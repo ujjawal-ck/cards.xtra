@@ -60,7 +60,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Chip } from '../atoms';
+import { Chip, Text } from '../atoms';
+import { analytics, Events } from '../analytics';
 import type { IconName } from '../atoms';
 import { SearchBar, SearchResults } from '../molecules';
 import type { SearchResultSection } from '../molecules';
@@ -128,6 +129,19 @@ export function SearchTopSheet({
   // tucks under the iOS notch. The sheet's white bg extends UP into
   // this padding so the status bar reads as part of the sheet.
   const insets = useSafeAreaInsets();
+
+  // Zero-result searches — logged once the user pauses typing (800 ms), so
+  // each keystroke isn't an event. Only the query LENGTH is sent, never the
+  // text (it can contain anything the user typed).
+  const trimmed = value?.trim() ?? '';
+  const noResults = visible && variant === 'suggestions' && trimmed.length > 0 && sections.length === 0;
+  useEffect(() => {
+    if (!noResults) return;
+    const t = setTimeout(() => {
+      analytics.track(Events.SEARCH_NO_RESULTS, { query_length: trimmed.length });
+    }, 800);
+    return () => clearTimeout(t);
+  }, [noResults, trimmed]);
 
   // Keep the <Modal> mounted across the closing tween so the slide-up
   // is actually rendered. Unmount only after the tween completes.
@@ -306,6 +320,16 @@ export function SearchTopSheet({
                     onResultPress={onResultPress}
                   />
                 </ScrollView>
+              ) : noResults ? (
+                /* Typed query, nothing matched (Figma "No result"). */
+                <View style={{ paddingVertical: spacing[16], gap: spacing[4] }}>
+                  <Text variant="body14SemiBold" color={colors.text.primary}>
+                    {`No cards match "${trimmed}"`}
+                  </Text>
+                  <Text variant="body12Regular" color={colors.text.secondary}>
+                    Try a bank name like HDFC or SBI, or part of a card name.
+                  </Text>
+                </View>
               ) : !value?.trim() && recentSearches.length > 0 ? (
                 /* Empty query → quick suggestions (top banks + a card),
                    Figma 1985:36934. Once the user types, the results

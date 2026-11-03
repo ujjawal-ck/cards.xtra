@@ -540,6 +540,10 @@ export function OnboardingScreen() {
         }
       }, 200);
     } catch (e) {
+      analytics.track(Events.OTP_FAILED, {
+        flow: isSignup ? 'signup' : 'login',
+        reason: e instanceof ApiError ? (e.status === 0 ? 'network' : `http_${e.status}`) : 'unknown',
+      });
       setError(
         e instanceof ApiError ? e.message : 'Could not verify OTP. Please try again.'
       );

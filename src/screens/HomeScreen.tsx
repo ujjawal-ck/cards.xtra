@@ -1959,7 +1959,18 @@ export function HomeScreen() {
         // (and so Apply / Share / eligibility) in sync as they swipe.
         cards={pagerCards}
         initialCardId={selectedCard?.id}
-        onActiveCardChange={(card) => setSelectedCard(card)}
+        onActiveCardChange={(card) => {
+          // Swiping to another card in the sheet is a new card view.
+          if (card && card.id !== selectedCardRef.current?.id) {
+            analytics.track(Events.VIEW_ITEM, {
+              item_id: card.id,
+              item_name: card.name,
+              item_brand: card.filterMeta?.bankName,
+              source: 'swipe',
+            });
+          }
+          setSelectedCard(card);
+        }}
         // Recommend from the SAME list the pager swipes through, so tapping a
         // recommended card always resolves to a page in the pager (clean jump).
         recommended={pagerCards}
@@ -1968,7 +1979,15 @@ export function HomeScreen() {
         onEligibilityChecked={applyEligibility}
         onShowResultSheet={presentResultSheet}
         onApply={handleApply}
-        onRecommendedPress={(card) => setSelectedCard(card)}
+        onRecommendedPress={(card) => {
+          analytics.track(Events.VIEW_ITEM, {
+            item_id: card.id,
+            item_name: card.name,
+            item_brand: card.filterMeta?.bankName,
+            source: 'recommended',
+          });
+          setSelectedCard(card);
+        }}
         // "Learn how it works?" → slide the HowItWorksSheet up over the
         // (still-mounted) card detail. Hide the BottomNav for the duration
         // so it can't peek above the RN Modal scrim, mirroring the share flow.
