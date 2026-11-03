@@ -28,8 +28,11 @@ type Stage = 'local' | 'staging' | 'prod';
 const RAW_STAGE = process.env.EXPO_PUBLIC_STAGE;
 export const STAGE: Stage = RAW_STAGE === 'prod' || RAW_STAGE === 'local' ? RAW_STAGE : 'staging';
 
-// Shared app identity sent to CashKaro.
-const APP_VERSION = '4.6'; // x-chkr-app-version (from CK env)
+// x-chkr-app-version per stage. Staging accepts 4.6; the mini-app gateway
+// (ckminapps.com) rejects anything but 4.9 with a CloudFront 401.
+// Override with EXPO_PUBLIC_CK_APP_VERSION if CashKaro bumps it.
+const APP_VERSION_BY_STAGE: Record<Stage, string> = { staging: '4.6', local: '4.6', prod: '4.9' };
+const APP_VERSION = process.env.EXPO_PUBLIC_CK_APP_VERSION || APP_VERSION_BY_STAGE[STAGE];
 const DEVICE = 'App'; // ?device=App on most CK calls
 
 const CONFIG = {
@@ -69,20 +72,20 @@ const CONFIG = {
     },
   },
   prod: {
-    // Filled from .env / the EAS production profile at cutover. Production
-    // hosts and keys are NOT committed. Before prod, the CK basic-auth and the
-    // BK partner key should sit behind a server proxy (see docs/GAP_AUDIT.md P0
-    // #5); when that exists, point the base URLs at the proxy and leave the
-    // secret keys empty.
+    // CK Mini Apps gateway. Keys come from .env / the EAS production profile
+    // and are NOT committed. Before launch, the BK partner key should sit
+    // behind a server proxy (see docs/GAP_AUDIT.md P0 #5). /token on this host
+    // needs only x-api-key (Basic auth is optional).
     ck: {
-      baseUrl: process.env.EXPO_PUBLIC_CK_BASE_URL ?? '',
-      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
-      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
-      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
-      trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST ?? '',
+      baseUrl: process.env.EXPO_PUBLIC_MINI_BASE_URL || 'https://ckminapps.com/v1',
+      apiKey: process.env.EXPO_PUBLIC_MINI_API_KEY ?? '',
+      basicAuthUser: process.env.EXPO_PUBLIC_MINI_BASIC_USER ?? '',
+      basicAuthPass: process.env.EXPO_PUBLIC_MINI_BASIC_PASS ?? '',
+      // Prod store cashback_urls use tracking.cklbls.com (seen on /offers/flipkart).
+      trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST || 'tracking.cklbls.com',
     },
     bk: {
-      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL ?? '',
+      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL || 'https://platform.bankkaro.com/partner',
       partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
     },
   },

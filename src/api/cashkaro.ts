@@ -40,7 +40,9 @@ async function getAwsToken(): Promise<string> {
     method: 'GET',
     headers: {
       ...CK.headers(),
-      Authorization: basicAuthHeader(CK.basicAuthUser, CK.basicAuthPass),
+      // Basic auth is only needed where CashKaro issued it (staging);
+      // ckminapps.com /token works with x-api-key alone.
+      ...(CK.basicAuthUser ? { Authorization: basicAuthHeader(CK.basicAuthUser, CK.basicAuthPass) } : {}),
     },
   });
   const value = res?.data?.attributes?.token;
