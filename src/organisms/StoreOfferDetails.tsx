@@ -52,11 +52,15 @@ export interface StoreOfferDetailsProps {
   copyCode?: boolean;
   /** Heading. Default "Top <Brand> Offers". */
   title?: string;
-  /** Offer description line (wraps). Default Figma sample. */
-  offerText?: string;
-  /** Promo code shown in the dashed chip. Default "MCCK300". */
-  code?: string;
-  /** Fired when "Copy Code" is tapped. */
+  /** Offer description line (wraps). Default Figma sample. Pass null to
+   *  hide it (e.g. the store has no real offer line). */
+  offerText?: string | null;
+  /** Promo code shown in the dashed chip. Default "MCCK300". Pass null to
+   *  hide the code chip + Copy Code row (no real code). */
+  code?: string | null;
+  /** Fired when "Copy Code" is tapped. The Copy Code button only renders
+   *  when this is provided; the code text itself is always selectable
+   *  (long-press → native Copy). */
   onCopyCode?: () => void;
   /** Label for the see-details link row. Default "See Offer Details"
    *  (e.g. pass "See +5 Offers" on a brand page). */
@@ -99,11 +103,13 @@ export function StoreOfferDetails({
 
       {/* Offer block — offer line + (optional) code/copy row */}
       <View style={{ width: '100%', gap: spacing[20], alignItems: 'flex-start' }}>
-        <Text variant="body14Regular" color={colors.text.primary} style={{ width: '100%' }}>
-          {offerText}
-        </Text>
+        {offerText ? (
+          <Text variant="body14Regular" color={colors.text.primary} style={{ width: '100%' }}>
+            {offerText}
+          </Text>
+        ) : null}
 
-        {copyCode && (
+        {copyCode && !!code && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[12] }}>
             {/* Dashed code chip */}
             <View
@@ -118,12 +124,13 @@ export function StoreOfferDetails({
                 justifyContent: 'center',
               }}
             >
-              <Text variant="body14Medium" color={colors.text.primary}>
+              <Text variant="body14Medium" color={colors.text.primary} selectable>
                 {code}
               </Text>
             </View>
 
-            {/* Copy Code button */}
+            {/* Copy Code button — only when a copy handler is wired */}
+            {onCopyCode ? (
             <Pressable
               onPress={onCopyCode}
               accessibilityRole="button"
@@ -134,6 +141,7 @@ export function StoreOfferDetails({
               </Text>
               <Icon name="copy-outline" size={iconSize[12]} color={colors.text.link} />
             </Pressable>
+            ) : null}
           </View>
         )}
       </View>

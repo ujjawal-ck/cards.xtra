@@ -55,4 +55,8 @@ export const sizing = {
    *  pairs with mediaSize[32]. */
   ticketLogoW: 74,
   ticketLogoH: 32,
+  /** Search "No matching results" illustration (Figma 4369:244199 is a
+   *  224px ScreenState). Scaled down to fit inside the search drop-down
+   *  above the keyboard. */
+  searchEmptyIllustration: 120,
 } as const;

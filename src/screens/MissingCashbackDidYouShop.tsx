@@ -124,11 +124,15 @@ export function MissingCashbackDidYouShop() {
   // fetch fails or returns empty. When In Review is the active tab this is
   // the same cached query (no extra request).
   const counts = useClaims('In Review').data?.counts;
+  // The Others badge comes from the Others query itself (rows actually shown:
+  // raised tickets + rejected claims), so the count always matches the list.
+  // Same cached query when Others is the active tab.
+  const othersCount = useClaims('Others').data?.counts.others;
   const withCount = (base: string, n?: number) => (n && n > 0 ? `${base} (${n})` : base);
   const tabs = [
     { label: withCount('In Review', counts?.pending) },
     { label: withCount('Closed', counts?.resolved) },
-    { label: withCount('Others', counts?.others) },
+    { label: withCount('Others', othersCount ?? counts?.others) },
   ];
 
   // Resume a need-details claim at the right step. The invoice/category screens
@@ -163,14 +167,16 @@ export function MissingCashbackDidYouShop() {
   const cards = data?.cards ?? [];
   const othersCards = data?.othersCards ?? [];
   const isOthers = tabName === 'Others';
-  const listEmpty = isOthers ? othersCards.length === 0 : cards.length === 0;
+  const listEmpty = isOthers
+    ? othersCards.length === 0 && cards.length === 0
+    : cards.length === 0;
 
   const emptyCopy =
     tabName === 'Closed'
       ? 'Successfully tracked Cashbacks will show up here.'
       : tabName === 'In Review'
         ? 'Cashbacks being tracked show up here.'
-        : 'Raised tickets will show up here.';
+        : 'Raised tickets and rejected claims will show up here.';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
@@ -214,14 +220,18 @@ export function MissingCashbackDidYouShop() {
                 {emptyCopy}
               </Text>
             </View>
-          ) : isOthers ? (
-            othersCards.map((card) => (
-              <View key={card.ticketId} style={{ paddingHorizontal: spacing[16], width: '100%' }}>
-                <OthersCard card={card} onView={() => openSummary(card)} />
-              </View>
-            ))
           ) : (
-            cards.map((card) => (
+            <>
+            {isOthers
+              ? othersCards.map((card) => (
+                  <View key={card.ticketId} style={{ paddingHorizontal: spacing[16], width: '100%' }}>
+                    <OthersCard card={card} onView={() => openSummary(card)} />
+                  </View>
+                ))
+              : null}
+            {/* Tracking cards (In Review / Closed) — and, on Others, rejected
+                claims without a ticket (Figma 4129:26811). */}
+            {cards.map((card) => (
               <View key={card.queueId} style={{ paddingHorizontal: spacing[16], width: '100%' }}>
                 <HelpTicketCard
                   status={card.status}
@@ -234,10 +244,13 @@ export function MissingCashbackDidYouShop() {
                   timer={card.timer}
                   timerTarget={card.timerTarget}
                   ctaLabel={card.ctaLabel}
+                  subtitle={card.subtitle}
+                  rejectionReason={card.rejectionReason}
                   onCtaPress={() => onCtaPress(card)}
                 />
               </View>
-            ))
+            ))}
+            </>
           )}
         </ScrollView>
 

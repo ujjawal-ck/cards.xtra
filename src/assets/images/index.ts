@@ -139,6 +139,8 @@ export const images = {
     appOrders: require('./screenstate/screenstate-app-orders.png'),
     tracking: require('./screenstate/screenstate-tracking.png'),
     confirmation: require('./screenstate/screenstate-confirmation.png'),
+    // Figma 4369:244199 ("NOPE" cat). Exported at 224px — re-export at 3x.
+    noResults: require('./screenstate/screenstate-no-results.png'),
   },
   onboarding: {
     slide1: require('./onboarding/onboarding-1.png'),

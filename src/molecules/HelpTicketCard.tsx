@@ -39,6 +39,11 @@
  *   → Order info
  *   → link <Button> "Add Details" (variant link, size 36 → body12Medium,
  *       text.link, underline) + trailing forward-arrow glyph → onAddDetails
+ *
+ * REJECTED (Figma 4129:26811, bg colors.surface.default, no CTA):
+ *   [BrandLogoTile] → title (body12SemiBold) + `subtitle` (body12Regular /
+ *   text.secondary) → Order info → "Rejection Reason: …" (body12SemiBold /
+ *   text.primary) when `rejectionReason` is supplied.
  */
 import React from 'react';
 import { View, StyleProp, ViewStyle, ImageSourcePropType } from 'react-native';
@@ -53,7 +58,7 @@ import {
   letterSpacing,
 } from '../tokens';
 
-export type HelpTicketStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review';
+export type HelpTicketStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review' | 'rejected';
 
 export interface HelpTicketCardProps {
   status: HelpTicketStatus;
@@ -83,6 +88,10 @@ export interface HelpTicketCardProps {
   ctaLabel?: string;
   /** Tapped on the link CTA (need-details / tracked). */
   onCtaPress?: () => void;
+  /** Secondary line under the title (e.g. rejected: "Check your email…"). */
+  subtitle?: string;
+  /** Rejected only — rendered as "Rejection Reason: …" below the order info. */
+  rejectionReason?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -166,6 +175,8 @@ export function HelpTicketCard({
   timerLabel,
   ctaLabel = 'Add Details',
   onCtaPress,
+  subtitle,
+  rejectionReason,
   style,
 }: HelpTicketCardProps) {
   const isNeedDetails = status === 'need-details';
@@ -240,6 +251,12 @@ export function HelpTicketCard({
           {title}
         </Text>
 
+        {subtitle ? (
+          <Text variant="body12Regular" color={colors.text.secondary} style={{ width: '100%' }}>
+            {subtitle}
+          </Text>
+        ) : null}
+
         {/* Timer row — in-review (countdown) and under-review (fixed date) */}
         {isInReview || isUnderReview ? (
           <View
@@ -272,6 +289,13 @@ export function HelpTicketCard({
 
       {/* Order info */}
       <OrderInfo orderId={orderId} orderAmount={orderAmount} ticketId={ticketId} />
+
+      {/* Rejection reason — rejected only, and only when the API sent one */}
+      {status === 'rejected' && rejectionReason ? (
+        <Text variant="body12SemiBold" color={colors.text.primary} style={{ width: '100%' }}>
+          {`Rejection Reason: ${rejectionReason}`}
+        </Text>
+      ) : null}
 
       {/* Link CTA — need-details + tracked */}
       {hasCta ? (

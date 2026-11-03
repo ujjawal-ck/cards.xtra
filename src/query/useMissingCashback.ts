@@ -35,6 +35,7 @@ import {
   mapExitClicks,
   mapClaims,
   mapOthersClaims,
+  mapRejectedClaims,
   STATUS_TAB_TO_API,
   type RetailerRow,
   type ExitMonthGroup,
@@ -140,6 +141,9 @@ export function useClaims(tab: ClaimTab) {
         const seen = new Set<string>();
         const claims: McClaim[] = [];
         const counts = { pending: 0, resolved: 0, others: 0 };
+        // Rejected-bucket claims are kept even without a Ticket ID (index 2
+        // of `settled` is the Rejected fetch).
+        const rejected = settled[2].status === 'fulfilled' ? settled[2].value.data || [] : [];
         for (const r of fulfilled) {
           if (r.value.meta?.pending != null) counts.pending = r.value.meta.pending;
           if (r.value.meta?.resolved != null) counts.resolved = r.value.meta.resolved;
@@ -150,8 +154,13 @@ export function useClaims(tab: ClaimTab) {
             claims.push(c);
           }
         }
-        // mapOthersClaims keeps only ticket claims (those with a Ticket ID).
-        return { cards: [], othersCards: mapOthersClaims({ data: claims }), counts };
+        // Raised tickets → flat rows; rejected claims without a ticket → rejected
+        // HelpTicketCards. The Others count is the number of rows actually shown,
+        // so the tab badge always matches the list.
+        const othersCards = mapOthersClaims({ data: claims });
+        const cards = mapRejectedClaims({ data: rejected }, Date.now());
+        counts.others = othersCards.length + cards.length;
+        return { cards, othersCards, counts };
       };
 
       const run = async (token: string): Promise<ClaimsResult> => {

@@ -141,6 +141,19 @@ export function OffersBrandAmazon() {
 
   const noop = () => undefined;
 
+  // First real coupon from the API (code and/or its own offer line). Never
+  // a sample: when the store sends none, the code chip / offer line hide.
+  const coupon = store?.coupons?.find((c) => !!c.code) ?? store?.coupons?.[0];
+  const couponCode = coupon?.code ?? null;
+  // Offer line: the coupon's real title on a live store; the Figma Amazon
+  // sample only on the no-slug demo (whose whole page is the Amazon sample).
+  const offerLine = slug ? coupon?.title ?? null : 'Upto 90% Off across categories';
+
+  // Click-out availability. A store without a cashback_url can't be shopped
+  // through CashKaro, so the footer CTA renders disabled (and logs nothing).
+  const cashbackUrl = store?.cashbackUrl;
+  const canShop = !!cashbackUrl;
+
   // Share the store via the OS share sheet. Prefers the store's real
   // cashback URL (so the recipient lands on the live offer); falls back to a
   // plain brand message when no URL is available (no-slug demo).
@@ -394,6 +407,11 @@ export function OffersBrandAmazon() {
             cashbackText={store?.cashbackKind ?? 'Cashback'}
             subtitle={store?.cashbackDetails ?? 'on mobile, fashion, beauty and more'}
             bonusValue={store?.upsellText}
+            // The API carries no upsell end time or offer condition, so the
+            // countdown and the "on order over ₹X" sub-line are hidden
+            // rather than showing the static Figma sample values.
+            timerValue={null}
+            bonusSubtitle={null}
             onViewRates={openRewardRates}
             style={{ width: '100%' }}
           />
@@ -415,11 +433,15 @@ export function OffersBrandAmazon() {
             />
           ) : showOfferDetails ? (
             <StoreOfferDetails
-              copyCode={hasCoupons}
-              howToGetThisOffer={!hasCoupons && (store?.hasHowTo ?? !slug)}
+              // Code chip shows only with a REAL coupon code from the API.
+              // No clipboard library is installed, so there is no Copy Code
+              // button; the code text is selectable (long-press → Copy).
+              copyCode={!!couponCode}
+              code={couponCode}
+              howToGetThisOffer={!couponCode && (store?.hasHowTo ?? !slug)}
               title={`Top ${brandName} Offers`}
-              offerText="Upto 90% Off across categories"
-              seeDetailsLabel="See +5 Offers"
+              offerText={offerLine}
+              seeDetailsLabel={slug ? 'See Offer Details' : 'See +5 Offers'}
               onSeeDetails={openOfferDetails}
               onHowToGet={openHowToGet}
               style={{ width: '100%' }}
@@ -517,17 +539,23 @@ export function OffersBrandAmazon() {
           size={52}
           shadow="on"
           color="main"
-          primaryLabel={`Earn Cashback on ${brandName}`}
-          primaryIcon="trailing"
+          primaryLabel={
+            store && !canShop
+              ? `Cashback Unavailable on ${brandName}`
+              : `Earn Cashback on ${brandName}`
+          }
+          primaryIcon={canShop ? 'trailing' : 'none'}
           primaryIconName="chevron-right"
           shine
+          primaryDisabled={!canShop}
           onPrimary={() => {
+            if (!cashbackUrl) return;
             // Outbound "Shop & Earn" click — the offers conversion.
             analytics.track(Events.OFFER_SHOP, {
               store: brandName,
               cashback_kind: store?.cashbackKind,
             });
-            openUrl(withTrackingUser(store?.cashbackUrl, profile?.id));
+            openUrl(withTrackingUser(cashbackUrl, profile?.id));
           }}
         />
       </View>

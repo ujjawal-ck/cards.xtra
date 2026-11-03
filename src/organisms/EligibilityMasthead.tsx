@@ -714,10 +714,10 @@ function MaybeMasthead({
 // pill, then the same ghost "Continue to Apply" CTA. No floating card.
 function IneligibleMasthead({
   message = "We're Sorry! You're\nineligible for this card",
-  reasons = [
-    'Your pin code is not serviceable',
-    'Salary is below the required amount',
-  ],
+  // No default reasons: only show a reason the caller actually knows is
+  // true. A hardcoded list told every ineligible user their pincode was
+  // unserviceable, whether or not it was.
+  reasons = [],
   pincode = '144000',
   amount = '₹1.2L',
   occupation = 'Salaried',
@@ -787,7 +787,8 @@ function IneligibleMasthead({
             backgroundColor: alpha.black[16],
           }}
         >
-          {/* Bulleted reason lines */}
+          {/* Bulleted reason lines — omitted when no reason is known */}
+          {reasons.length > 0 ? (
           <View style={{ gap: spacing[8] }}>
             {reasons.map((reason, i) => (
               <View
@@ -807,8 +808,11 @@ function IneligibleMasthead({
               </View>
             ))}
           </View>
+          ) : null}
 
-          <Divider style="dashed" color={colors.icon.inverse} />
+          {reasons.length > 0 ? (
+            <Divider style="dashed" color={colors.icon.inverse} />
+          ) : null}
 
           {/* Detail row — LEFT details white @ 80% + RIGHT Edit pill */}
           <View

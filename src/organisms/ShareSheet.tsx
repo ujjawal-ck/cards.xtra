@@ -45,6 +45,7 @@
  *   border 1px  → borderWidth.thin + colors.border.default
  *   #ff6d1d     → colors.action.primary.default (Solid Button main)
  */
+import { analytics, Events } from '../analytics';
 import React, {
   forwardRef,
   useCallback,
@@ -188,7 +189,18 @@ function ShareSheetBody({
     if (onShare) return onShare();
     Share.share({
       message: `Found ${cardName} on CashKaro — earn ${cashbackValue} on activation.`,
-    }).catch(() => undefined);
+    })
+      .then((res) => {
+        // GA4 `share` — was defined but never fired. Only count completed
+        // shares (iOS reports a dismiss; Android always reports shared).
+        if (res.action === Share.dismissedAction) return;
+        analytics.track(Events.SHARE, {
+          method: 'os_share_sheet',
+          content_type: 'card',
+          item_id: cardName,
+        });
+      })
+      .catch(() => undefined);
   }, [onShare, cardName, cashbackValue]);
 
   return (

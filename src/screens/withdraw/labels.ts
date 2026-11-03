@@ -16,3 +16,18 @@ export function withdrawTitle(
 ): string {
   return kind === 'rewards' ? 'Withdraw Rewards' : 'Withdraw Cashback';
 }
+
+/**
+ * Shared masthead sub-line — names the bucket being paid out, so the rewards
+ * and combined flows don't read "Cashback Available For Payment". Same copy
+ * as the gift-card chooser's masthead (WithdrawGiftCard).
+ */
+export function withdrawSubtitle(
+  kind: WithdrawPaymentType | WithdrawGiftCardVariant
+): string {
+  if (kind === 'rewards') return 'Withdrawing Available Rewards';
+  if (kind === 'combined' || kind === 'cashback_and_rewards') {
+    return 'Withdrawing Total Amount (Cashback + Rewards)';
+  }
+  return 'Cashback Available For Payment';
+}

@@ -18,6 +18,11 @@
  *     + caption "Once confirmed, they can be withdrawn…" (body12Regular)
  *   - FooterButtons single, cobalt, "Ok, Got It" → dismiss             ← REUSED
  *
+ * Variant `no-cashback` (Figma earnings/day-0/bottomsheet/no-cashback,
+ * 2898:164825) reuses the same shell for a brand-new user with nothing
+ * earned at all: "No Cashback Yet!" + "You haven't shopped via Cards.xtra
+ * so far…" + a tracking-time note. Same cobalt "Ok, Got It" footer.
+ *
  * Imperative API: ref.present() / ref.dismiss() (mirrors @gorhom).
  *
  * Hex → token: black-@80% body copy → colors.text.secondary; scrim 0.72
@@ -46,10 +51,35 @@ import { BottomSheetHeader } from './BottomSheetHeader';
 import { FooterButtons } from './FooterButtons';
 import { colors, spacing, radius } from '../tokens';
 
+export type CashbackNotConfirmedSheetVariant = 'not-confirmed' | 'no-cashback';
+
 export interface CashbackNotConfirmedSheetProps {
-  /** Pending amount shown in the body, e.g. "₹123". Default "₹0.0". */
+  /** 'not-confirmed' (default) — pending balance only, nothing withdrawable.
+   *  'no-cashback' — nothing earned at all yet (Day 0, Figma 2898:164825). */
+  variant?: CashbackNotConfirmedSheetVariant;
+  /** Pending amount shown in the body, e.g. "₹123". Default "₹0.0".
+   *  Used by the 'not-confirmed' variant only. */
   pendingAmount?: string;
 }
+
+// Per-variant copy. 'no-cashback' strings are verbatim from Figma 2898:164825.
+const COPY: Record<
+  CashbackNotConfirmedSheetVariant,
+  { emoji: string; a11y: string; title: string; note: string }
+> = {
+  'not-confirmed': {
+    emoji: '⏱️',
+    a11y: 'Pending cashback',
+    title: 'Cashback Not Confirmed',
+    note: 'Once confirmed, they can be withdrawn. Until then, grab deals & earn more!',
+  },
+  'no-cashback': {
+    emoji: '🛒',
+    a11y: 'No cashback yet',
+    title: 'No Cashback Yet!',
+    note: 'Note - If shopped, Cashback tracks within 5mins to 48 hrs',
+  },
+};
 
 // Illustration placeholder — the Figma uses a 156-px 3D stopwatch+cash
 // render; no asset ships, so a stopwatch emoji stands in. Sizes are
@@ -61,7 +91,11 @@ const EMOJI_SIZE = 96;
 export const CashbackNotConfirmedSheet = forwardRef<
   BottomSheetModalRef,
   CashbackNotConfirmedSheetProps
->(function CashbackNotConfirmedSheet({ pendingAmount = '₹0.0' }, ref) {
+>(function CashbackNotConfirmedSheet(
+  { variant = 'not-confirmed', pendingAmount = '₹0.0' },
+  ref
+) {
+  const copy = COPY[variant];
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef);
@@ -114,10 +148,10 @@ export const CashbackNotConfirmedSheet = forwardRef<
             }}
           >
             <RNText
-              accessibilityLabel="Pending cashback"
+              accessibilityLabel={copy.a11y}
               style={{ fontSize: EMOJI_SIZE, lineHeight: EMOJI_SIZE * 1.1 }}
             >
-              ⏱️
+              {copy.emoji}
             </RNText>
           </View>
 
@@ -129,14 +163,16 @@ export const CashbackNotConfirmedSheet = forwardRef<
                 color={colors.text.primary}
                 align="center"
               >
-                Cashback Not Confirmed
+                {copy.title}
               </Text>
               <Text
                 variant="body16Regular"
                 color={colors.text.secondary}
                 align="center"
               >
-                You have {pendingAmount} pending in your Cards.xtra account.
+                {variant === 'no-cashback'
+                  ? 'You haven’t shopped via Cards.xtra so far. Shop & earn Cashback today! 😍'
+                  : `You have ${pendingAmount} pending in your Cards.xtra account.`}
               </Text>
             </View>
             <Text
@@ -144,8 +180,7 @@ export const CashbackNotConfirmedSheet = forwardRef<
               color={colors.text.secondary}
               align="center"
             >
-              Once confirmed, they can be withdrawn. Until then, grab deals &
-              earn more!
+              {copy.note}
             </Text>
           </View>
         </View>

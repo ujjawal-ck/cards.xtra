@@ -101,10 +101,12 @@ export interface StoreCashbackDetailsProps {
   bonusTitle?: string;
   /** Bonus card value line. Default "Flat ₹50 Cashback". */
   bonusValue?: string;
-  /** Bonus card sub-line. Default "on order over ₹150 once per user". */
-  bonusSubtitle?: string;
-  /** Countdown value, "dd:hh:mm" or "hh:mm". Default "01:23:59". */
-  timerValue?: string;
+  /** Bonus card sub-line. Default "on order over ₹150 once per user".
+   *  Pass null to hide it (e.g. the API carries no offer condition). */
+  bonusSubtitle?: string | null;
+  /** Countdown value, "dd:hh:mm" or "hh:mm". Default "01:23:59".
+   *  Pass null to hide the timer (e.g. the API carries no end time). */
+  timerValue?: string | null;
   /** Fired when the "View Cashback Rates" row is tapped. */
   onViewRates?: () => void;
   style?: StyleProp<ViewStyle>;
@@ -316,7 +318,7 @@ export function StoreCashbackDetails({
   }
 
   // ---- On state: details block + bonus card, gap 24, no outer padding ----
-  const t = parseTimer(timerValue);
+  const t = timerValue ? parseTimer(timerValue) : null;
   return (
     <View
       style={[
@@ -352,13 +354,15 @@ export function StoreCashbackDetails({
         }}
       >
         <View style={{ width: '100%', gap: spacing[8], alignItems: 'flex-start' }}>
-          <Timer
-            surface="default"
-            format={t.format}
-            days={t.days}
-            hours={t.hours}
-            minutes={t.minutes}
-          />
+          {t ? (
+            <Timer
+              surface="default"
+              format={t.format}
+              days={t.days}
+              hours={t.hours}
+              minutes={t.minutes}
+            />
+          ) : null}
           <View style={{ width: '100%', gap: spacing[8], alignItems: 'flex-start' }}>
             <Text variant="body16Bold" color={colors.text.primary} style={{ width: '100%' }}>
               {bonusTitle}
@@ -371,13 +375,15 @@ export function StoreCashbackDetails({
               >
                 {bonusValue}
               </Text>
-              <Text
-                variant="body12Regular"
-                color={colors.text.secondary}
-                style={{ width: '100%' }}
-              >
-                {bonusSubtitle}
-              </Text>
+              {bonusSubtitle ? (
+                <Text
+                  variant="body12Regular"
+                  color={colors.text.secondary}
+                  style={{ width: '100%' }}
+                >
+                  {bonusSubtitle}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>

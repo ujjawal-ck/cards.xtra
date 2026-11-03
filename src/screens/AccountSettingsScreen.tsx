@@ -34,9 +34,12 @@
  *   success message  → <InlineMessage tone="success" icon="check-circle-filled">
  *   save footer      → <FooterButtons buttons="single" color="second">
  *
- * Demo: there is no live "update profile" endpoint wired, so Save Changes
- * just returns to the previous screen, and the email/mobile change is
- * reflected optimistically from the flow's nav params.
+ * No CashKaro "update profile" endpoint exists (INTEGRATION.md documents
+ * none), so Save Changes stores the name as the app's LOCAL display-name
+ * override (AuthContext.setDisplayName — the same store the post-OTP
+ * NameInput screen uses, and what Profile/Home already read first). It is
+ * not written to the CashKaro account. The email/mobile change is still
+ * reflected optimistically from the flow's nav params (no write API).
  */
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
@@ -51,6 +54,7 @@ import { Header, FooterButtons } from '../organisms';
 import { InlineMessage } from '../molecules';
 import { colors, spacing } from '../tokens';
 import { useProfile } from '../query/useProfile';
+import { useAuth } from '../auth/AuthContext';
 import { FIELD_COPY } from './editContact';
 import type { RootStackParamList, EditContactField } from '../navigation/types';
 
@@ -68,6 +72,10 @@ export function AccountSettingsScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const { data: profile } = useProfile();
+  const { displayName, setDisplayName } = useAuth();
+  // The name the rest of the app shows: the local override, else the backend
+  // fullname (same precedence as ProfileScreen).
+  const currentName = displayName || profile?.fullname || '';
 
   // A completed email/mobile change comes back via nav params; it drives
   // both the success message and the optimistic field value.
@@ -76,10 +84,10 @@ export function AccountSettingsScreen() {
 
   // Full Name is the only inline-editable field — seed it from the live
   // profile (re-seeding if the profile loads after mount).
-  const [name, setName] = useState(profile?.fullname ?? '');
+  const [name, setName] = useState(currentName);
   useEffect(() => {
-    setName(profile?.fullname ?? '');
-  }, [profile?.fullname]);
+    setName(currentName);
+  }, [currentName]);
 
   // Email / Mobile are display-only here; show the freshly-changed value
   // when returning from the flow, otherwise the live profile value.
@@ -89,7 +97,9 @@ export function AccountSettingsScreen() {
     updated === 'mobile' && updatedValue ? updatedValue : profile?.mobileNumber
   );
 
-  const dirty = name !== (profile?.fullname ?? '');
+  // Dirty only when changed to a non-empty name (never save a blank name).
+  const dirty = name.trim().length > 0 && name.trim() !== currentName;
+  const [saving, setSaving] = useState(false);
 
   const launchChange = (field: EditContactField) =>
     navigation.navigate('EditContactVerifyIdentity', { field });
@@ -206,8 +216,16 @@ export function AccountSettingsScreen() {
           size={52}
           shadow="off"
           primaryLabel="Save Changes"
-          primaryDisabled={!dirty}
-          onPrimary={() => navigation.goBack()}
+          primaryDisabled={!dirty || saving}
+          onPrimary={async () => {
+            setSaving(true);
+            try {
+              await setDisplayName(name);
+              navigation.goBack();
+            } finally {
+              setSaving(false);
+            }
+          }}
         />
       </SafeAreaView>
     </View>

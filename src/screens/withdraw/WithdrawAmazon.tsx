@@ -23,7 +23,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawAmazon'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawAmazon'>;
@@ -67,6 +67,12 @@ export function WithdrawAmazon() {
   // diverges from the first number (not only once both are full length).
   const confirmMismatch =
     confirm.length > 0 && confirm !== mobile.slice(0, confirm.length);
+  // Inline invalid-number error on the first field (Figma 3283:52824) —
+  // shown once the user has left the field with a non-10-digit value, so it
+  // never flashes while they're still typing.
+  const [mobileTouched, setMobileTouched] = useState(false);
+  const mobileInvalid =
+    mobileTouched && mobile.length > 0 && !/^\d{10}$/.test(mobile);
 
   const handleGetPaid = async () => {
     if (!accessToken || sending) return;
@@ -106,7 +112,7 @@ export function WithdrawAmazon() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>
@@ -124,9 +130,12 @@ export function WithdrawAmazon() {
                 size="sm"
                 value={mobile}
                 onChangeText={setMobile}
+                onBlur={() => setMobileTouched(true)}
                 keyboardType="number-pad"
                 maxLength={10}
                 returnKeyType="next"
+                state={mobileInvalid ? 'error' : undefined}
+                hint={mobileInvalid ? 'Invalid mobile number' : undefined}
               />
               <Input
                 label="Re-enter Mobile No."

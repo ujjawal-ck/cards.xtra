@@ -104,6 +104,45 @@ function extractSecondaryCashback(res: any): OfferCashback[] {
   return [];
 }
 
+/** One coupon from the store's embedded `coupons` include. */
+export interface StoreCoupon {
+  /** The promo code to enter at checkout (only set when the API sends one). */
+  code?: string;
+  /** The coupon's own offer line (e.g. "Flat ₹300 off on orders over ₹999"). */
+  title?: string;
+}
+
+/**
+ * Pull coupons from the store response's JSON:API `included` block. The
+ * request asks for `include=coupons`, but staging has never returned a
+ * populated coupons relationship (INTEGRATION.md §7), so the exact payload
+ * shape is unverified. Accept both shapes this API uses for includes —
+ * a `{ coupons: [{ attributes }] }` bundle (like `secondary_cashback`) or
+ * flat `{ type: 'coupon(s)', attributes }` rows — and read only explicit
+ * code / title fields. Never invents a code: [] when nothing real is sent.
+ */
+function extractCoupons(res: any): StoreCoupon[] {
+  const included: any[] = Array.isArray(res?.included) ? res.included : [];
+  const rows: any[] = [];
+  for (const entry of included) {
+    if (Array.isArray(entry?.coupons)) {
+      rows.push(...entry.coupons.map((c: any) => c?.attributes ?? c));
+    } else if (typeof entry?.type === 'string' && /coupon/i.test(entry.type)) {
+      rows.push(entry.attributes ?? {});
+    }
+  }
+  const clean = (v: unknown): string | undefined => {
+    const t = typeof v === 'string' ? stripHtml(v) : undefined;
+    return t || undefined;
+  };
+  return rows
+    .map((at): StoreCoupon => ({
+      code: clean(at?.coupon_code ?? at?.code),
+      title: clean(at?.title ?? at?.coupon_title ?? at?.name),
+    }))
+    .filter((c) => !!c.code || !!c.title);
+}
+
 export interface OfferStoreSummary {
   slug: string;
   name: string;
@@ -197,6 +236,8 @@ export interface OfferStoreDetail {
   banners: string[];
   /** Store FAQ ({ ques, ans } from the API) → accordion section. [] = none. */
   faq: FaqEntry[];
+  /** Coupons from the `coupons` include. [] when the API sends none. */
+  coupons: StoreCoupon[];
 }
 
 /** One store FAQ row (API `faq[].ques` / `.ans`). */
@@ -367,5 +408,6 @@ export function mapOfferStore(res: any): OfferStoreDetail | null {
     ratingCount: a.rating_count || undefined,
     banners,
     faq,
+    coupons: extractCoupons(res),
   };
 }

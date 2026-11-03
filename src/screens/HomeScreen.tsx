@@ -102,6 +102,7 @@ import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { openUrl, withTrackingUser } from '../lib/openUrl';
+import { requiredMonthlyIncome } from '../lib/eligibilityVerdict';
 import { useProfile } from '../query/useProfile';
 import { analytics, Events } from '../analytics';
 import { haptics, play } from '../lib/haptics';
@@ -142,31 +143,9 @@ const NAV_REVEAL_THRESHOLD = 1;
 //   • Maybe      — not eligible AND income is within 20% below req
 //                  (0.8·req ≤ income < req): a soft, income-only near-miss.
 //   • Ineligible — not eligible AND income < 0.8·req: clearly short.
-type EligibilityBucket = 'eligible' | 'maybe' | 'ineligible';
-
-function requiredMonthlyIncome(card: CardModel): number {
-  const feeStr = card.detail?.fee.annual.amount ?? card.annualFee ?? '';
-  const fee = Number(String(feeStr).replace(/[^0-9]/g, '')) || 0;
-  if (fee >= 2500) return 100000; // premium
-  if (fee >= 500) return 50000; // mid
-  return 25000; // entry / lifetime-free
-}
-
-function classifyEligibility(
-  card: CardModel,
-  eligibleSet: Set<string>,
-  monthlyIncome: number
-): EligibilityBucket {
-  const alias = card.filterMeta?.cardAlias;
-  if (alias && eligibleSet.has(alias)) return 'eligible';
-  const req = requiredMonthlyIncome(card);
-  if (!Number.isFinite(monthlyIncome)) return 'ineligible';
-  // Rejected despite enough income → the block is pincode/employment (hard
-  // gate). No "Maybe" for those, per the agreed rule.
-  if (monthlyIncome >= req) return 'ineligible';
-  if (monthlyIncome >= 0.8 * req) return 'maybe';
-  return 'ineligible';
-}
+// Grouping uses the shared classifier (lib/eligibilityVerdict.ts) so the
+// list and the card-detail verdict can never disagree.
+type EligibilityBucket = EligibilityOutcome;
 
 // Section separator — a label with a hairline rule filling the row to the
 // right (Figma). Used for the eligibility group headers (Eligible / Maybe /
@@ -1061,7 +1040,7 @@ export function HomeScreen() {
     }
     const income = Number(eligibilityDetails.income.replace(/[^0-9]/g, ''));
     const outcome = resolveCardOutcome(
-      card.filterMeta?.cardAlias,
+      card,
       eligibleAliases,
       income
     );
@@ -1319,7 +1298,7 @@ export function HomeScreen() {
       ineligible: [],
     };
     for (const c of filtered) {
-      buckets[classifyEligibility(c, set, monthlyIncome)].push(c);
+      buckets[resolveCardOutcome(c, set, monthlyIncome)].push(c);
     }
     const labels: Record<EligibilityBucket, string> = {
       eligible: 'Eligible Cards',
@@ -1424,10 +1403,43 @@ export function HomeScreen() {
     maybeSheetRef.current?.dismiss();
     ineligibleSheetRef.current?.dismiss();
   }, []);
+
+  // Maybe / Ineligible carousel tap → close the result sheet and open that
+  // card's detail sheet, so a user who didn't qualify is steered to an
+  // alternative card instead of a dead end.
+  const handleResultCardPress = useCallback(
+    (id: string) => {
+      const card = cards.find((c) => c.id === id);
+      if (!card) return;
+      dismissResultSheets();
+      setTimeout(() => openCardSheet(card, 0), 280);
+    },
+    [cards, dismissResultSheets, openCardSheet]
+  );
+
+  // Copy for the Maybe / Ineligible mastheads, derived from the same income
+  // bar the shared classifier uses (was hardcoded "₹50,000" for every card).
+  const resultHeroIncomeBar = resultHeroCard ? requiredMonthlyIncome(resultHeroCard) : null;
+  const maybeInfoText =
+    resultHeroIncomeBar != null
+      ? `Usually offered for salaries above ₹${resultHeroIncomeBar.toLocaleString('en-IN')}/month\nYou may qualify or the bank might still approve your application`
+      : undefined;
+  // Only state a reason we actually know. The API gives no reason, so the
+  // one fact we can show is an income shortfall vs the card's bar.
+  const ineligibleReasons = useMemo(() => {
+    if (!resultHeroCard || !eligibilityDetails) return [];
+    const income = Number(eligibilityDetails.income.replace(/[^0-9]/g, ''));
+    return Number.isFinite(income) && income < requiredMonthlyIncome(resultHeroCard)
+      ? ['Salary is below the required amount']
+      : [];
+  }, [resultHeroCard, eligibilityDetails]);
   // The real outbound click to the bank's apply page — the conversion. Shared
   // by the result-sheet CTA and the skip-the-sheet repeat-apply path.
   const applyOutbound = useCallback(
     (card: CardModel) => {
+      // No apply link → nothing would open. Don't log a conversion that
+      // never happened (it inflated card_apply redirect:true).
+      if (!card.applyUrl?.trim()) return;
       shownEligibilityResultRef.current.add(card.id);
       analytics.track(Events.CARD_APPLY, {
         item_id: card.id,
@@ -1535,7 +1547,7 @@ export function HomeScreen() {
             <Footer
               theme="dark"
               headline={'Found the\nright card?'}
-              subtext="Apply now and get cash back"
+              subtext="Apply now and earn cashback."
             />
           </View>
         }
@@ -2154,7 +2166,7 @@ export function HomeScreen() {
             const card = applyPendingCard;
             setApplyPendingCard(null);
             const outcome = resolveCardOutcome(
-              card.filterMeta?.cardAlias,
+              card,
               result.eligibleCardAliases,
               result.incomeValue
             );
@@ -2250,8 +2262,10 @@ export function HomeScreen() {
             pincode={eligibilityDisplay?.pincode}
             amount={eligibilityDisplay?.amount}
             occupation={eligibilityDisplay?.occupation}
+            infoText={maybeInfoText}
             onContinue={handleResultApply}
             onEditPress={handleResultEdit}
+            onCardPress={handleResultCardPress}
           />
         </BottomSheetScrollView>
       </GorhomBottomSheetModal>
@@ -2277,8 +2291,10 @@ export function HomeScreen() {
             pincode={eligibilityDisplay?.pincode}
             amount={eligibilityDisplay?.amount}
             occupation={eligibilityDisplay?.occupation}
+            reasons={ineligibleReasons}
             onContinue={handleResultApply}
             onEditPress={handleResultEdit}
+            onCardPress={handleResultCardPress}
           />
         </BottomSheetScrollView>
       </GorhomBottomSheetModal>

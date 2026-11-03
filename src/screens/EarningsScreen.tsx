@@ -65,6 +65,13 @@ type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>
 >;
 
+// True when a display amount ("₹0", "₹1,234.50") is zero / missing. The
+// earnings mapper exposes pending / paid as display strings only.
+function moneyIsZero(v?: string): boolean {
+  const n = Number(String(v ?? '').replace(/[^\d.]/g, ''));
+  return !isFinite(n) || n === 0;
+}
+
 export function EarningsScreen() {
   const navigation = useNavigation<Nav>();
   // Live earnings for the signed-in user. While the first fetch is in
@@ -102,6 +109,9 @@ export function EarningsScreen() {
   //   • Withdraw with ₹0 confirmed → "Cashback Not Confirmed"
   //   • Pending row "Know Why?"     → "Earning Status"
   const cashbackNotConfirmedRef = useRef<CashbackNotConfirmedSheetRef>(null);
+  // Day-0 variant of the same sheet (Figma 2898:164825) — "No Cashback
+  // Yet!" for a user with nothing confirmed, pending, rewarded or paid.
+  const noCashbackRef = useRef<CashbackNotConfirmedSheetRef>(null);
   const earningStatusRef = useRef<EarningStatusSheetRef>(null);
   // Paid row's "View" opens the same Earning-Status sheet in its 'paid'
   // variant (Cashback Paid), rather than navigating to payment history.
@@ -127,8 +137,13 @@ export function EarningsScreen() {
       // time. Explain instead of starting another.
       paymentProcessingRef.current?.present();
     } else if (!hasBalance) {
-      // Nothing confirmed to withdraw yet — explain the pending balance.
-      cashbackNotConfirmedRef.current?.present();
+      // Nothing withdrawable. A user who has never earned anything (no
+      // pending, no paid either) gets "No Cashback Yet!"; otherwise explain
+      // the pending balance.
+      const neverEarned =
+        moneyIsZero(earnings?.pending) && moneyIsZero(earnings?.paid);
+      if (neverEarned) noCashbackRef.current?.present();
+      else cashbackNotConfirmedRef.current?.present();
     } else {
       navigation.navigate('WithdrawStack');
     }
@@ -278,7 +293,7 @@ export function EarningsScreen() {
                 type="menu-option"
                 icon="headset-outline"
                 title="Get Help"
-                onPress={() => undefined}
+                onPress={() => navigation.navigate('GetHelp')}
               />
             </View>
           </View>
@@ -307,6 +322,7 @@ export function EarningsScreen() {
         ref={cashbackNotConfirmedRef}
         pendingAmount={earnings?.pending ?? '₹0.0'}
       />
+      <CashbackNotConfirmedSheet ref={noCashbackRef} variant="no-cashback" />
       <EarningStatusSheet
         ref={earningStatusRef}
         amount={earnings?.pending ?? '₹0.0'}

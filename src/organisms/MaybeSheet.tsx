@@ -33,7 +33,7 @@ export interface MaybeSheetProps {
    *  "Explore 26 Cards". */
   exploreLead?: string;
   /** Trailing copy in the same line, rendered Regular; default
-   *  "that you are eligible for you!". */
+   *  "that you are eligible for!". */
   exploreTail?: string;
 
   // 'maybe' masthead pass-through props
@@ -46,13 +46,17 @@ export interface MaybeSheetProps {
   onContinue?: () => void;
   onEditPress?: () => void;
 
+  /** Tap on a carousel card (by card id) — lets the user jump to an
+   *  alternative card instead of hitting a dead end. */
+  onCardPress?: (id: string) => void;
+
   style?: StyleProp<ViewStyle>;
 }
 
 export function MaybeSheet({
   cards,
   exploreLead = 'Explore 26 Cards',
-  exploreTail = ' that you are eligible for you!',
+  exploreTail = ' that you are eligible for!',
   message,
   infoText,
   pincode,
@@ -61,6 +65,7 @@ export function MaybeSheet({
   ctaLabel,
   onContinue,
   onEditPress,
+  onCardPress,
   style,
 }: MaybeSheetProps) {
   return (
@@ -123,7 +128,7 @@ export function MaybeSheet({
       {/* 3. Card carousel — REUSED (Carousels organism, card-carousel
           variant). Auto-scrolls slowly L→R; user touch pauses the loop
           and a short delay later it resumes. */}
-      <CardCarousel cards={cards} autoScroll />
+      <CardCarousel cards={cards} autoScroll onCardPress={onCardPress ? (c) => onCardPress(c.id) : undefined} />
     </View>
   );
 }

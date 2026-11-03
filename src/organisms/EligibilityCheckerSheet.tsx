@@ -89,11 +89,10 @@ export interface EligibilityCheckerResult {
   /** Parsed numeric value, e.g. 120000. NaN if the input can't be parsed. */
   incomeValue: number;
   incomeType: IncomeType;
-  /** True when the user is eligible for at least one card (from the API;
-   *  falls back to the income threshold if the API call fails). */
+  /** True when the API says the user is eligible for at least one card.
+   *  Not called at all when the API call fails (an error banner shows). */
   isEligible: boolean;
-  /** Number of cards the user is eligible for (0 when the API call failed
-   *  and we fell back to the threshold). */
+  /** Number of cards the user is eligible for (from the API). */
   eligibleCount: number;
   /** card_alias of each eligible card — used to filter the Home list. */
   eligibleCardAliases: string[];
@@ -259,6 +258,8 @@ export const EligibilityCheckerSheet = forwardRef<
   // 4439:291874).
   const [verdict, setVerdict] = useState<EligibilityVerdict | null>(null);
   const [pinError, setPinError] = useState(false);
+  // API failure → explicit error banner. Never guess a verdict from income.
+  const [checkFailed, setCheckFailed] = useState(false);
 
   // Show the "Clear" CTA only when the sheet opened with SAVED details
   // (i.e. a check was committed in an earlier session and the caller
@@ -267,17 +268,18 @@ export const EligibilityCheckerSheet = forwardRef<
   // types — and only appears on a later reopen.
   const showClear = !!onClear && (defaultPincode.length > 0 || defaultIncome.length > 0);
 
-  // eligibleCount + parsed income → one of the three result states. Demo
-  // logic: any qualifying card OR income at/above the threshold → eligible;
-  // at least half the threshold → maybe; below that → ineligible.
+  // Aggregate verdict for this sheet's inline banner. The API is the source
+  // of truth: any qualifying card → eligible. Zero qualifying cards → a
+  // near-miss on income (within 20% of the bar) reads "maybe", otherwise
+  // ineligible. Income alone never turns an API "no" into "eligible".
   const decideVerdict = (
     eligibleCount: number,
     incomeValue: number
   ): EligibilityVerdict => {
-    if (eligibleCount > 0 || (Number.isFinite(incomeValue) && incomeValue >= threshold)) {
-      return 'eligible';
+    if (eligibleCount > 0) return 'eligible';
+    if (Number.isFinite(incomeValue) && incomeValue >= 0.8 * threshold && incomeValue < threshold) {
+      return 'maybe';
     }
-    if (Number.isFinite(incomeValue) && incomeValue >= threshold / 2) return 'maybe';
     return 'ineligible';
   };
 
@@ -301,6 +303,7 @@ export const EligibilityCheckerSheet = forwardRef<
         incomeMonthly: incomeValue,
         selfEmployed: incomeType === 'self-employed',
       });
+      setCheckFailed(false);
       // Inline banner only when the caller isn't routing to a result sheet.
       if (!routeResultExternally) setVerdict(decideVerdict(eligibleCount, incomeValue));
       onCheck?.({
@@ -313,18 +316,11 @@ export const EligibilityCheckerSheet = forwardRef<
         eligibleCardAliases: eligibleAliases,
       });
     } catch {
-      // Network/API failure — fall back to the income threshold so the
-      // flow never dead-ends during a demo.
-      if (!routeResultExternally) setVerdict(decideVerdict(0, incomeValue));
-      onCheck?.({
-        pincode,
-        incomeRaw: income,
-        incomeValue,
-        incomeType,
-        isEligible: Number.isFinite(incomeValue) && incomeValue >= threshold,
-        eligibleCount: 0,
-        eligibleCardAliases: [],
-      });
+      // Network/API failure — show an error and let the user retry. Do not
+      // commit a guessed result (that told users "eligible" when the bank
+      // would reject them).
+      setVerdict(null);
+      setCheckFailed(true);
     } finally {
       setIsChecking(false);
     }
@@ -406,6 +402,7 @@ export const EligibilityCheckerSheet = forwardRef<
       onDismiss={() => {
         setVerdict(null);
         setPinError(false);
+        setCheckFailed(false);
         onDismiss?.();
       }}
       footerComponent={renderFooter}
@@ -437,6 +434,15 @@ export const EligibilityCheckerSheet = forwardRef<
 
         {/* Result banner — eligible / maybe / ineligible (Figma 4439:291874).
             REUSES the InlineMessage molecule (baked desc-* icons + DS tones). */}
+        {checkFailed ? (
+          <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16] }}>
+            <InlineMessage
+              tone="error"
+              icon="desc-cross"
+              message="We couldn't check your eligibility right now. Please try again."
+            />
+          </View>
+        ) : null}
         {verdict ? (
           <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16] }}>
             {verdict === 'eligible' ? (

@@ -36,7 +36,7 @@ import {
 import LottieView from 'lottie-react-native';
 import type { LottieViewProps } from 'lottie-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BottomSheetModal,
@@ -549,7 +549,25 @@ export function OnboardingScreen() {
 
   // Reset to the phone stage whenever the sheet closes, so the next
   // present() starts clean.
+  // Legal links (Privacy Policy) push a stack screen, but the login sheet is
+  // a portal that would stay on top of it. Close the sheet first, keep the
+  // typed number, and re-open the sheet when the user comes back.
+  const openingLegalRef = useRef(false);
+  const openPrivacyPolicy = useCallback(() => {
+    openingLegalRef.current = true;
+    loginSheetRef.current?.dismiss();
+    navigation.navigate('PrivacyPolicy');
+  }, [navigation]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!openingLegalRef.current) return;
+      openingLegalRef.current = false;
+      loginSheetRef.current?.present();
+    }, [])
+  );
+
   const handleSheetDismiss = useCallback(() => {
+    if (openingLegalRef.current) return; // temporary close for a legal page
     setStage('phone');
     setOtp('');
     setOtpGuid(undefined);
@@ -922,6 +940,8 @@ export function OnboardingScreen() {
                   <Text
                     variant="body12Medium"
                     color={colors.text.link}
+                    accessibilityRole="link"
+                    onPress={openPrivacyPolicy}
                   >
                     Privacy Policy
                   </Text>

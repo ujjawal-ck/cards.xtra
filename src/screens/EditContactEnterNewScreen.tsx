@@ -25,7 +25,7 @@ import { Text, Input } from '../atoms';
 import { Header, FooterButtons } from '../organisms';
 import { colors, spacing } from '../tokens';
 import { analytics, Events } from '../analytics';
-import { FIELD_COPY, isValidContact } from './editContact';
+import { FIELD_COPY, isValidContact, shouldShowContactError } from './editContact';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EditContactEnterNew'>;
@@ -38,7 +38,11 @@ export function EditContactEnterNewScreen() {
   const copy = FIELD_COPY[field];
 
   const [value, setValue] = useState('');
+  const [blurred, setBlurred] = useState(false);
   const isValid = isValidContact(field, value);
+  // Inline error (Figma 4448:23879 / 3396:25096) — shown after blur or a
+  // full-length entry, never while the user is still mid-way through typing.
+  const showError = shouldShowContactError(field, value, blurred);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -68,7 +72,15 @@ export function EditContactEnterNewScreen() {
               <Input
                 label={copy.inputLabel}
                 value={value}
-                onChangeText={setValue}
+                onChangeText={(t) => {
+                  setValue(t);
+                  // Re-arm the blur trigger so the error doesn't nag while
+                  // the user is correcting the entry.
+                  if (blurred) setBlurred(false);
+                }}
+                onBlur={() => setBlurred(true)}
+                state={showError ? 'error' : undefined}
+                hint={showError ? copy.invalidMessage : undefined}
                 autoFocus
                 keyboardType={field === 'email' ? 'email-address' : 'phone-pad'}
                 autoCapitalize="none"

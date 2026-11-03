@@ -140,7 +140,10 @@ export function ProfileScreen() {
                 type="menu-option"
                 icon="wallet-outline"
                 title="Withdraw Cashback"
-                onPress={onMenu('withdraw', () => navigation.navigate('WithdrawStack'))}
+                // Routes to the Earnings tab rather than straight into
+                // WithdrawStack, so the Withdraw button's gates (payout in
+                // process, ₹0 / no-cashback sheets) and withdraw_start apply.
+                onPress={onMenu('withdraw', () => navigation.navigate('Earnings'))}
               />
               <Divider style="solid" />
               <ListRow

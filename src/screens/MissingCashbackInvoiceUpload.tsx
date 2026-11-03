@@ -4,8 +4,11 @@
  *
  * NOT a standalone Figma frame (the attachment uploader lives only inside the
  * feedback form), so built on-brand from the component library + tokens; the
- * allowed-types/size caption matches the Figma uploader spec
- * (.jpg/.png/.jpeg/.pdf/.bmp, 2MB). Picks images via expo-image-picker.
+ * Figma uploader spec lists .jpg/.png/.jpeg/.pdf/.bmp at 2MB, but this
+ * screen picks from the photo library only (expo-image-picker, images), so
+ * the caption advertises images only. Each picked asset is checked against
+ * the 2MB cap via `asset.fileSize` when the platform reports it; oversized
+ * files are dropped with an inline error.
  *
  * On submit: raiseTicket(exitDate, storeId, exitId, ticketData, files) →
  * MissingCashbackTicketSuccess. Hydrates a missing exit_id from the queue item
@@ -36,6 +39,10 @@ type Rt = RouteProp<RootStackParamList, 'MissingCashbackInvoiceUpload'>;
 
 const THUMB = 84;
 
+/** Upload cap per invoice file (2MB — Figma uploader spec). A byte limit,
+ *  not a design value, so it lives here rather than in tokens. */
+const MAX_INVOICE_BYTES = 2 * 1024 * 1024;
+
 function PlusGlyph({ color }: { color: string }) {
   return (
     <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -65,13 +72,26 @@ export function MissingCashbackInvoiceUpload() {
       quality: 0.7,
     });
     if (res.canceled) return;
-    const picked: McTicketFile[] = res.assets.map((a, i) => ({
-      uri: a.uri,
-      name: a.fileName || `invoice_${Date.now()}_${i}.jpg`,
-      type: a.mimeType || 'image/jpeg',
-    }));
+    // 2MB cap. `fileSize` is optional in expo-image-picker (not every
+    // platform reports it); when absent the file can't be checked here.
+    const tooBig = res.assets.filter(
+      (a) => a.fileSize != null && a.fileSize > MAX_INVOICE_BYTES,
+    );
+    const picked: McTicketFile[] = res.assets
+      .filter((a) => !(a.fileSize != null && a.fileSize > MAX_INVOICE_BYTES))
+      .map((a, i) => ({
+        uri: a.uri,
+        name: a.fileName || `invoice_${Date.now()}_${i}.jpg`,
+        type: a.mimeType || 'image/jpeg',
+      }));
     setFiles((prev) => [...prev, ...picked]);
-    setError(null);
+    setError(
+      tooBig.length === 0
+        ? null
+        : tooBig.length === 1
+          ? 'This image is larger than 2MB. Please choose a smaller one.'
+          : `${tooBig.length} images are larger than 2MB and were not added.`,
+    );
   };
 
   const removeAt = (idx: number) => setFiles((prev) => prev.filter((_, i) => i !== idx));
@@ -171,7 +191,7 @@ export function MissingCashbackInvoiceUpload() {
                 Add screenshot
               </Text>
               <Text variant="body12Regular" color={colors.text.secondary}>
-                Allowed: .jpg, .png, .jpeg, .pdf, .bmp · Max 2MB
+                Allowed: images (.jpg, .jpeg, .png) · Max 2MB
               </Text>
             </Pressable>
 

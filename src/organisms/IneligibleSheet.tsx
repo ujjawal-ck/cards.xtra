@@ -11,7 +11,7 @@
  *   - <CardCarousel ... />                           (Carousels organism)
  *
  * Body content between the masthead and carousel mirrors MaybeSheet:
- *   - Or-divider + "Explore N Cards that you are eligible for you!" line.
+ *   - Or-divider + "Explore N Cards that you are eligible for!" line.
  *
  * Hex → token: every value sourced from src/tokens.
  */
@@ -30,7 +30,7 @@ export interface IneligibleSheetProps {
    *  "Explore 26 Cards". */
   exploreLead?: string;
   /** Trailing copy in the same line, rendered Regular; default
-   *  "that you are eligible for you!". */
+   *  "that you are eligible for!". */
   exploreTail?: string;
 
   // 'ineligible' masthead pass-through props
@@ -44,13 +44,17 @@ export interface IneligibleSheetProps {
   onContinue?: () => void;
   onEditPress?: () => void;
 
+  /** Tap on a carousel card (by card id) — lets the user jump to an
+   *  alternative card instead of hitting a dead end. */
+  onCardPress?: (id: string) => void;
+
   style?: StyleProp<ViewStyle>;
 }
 
 export function IneligibleSheet({
   cards,
   exploreLead = 'Explore 26 Cards',
-  exploreTail = ' that you are eligible for you!',
+  exploreTail = ' that you are eligible for!',
   message,
   reasons,
   pincode,
@@ -59,6 +63,7 @@ export function IneligibleSheet({
   ctaLabel,
   onContinue,
   onEditPress,
+  onCardPress,
   style,
 }: IneligibleSheetProps) {
   return (
@@ -108,7 +113,7 @@ export function IneligibleSheet({
 
       {/* 3. Card carousel — REUSED (Carousels organism, card-carousel
           variant). Auto-scrolls slowly L→R; user touch pauses the loop. */}
-      <CardCarousel cards={cards} autoScroll />
+      <CardCarousel cards={cards} autoScroll onCardPress={onCardPress ? (c) => onCardPress(c.id) : undefined} />
     </View>
   );
 }

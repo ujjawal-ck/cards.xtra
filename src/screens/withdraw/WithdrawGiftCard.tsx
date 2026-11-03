@@ -26,20 +26,14 @@ import { Header, Masthead } from '../../organisms';
 import { colors, spacing } from '../../tokens';
 import type {
   WithdrawStackParamList,
-  WithdrawGiftCardVariant,
 } from '../../navigation/types';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 import { MethodCard, type MethodRowItem } from './methodRow';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawGiftCard'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawGiftCard'>;
 
-const SUBTITLE: Record<WithdrawGiftCardVariant, string> = {
-  cashback: 'Cashback Available For Payment',
-  rewards: 'Withdrawing Available Rewards',
-  combined: 'Withdrawing Total Amount (Cashback + Rewards)',
-};
 
 export function WithdrawGiftCard() {
   const navigation = useNavigation<Nav>();
@@ -91,7 +85,7 @@ export function WithdrawGiftCard() {
           <Masthead
             variant="payment"
             amount={formatRupees(amount)}
-            subtitle={SUBTITLE[variant]}
+            subtitle={withdrawSubtitle(variant)}
           />
 
           {/* "Choose Your Payment Method" + method card */}

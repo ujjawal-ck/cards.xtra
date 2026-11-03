@@ -219,7 +219,7 @@ export function mapExitMeta(res: { meta?: McExitMeta }): McExitMeta {
 
 // ── claims → HelpTicketCard view-models ─────────────────────────────────────
 
-export type ClaimCardStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review';
+export type ClaimCardStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review' | 'rejected';
 
 export interface ClaimCard {
   queueId: string;
@@ -245,6 +245,11 @@ export interface ClaimCard {
   expectByDate?: string;
   /** CTA label for need-details/tracked cards. */
   ctaLabel?: string;
+  /** Secondary line under the title (rejected: "Check your email…"). */
+  subtitle?: string;
+  /** Rejected cards only — the claim's `comments` text, rendered as
+   *  "Rejection Reason: …" (Figma 4129:26811). Absent when the API sends none. */
+  rejectionReason?: string;
 }
 
 export const STATUS_TAB_TO_API: Record<'In Review' | 'Closed' | 'Others', 'Pending' | 'Resolved' | 'Rejected'> = {
@@ -321,10 +326,21 @@ function remainingHHMM(target: number | null, now: number): string | undefined {
  * Map one claim to a HelpTicketCard model. `now` is passed in (don't call
  * Date.now() at module scope) so the same render is deterministic.
  */
-export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
+export function mapClaimToCard(
+  c: McClaim,
+  now: number,
+  /** Set when the claim came from the `filter[status]=Rejected` bucket, so it
+   *  is treated as rejected even if its own `status` string says otherwise. */
+  opts?: { fromRejectedBucket?: boolean },
+): ClaimCard {
   const a = c.attributes;
   const group = a.groupid || '';
-  const tracked = !!a.cashback_id || (a.status || '').toLowerCase() === 'resolved';
+  // Rejected is checked FIRST: a rejected claim must never read as tracked.
+  const rejected = !!opts?.fromRejectedBucket || /reject/i.test(a.status || '');
+  // NOTE: the queue API has no field separating "tracked" from "not eligible"
+  // within the Resolved bucket, so Resolved still maps to tracked here (see
+  // GAP_AUDIT 4129:26831 — blocked on an API field).
+  const tracked = !rejected && (!!a.cashback_id || (a.status || '').toLowerCase() === 'resolved');
   const needDetails = needsAdditionalDetails(c, now);
 
   let status: ClaimCardStatus;
@@ -333,8 +349,17 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
   let timer: string | undefined;
   let ticketId: string | undefined;
   let expectByDate: string | undefined;
+  let subtitle: string | undefined;
+  let rejectionReason: string | undefined;
 
-  if (isTicketClaim(c)) {
+  if (rejected) {
+    // Figma 4129:26811 — informational, no CTA.
+    status = 'rejected';
+    title = 'We are sorry, your missing ticket has been rejected.';
+    subtitle = 'Check your email for more details';
+    // `comments` is the only free-text reviewer field on a queue claim.
+    rejectionReason = (a.comments || '').trim() || undefined;
+  } else if (isTicketClaim(c)) {
     // A raised ticket still under review — informational card, no CTA.
     status = 'under-review';
     title = 'Your missing ticket is currently under review.';
@@ -375,6 +400,8 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
     ticketId,
     expectByDate,
     ctaLabel,
+    subtitle,
+    rejectionReason,
   };
 }
 
@@ -489,4 +516,15 @@ export function mapOthersClaim(c: McClaim): OthersClaimCard {
 /** The "Others" tab lists raised tickets (those with a Ticket ID) as flat rows. */
 export function mapOthersClaims(res: { data?: McClaim[] }): OthersClaimCard[] {
   return (res.data || []).filter(isTicketClaim).map(mapOthersClaim);
+}
+
+/**
+ * Rejected-bucket claims WITHOUT a ticket id. They used to be dropped by the
+ * ticket filter above and appeared in no tab; they now render in "Others" as
+ * 'rejected' HelpTicketCards (Figma 4129:26811).
+ */
+export function mapRejectedClaims(res: { data?: McClaim[] }, now: number): ClaimCard[] {
+  return (res.data || [])
+    .filter((c) => !isTicketClaim(c))
+    .map((c) => mapClaimToCard(c, now, { fromRejectedBucket: true }));
 }

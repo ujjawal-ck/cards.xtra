@@ -35,6 +35,7 @@ import type {
 import { formatRupees, formatRupeesDecimal } from './amount';
 import type { WithdrawMethod } from '../../navigation/types';
 import { play } from '../../lib/haptics';
+import { analytics, Events } from '../../analytics';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawSuccess'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawSuccess'>;
@@ -119,6 +120,13 @@ export function WithdrawSuccess() {
   // Celebrate the completed withdrawal once, on mount.
   useEffect(() => {
     play('success');
+    // Success screen reached — fired once on mount. Same method / amount
+    // props as withdraw_submit (payment_type isn't a route param here).
+    analytics.track(Events.WITHDRAW_SUCCESS, {
+      method: params.method,
+      amount: params.amount,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Exit the whole withdraw stack back to the Home tab.

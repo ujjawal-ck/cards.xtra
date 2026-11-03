@@ -25,7 +25,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
@@ -90,7 +90,7 @@ export function WithdrawEnterUPI() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>

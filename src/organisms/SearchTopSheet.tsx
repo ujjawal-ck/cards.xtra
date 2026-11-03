@@ -60,11 +60,45 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Chip } from '../atoms';
+import { Image } from 'expo-image';
+import { Chip, Text } from '../atoms';
+import { images } from '../assets/images';
 import type { IconName } from '../atoms';
 import { SearchBar, SearchResults } from '../molecules';
 import type { SearchResultSection } from '../molecules';
-import { colors, spacing, radius, opacity } from '../tokens';
+import { colors, spacing, radius, opacity, sizing } from '../tokens';
+
+// ----------------------------------------------------------------------------
+// SearchNoResults — zero-match state (Figma 4367:243584)
+// ----------------------------------------------------------------------------
+function SearchNoResults() {
+  return (
+    <View
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel="No matching results. Try adjusting your filters or search terms."
+      style={{
+        alignItems: 'center',
+        gap: spacing[8],
+        paddingVertical: spacing[16],
+        paddingHorizontal: spacing[16],
+      }}
+    >
+      <Image
+        source={images.screenstate.noResults}
+        style={{ width: sizing.searchEmptyIllustration, height: sizing.searchEmptyIllustration }}
+        contentFit="contain"
+        accessibilityIgnoresInvertColors
+      />
+      <Text variant="heading18SemiBold" color={colors.text.primary} align="center">
+        No matching results
+      </Text>
+      <Text variant="body14Regular" color={colors.text.secondary} align="center">
+        Try adjusting your filters or search terms.
+      </Text>
+    </View>
+  );
+}
 
 // ----------------------------------------------------------------------------
 // Types
@@ -311,6 +345,10 @@ export function SearchTopSheet({
                    Figma 1985:36934. Once the user types, the results
                    above take over and these hide. */
                 <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+              ) : value?.trim() ? (
+                /* Typed query with zero matches → Figma "Cards search / No
+                   result" (4367:243584). Was a blank panel. */
+                <SearchNoResults />
               ) : null}
             </>
           ) : (

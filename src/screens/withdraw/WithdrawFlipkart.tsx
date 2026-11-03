@@ -22,7 +22,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
@@ -62,6 +62,15 @@ export function WithdrawFlipkart() {
   const [sending, setSending] = useState(false);
 
   const valid = EMAIL_RE.test(email.trim()) && email.trim() === confirm.trim();
+  // Inline errors (Figma 3283:51858 / 3283:52088), mirroring WithdrawAmazon:
+  //   • "Invalid Email ID" on the first field once the user has left it.
+  //   • "Emails don't match…" on Confirm as soon as what's typed diverges.
+  const [emailTouched, setEmailTouched] = useState(false);
+  const emailInvalid =
+    emailTouched && email.trim().length > 0 && !EMAIL_RE.test(email.trim());
+  const confirmMismatch =
+    confirm.trim().length > 0 &&
+    confirm.trim() !== email.trim().slice(0, confirm.trim().length);
 
   const handleGetPaid = async () => {
     if (!accessToken || sending) return;
@@ -101,7 +110,7 @@ export function WithdrawFlipkart() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>
@@ -119,10 +128,13 @@ export function WithdrawFlipkart() {
                 size="sm"
                 value={email}
                 onChangeText={setEmail}
+                onBlur={() => setEmailTouched(true)}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 returnKeyType="next"
+                state={emailInvalid ? 'error' : undefined}
+                hint={emailInvalid ? 'Invalid Email ID' : undefined}
               />
               <Input
                 label="Confirm Email"
@@ -133,6 +145,12 @@ export function WithdrawFlipkart() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 returnKeyType="done"
+                state={confirmMismatch ? 'error' : undefined}
+                hint={
+                  confirmMismatch
+                    ? 'Emails don’t match. Please re-enter email'
+                    : undefined
+                }
               />
               <NoteBox>
                 The Gift Card will be sent to above email within 5 minutes. In

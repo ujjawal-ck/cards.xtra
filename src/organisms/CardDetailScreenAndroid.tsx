@@ -424,7 +424,7 @@ function CardPageAndroid({
           <Footer
             theme="dark"
             headline={'Found the\nright card?'}
-            subtext="Apply now and get cash back"
+            subtext="Apply now and earn cashback."
           />
         </View>
       </View>
@@ -912,7 +912,7 @@ export const CardDetailScreenAndroid = forwardRef<
       if (eligibilityDefaults) {
         setEligibilityResult(
           resolveCardOutcome(
-            card?.filterMeta?.cardAlias,
+            card,
             eligibleAliases,
             parseIncome(eligibilityDefaults.income)
           )
@@ -924,7 +924,6 @@ export const CardDetailScreenAndroid = forwardRef<
       card?.id,
       eligibilityDefaults,
       eligibleAliases,
-      card?.filterMeta?.cardAlias,
     ]);
 
     const handleEligibilityChecked = useCallback(
@@ -935,7 +934,7 @@ export const CardDetailScreenAndroid = forwardRef<
         eligibleCardAliases: string[];
       }) => {
         const outcome = resolveCardOutcome(
-          card?.filterMeta?.cardAlias,
+          card,
           o.eligibleCardAliases,
           parseIncome(o.income)
         );
@@ -946,7 +945,7 @@ export const CardDetailScreenAndroid = forwardRef<
         }
         onEligibilityChecked?.(o);
       },
-      [card?.filterMeta?.cardAlias, onEligibilityChecked, onShowResultSheet]
+      [card, onEligibilityChecked, onShowResultSheet]
     );
 
     const handleClose = useCallback(() => {

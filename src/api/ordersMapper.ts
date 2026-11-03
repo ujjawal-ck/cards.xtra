@@ -327,11 +327,12 @@ function buildSteps(statusKey: OrderStatusKey, a: Record<string, unknown>): Time
         { iconName: 'desc-cross', title: 'Cashback cancelled', date: longDate(a.cancelled_date) || expDate, fill: 'solid', tone: 'error' },
       ];
     case 'delayed':
-      // Timeline has no orange tone; warning (amber) is the closest available.
+      // Figma 3919:40017 paints the delayed step orange → Timeline 'brand'
+      // (saffron) tone, matching the demo STATUS_CONFIG path in OrdersDetail.
       return [
         placed,
         tracked,
-        { iconName: 'clock-filled', title: 'Confirmation delayed', date: expDate, fill: 'solid', tone: 'warning' },
+        { iconName: 'clock-filled', title: 'Confirmation delayed', date: expDate, fill: 'solid', tone: 'brand' },
       ];
     default: // pending / requested
       return [

@@ -42,7 +42,7 @@ import {
   submitFlipkartPayment,
 } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
@@ -177,7 +177,7 @@ export function WithdrawVerifyOTP() {
           <Masthead
             variant="payment"
             amount={formatRupees(draft.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(draft.paymentType)}
           />
 
           <View style={{ gap: spacing[24] }}>

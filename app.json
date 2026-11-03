@@ -40,6 +40,12 @@
       "expo-font",
       "expo-secure-store",
       "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Cards.xtra to access your photos so you can upload an order invoice."
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/analytics",
       [

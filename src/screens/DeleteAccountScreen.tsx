@@ -13,8 +13,10 @@
  *      (body14Regular / text.secondary), scrollable.
  *   5. Sticky footer: "I agree to the terms & conditions" checkbox row
  *      + action row [ outline "Delete Account" | solid "Keep My Account" ].
- *      The destructive "Delete Account" is disabled until the box is
- *      checked; "Keep My Account" simply returns.
+ *      "Delete Account" stays tappable (Figma 3919:38344): tapping it
+ *      while the box is unchecked shows the red "Please checkmark the box
+ *      first." line above the checkbox instead of advancing.
+ *      "Keep My Account" simply returns.
  *
  * Built inline (not via the FooterButtons organism) because the
  * destructive secondary button must be gated on the checkbox, which
@@ -70,6 +72,9 @@ const TNC_PARAGRAPHS = [
 export function DeleteAccountScreen() {
   const navigation = useNavigation<Nav>();
   const [agreed, setAgreed] = useState(false);
+  // Set when "Delete Account" is tapped with the box unchecked; cleared as
+  // soon as the box is ticked (Figma 3919:38344 checkbox-error state).
+  const [showConsentError, setShowConsentError] = useState(false);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -132,7 +137,11 @@ export function DeleteAccountScreen() {
         <View style={[{ backgroundColor: colors.surface.default }, elevation.light.up]}>
           <TermsAndConditions
             checked={agreed}
-            onChange={setAgreed}
+            onChange={(next) => {
+              setAgreed(next);
+              if (next) setShowConsentError(false);
+            }}
+            state={showConsentError ? 'error' : 'default'}
             label="I agree to the terms & conditions"
             placement="sticky"
             body="1-line"
@@ -151,8 +160,11 @@ export function DeleteAccountScreen() {
               variant="outline"
               tone="second"
               size={44}
-              disabled={!agreed}
               onPress={() => {
+                if (!agreed) {
+                  setShowConsentError(true);
+                  return;
+                }
                 analytics.track(Events.ACCOUNT_DELETE_START);
                 navigation.navigate('DeleteAccountOtp');
               }}
