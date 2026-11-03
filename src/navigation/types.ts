@@ -34,12 +34,9 @@ export type RootStackParamList = {
   /** Lottie splash that plays once on app launch, then replaces itself
    *  with Login (replace, not navigate — user can't swipe back to it). */
   Splash: undefined;
-  // TEMPORARY: foundation verification screen. Remove this route and
-  // set initialRouteName back to 'Login' once foundations are signed off.
+  // Design-token verification screen. Registered in dev builds only.
   FoundationCheck: undefined;
   Onboarding: undefined;
-  Login: undefined;
-  Otp: { phone?: string; otpGuid?: string } | undefined;
   /** Post-OTP name capture for a fresh signup ("what should we call you?").
    *  No params — the entered name is stored via AuthContext and passed forward
    *  to Greeting. Cross-fades in from the OTP step; cross-fades to Greeting. */

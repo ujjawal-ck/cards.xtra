@@ -1,12 +1,9 @@
 /**
  * RootNavigator — top-level native stack.
- *   FoundationCheck (TEMPORARY) -> Splash -> Login -> Otp -> MainTabs
+ *   Splash -> Onboarding (login/OTP bottom sheet) -> MainTabs
  *
- * FoundationCheck stays as the initial route during the design-token
- * verification phase. A "Play Splash" CTA inside FoundationCheck
- * navigates to the Splash screen, which then replaces itself with
- * Login on onAnimationFinish / its 7-s safety timeout (so you can't
- * swipe back to the splash from Login).
+ * FoundationCheck (design-token verification screen) is registered in
+ * development builds only, so it can never ship to users.
  *
  * Headers are off everywhere: the four-screen flow uses custom branded
  * headers / hero sections per the Figma spec.
@@ -20,8 +17,6 @@ import type { RootStackParamList } from './types';
 import { SplashScreen } from '../screens/SplashScreen';
 import { FoundationCheck } from '../screens/FoundationCheck';
 import { OnboardingScreen } from '../screens/OnboardingScreen';
-import { LoginScreen } from '../screens/LoginScreen';
-import { OtpScreen } from '../screens/OtpScreen';
 import { NameInputScreen } from '../screens/NameInputScreen';
 import { GreetingScreen } from '../screens/GreetingScreen';
 import { WithdrawStack } from './WithdrawStack';
@@ -73,8 +68,6 @@ const NO_ENTRANCE = new Set<string>([
   'Splash',
   'FoundationCheck',
   'Onboarding',
-  'Login',
-  'Otp',
   // The post-OTP name/greeting handoff owns its own entrance + cross-fades.
   'NameInput',
   'Greeting',
@@ -121,10 +114,8 @@ export function RootNavigator() {
         // sideways slide breaking the cinematic moment.
         options={{ animation: 'fade' }}
       />
-      <Stack.Screen name="FoundationCheck" component={FoundationCheck} />
+      {__DEV__ ? <Stack.Screen name="FoundationCheck" component={FoundationCheck} /> : null}
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Otp" component={OtpScreen} />
       <Stack.Screen
         name="NameInput"
         component={NameInputScreen}
