@@ -43,6 +43,8 @@ export interface HttpEvent {
   durationMs: number;
   attempt: number;
   error?: ApiError;
+  /** True when this failed attempt will be retried (so it isn't the final outcome). */
+  willRetry?: boolean;
 }
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
@@ -206,8 +208,17 @@ export async function httpRequest<T = unknown>(
       return res.data as T;
     } catch (e) {
       const err = e as ApiError;
-      observer?.({ requestId: id, method, endpoint, status: err.status, durationMs: Date.now() - started, attempt, error: err });
       const canRetry = attempt <= maxRetries && err.isTransient && err.kind !== 'aborted';
+      observer?.({
+        requestId: id,
+        method,
+        endpoint,
+        status: err.status,
+        durationMs: Date.now() - started,
+        attempt,
+        error: err,
+        willRetry: canRetry,
+      });
       if (!canRetry) throw err;
       await __testing.sleep(backoffMs(attempt, (err as { retryAfter?: string | null }).retryAfter));
       if (signal?.aborted) throw err;

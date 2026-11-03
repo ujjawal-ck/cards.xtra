@@ -22,6 +22,10 @@
  */
 import { STAGE } from '../config/env';
 import { Events, type EventName, type EventParams, type ParamValue } from './events';
+import { redact, redactSecrets, SENSITIVE_KEY } from '../lib/redact';
+
+/** Params that hold user-typed text, where a phone number could slip in. */
+const FREE_TEXT_KEY = /(search_term|query|reason|message|error|note)/i;
 
 /** A sink is any analytics backend. Add GA/Firebase/Segment by implementing this. */
 export interface AnalyticsSink {
@@ -67,8 +71,11 @@ function buildParams(
   const out: Record<string, string | number | boolean> = { ...superProps };
   if (params) {
     for (const [rawKey, rawValue] of Object.entries(params)) {
-      const value = cleanValue(rawValue);
+      // Never ship personal data or secrets, whatever a call site passes.
+      if (SENSITIVE_KEY.test(rawKey)) continue;
+      let value = cleanValue(rawValue);
       if (value === undefined) continue;
+      if (typeof value === 'string') value = FREE_TEXT_KEY.test(rawKey) ? redact(value) : redactSecrets(value);
       out[sanitiseKey(rawKey)] = value;
     }
   }

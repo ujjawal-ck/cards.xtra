@@ -12,6 +12,7 @@
  */
 import crashlytics from '@react-native-firebase/crashlytics';
 import { analytics, type AnalyticsSink } from './analytics';
+import { redact, redactError } from '../lib/redact';
 
 const crashlyticsSink: AnalyticsSink = {
   track(name, params) {
@@ -25,6 +26,15 @@ const crashlyticsSink: AnalyticsSink = {
   },
 };
 
+/** Breadcrumb line (already free of PII; redacted again to be safe). */
+export function breadcrumb(line: string): void {
+  try {
+    crashlytics().log(redact(line));
+  } catch {
+    // ignore
+  }
+}
+
 /** Attach Crashlytics. Call once at startup (native builds only). */
 export function registerCrashlyticsSink(): void {
   analytics.registerSink(crashlyticsSink);
@@ -33,8 +43,9 @@ export function registerCrashlyticsSink(): void {
 /** Report a handled error (e.g. a failed API call we recovered from). */
 export function recordError(error: unknown, context?: string): void {
   try {
-    const err = error instanceof Error ? error : new Error(String(error));
-    if (context) crashlytics().log(context);
+    // Server messages can echo a mobile number or token: scrub before upload.
+    const err = redactError(error);
+    if (context) crashlytics().log(redact(context));
     crashlytics().recordError(err);
   } catch {
     // never let crash reporting crash the app

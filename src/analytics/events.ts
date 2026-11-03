@@ -43,6 +43,9 @@ export const Events = {
   // A click-out we refused to open (no URL, or signed-in user id not loaded).
   // Params: surface, reason ('no_url' | 'no_user_id'), item_id.
   CLICKOUT_BLOCKED: 'clickout_blocked',
+  // A network call failed for good (after retries). Params: endpoint_group,
+  // method, status, error_kind, error_code, attempt, duration_ms. No PII.
+  API_ERROR: 'api_error',
   SEARCH: 'search', // GA4 — param: search_term
   // A typed query returned zero cards. Params: query_length (never the text).
   SEARCH_NO_RESULTS: 'search_no_results',

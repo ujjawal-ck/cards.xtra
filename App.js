@@ -38,6 +38,8 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { analytics, Events } from './src/analytics';
 import { STAGE, PLATFORM, configProblems } from './src/config/env';
 import { initExperiments } from './src/experiments';
+import { setHttpObserver } from './src/api/http/client';
+import { createHttpMonitor } from './src/api/http/monitor';
 
 // Super-props ride on EVERY event — set once, before anything is tracked.
 analytics.setSuperProps({ platform: PLATFORM, stage: STAGE });
@@ -84,6 +86,30 @@ if (problems.length) {
       // crash reporting unavailable: the console warning above is enough
     }
   }
+}
+
+// Network monitor: one log line per API attempt in dev; in builds a
+// Crashlytics breadcrumb per call, plus a GA4 `api_error` and (for server or
+// network failures) a Crashlytics non-fatal when a call fails for good.
+// Endpoints are route templates and text is redacted: no tokens, OTPs or
+// mobile numbers leave the device.
+{
+  let crash = null;
+  if (Constants.executionEnvironment !== 'storeClient') {
+    try {
+      crash = require('./src/analytics/crashlyticsSink');
+    } catch {
+      crash = null;
+    }
+  }
+  setHttpObserver(
+    createHttpMonitor({
+      log: __DEV__ ? (line) => console.log(line) : undefined,
+      breadcrumb: crash ? crash.breadcrumb : undefined,
+      recordError: crash ? crash.recordError : undefined,
+      trackApiError: (params) => analytics.track(Events.API_ERROR, params),
+    }),
+  );
 }
 
 // A/B flags (Firebase Remote Config). Non-blocking: defaults apply until the
