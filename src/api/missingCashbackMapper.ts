@@ -219,7 +219,7 @@ export function mapExitMeta(res: { meta?: McExitMeta }): McExitMeta {
 
 // ── claims → HelpTicketCard view-models ─────────────────────────────────────
 
-export type ClaimCardStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review';
+export type ClaimCardStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review' | 'not-tracked';
 
 export interface ClaimCard {
   queueId: string;
@@ -245,6 +245,8 @@ export interface ClaimCard {
   expectByDate?: string;
   /** CTA label for need-details/tracked cards. */
   ctaLabel?: string;
+  /** Why the claim was not tracked (status 'not-tracked'). */
+  reason?: string;
 }
 
 export const STATUS_TAB_TO_API: Record<'In Review' | 'Closed' | 'Others', 'Pending' | 'Resolved' | 'Rejected'> = {
@@ -317,6 +319,22 @@ function remainingHHMM(target: number | null, now: number): string | undefined {
   return days > 0 ? `${days}d ${pad(hh)}:${pad(mm)}` : `${pad(hh)}:${pad(mm)}`;
 }
 
+/** Queue statuses that mean the claim was closed without cashback. */
+function isRejectedStatus(statusLc: string): boolean {
+  return statusLc.includes('reject') || statusLc.includes('cancel') || statusLc.includes('declin');
+}
+
+/**
+ * The reason to show on a not-tracked claim. CashKaro puts the agent's note in
+ * `comments` (sometimes `details`). Falls back to a plain explanation and
+ * where to go next, never an empty card.
+ */
+function claimReason(c: McClaim): string {
+  const raw = (c.attributes.comments || c.attributes.details || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (raw && !/^(waiting|additional|user|invoice)/i.test(raw)) return raw;
+  return "The retailer didn't confirm this order for cashback. If you think this is wrong, raise a ticket from Get Help.";
+}
+
 /**
  * Map one claim to a HelpTicketCard model. `now` is passed in (don't call
  * Date.now() at module scope) so the same render is deterministic.
@@ -324,8 +342,16 @@ function remainingHHMM(target: number | null, now: number): string | undefined {
 export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
   const a = c.attributes;
   const group = a.groupid || '';
-  const tracked = !!a.cashback_id || (a.status || '').toLowerCase() === 'resolved';
+  // Only call a claim "tracked" when cashback was actually credited: a
+  // cashback_id, or a Resolved claim that carries a cashback value. A claim
+  // that was rejected, or resolved with no cashback, is "not tracked" and
+  // must say so (it used to read "Hurray!" or vanish).
+  const statusLc = (a.status || '').toLowerCase();
+  const hasCashbackValue = !!(a.cashbackvalue || a.missing_txn_cashback);
+  const tracked = !!a.cashback_id || (statusLc === 'resolved' && hasCashbackValue);
+  const notTracked = !tracked && (isRejectedStatus(statusLc) || statusLc === 'resolved');
   const needDetails = needsAdditionalDetails(c, now);
+  let reason: string | undefined;
 
   let status: ClaimCardStatus;
   let title: string;
@@ -345,6 +371,10 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
     const val = a.cashbackvalue || a.missing_txn_cashback;
     title = val ? `Hurray! Cashback of ₹${val} is added to your account.` : 'Hurray! Your cashback has been tracked.';
     ctaLabel = 'View Details';
+  } else if (notTracked) {
+    status = 'not-tracked';
+    title = `We couldn't track cashback on your ${claimStoreName(c)} order.`;
+    reason = claimReason(c);
   } else if (needDetails) {
     status = 'need-details';
     title = group === 'B1' ? 'We need a few more details to track your cashback.' : 'We need more details to track your cashback.';
@@ -375,6 +405,7 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
     ticketId,
     expectByDate,
     ctaLabel,
+    reason,
   };
 }
 

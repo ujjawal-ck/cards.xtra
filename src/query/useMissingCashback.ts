@@ -36,6 +36,7 @@ import {
   mapClaims,
   mapOthersClaims,
   STATUS_TAB_TO_API,
+  isTicketClaim,
   type RetailerRow,
   type ExitMonthGroup,
   type ClaimCard,
@@ -157,6 +158,22 @@ export function useClaims(tab: ClaimTab) {
       const run = async (token: string): Promise<ClaimsResult> => {
         if (tab === 'Others') return runOthers(token);
         const res = await getQueue(token, apiStatus);
+        // "Closed" must also show claims that were REJECTED without a ticket,
+        // otherwise they vanish from every tab and the user never learns the
+        // outcome. Ticket claims stay in "Others". The Rejected filter can
+        // error on staging, so a failure here only drops the extra rows.
+        if (tab === 'Closed') {
+          try {
+            const rejected = await getQueue(token, 'Rejected');
+            const seen = new Set((res.data || []).map((c) => String(c.id)));
+            const extra = (rejected.data || []).filter(
+              (c) => !seen.has(String(c.id)) && !isTicketClaim(c)
+            );
+            res.data = [...(res.data || []), ...extra];
+          } catch {
+            // keep the Resolved rows
+          }
+        }
         // Stamp `now` once per fetch (timers tick live via timerTarget; this is
         // only the static fallback / "is the countdown still future" check).
         const now = Date.now();
