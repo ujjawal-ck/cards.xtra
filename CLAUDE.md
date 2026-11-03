@@ -35,6 +35,7 @@ Every color, spacing, radius, font size, and text style MUST come from src/token
 - Colors: use the SEMANTIC layer only (colors.action.primary.default, colors.text.primary, colors.cashback.default, colors.surface.default, ...). Never use primitives.* directly in components.
 - Type: apply a named style object, e.g. style={typography.heading20SemiBold}. Do not set fontFamily/fontSize/fontWeight by hand.
 - Primary action color is Saffron orange (colors.action.primary.default = #ff6d1d). The blue (colors.action.accent.default = Cobalt #0741ef) is the ACCENT, used for links and secondary emphasis — NOT the primary button color. Get this right; it defines the brand.
+- **Figma is the source of truth for button colour per screen** (confirmed by product, 2026-11-03). Where Figma shows a Cobalt CTA (e.g. "Get OTP" / "Verify OTP" on the login sheet, Figma 6851:26627), use Cobalt. Do not "correct" a Figma-matching button to orange.
 
 If you need a value not in tokens, add it to the correct token file with a clear name and comment — never inline it.
 
@@ -54,7 +55,7 @@ Outfit, loaded at startup via @expo-google-fonts/outfit. App.js (or a font hook)
 Four-screen core flow + working bottom tab bar. Do not build other screens.
 
 1. LoginScreen — branded hero (dark navy→teal gradient, Cards.xtra logo, "Find The Perfect Card in Seconds" faded heading, model image), white bottom area with "Log in or Sign up", phone Input, primary "Get OTP" Button, terms footer. "Get OTP" navigates to OtpScreen.
-2. OtpScreen — same hero, "Enter OTP", "Sent to <number> · Change", 4 OtpBox digit cells, "Resend OTP in: 30s", primary "Submit" Button navigates into the Tab navigator (Home tab).
+2. OtpScreen — same hero, "Enter OTP", "Sent to <number> · Change", 6 OtpBox digit cells (OTPs are 6 digits app-wide, confirmed by product; Figma's 4-box frames are outdated), "Resend OTP in: 30s", primary "Submit" Button navigates into the Tab navigator (Home tab).
 3. HomeScreen (Home tab) — gradient header (logo + notification bell with badge), "Earn Upto ₹2,000 Cashback" hero with floating card images, SearchBar, filter row (Category dropdown, Filters, Eligibility toggle), a vertical list of CardTiles, a horizontal "Find the best card by category" carousel. Tapping any CardTile opens the CardDetailSheet.
 4. OffersScreen (Offers tab) — orange header with SearchBar, horizontal category circles (New on CashKaro, Fashion, Food & Grocery, ...), 2-column grid of PartnerCards (brand logo + image + blue "Shop & Earn upto X%" button).
 

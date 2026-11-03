@@ -10,7 +10,7 @@
  *   3. OtpInput (4 slots) + "Resend OTP in: 30s" timer — REUSED atom.
  *   4. Sticky "Submit" footer button (cobalt/accent) above the keyboard.
  *
- * Demo: there is no live delete-account verify endpoint, so any 4-digit
+ * Demo: there is no live delete-account verify endpoint, so any 6-digit
  * code is accepted and submitting advances to the Account Deleted screen.
  *
  * Token map:
@@ -37,7 +37,7 @@ import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'DeleteAccountOtp'>;
 
-const OTP_LENGTH = 4;
+const OTP_LENGTH = 6; // OTPs are 6 digits app-wide (confirmed by product).
 const RESEND_SECONDS = 30;
 
 /** Mask a mobile number to "967XXXX551" (first 3 · XXXX · last 3). */
@@ -115,7 +115,7 @@ export function DeleteAccountOtpScreen() {
             />
           </View>
 
-          {/* Sticky Submit — cobalt/accent, disabled until 4 digits entered. */}
+          {/* Sticky Submit — cobalt/accent, disabled until 6 digits entered. */}
           <FooterButtons
             buttons="single"
             color="second"

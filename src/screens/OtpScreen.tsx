@@ -29,7 +29,7 @@ import type { RootStackParamList } from '../navigation/types';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Otp'>;
 type OtpRoute = RouteProp<RootStackParamList, 'Otp'>;
 
-const OTP_LENGTH = 4;
+const OTP_LENGTH = 6; // OTPs are 6 digits app-wide (confirmed by product).
 const RESEND_SECONDS = 30;
 
 function formatPhone(raw?: string) {

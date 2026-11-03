@@ -63,6 +63,6 @@ This pass follows `docs/GAP_AUDIT.md`. It uses the same issue numbers where they
 | D-11 | P2 | Terms & Conditions link on login | No T&C page or URL exists | Legal: provide the URL |
 | D-12 | P2 | No pre-apply T&C sheet (5873:27578), and no redirect interstitials | Not built | Next pass (audit P1) |
 | D-13 | P3 | The search illustration is a 224px raster | The Figma CDN is blocked from the sandbox | Re-export node 4369:244199 at 3x |
-| C-1 | — | CLAUDE.md says the primary button is orange. Figma 6851:26627 shows "Get OTP" in Cobalt, and the code matches Figma. | Spec conflict | Design: confirm which is right and update the losing doc |
-| C-2 | — | OTP length: 6 in code, 4 in Figma | Backend fact | Confirm and align Figma |
+| C-1 | — | Button colour: Figma vs CLAUDE.md | **Resolved:** Figma is correct. CLAUDE.md updated. | — |
+| C-2 | — | OTP length | **Resolved:** 6 digits. Delete-account OTP moved from 4 to 6, so every flow now uses 6. Figma's 4-box frames are outdated. | Design: update the Figma OTP frames to 6 boxes |
 | C-3 | — | Eligibility before Apply: mandatory or skippable | Product decision | A/B the gate on the apply-click vs approval-rate trade-off |
