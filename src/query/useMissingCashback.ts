@@ -120,14 +120,14 @@ export function useClaims(tab: ClaimTab) {
       const apiStatus = STATUS_TAB_TO_API[tab];
 
       // "Others" lists raised tickets (those with a Ticket ID) as flat rows.
-      // A ticket can come back under any status filter, and the Rejected filter
-      // sometimes errors on staging — so we gather across all three and keep
-      // whatever succeeds (only failing if EVERY fetch fails → outer catch).
+      // A ticket can come back under either status filter, so gather both and
+      // keep whatever succeeds (only failing if EVERY fetch fails → outer
+      // catch). The API accepts only Pending | Resolved; "Rejected" always
+      // returns 422 (verified on staging 2026-11-03), so it isn't requested.
       const runOthers = async (token: string): Promise<ClaimsResult> => {
         const settled = await Promise.allSettled([
           getQueue(token, 'Pending'),
           getQueue(token, 'Resolved'),
-          getQueue(token, 'Rejected'),
         ]);
         const fulfilled = settled.filter(
           (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof getQueue>>> => r.status === 'fulfilled',

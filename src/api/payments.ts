@@ -71,6 +71,26 @@ export function paymentInProcessAmountFromError(e: unknown): number | null {
   return parseFloat(err?.meta?.requested_earnings) || 0;
 }
 
+// Error code returned by /payment/payment when the user's confirmed balance is
+// below the cash-out minimum (verified on staging 2026-11-03:
+// {"code":"5003","title":"Payment threshold not reached.",
+//  "meta":{"cashout_limit":250,"pending_earnings":"0.00",...}}).
+const PAYMENT_BELOW_THRESHOLD_CODE = '5003';
+
+/**
+ * When /payment/payment fails because the balance is below the cash-out
+ * minimum (HTTP 400, code 5003), returns that minimum (₹). Returns null for
+ * any other error.
+ */
+export function paymentThresholdFromError(e: unknown): number | null {
+  if (!(e instanceof ApiError) || e.status !== 400) return null;
+  const errors = (e.payload as any)?.errors;
+  if (!Array.isArray(errors)) return null;
+  const err = errors.find((x: any) => String(x?.code) === PAYMENT_BELOW_THRESHOLD_CODE);
+  if (!err) return null;
+  return parseFloat(err?.meta?.cashout_limit) || 250;
+}
+
 export function extractPaymentData(info: any): PaymentData {
   const a = info?.data?.attributes ?? {};
   return {

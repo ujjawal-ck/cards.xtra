@@ -13,6 +13,7 @@ import {
   extractPaymentData,
   extractPaymentMethodIds,
   paymentInProcessAmountFromError,
+  paymentThresholdFromError,
   type PaymentData,
   type PaymentMethodKey,
 } from '../api/payments';
@@ -21,6 +22,9 @@ import { useRefetchOnFocus } from './useRefetchOnFocus';
 
 export interface PaymentInfo extends PaymentData {
   methodIds: Record<PaymentMethodKey, number>;
+  /** True when the balance is below the cash-out minimum (API code 5003).
+   *  `paymentThreshold` then holds that minimum. Withdraw is not possible. */
+  belowThreshold?: boolean;
 }
 
 export function usePaymentInfo() {
@@ -61,6 +65,25 @@ export function usePaymentInfo() {
             paymentInProcessAmount: pendingAmount,
             // No success body to read method ids from — defaults are fine; the
             // withdraw flow that needs them is blocked while a payout pends.
+            methodIds: extractPaymentMethodIds({}),
+          };
+        }
+        // Balance below the cash-out minimum isn't a failure either: the
+        // endpoint 400s with code 5003. Resolve to a normal PaymentInfo with
+        // belowThreshold so the UI can say "Earn ₹X to withdraw" instead of
+        // showing a generic error.
+        const threshold = paymentThresholdFromError(e);
+        if (threshold !== null) {
+          return {
+            mobile: '',
+            totalEarnings: 0,
+            cashbackEarnings: 0,
+            rewardsEarnings: 0,
+            currencyCode: 'INR',
+            paymentThreshold: threshold,
+            paymentInProcess: false,
+            paymentInProcessAmount: 0,
+            belowThreshold: true,
             methodIds: extractPaymentMethodIds({}),
           };
         }
