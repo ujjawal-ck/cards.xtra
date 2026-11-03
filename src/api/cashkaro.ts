@@ -15,27 +15,30 @@
  */
 import { Platform, Dimensions, PixelRatio } from 'react-native';
 import { CK } from '../config/env';
-import { httpRequest, basicAuthHeader, ApiError } from './client';
+import { httpRequest, basicAuthHeader } from './http/client';
+import { ApiError } from './http/errors';
+import { createCachedToken, withCachedToken, withUserToken } from './http/tokenManager';
 import type { LoginOtpResult, AuthSession, UserProfile } from './types';
 
-type Auth = 'aws' | { userToken: string } | undefined;
+type Auth = 'aws' | 'user' | { userToken: string } | undefined;
 
 interface CkOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | undefined>;
   auth?: Auth;
+  /** React Query's cancellation signal. */
+  signal?: AbortSignal;
+  /** Per-call deadline; payments use a longer one. */
+  timeoutMs?: number;
+  /** Mark a write safe to retry on transient failures. */
+  idempotent?: boolean;
 }
 
-// aws-token cache. Expiry is not documented; refresh defensively every 30 min
-// (and on demand if a pre-login call 401s — callers can clear via resetAwsToken).
-let awsToken: { value: string; fetchedAt: number } | null = null;
-const AWS_TOKEN_TTL = 30 * 60 * 1000;
-
-async function getAwsToken(): Promise<string> {
-  if (awsToken && Date.now() - awsToken.fetchedAt < AWS_TOKEN_TTL) {
-    return awsToken.value;
-  }
+// App token (GET /token). Cached until shortly before its JWT exp, minted
+// single-flight, re-minted once on a 401/403 (see tokenManager.ts).
+const APP_TOKEN_FALLBACK_TTL = 25 * 60 * 1000;
+const appToken = createCachedToken(async () => {
   const res = await httpRequest<any>(CK.baseUrl, '/token', {
     method: 'GET',
     headers: {
@@ -47,13 +50,12 @@ async function getAwsToken(): Promise<string> {
   });
   const value = res?.data?.attributes?.token;
   if (!value) throw new ApiError('Could not obtain access token from CashKaro.', 0, res);
-  awsToken = { value, fetchedAt: Date.now() };
-  return value;
-}
+  return value as string;
+}, APP_TOKEN_FALLBACK_TTL);
 
 /** Force the next pre-login call to re-mint an aws-token. */
 export function resetAwsToken(): void {
-  awsToken = null;
+  appToken.invalidate();
 }
 
 // Public IP — /signupV1 validates a required `ip_address` (login does not).
@@ -79,18 +81,26 @@ async function getPublicIp(): Promise<string> {
 }
 
 export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, auth } = opts;
+  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent } = opts;
   const headers: Record<string, string> = { ...CK.headers() };
   // JSON:API content-type for write bodies — EXCEPT multipart (FormData file
   // uploads), where the runtime must set the boundary content-type itself.
   const isMultipart = typeof FormData !== 'undefined' && body instanceof FormData;
   if (body !== undefined && !isMultipart) headers['Content-Type'] = 'application/vnd.api+json';
-  if (auth === 'aws') {
-    headers.Authorization = `Bearer ${await getAwsToken()}`;
-  } else if (auth && 'userToken' in auth) {
-    headers.Authorization = `Bearer ${auth.userToken}`;
-  }
-  return httpRequest<T>(CK.baseUrl, path, { method, body, query, headers });
+  const send = (bearer?: string) =>
+    httpRequest<T>(CK.baseUrl, path, {
+      method,
+      body,
+      query,
+      signal,
+      timeoutMs,
+      idempotent,
+      headers: bearer ? { ...headers, Authorization: `Bearer ${bearer}` } : headers,
+    });
+  if (auth === 'aws') return withCachedToken(appToken, send);
+  if (auth === 'user') return withUserToken(send);
+  if (auth && 'userToken' in auth) return withUserToken(send, auth.userToken);
+  return send();
 }
 
 /**
@@ -230,17 +240,27 @@ export async function signup(params: {
 
 // ── Session maintenance ──────────────────────────────────────────────────
 
-/** Exchange a refresh token for a fresh access token. */
-export async function refreshAccessToken(refreshToken: string): Promise<string> {
+/**
+ * Exchange a refresh token for a fresh access token. Returns the rotated
+ * refresh token too when CashKaro issues one (keep it, or the next refresh fails).
+ */
+export async function refreshTokens(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken?: string }> {
   const res = await ck<any>('/refreshtoken', {
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
     body: { data: { type: 'auth', attributes: { refresh_token: refreshToken } } },
   });
-  const accessToken = res?.data?.attributes?.access_token;
-  if (!accessToken) throw new ApiError('Session expired. Please log in again.', 0, res);
-  return accessToken;
+  const attrs = res?.data?.attributes;
+  if (!attrs?.access_token) throw new ApiError('Session expired. Please log in again.', 401, res);
+  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token || undefined };
+}
+
+/** @deprecated use refreshTokens (keeps the rotated refresh token). */
+export async function refreshAccessToken(refreshToken: string): Promise<string> {
+  return (await refreshTokens(refreshToken)).accessToken;
 }
 
 /** Fetch the logged-in user's earnings summary (confirmed/pending/cashback/rewards). */

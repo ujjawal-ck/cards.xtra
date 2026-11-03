@@ -30,11 +30,11 @@ import {
 } from './tokenStore';
 import {
   logout as ckLogout,
-  refreshAccessToken as ckRefreshAccessToken,
+  refreshTokens as ckRefreshTokens,
   getEarnings,
   getProfile,
 } from '../api/cashkaro';
-import { ApiError } from '../api/client';
+import { configureUserSession, refreshUserToken } from '../api/http/tokenManager';
 import { queryClient } from '../query/queryClient';
 import { mapEarnings } from '../api/earningsMapper';
 import { analytics, Events } from '../analytics';
@@ -95,11 +95,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [displayName, setDisplayNameState] = useState<string | null>(null);
-  // Holds the single in-flight refresh so that several queries hitting a 401 at
-  // once share ONE /refreshtoken call instead of each firing their own (which,
-  // with rotating refresh tokens, makes all but the first fail). Cleared when
-  // the refresh settles.
-  const refreshInFlight = useRef<Promise<string | null> | null>(null);
 
   // Bootstrap: load device id + any persisted session on launch.
   useEffect(() => {
@@ -142,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (next: Session) => {
     await saveSession(next);
+    sessionRef.current = next;
     setSession(next);
     setStatus('authenticated');
     // Warm earnings/profile so those tabs open instantly (non-blocking).
@@ -154,41 +150,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setDisplayNameState(trimmed);
   }, []);
 
-  const refreshSession = useCallback(async (): Promise<string | null> => {
-    if (!session?.refreshToken) return null;
-    // De-dupe: if a refresh is already running, await that one instead of
-    // starting a second (see refreshInFlight above).
-    if (refreshInFlight.current) return refreshInFlight.current;
+  // Mirror of `session` for the token manager, which reads it outside React.
+  const sessionRef = useRef<Session | null>(null);
+  sessionRef.current = session;
 
-    const run = (async (): Promise<string | null> => {
-      try {
-        const accessToken = await ckRefreshAccessToken(session.refreshToken);
-        const next: Session = { ...session, accessToken };
+  // End the session locally (no server call): used when the refresh token is
+  // rejected. Clears every cached query so the next user never sees this
+  // user's data.
+  const expireSession = useCallback(async () => {
+    await clearSession();
+    sessionRef.current = null;
+    setSession(null);
+    setStatus('unauthenticated');
+    setDisplayNameState(null);
+    queryClient.clear();
+    if (deviceIdRef.current) analytics.identify(deviceIdRef.current);
+  }, []);
+
+  const deviceIdRef = useRef<string | null>(null);
+  deviceIdRef.current = deviceId;
+
+  // Hand the session to the token manager once. It owns refresh: single-flight
+  // across every caller, keeps rotated refresh tokens, and calls onExpired only
+  // when the refresh token is genuinely dead (401 / code 2004) — never on a
+  // network error.
+  useEffect(() => {
+    configureUserSession({
+      read: () => sessionRef.current,
+      write: async (tokens) => {
+        const next: Session = { ...(sessionRef.current ?? tokens), ...tokens };
+        sessionRef.current = next;
         await saveSession(next);
         setSession(next);
-        return accessToken;
-      } catch (e) {
-        // Only force a sign-out when the refresh token itself is rejected
-        // (401/403) — that session is genuinely dead, so end it cleanly rather
-        // than leaving the user "authenticated" with tokens that 401 forever.
-        // A network/timeout error (ApiError status 0) is transient: keep the
-        // session and just report failure so the caller can retry later.
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          await clearSession();
-          setSession(null);
-          setStatus('unauthenticated');
-          setDisplayNameState(null);
-          if (deviceId) analytics.identify(deviceId);
-        }
-        return null;
-      } finally {
-        refreshInFlight.current = null;
-      }
-    })();
+      },
+      onExpired: () => {
+        void expireSession();
+      },
+      refresh: (refreshToken) => ckRefreshTokens(refreshToken),
+    });
+    return () => configureUserSession(null);
+  }, [expireSession]);
 
-    refreshInFlight.current = run;
-    return run;
-  }, [session, deviceId]);
+  const refreshSession = useCallback(async (): Promise<string | null> => {
+    if (!sessionRef.current?.refreshToken) return null;
+    try {
+      return await refreshUserToken();
+    } catch {
+      return null;
+    }
+  }, []);
 
   // Upgrade the analytics identity from the device id to the real CashKaro
   // account id once a session exists. The account id is an opaque identifier
@@ -240,9 +250,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     await clearSession();
+    sessionRef.current = null;
     setSession(null);
     setStatus('unauthenticated');
     setDisplayNameState(null);
+    // Never let the next user see this user's cached earnings/orders/profile.
+    queryClient.clear();
     // Drop the account-id identity back to the anonymous device id so later
     // events aren't attributed to the user who just logged out.
     if (deviceId) analytics.identify(deviceId);

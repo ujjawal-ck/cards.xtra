@@ -18,37 +18,41 @@
  * Phase 2 against live responses, then the `any` returns get real types.
  */
 import { BK } from '../config/env';
-import { httpRequest, ApiError } from './client';
+import { httpRequest } from './http/client';
+import { ApiError } from './http/errors';
+import { createCachedToken, withCachedToken } from './http/tokenManager';
 import type { CardListFilters, EligibilityPayload } from './types';
 
-let partnerToken: string | null = null;
-
-async function getPartnerToken(): Promise<string> {
-  if (partnerToken) return partnerToken;
+// Partner JWT (POST /token). Cached until shortly before its exp, minted
+// single-flight, re-minted once when a call returns 401/403. Previously it was
+// cached forever, so every card call failed after the JWT expired.
+const PARTNER_TOKEN_FALLBACK_TTL = 50 * 60 * 1000;
+const partnerToken = createCachedToken(async () => {
   const res = await httpRequest<any>(BK.baseUrl, '/token', {
     method: 'POST',
-    headers: { 'partner-token': BK.partnerApiKey, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: { 'x-api-key': BK.partnerApiKey },
   });
   const value = res?.data?.jwttoken;
   if (!value) throw new ApiError('Could not authenticate with BankKaro.', 0, res);
-  partnerToken = value;
-  return value;
-}
+  return value as string;
+}, PARTNER_TOKEN_FALLBACK_TTL);
 
 /** Force the next call to re-mint the partner JWT. */
 export function resetPartnerToken(): void {
-  partnerToken = null;
+  partnerToken.invalidate();
 }
 
 async function bk<T = any>(
   path: string,
-  opts: { method?: 'GET' | 'POST'; body?: unknown } = {},
+  opts: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal; idempotent?: boolean } = {},
 ): Promise<T> {
-  const { method = 'GET', body } = opts;
-  const headers: Record<string, string> = { 'partner-token': await getPartnerToken() };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  return httpRequest<T>(BK.baseUrl, path, { method, body, headers });
+  const { method = 'GET', body, signal, idempotent } = opts;
+  return withCachedToken(partnerToken, (token) => {
+    const headers: Record<string, string> = { 'partner-token': token };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    return httpRequest<T>(BK.baseUrl, path, { method, body, headers, signal, idempotent });
+  });
 }
 
 /** Bootstrap data: banks, networks, tags, filter options. */
@@ -68,7 +72,7 @@ export function getCards(): Promise<any> {
 
 /** Filtered / sorted card list. */
 export function filterCards(filters: CardListFilters): Promise<any> {
-  return bk('/cardgenius/cards', { method: 'POST', body: filters });
+  return bk('/cardgenius/cards', { method: 'POST', body: filters, idempotent: true });
 }
 
 /** Single card detail by alias/slug (e.g. "icici-platinum-chip-credit-card"). */
@@ -78,7 +82,7 @@ export function getCardDetail(alias: string): Promise<any> {
 
 /** Eligibility check for a given pincode / income / employment. */
 export function checkEligibility(payload: EligibilityPayload): Promise<any> {
-  return bk('/cardgenius/eligiblity', { method: 'POST', body: payload });
+  return bk('/cardgenius/eligiblity', { method: 'POST', body: payload, idempotent: true });
 }
 
 /** Rewards calculator across a spend breakdown. */

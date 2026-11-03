@@ -34,7 +34,7 @@ import { queryClient } from './src/query/queryClient';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { analytics, Events } from './src/analytics';
-import { STAGE, PLATFORM } from './src/config/env';
+import { STAGE, PLATFORM, configProblems } from './src/config/env';
 import { initExperiments } from './src/experiments';
 
 // Super-props ride on EVERY event — set once, before anything is tracked.
@@ -57,6 +57,20 @@ if (Constants.executionEnvironment !== 'storeClient') {
     require('./src/analytics/crashlyticsSink').registerCrashlyticsSink();
   } catch (e) {
     console.warn('Crashlytics not registered:', e?.message ?? e);
+  }
+}
+
+// Catch a misconfigured build (empty API host/key for this stage) at launch,
+// not when a user first hits a broken screen.
+const problems = configProblems();
+if (problems.length) {
+  console.warn(`[config] ${problems.join('; ')}`);
+  if (Constants.executionEnvironment !== 'storeClient') {
+    try {
+      require('./src/analytics/crashlyticsSink').recordError(new Error(`Config: ${problems.join('; ')}`), 'startup config');
+    } catch {
+      // crash reporting unavailable: the console warning above is enough
+    }
   }
 }
 

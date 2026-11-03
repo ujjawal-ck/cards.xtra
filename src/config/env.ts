@@ -115,3 +115,18 @@ export const BK = {
 
 /** Coarse platform string used in device_info payloads. */
 export const PLATFORM = Platform.OS;
+
+/**
+ * Missing settings for the active stage (empty array = good to go). Checked
+ * once at startup: dev builds warn loudly, release builds report to
+ * Crashlytics, so a misconfigured build is caught before users hit errors.
+ */
+export function configProblems(): string[] {
+  const problems: string[] = [];
+  if (!CK.baseUrl) problems.push(`CK base URL is empty for stage "${STAGE}"`);
+  if (!CK.apiKey) problems.push(`CK API key is empty for stage "${STAGE}"`);
+  if (!CK.trackingHost) problems.push(`CK tracking host is empty for stage "${STAGE}"`);
+  if (!BK.baseUrl) problems.push(`BK base URL is empty for stage "${STAGE}"`);
+  if (!BK.partnerApiKey) problems.push(`BK partner key is empty for stage "${STAGE}"`);
+  return problems;
+}
