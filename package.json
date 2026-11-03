@@ -13,6 +13,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@gorhom/portal": "1.0.14",
+    "@lottiefiles/dotlottie-react": "^0.13.5",
     "@react-native-firebase/analytics": "^24.1.1",
     "@react-native-firebase/app": "^24.1.1",
     "@react-native-firebase/crashlytics": "^24.1.1",
