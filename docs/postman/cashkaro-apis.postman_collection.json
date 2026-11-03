@@ -1,0 +1,1058 @@
+{
+ "info": {
+  "name": "cashkaro-apis",
+  "description": "CashKaro staging APIs as called by the Cards.xtra app (src/api/cashkaro.ts, payments.ts, missingCashback.ts). Folder D creates real claims/OTPs: run on a TEST account only.",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "item": [
+  {
+   "name": "A. Public (no login)",
+   "item": [
+    {
+     "name": "token (aws bootstrap)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       }
+      ],
+      "url": "{{CK_BASE}}/token",
+      "auth": {
+       "type": "basic",
+       "basic": [
+        {
+         "key": "username",
+         "value": "{{CK_BASIC_USER}}"
+        },
+        {
+         "key": "password",
+         "value": "{{CK_BASIC_PASS}}"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('token: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('token ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const t = j && j.data && j.data.attributes && j.data.attributes.token;",
+         "pm.test('token: present', () => pm.expect(t).to.be.a('string'));",
+         "if (t) pm.environment.set('AWS_TOKEN', t);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "offers/categories",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/offers/categories?device=App"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('categories: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('categories ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('categories:', d.length, d.map(c => c.attributes && c.attributes.unique_identifier).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "offers/category/miniapp (Offers tab parent)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/offers/category/miniapp?device=App&page[size]=1&include=categories",
+      "description": "The app's Offers tab is built from this parent category's sub-categories (src/data/offerCategories.ts MINIAPP_PARENT_PATH)."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('miniapp-tree: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('miniapp-tree ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const subs = ((j && j.included) || []).filter(i => i.type === 'categories');",
+         "pm.test('miniapp-tree: has sub-categories (drives the Offers strip)', () => pm.expect(subs.length).to.be.above(0));",
+         "console.log('miniapp sub-categories:', subs.map(s => s.attributes.unique_identifier).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "offers/category/fashion",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/offers/category/fashion?device=App&page[size]=100"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('category: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('category ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "pm.test('category: stores returned', () => pm.expect(d.length).to.be.above(0));",
+         "const s = d[0] && d[0].attributes || {};",
+         "pm.test('category: store has cashback_url (Shop click-out)', () => pm.expect(s.cashback_url).to.be.a('string'));",
+         "console.log('fashion stores:', d.length, '| first:', s.unique_identifier, '| cashback_url:', s.cashback_url);",
+         "if (s.unique_identifier) pm.environment.set('STORE_SLUG', s.unique_identifier);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "offers/{{STORE_SLUG}} (store page)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/offers/{{STORE_SLUG}}?device=App&include=coupons,secondary_cashback,related_offers"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('store: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('store ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && j.data.attributes) || {};",
+         "pm.test('store: cashback_url present', () => pm.expect(a.cashback_url).to.be.a('string'));",
+         "console.log('store', pm.environment.get('STORE_SLUG'), '| cashback_url:', a.cashback_url, '| included:', ((j && j.included) || []).map(i => i.type).join(','));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "B. Login (OTP)",
+   "item": [
+    {
+     "name": "loginotp",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/loginotp?device=App",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"mobile_number\": {{TEST_MOBILE}}\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('loginotp: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('loginotp ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && j.data.attributes) || {};",
+         "const g = a.otp_guid || (j && j.data && j.data.id);",
+         "pm.test('loginotp: otp_guid returned', () => pm.expect(g).to.be.ok);",
+         "if (g) pm.environment.set('OTP_GUID', g);",
+         "console.log('loginotp: otp_expire_sec', a.otp_expire_sec);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "login (needs OTP)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/login?device=App",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"auth\",\n  \"attributes\": {\n   \"mobile_number\": {{TEST_MOBILE}},\n   \"otp_guid\": \"{{OTP_GUID}}\",\n   \"otp\": {{OTP}},\n   \"device_info\": {\n    \"fcm_id\": \"{{DEVICE_ID}}\",\n    \"device_unique_id\": \"{{DEVICE_ID}}\",\n    \"imei_number\": \"{{DEVICE_ID}}\",\n    \"advertising_id\": \"{{DEVICE_ID}}\",\n    \"device_brand\": \"android\",\n    \"device_model\": \"android\",\n    \"device_client\": \"cards-xtra-mini-app\",\n    \"app_version\": \"4.6\",\n    \"app_version_code\": \"4.6\",\n    \"os_name\": \"android\",\n    \"os_version\": \"34\",\n    \"device_country\": \"IN\",\n    \"latitude\": \"0.0\",\n    \"longitude\": \"0.0\",\n    \"language\": \"en\",\n    \"network_type\": \"wifi\",\n    \"screen_resolution\": \"1080x2400\",\n    \"screen_density\": \"2.625\",\n    \"screen_height\": \"2400\"\n   }\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('login: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('login ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && j.data.attributes) || {};",
+         "pm.test('login: access_token', () => pm.expect(a.access_token).to.be.a('string'));",
+         "if (a.access_token) pm.environment.set('ACCESS_TOKEN', a.access_token);",
+         "if (a.refresh_token) pm.environment.set('REFRESH_TOKEN', a.refresh_token);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "refreshtoken",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{AWS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/refreshtoken?device=App",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"auth\",\n  \"attributes\": {\n   \"refresh_token\": \"{{REFRESH_TOKEN}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('refresh: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('refresh ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && j.data.attributes) || {};",
+         "pm.test('refresh: new access_token', () => pm.expect(a.access_token).to.be.a('string'));",
+         "if (a.access_token) pm.environment.set('ACCESS_TOKEN', a.access_token);"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "C. User data (read-only)",
+   "item": [
+    {
+     "name": "users/profile",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/profile?device=App"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('profile: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('profile ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const row = Array.isArray(j && j.data) ? j.data[0] : (j && j.data);",
+         "const a = (row && row.attributes) || {};",
+         "const id = (row && row.id) || a.id || a.user_id;",
+         "pm.test('profile: user id present (click-out attribution)', () => pm.expect(id).to.be.ok);",
+         "if (id) pm.environment.set('USER_ID', String(id));",
+         "console.log('profile: id', id, '| attr keys:', Object.keys(a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "users/earnings",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/earnings?device=App"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('earnings: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('earnings ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && (j.data.attributes || (j.data[0] && j.data[0].attributes))) || {};",
+         "console.log('earnings keys:', Object.keys(a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "users/orders",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/orders?device=App&page[number]=1&page[size]=20"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('orders: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('orders ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('orders:', d.length, '| first attrs:', d[0] ? Object.keys(d[0].attributes || {}).join(',') : '-');",
+         "if (d[0]) pm.environment.set('ORDER_ID', String(d[0].id));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "users/orders/{{ORDER_ID}}",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/orders/{{ORDER_ID}}?device=App"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('order-detail: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('order-detail ERROR BODY:', pm.response.text().slice(0, 300));",
+         "console.log('order detail keys:', Object.keys((j && j.data && j.data.attributes) || {}).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "payment/payment (withdraw info)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/payment/payment?device=App&paymentautomation=true&include=charities",
+      "description": "400 with error code 5002 means a payout is already pending (handled by the app)."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('payment-info: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('payment-info ERROR BODY:', pm.response.text().slice(0, 300));",
+         "console.log('payment info:', JSON.stringify(j).slice(0, 400));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/retailers",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/retailers?device=App&page[number]=1&page[size]=100"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-retailers: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-retailers ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('mc retailers:', d.length, '| first:', JSON.stringify(d[0] || {}).slice(0, 200));",
+         "if (d[0]) pm.environment.set('MC_STORE_ID', String((d[0].attributes && (d[0].attributes.store_id || d[0].attributes.storeid)) || d[0].id));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/exitclickdates/{{MC_STORE_ID}}",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/exitclickdates/{{MC_STORE_ID}}"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-dates: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-dates ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "const a = (d[0] && d[0].attributes) || {};",
+         "const dt = a.exitclick_date || a.exit_date;",
+         "console.log('exit click dates:', d.length, '| first:', JSON.stringify(d[0] || {}).slice(0, 200));",
+         "if (dt) pm.environment.set('MC_EXIT_DATE', dt);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/queue (Pending)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/queue?filter[status]=Pending&page[number]=1&page[size]=50"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-pending: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-pending ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('Pending claims:', d.length, '| meta:', JSON.stringify((j && j.meta) || {}), '| has comments:', d.filter(c => c.attributes && c.attributes.comments).length, '| has cashback_id:', d.filter(c => c.attributes && c.attributes.cashback_id).length, '| ticket claims:', d.filter(c => c.attributes && c.attributes.ticket_id).length);",
+         "if (d[0]) console.log('Pending sample:', JSON.stringify(d[0].attributes).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/queue (Resolved)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/queue?filter[status]=Resolved&page[number]=1&page[size]=50"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-resolved: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-resolved ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('Resolved claims:', d.length, '| meta:', JSON.stringify((j && j.meta) || {}), '| has comments:', d.filter(c => c.attributes && c.attributes.comments).length, '| has cashback_id:', d.filter(c => c.attributes && c.attributes.cashback_id).length, '| ticket claims:', d.filter(c => c.attributes && c.attributes.ticket_id).length);",
+         "if (d[0]) console.log('Resolved sample:', JSON.stringify(d[0].attributes).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/queue (Rejected)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/queue?filter[status]=Rejected&page[number]=1&page[size]=50"
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-rejected: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-rejected ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const d = (j && j.data) || [];",
+         "console.log('Rejected claims:', d.length, '| meta:', JSON.stringify((j && j.meta) || {}), '| has comments:', d.filter(c => c.attributes && c.attributes.comments).length, '| has cashback_id:', d.filter(c => c.attributes && c.attributes.cashback_id).length, '| ticket claims:', d.filter(c => c.attributes && c.attributes.ticket_id).length);",
+         "if (d[0]) console.log('Rejected sample:', JSON.stringify(d[0].attributes).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "D. Writes (test account only)",
+   "item": [
+    {
+     "name": "missingcashback/validate (test order)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/validate",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"missingcashback\",\n  \"attributes\": {\n   \"storeid\": \"{{MC_STORE_ID}}\",\n   \"exitclick_date\": \"{{MC_EXIT_DATE}}\",\n   \"order_id\": \"{{MC_ORDER_ID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-validate: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-validate ERROR BODY:', pm.response.text().slice(0, 300));",
+         "console.log('validate:', JSON.stringify(j).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "missingcashback/queue POST (create claim)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/missingcashback/queue",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"missingcashback\",\n  \"attributes\": {\n   \"storeid\": \"{{MC_STORE_ID}}\",\n   \"exitclick_date\": \"{{MC_EXIT_DATE}}\",\n   \"order_id\": \"{{MC_ORDER_ID}}\",\n   \"order_amount\": \"999\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-submit: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-submit ERROR BODY:', pm.response.text().slice(0, 300));",
+         "console.log('queue submit:', JSON.stringify(j).slice(0, 400));",
+         "const q = j && j.data && j.data.id; if (q) pm.environment.set('MC_QUEUE_ID', String(q));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "users/sendotp (payout OTP)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/sendotp?device=App",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"notification_name\": \"PAYMENT_REQUEST_OTP\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-sendotp: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-sendotp ERROR BODY:', pm.response.text().slice(0, 300));",
+         "const a = (j && j.data && (j.data.attribute || j.data.attributes)) || {};",
+         "const g = a.otp_guid || (j && j.data && j.data.id);",
+         "if (g) pm.environment.set('PAY_OTP_GUID', g);",
+         "console.log('sendotp: guid', !!g, '| sent to', a.sent_to_mobile);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "users/logout",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{CK_API_KEY}}"
+       },
+       {
+        "key": "x-chkr-app-version",
+        "value": "4.6"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{CK_BASE}}/users/logout?device=App",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user\",\n  \"attributes\": {\n   \"fcm_id\": \"\",\n   \"device_unique_id\": \"{{DEVICE_ID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('logout: status ' + pm.response.code, () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('logout ERROR BODY:', pm.response.text().slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
