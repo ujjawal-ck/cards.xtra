@@ -64,5 +64,5 @@ This pass follows `docs/GAP_AUDIT.md`. It uses the same issue numbers where they
 | D-12 | P2 | No pre-apply T&C sheet (5873:27578), and no redirect interstitials | Not built | Next pass (audit P1) |
 | D-13 | P3 | The search illustration is a 224px raster | The Figma CDN is blocked from the sandbox | Re-export node 4369:244199 at 3x |
 | C-1 | — | Button colour: Figma vs CLAUDE.md | **Resolved:** Figma is correct. CLAUDE.md updated. | — |
-| C-2 | — | OTP length | **Resolved:** 6 digits. Delete-account OTP moved from 4 to 6, so every flow now uses 6. Figma's 4-box frames are outdated. | Design: update the Figma OTP frames to 6 boxes |
+| C-2 | — | OTP length | **Resolved in the app:** 6 digits on every OTP screen, and the shared `OtpInput` now defaults to 6. The 6-box row overflowed a 360px screen (fixed 48px slots, 12px gaps); it now follows the design-system 6-digit spec (fill-width slots, 8px gaps, 56 tall). Verified in Playwright: typing, paste and layout at 360px. Figma's screen frames still use the 4-digit variant (34 instances); per product, Figma was left unchanged. | — |
 | C-3 | — | Eligibility before Apply: mandatory or skippable | Product decision | A/B the gate on the apply-click vs approval-rate trade-off |

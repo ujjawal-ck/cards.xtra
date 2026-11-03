@@ -6,9 +6,8 @@
  *   [hint row]?      — optional 16px icon + body12Regular text
  *   [resend row]?    — 'hidden' | 'timer' | 'ready'
  *
- * Each slot: 56 × 64 (length 4) or 48 × 64 (length 6), radius 12,
- * surface.default fill, centred digit (heading20SemiBold). The narrower
- * 48 width on length-6 keeps the row within standard phone widths.
+ * Each slot: 56 × 64 (length 4) or fill-width × 56 (length 6), radius 12,
+ * surface.default fill, centred digit (heading20SemiBold).
  * Border per state:
  *   default / filled : colors.border.default (#d9e3ec) · borderWidth.thin
  *   focused          : colors.border.focussed (#0741ef) · borderWidth.thick (1.5)
@@ -88,19 +87,23 @@ export interface OtpInputHandle {
   blur: () => void;
 }
 
-// Slot dimensions per length — component-spec values, not in the shared
-// scale. The 48 width on length 6 keeps a row of slots within a standard
-// phone's inner width (6 × 48 + 5 × spacing[12] gap = 348 < ~358 inner).
-const SLOT_DIMS: Record<OtpInputLength, { w: number; h: number }> = {
-  4: { w: 56, h: 64 },
-  6: { w: 48, h: 64 },
+// Slot layout per length — component-spec values, not in the shared scale.
+//   4 digits: fixed 56 × 64 slots, spacing[12] gaps.
+//   6 digits: Figma "Text Field/OTP · Size=6 digits" (3106:103) — slots
+//             FILL the row equally, 56 tall, spacing[8] gaps. Filling (not a
+//             fixed 48) keeps the row inside a 360-wide phone; the old fixed
+//             48 + 12-gap row was 348 wide and overflowed the 328 inner width.
+const SLOT_DIMS: Record<OtpInputLength, { w: number | null; h: number; gap: number }> = {
+  4: { w: 56, h: 64, gap: spacing[12] },
+  6: { w: null, h: 56, gap: spacing[8] },
 };
 
 interface SlotProps {
   char: string;
   isActive: boolean;
   isError: boolean;
-  width: number;
+  /** Fixed slot width, or null to share the row equally (flex: 1). */
+  width: number | null;
   height: number;
 }
 
@@ -117,7 +120,7 @@ function Slot({ char, isActive, isError, width, height }: SlotProps) {
   return (
     <View
       style={{
-        width,
+        ...(width == null ? { flex: 1 } : { width }),
         height,
         borderRadius: radius.lg,
         borderWidth: bw,
@@ -140,7 +143,7 @@ function Slot({ char, isActive, isError, width, height }: SlotProps) {
 
 export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpInput(
   {
-    length = 4,
+    length = 6, // OTPs are 6 digits app-wide (backend). 4 kept only for legacy use.
     value,
     onChangeText,
     state,
@@ -212,13 +215,16 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
     >
       {/* Slots row — tapping anywhere here focuses the hidden TextInput. */}
       <Pressable
+        // Stretch even when a parent centres children (alignItems:'center'),
+        // so fill-width 6-digit slots get the full row to share.
+        style={{ alignSelf: 'stretch' }}
         onPress={focusHidden}
         accessibilityLabel={`OTP, ${length} digits, ${value.length} entered`}
       >
         <View
           style={{
             flexDirection: 'row',
-            gap: spacing[12],
+            gap: SLOT_DIMS[length].gap,
           }}
         >
           {Array.from({ length }).map((_, i) => (
