@@ -1,0 +1,116 @@
+{
+ "data": [
+  {
+   "type": "user",
+   "id": 17,
+   "attributes": {
+    "firstname": "<redacted>",
+    "email": "<redacted>",
+    "total_earned": "1458689.92",
+    "total_cashback_earned": "1335194.04",
+    "total_cashback_earned_v1": "1332999.89",
+    "confirmed_cashback": "500.00",
+    "pending_cashback": "68951.62",
+    "paid_cashback": "1263548.27",
+    "total_rewards_earned": "123495.88",
+    "confirmed_rewards": "500.00",
+    "pending_rewards": "9084.87",
+    "paid_rewards": "113911.01",
+    "total_referral_earned": "2194.15",
+    "pending_referrals": "70.40",
+    "confirmed_referrals": "0.00",
+    "paid_referrals": "2123.75",
+    "has_expired_earnings": false,
+    "currency": "INR",
+    "payment_threshold": "100.00"
+   }
+  }
+ ],
+ "included": [
+  {
+   "type": "myearnings_cashback",
+   "id": 17,
+   "attributes": {
+    "total_cashback_earned": "1335194.04",
+    "paid_cashback": "1265672.02",
+    "cashback_available_payment": "500.00",
+    "pending_cashback": "69022.02",
+    "referral_cashback": "0.00",
+    "pending_referral_cashback": "70.40",
+    "authorized_cashback": "500.00",
+    "currency": "INR"
+   },
+   "relationships": {
+    "months": {
+     "data": [
+      {
+       "type": "months",
+       "id": "April2021",
+       "attributes": {
+        "month": "April",
+        "year": 2021
+       },
+       "links": {
+        "self": "https://ckapi.iamsavings.co.uk/v1/users/earnings/cashbacks/April/2021"
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "type": "myearnings_rewards",
+   "id": 17,
+   "attributes": {
+    "total_rewards_earned": "123495.88",
+    "paid_rewards": "113911.01",
+    "rewards_available_payment": "500.00",
+    "pending_rewards": "9084.87",
+    "authorized_rewards": "500.00",
+    "currency": "INR"
+   },
+   "relationships": {
+    "months": {
+     "data": [
+      {
+       "type": "months",
+       "id": "April2021",
+       "attributes": {
+        "month": "April",
+        "year": 2021
+       },
+       "links": {
+        "self": "https://ckapi.iamsavings.co.uk/v1/users/earnings/rewards/April/2021"
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "type": "myearnings_referrals",
+   "id": 17,
+   "attributes": {
+    "authorized_referral_cashback": "0.00",
+    "currency": "INR"
+   },
+   "relationships": {
+    "months": {
+     "data": [
+      {
+       "type": "months",
+       "id": "March2021",
+       "attributes": {
+        "month": "March",
+        "year": 2021
+       },
+       "links": {
+        "self": "https://ckapi.iamsavings.co.uk/v1/users/earnings/referrals/March/2021"
+       }
+      }
+     ]
+    }
+   }
+  }
+ ]
+}

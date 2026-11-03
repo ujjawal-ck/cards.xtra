@@ -9,6 +9,7 @@
  * short-lived and kept in memory by cashkaro.ts.
  */
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 
 const ACCESS_TOKEN = 'ck_access_token';
 const REFRESH_TOKEN = 'ck_refresh_token';
@@ -70,14 +71,9 @@ export async function loadNamePending(): Promise<boolean> {
   return (await SecureStore.getItemAsync(NAME_PENDING)) === '1';
 }
 
-/** Random 32-char id (not crypto-grade; just a stable per-install handle). */
+/** Cryptographically random UUID v4: a stable per-install handle. */
 function randomId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let out = '';
-  for (let i = 0; i < 32; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return out;
+  return Crypto.randomUUID();
 }
 
 /** Stable device id, generated + persisted on first use. */

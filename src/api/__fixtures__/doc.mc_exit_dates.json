@@ -1,0 +1,29 @@
+{
+ "data": [
+  {
+   "type": "clickdates",
+   "id": null,
+   "attributes": {
+    "exitclick_date": "2022-08-09",
+    "month": "August"
+   }
+  },
+  {
+   "type": "clickdates",
+   "id": null,
+   "attributes": {
+    "exitclick_date": "2022-08-12",
+    "month": "August"
+   }
+  }
+ ],
+ "meta": {
+  "report_merchant_name": "Amazon",
+  "orderid_hint_message": "Please enter sample order ID like this: ",
+  "sample_orderid": "962-1198956-0957613",
+  "orderid_format": {
+   "962-1198956-0957613": "/^[0-9]{3,3}-[0-9]{7,7}-[0-9]{7,7}$/",
+   "AMqwtD#": "/^AM[A-Za-z]{4,5}#$/"
+  }
+ }
+}

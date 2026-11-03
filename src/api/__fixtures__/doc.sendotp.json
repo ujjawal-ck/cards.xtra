@@ -1,0 +1,16 @@
+{
+ "data": {
+  "type": "user_otp",
+  "id": 19,
+  "attribute": {
+   "sent_to": "<redacted>",
+   "sent_to_mobile": "<redacted>",
+   "sent_to_email": "<redacted>",
+   "otp_guid": "5f76ef50dba811ee9de0db59d822f630",
+   "otp_expire_sec": "180"
+  }
+ },
+ "meta": {
+  "message": "OTP sent to Mobile and Email"
+ }
+}

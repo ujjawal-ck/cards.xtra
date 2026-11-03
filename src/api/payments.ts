@@ -12,6 +12,8 @@
  * client-side format gate (an invalid value surfaces as a submit error).
  */
 import { ck } from './cashkaro';
+import { reportHandled } from './http/report';
+import * as Schemas from './schemas';
 import { ApiError } from './client';
 import { CK } from '../config/env';
 
@@ -47,7 +49,7 @@ export interface PaymentData {
  *  from you is already pending"). Callers detect that via
  *  paymentInProcessAmountFromError() rather than a field on the success body. */
 export async function fetchPaymentInfo(token: string): Promise<any> {
-  return ck('/payment/payment', {
+  return ck('/payment/payment', { contract: ['payment/payment', Schemas.PaymentInfoResponse],
     auth: { userToken: token },
     query: { device: CK.device, paymentautomation: 'true', include: 'charities' },
   });
@@ -114,17 +116,20 @@ export function extractPaymentMethodIds(
 ): Record<PaymentMethodKey, number> {
   const ids: Record<PaymentMethodKey, number> = { ...DEFAULT_PAYMENT_METHOD_IDS };
 
-  const candidates: any[] =
-    info?.data?.relationships?.payment_methods?.data ||
-    info?.data?.relationships?.payment_methods ||
-    info?.relationships?.payment_methods?.data ||
-    info?.relationships?.payment_methods ||
-    info?.data?.attributes?.payment_methods ||
-    info?.data?.payment_methods ||
-    (Array.isArray(info?.included)
+  // Documented shape (CK doc, GET /payment/payment):
+  // relationships.payment_methods.data[] with { id, attributes.payment_name }.
+  // `included` is kept as a second source in case CK moves it there.
+  const documented = info?.relationships?.payment_methods?.data;
+  const candidates: any[] = Array.isArray(documented)
+    ? documented
+    : Array.isArray(info?.included)
       ? info.included.filter((i: any) => i?.type === 'payment_method')
-      : []) ||
-    [];
+      : [];
+  if (candidates.length === 0 && info) {
+    // Falling back to built-in ids could send a payout to the wrong method on
+    // a backend where ids differ, so make it visible.
+    reportHandled(new Error('payment_methods missing in /payment/payment'), 'payment method ids: using defaults');
+  }
 
   if (!Array.isArray(candidates) || candidates.length === 0) return ids;
 
@@ -158,7 +163,7 @@ export interface SendOtpResult {
 
 /** POST /users/sendotp — PAYMENT_REQUEST_OTP. Returns otp_guid + masked no. */
 export async function sendPaymentRequestOTP(token: string): Promise<SendOtpResult> {
-  const res: any = await ck('/users/sendotp', {
+  const res: any = await ck('/users/sendotp', { contract: ['users/sendotp', Schemas.SendOtpResponse],
     method: 'POST',
     auth: { userToken: token },
     query: { device: CK.device },
@@ -207,7 +212,7 @@ export async function submitUPIPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
     auth: { userToken: token },
     query: { device: CK.device },
@@ -232,7 +237,7 @@ export async function submitAmazonPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
     auth: { userToken: token },
     query: { device: CK.device },
@@ -258,7 +263,7 @@ export async function submitFlipkartPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
     auth: { userToken: token },
     query: { device: CK.device },
@@ -276,31 +281,4 @@ export async function submitFlipkartPayment(
   });
 }
 
-export async function submitBankPayment(
-  token: string,
-  paymentType: PaymentTypeKey,
-  ifscCode: string,
-  accountHolderName: string,
-  accountNumber: string,
-  otpGuid: string,
-  paymentMethodId: number
-): Promise<any> {
-  return ck('/payment/paymentV1', {
-    method: 'POST',
-    auth: { userToken: token },
-    query: { device: CK.device },
-    body: {
-      data: {
-        type: 'imps',
-        attributes: {
-          otp_guid: otpGuid,
-          payment_type: paymentType,
-          payment_method_id: String(paymentMethodId),
-          ifsc_code: ifscCode,
-          account_holder_name: accountHolderName,
-          account_number: accountNumber,
-        },
-      },
-    },
-  });
-}
+

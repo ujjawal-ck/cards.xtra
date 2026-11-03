@@ -67,10 +67,12 @@ export function mapEarnings(res: any): EarningsValues {
   const paid = toAmount(a.paid_cashback);
   const cashback = toAmount(a.total_cashback_earned) ?? toAmount(a.total_cashback);
   const rewards = toAmount(a.total_rewards_earned) ?? toAmount(a.total_rewards);
-  const total =
-    toAmount(a.total_earned) ?? ((confirmed ?? 0) + (pending ?? 0));
+  const totalRaw = toAmount(a.total_earned);
+  const total = totalRaw ?? (confirmed ?? 0) + (pending ?? 0);
 
-  const hasData = [confirmed, pending, cashback, rewards, total].some((x) => x !== null);
+  // Only values the API actually sent count; the computed fallback total
+  // must not make an empty response look like "₹0 earned".
+  const hasData = [confirmed, pending, cashback, rewards, totalRaw].some((x) => x !== null);
 
   return {
     totalEarnings: money(total ?? 0),

@@ -420,7 +420,12 @@ export function OnboardingScreen() {
       try {
         ({ otpGuid: guid } = await loginOtp(loginPhone));
       } catch (loginErr) {
-        if (loginErr instanceof ApiError && /not regist/i.test(loginErr.message)) {
+        // Code 2010 = "Mobile number not registered with us" (CK doc). The text
+        // check stays only as a fallback in case a gateway drops the code.
+        if (
+          loginErr instanceof ApiError &&
+          (loginErr.hasCode(2010) || /not regist/i.test(loginErr.message))
+        ) {
           ({ otpGuid: guid } = await signupOtp(loginPhone));
           signupMode = true;
         } else {

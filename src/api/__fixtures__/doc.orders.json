@@ -1,0 +1,71 @@
+{
+ "meta": {
+  "total_records": 10,
+  "page_number": "1",
+  "page_size": "3"
+ },
+ "links": {
+  "self": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders?device=Desktop&filter[fromdate]=2024-04-01&filter[todate]=2024-07-30&page[number]=1&page[size]=3",
+  "first": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders?page[number]=1&page[size]=3&filter[fromdate]=2024-04-01&filter[todate]=2024-07-30&device=Desktop",
+  "last": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders?page[number]=4&page[size]=3&filter[fromdate]=2024-04-01&filter[todate]=2024-07-30&device=Desktop",
+  "prev": null,
+  "next": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders?page[number]=2&page[size]=3&filter[fromdate]=2024-04-01&filter[todate]=2024-07-30&device=Desktop",
+  "export": "https://ekapi.retailkaro.com/v1/users/orders?export=1&filter[fromdate]=2023-04-02&filter[status]=pending&filter[todate]=2023-07-02&device=App"
+ },
+ "data": [
+  {
+   "type": "myorder",
+   "id": "24545142",
+   "attributes": {
+    "merchant_image_url": "https://asset9.ckassets.com/resources/image/stores/firefox-market-store-1667381064.svg",
+    "bonus_type": null,
+    "cashback_type": "Cashback",
+    "order_id": "LCCHKR20240424911310",
+    "cashback_amount": "18.00",
+    "cashback_status": "Pending",
+    "referral_name": null,
+    "currency": "INR",
+    "comments": "Firefox View lets you see your tabs open on other devices and recent history."
+   },
+   "links": {
+    "self": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders/24545142"
+   }
+  },
+  {
+   "type": "myorder",
+   "id": "24545143",
+   "attributes": {
+    "merchant_image_url": "https://asset9.ckassets.com/resources/image/stores/firefox-market-store-1667381064.svg",
+    "bonus_type": "firefox-affiliateLCCHKR20240424911310-Bonus",
+    "cashback_type": "Bonus",
+    "order_id": "LCCHKR20240424911310-Bonus",
+    "cashback_amount": "100.00",
+    "cashback_status": "Pending",
+    "referral_name": null,
+    "currency": "INR",
+    "comments": null
+   },
+   "links": {
+    "self": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders/24545143"
+   }
+  },
+  {
+   "type": "myorder",
+   "id": "24545105",
+   "attributes": {
+    "merchant_image_url": "https://asset9.ckassets.com/resources/image/stores/no-image.jpg",
+    "bonus_type": "Special Bonus",
+    "cashback_type": "Bonus",
+    "order_id": "",
+    "cashback_amount": "5623.00",
+    "cashback_status": "Pending",
+    "referral_name": null,
+    "currency": "INR",
+    "comments": "Cashback pending to Bonus Pending comments updated via Admin"
+   },
+   "links": {
+    "self": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/orders/24545105"
+   }
+  }
+ ]
+}

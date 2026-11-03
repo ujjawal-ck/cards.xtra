@@ -1,0 +1,12 @@
+{
+ "errors": [
+  {
+   "code": "5002",
+   "title": "A payment request from you is already pending. This will be processed shortly. Once this is paid, you can request for another payment.",
+   "detail": "A payment request from you is already pending. This will be processed shortly. Once this is paid, you can request for another payment.",
+   "meta": {
+    "requested_earnings": "20.00"
+   }
+  }
+ ]
+}

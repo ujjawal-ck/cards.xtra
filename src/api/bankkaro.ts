@@ -8,11 +8,9 @@
  *
  * Endpoints map onto the Home UI:
  *   initBundle      → banks / networks / tags / filter metadata (bootstrap)
- *   getCards        → full card list   |  filterCards → filtered/sorted list
- *   getPopularCards → Home carousel
+ *   getCards        → full card list
  *   getCardDetail   → CardDetailSheet
  *   checkEligibility→ eligibility toggle
- *   calculate       → rewards calculator
  *
  * NOTE: response shapes aren't fully typed yet — they'll be pinned down in
  * Phase 2 against live responses, then the `any` returns get real types.
@@ -21,7 +19,7 @@ import { BK } from '../config/env';
 import { httpRequest } from './http/client';
 import { ApiError } from './http/errors';
 import { createCachedToken, withCachedToken } from './http/tokenManager';
-import type { CardListFilters, EligibilityPayload } from './types';
+import type { EligibilityPayload } from './types';
 
 // Partner JWT (POST /token). Cached until shortly before its exp, minted
 // single-flight, re-minted once when a call returns 401/403. Previously it was
@@ -60,20 +58,12 @@ export function initBundle(): Promise<any> {
   return bk('/cardgenius/init-bundle');
 }
 
-/** Cards shown in the Home carousel. */
-export function getPopularCards(): Promise<any> {
-  return bk('/cardgenius/popular-cards');
-}
 
 /** Full card list (unfiltered). */
 export function getCards(): Promise<any> {
   return bk('/cardgenius/cards');
 }
 
-/** Filtered / sorted card list. */
-export function filterCards(filters: CardListFilters): Promise<any> {
-  return bk('/cardgenius/cards', { method: 'POST', body: filters, idempotent: true });
-}
 
 /** Single card detail by alias/slug (e.g. "icici-platinum-chip-credit-card"). */
 export function getCardDetail(alias: string): Promise<any> {
@@ -85,7 +75,3 @@ export function checkEligibility(payload: EligibilityPayload): Promise<any> {
   return bk('/cardgenius/eligiblity', { method: 'POST', body: payload, idempotent: true });
 }
 
-/** Rewards calculator across a spend breakdown. */
-export function calculate(spends: Record<string, number>): Promise<any> {
-  return bk('/cardgenius/calculate', { method: 'POST', body: spends });
-}

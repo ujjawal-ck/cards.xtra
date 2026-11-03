@@ -1,0 +1,93 @@
+{
+ "meta": {
+  "total_records": 3,
+  "page_number": 1,
+  "page_size": 10,
+  "resolved": 249,
+  "others": 279,
+  "has_exits": "yes"
+ },
+ "links": {
+  "self": "/missingcashback/queue?filter[status]=Pending",
+  "first": "/missingcashback/queue?page[number]=1&page[size]=10&filter[status]=Pending",
+  "last": "/missingcashback/queue?page[number]=1&page[size]=10&filter[status]=Pending",
+  "prev": null,
+  "next": null
+ },
+ "data": [
+  {
+   "type": "list",
+   "id": 99,
+   "attributes": {
+    "callback_id": null,
+    "ticket_id": 413499,
+    "cashback_id": null,
+    "store_id": 16078,
+    "exit_id": "LCCHKR20220818584779",
+    "click_date": "2022-08-18",
+    "order_id": "OD938800379676695493",
+    "order_amount": "20.00",
+    "details": "Missing cashback Ticket Raised",
+    "comments": null,
+    "status": "Resolved",
+    "category": "Other Category",
+    "report_storename": "Flipkart",
+    "imageurl": "https://asset9.ckassets.com/resources/image/stores/flipkart-1640149920.png",
+    "ticket_comments": null,
+    "cashbackvalue": null,
+    "ticket_status": "Received",
+    "groupid": "C2",
+    "status_update": "2022-08-28T13:40:57Z"
+   }
+  },
+  {
+   "type": "list",
+   "id": 98,
+   "attributes": {
+    "callback_id": null,
+    "ticket_id": null,
+    "cashback_id": null,
+    "store_id": 1999,
+    "exit_id": "LCCHKR20220818584777",
+    "click_date": "2022-08-18",
+    "order_id": "962-1198956-0957614",
+    "order_amount": "60.00",
+    "details": "No cashback eligible on this category",
+    "comments": null,
+    "status": "Resolved",
+    "category": "No Cashback",
+    "report_storename": "Amazon",
+    "imageurl": "https://asset9.ckassets.com/resources/image/stores/amazon-1655287768.png",
+    "ticket_comments": null,
+    "cashbackvalue": null,
+    "ticket_status": null,
+    "groupid": "C1",
+    "status_update": "2022-08-18T10:00:28Z"
+   }
+  },
+  {
+   "type": "list",
+   "id": 68,
+   "attributes": {
+    "callback_id": null,
+    "ticket_id": null,
+    "cashback_id": null,
+    "store_id": 16190,
+    "exit_id": "LCCHKR20220818584783",
+    "click_date": "2022-08-18",
+    "order_id": "FL1802195788",
+    "order_amount": "45.00",
+    "details": "Waiting for Auto Tracking",
+    "comments": null,
+    "status": "Pending",
+    "report_storename": "Ajio",
+    "imageurl": "https://asset9.ckassets.com/resources/image/stores/ajio-coupons-1-1640149348.png",
+    "ticket_comments": null,
+    "cashbackvalue": null,
+    "ticket_status": null,
+    "groupid": "A",
+    "status_update": "2022-08-18T08:02:24Z"
+   }
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "errors": [
+  {
+   "status": "400",
+   "code": "10003",
+   "title": "Invalid Category",
+   "detail": "Invalild Category: miniapp",
+   "source": {
+    "parameter": "category"
+   }
+  }
+ ]
+}

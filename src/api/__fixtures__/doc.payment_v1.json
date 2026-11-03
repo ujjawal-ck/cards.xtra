@@ -1,0 +1,10 @@
+{
+ "data": {
+  "type": "payment",
+  "id": 520102
+ },
+ "meta": {
+  "status": "accepted",
+  "message": "We have initiated your Amazon Gift card of \u20b9500 to your registered account. We will notify you via SMS once this is done."
+ }
+}

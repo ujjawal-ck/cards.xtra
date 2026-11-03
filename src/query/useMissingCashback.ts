@@ -186,9 +186,9 @@ export function useClaims(tab: ClaimTab) {
           const fresh = await refreshSession();
           if (fresh) return run(fresh);
         }
-        // The list endpoint 404s / "no data" on an empty tab — treat as empty.
-        const msg = (e as Error)?.message?.toLowerCase() || '';
-        if (msg.includes('not found') || msg.includes('no data') || msg.includes('empty')) {
+        // An empty tab can come back as 404 — treat that as empty. Every
+        // other failure is a real error and shows the retry state.
+        if (e instanceof ApiError && e.kind === 'http' && e.status === 404) {
           return { cards: [], othersCards: [], counts: { pending: 0, resolved: 0, others: 0 } };
         }
         throw e;

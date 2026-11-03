@@ -13,11 +13,14 @@
  * writes add the vnd.api+json Content-Type. Responses are unwrapped from the
  * `{ data: { attributes } }` envelope before returning.
  */
-import { Platform, Dimensions, PixelRatio } from 'react-native';
+import { Platform } from 'react-native';
 import { CK } from '../config/env';
 import { httpRequest, basicAuthHeader } from './http/client';
 import { ApiError } from './http/errors';
 import { createCachedToken, withCachedToken, withUserToken } from './http/tokenManager';
+import type { ZodTypeAny } from 'zod';
+import { checkContract } from './schemas/validate';
+import * as Schemas from './schemas';
 import type { LoginOtpResult, AuthSession, UserProfile } from './types';
 
 type Auth = 'aws' | 'user' | { userToken: string } | undefined;
@@ -33,6 +36,8 @@ interface CkOptions {
   timeoutMs?: number;
   /** Mark a write safe to retry on transient failures. */
   idempotent?: boolean;
+  /** Response contract: [endpoint name, zod schema]. Mismatches are reported, never thrown. */
+  contract?: [string, ZodTypeAny];
 }
 
 // App token (GET /token). Cached until shortly before its JWT exp, minted
@@ -81,7 +86,7 @@ async function getPublicIp(): Promise<string> {
 }
 
 export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent } = opts;
+  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent, contract } = opts;
   const headers: Record<string, string> = { ...CK.headers() };
   // JSON:API content-type for write bodies — EXCEPT multipart (FormData file
   // uploads), where the runtime must set the boundary content-type itself.
@@ -97,46 +102,39 @@ export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T
       idempotent,
       headers: bearer ? { ...headers, Authorization: `Bearer ${bearer}` } : headers,
     });
-  if (auth === 'aws') return withCachedToken(appToken, send);
-  if (auth === 'user') return withUserToken(send);
-  if (auth && 'userToken' in auth) return withUserToken(send, auth.userToken);
-  return send();
+  const res =
+    auth === 'aws'
+      ? await withCachedToken(appToken, send)
+      : auth === 'user'
+        ? await withUserToken(send)
+        : auth && 'userToken' in auth
+          ? await withUserToken(send, auth.userToken)
+          : await send();
+  if (contract) checkContract(contract[0], contract[1], res);
+  return res;
 }
 
 /**
- * device_info block the login/signup endpoints expect.
- *
- * The backend validates this object and rejects EMPTY fields ("the device
- * info must be a valid data"), so every key must carry a non-empty value.
- * Identifiers the mini-app can't read on a managed Expo runtime (fcm_id,
- * imei, advertising id) fall back to the stable per-install deviceId rather
- * than ''. Screen metrics come from RN's Dimensions/PixelRatio.
+ * device_info block the login/signup endpoints expect (CK doc, "Login from
+ * App"). Only the documented fields are sent, with real values:
+ *   - device_unique_id: stable per-install UUID (tokenStore)
+ *   - fcm_id: must be non-empty and match what /users/logout sends. There is
+ *     no FCM registration yet, so it is the device id; swap in the FCM token
+ *     when push is added.
+ *   - imei_number: Android no longer exposes IMEI to apps; the doc's
+ *     placeholder of zeros is what CK expects.
+ *   - device_client: the real OS ("Android" / "iOS").
+ * We no longer send invented values (lat/long 0, network "wifi", a fake
+ * advertising id). Verified: staging /login accepts this block (200).
  */
 function buildDeviceInfo(deviceId: string): Record<string, string> {
-  const { width, height } = Dimensions.get('window');
-  const scale = PixelRatio.get();
-  const pxW = Math.round(width * scale);
-  const pxH = Math.round(height * scale);
   return {
     fcm_id: deviceId,
     device_unique_id: deviceId,
-    imei_number: deviceId,
-    advertising_id: deviceId,
-    device_brand: Platform.OS,
-    device_model: Platform.OS,
-    device_client: 'cards-xtra-mini-app',
+    imei_number: '000000000000000',
+    device_client: Platform.OS === 'ios' ? 'iOS' : 'Android',
     app_version: CK.appVersion,
-    app_version_code: CK.appVersion,
-    os_name: Platform.OS,
     os_version: String(Platform.Version),
-    device_country: 'IN',
-    latitude: '0.0',
-    longitude: '0.0',
-    language: 'en',
-    network_type: 'wifi',
-    screen_resolution: `${pxW}x${pxH}`,
-    screen_density: String(scale),
-    screen_height: String(pxH),
   };
 }
 
@@ -144,7 +142,7 @@ function buildDeviceInfo(deviceId: string): Record<string, string> {
 
 /** Request a login OTP; returns the otp_guid needed to verify. */
 export async function loginOtp(mobileNumber: string): Promise<LoginOtpResult> {
-  const res = await ck<any>('/loginotp', {
+  const res = await ck<any>('/loginotp', { contract: ['loginotp', Schemas.OtpRequestResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -162,7 +160,7 @@ export async function login(params: {
   otp: string;
   deviceId: string;
 }): Promise<AuthSession> {
-  const res = await ck<any>('/login', {
+  const res = await ck<any>('/login', { contract: ['login', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -187,7 +185,7 @@ export async function login(params: {
 
 /** Request a signup OTP; returns the otp_guid needed to complete signup. */
 export async function signupOtp(mobileNumber: string): Promise<LoginOtpResult> {
-  const res = await ck<any>('/signupotp', {
+  const res = await ck<any>('/signupotp', { contract: ['signupotp', Schemas.OtpRequestResponse],
     method: 'POST',
     auth: 'aws',
     body: { data: { type: 'user_otp', attributes: { mobile_number: Number(mobileNumber) } } },
@@ -209,7 +207,7 @@ export async function signup(params: {
   referralUser?: string | null;
 }): Promise<AuthSession> {
   const ip = await getPublicIp();
-  const res = await ck<any>('/signupV1', {
+  const res = await ck<any>('/signupV1', { contract: ['signupV1', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -258,14 +256,10 @@ export async function refreshTokens(
   return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token || undefined };
 }
 
-/** @deprecated use refreshTokens (keeps the rotated refresh token). */
-export async function refreshAccessToken(refreshToken: string): Promise<string> {
-  return (await refreshTokens(refreshToken)).accessToken;
-}
 
 /** Fetch the logged-in user's earnings summary (confirmed/pending/cashback/rewards). */
 export async function getEarnings(userToken: string): Promise<any> {
-  return ck('/users/earnings', { auth: { userToken }, query: { device: CK.device } });
+  return ck('/users/earnings', { contract: ['users/earnings', Schemas.EarningsResponse], auth: { userToken }, query: { device: CK.device } });
 }
 
 /** Server-side order-list filters (CashKaro `/users/orders` `filter[*]` params).
@@ -297,12 +291,12 @@ export async function getOrders(
   if (filters.cashbacktype) query['filter[cashbacktype]'] = filters.cashbacktype;
   if (filters.fromdate) query['filter[fromdate]'] = filters.fromdate;
   if (filters.todate) query['filter[todate]'] = filters.todate;
-  return ck('/users/orders', { auth: { userToken }, query });
+  return ck('/users/orders', { contract: ['users/orders', Schemas.OrdersResponse], auth: { userToken }, query });
 }
 
 /** Fetch a single order's detail (amount, dates, status, timeline). */
 export async function getOrderDetail(userToken: string, orderId: string): Promise<any> {
-  return ck(`/users/orders/${encodeURIComponent(orderId)}`, {
+  return ck(`/users/orders/${encodeURIComponent(orderId)}`, { contract: ['users/orders/:id', Schemas.OrderDetailResponse],
     auth: { userToken },
     query: { device: CK.device },
   });
@@ -310,7 +304,7 @@ export async function getOrderDetail(userToken: string, orderId: string): Promis
 
 /** Fetch the logged-in user's profile. */
 export async function getProfile(userToken: string): Promise<UserProfile> {
-  const res = await ck<any>('/users/profile', {
+  const res = await ck<any>('/users/profile', { contract: ['users/profile', Schemas.ProfileResponse],
     auth: { userToken },
     query: { device: CK.device },
   });
@@ -330,10 +324,6 @@ export async function getProfile(userToken: string): Promise<UserProfile> {
 // All use the aws-token (pre-login). JSON:API envelopes returned raw; the
 // offers mapper unwraps data/attributes.
 
-/** All offer categories (33; filter to real top-level ones in the mapper). */
-export async function getOfferCategories(): Promise<any> {
-  return ck('/offers/categories', { auth: 'aws', query: { device: CK.device } });
-}
 
 /**
  * Stores within a category. Accepts a category PATH — usually nested
@@ -343,7 +333,7 @@ export async function getOfferCategories(): Promise<any> {
  */
 export async function getCategoryOffers(categoryPath: string): Promise<any> {
   const path = categoryPath.split('/').map(encodeURIComponent).join('/');
-  return ck(`/offers/category/${path}`, {
+  return ck(`/offers/category/${path}`, { contract: ['offers/category', Schemas.OffersByCategoryResponse],
     auth: 'aws',
     // Default page size is 10 — request a large page so the grid shows the
     // full category (e.g. fashion has 39 stores, not 10).
@@ -367,7 +357,7 @@ export async function getOfferCategoryTree(parentSlug: string): Promise<any> {
 
 /** Full store/brand page for an offer (e.g. "flipkart"). */
 export async function getOfferStore(storeSlug: string): Promise<any> {
-  return ck(`/offers/${encodeURIComponent(storeSlug)}`, {
+  return ck(`/offers/${encodeURIComponent(storeSlug)}`, { contract: ['offers/:slug', Schemas.MerchantOfferResponse],
     auth: 'aws',
     query: { device: CK.device, include: 'coupons,secondary_cashback,related_offers' },
   });
@@ -390,7 +380,7 @@ const CARD_RATE_CATEGORY = 'home-categories-exclusive';
 export async function getCardRateStores(): Promise<any[]> {
   const all: any[] = [];
   for (let page = 1; page <= 20; page++) {
-    const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, {
+    const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, { contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
       auth: 'aws',
       query: { device: CK.device, 'page[size]': 100, 'page[number]': page },
     });

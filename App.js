@@ -54,7 +54,17 @@ if (Constants.executionEnvironment !== 'storeClient') {
   }
   try {
     // Crash reports + analytics breadcrumbs (Firebase Crashlytics).
-    require('./src/analytics/crashlyticsSink').registerCrashlyticsSink();
+    const crash = require('./src/analytics/crashlyticsSink');
+    crash.registerCrashlyticsSink();
+    // A response that stops matching its contract becomes a non-fatal,
+    // tagged with the endpoint and failing fields (never the payload).
+    require('./src/api/schemas/validate').setContractReporter((v) =>
+      crash.recordError(new Error(`API contract drift: ${v.endpoint}`), v.issues.join(' | ')),
+    );
+    // Failures we recover from (fallback data) still get counted.
+    require('./src/api/http/report').setHandledErrorReporter((err, context) =>
+      crash.recordError(err, `handled: ${context}`),
+    );
   } catch (e) {
     console.warn('Crashlytics not registered:', e?.message ?? e);
   }
