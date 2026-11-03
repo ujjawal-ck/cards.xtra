@@ -8,7 +8,8 @@
  *      caller gets `opened: false` so it must not log a conversion.
  *   2. Signed-in user whose profile id hasn't loaded yet → the tracker went
  *      out with an empty `id=`, so CashKaro could not credit the user. Now we
- *      wait for the profile (up to PROFILE_WAIT_MS) before opening.
+ *      use the id persisted at the last profile load (tokenStore), and only
+ *      wait for the profile (up to PROFILE_WAIT_MS) on a first-ever launch.
  *
  * If the id still isn't available (offline, profile API down) we open
  * anyway: blocking the click would lose the commission entirely. The result
@@ -17,6 +18,7 @@
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import { loadUserId } from '../auth/tokenStore';
 import { useProfile } from './useProfile';
 import { openUrl, withTrackingUser } from '../lib/openUrl';
 import { analytics, Events } from '../analytics';
@@ -58,6 +60,9 @@ export function useTrackedClickout() {
         return { opened: false, attributed: false };
       }
       let userId: string | number | undefined = profileId;
+      if (accessToken && (userId === undefined || userId === null || userId === '')) {
+        userId = (await loadUserId().catch(() => null)) ?? undefined;
+      }
       if (accessToken && (userId === undefined || userId === null || userId === '')) {
         const res = await withTimeout(refetchProfile(), PROFILE_WAIT_MS);
         userId = res?.data?.id;

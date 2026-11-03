@@ -37,10 +37,8 @@ import {
   sendPaymentRequestOTP,
   verifyPaymentRequestOTP,
   verifyHasError,
-  submitUPIPayment,
-  submitAmazonPayment,
-  submitFlipkartPayment,
 } from '../../api/payments';
+import { useWithdraw, PayoutInFlightError, PayoutUnknownError } from '../../query/mutations/withdraw';
 import { formatRupees } from './amount';
 import { withdrawTitle } from './labels';
 
@@ -58,6 +56,7 @@ export function WithdrawVerifyOTP() {
   const insets = useSafeAreaInsets();
   const { accessToken } = useAuth();
   const { draft, maskedMobile } = params;
+  const withdraw = useWithdraw();
 
   const [otp, setOtp] = useState('');
   const [otpGuid, setOtpGuid] = useState(params.otpGuid);
@@ -103,24 +102,25 @@ export function WithdrawVerifyOTP() {
 
     // 2) Submit the payment for the chosen method.
     try {
-      const { method, paymentType, paymentMethodId } = draft;
-      if (method === 'upi') {
-        await submitUPIPayment(accessToken, paymentType, draft.upiId ?? '', otpGuid, paymentMethodId);
-      } else if (method === 'amazon') {
-        await submitAmazonPayment(accessToken, paymentType, draft.mobile ?? '', otpGuid, paymentMethodId);
-      } else if (method === 'flipkart') {
-        await submitFlipkartPayment(accessToken, paymentType, draft.email ?? '', otpGuid, paymentMethodId);
-      }
+      const { method, paymentType } = draft;
+      const outcome = await withdraw.mutateAsync({ draft, otpGuid });
       // Payout request accepted — the withdraw conversion.
       analytics.track(Events.WITHDRAW_SUBMIT, {
         method,
         payment_type: paymentType,
         amount: draft.amount,
+        recheck: outcome.status === 'submitted_after_recheck',
       });
       navigation.navigate('WithdrawSuccess', { amount: draft.amount, method });
     } catch (e: any) {
+      // Another submit is already running: leave the busy overlay up.
+      if (e instanceof PayoutInFlightError) return;
       setBusy(false);
       play('error');
+      if (e instanceof PayoutUnknownError) {
+        Alert.alert('Checking your withdrawal', e.message);
+        return;
+      }
       Alert.alert('Payment failed', e?.message ?? 'Please try again.');
     }
   };

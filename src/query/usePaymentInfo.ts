@@ -3,11 +3,10 @@
  * method ids, from CashKaro GET /payment/payment. Source of truth for the
  * withdraw flow (amounts shown + payment_method_id used at submit).
  *
- * Mirrors useEarnings: disabled when signed out; one refresh-token retry on
- * 401/403.
+ * Mirrors useEarnings: disabled when signed out; token refresh is handled
+ * by the API layer.
  */
 import { useQuery } from '@tanstack/react-query';
-import { ApiError } from '../api/client';
 import {
   fetchPaymentInfo,
   extractPaymentData,
@@ -19,6 +18,7 @@ import {
 } from '../api/payments';
 import { useAuth } from '../auth/AuthContext';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { qk } from './keys';
 
 export interface PaymentInfo extends PaymentData {
   methodIds: Record<PaymentMethodKey, number>;
@@ -28,9 +28,9 @@ export interface PaymentInfo extends PaymentData {
 }
 
 export function usePaymentInfo() {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   const query = useQuery<PaymentInfo>({
-    queryKey: ['ck', 'paymentInfo', accessToken],
+    queryKey: qk.user.paymentInfo(),
     enabled: !!accessToken,
     // Override the 5-min app default. Payment state is unlike the card catalog:
     // a payout settles server-side at any moment, and the 5002 "in process"
@@ -40,9 +40,9 @@ export function usePaymentInfo() {
     // a user who can already withdraw. A short staleTime makes any focus/remount
     // re-validate promptly so the stale state clears.
     staleTime: 30 * 1000, // 30s
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const load = async (token: string): Promise<PaymentInfo> => {
-        const info = await fetchPaymentInfo(token);
+        const info = await fetchPaymentInfo(token, signal);
         return { ...extractPaymentData(info), methodIds: extractPaymentMethodIds(info) };
       };
       try {
@@ -86,10 +86,6 @@ export function usePaymentInfo() {
             belowThreshold: true,
             methodIds: extractPaymentMethodIds({}),
           };
-        }
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return load(fresh);
         }
         throw e;
       }

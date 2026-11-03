@@ -258,8 +258,8 @@ export async function refreshTokens(
 
 
 /** Fetch the logged-in user's earnings summary (confirmed/pending/cashback/rewards). */
-export async function getEarnings(userToken: string): Promise<any> {
-  return ck('/users/earnings', { contract: ['users/earnings', Schemas.EarningsResponse], auth: { userToken }, query: { device: CK.device } });
+export async function getEarnings(userToken: string, signal?: AbortSignal): Promise<any> {
+  return ck('/users/earnings', { contract: ['users/earnings', Schemas.EarningsResponse], auth: { userToken }, query: { device: CK.device }, signal });
 }
 
 /** Server-side order-list filters (CashKaro `/users/orders` `filter[*]` params).
@@ -281,31 +281,36 @@ export interface OrdersApiFilters {
 export async function getOrders(
   userToken: string,
   filters: OrdersApiFilters = {},
-  pageSize = 20
+  paging: { page?: number; size?: number } | number = {},
+  signal?: AbortSignal,
 ): Promise<any> {
+  const { page = 1, size = 20 } = typeof paging === 'number' ? { size: paging } : paging;
   const query: Record<string, string | number> = {
     device: CK.device,
-    'page[size]': pageSize,
+    'page[number]': page,
+    'page[size]': size,
   };
   if (filters.status) query['filter[status]'] = filters.status;
   if (filters.cashbacktype) query['filter[cashbacktype]'] = filters.cashbacktype;
   if (filters.fromdate) query['filter[fromdate]'] = filters.fromdate;
   if (filters.todate) query['filter[todate]'] = filters.todate;
-  return ck('/users/orders', { contract: ['users/orders', Schemas.OrdersResponse], auth: { userToken }, query });
+  return ck('/users/orders', { contract: ['users/orders', Schemas.OrdersResponse], auth: { userToken }, query, signal });
 }
 
 /** Fetch a single order's detail (amount, dates, status, timeline). */
-export async function getOrderDetail(userToken: string, orderId: string): Promise<any> {
+export async function getOrderDetail(userToken: string, orderId: string, signal?: AbortSignal): Promise<any> {
   return ck(`/users/orders/${encodeURIComponent(orderId)}`, { contract: ['users/orders/:id', Schemas.OrderDetailResponse],
     auth: { userToken },
+    signal,
     query: { device: CK.device },
   });
 }
 
 /** Fetch the logged-in user's profile. */
-export async function getProfile(userToken: string): Promise<UserProfile> {
+export async function getProfile(userToken: string, signal?: AbortSignal): Promise<UserProfile> {
   const res = await ck<any>('/users/profile', { contract: ['users/profile', Schemas.ProfileResponse],
     auth: { userToken },
+    signal,
     query: { device: CK.device },
   });
   // `data` is an array of one `user` row (same shape as /users/earnings).

@@ -32,9 +32,11 @@ import {
   logout as ckLogout,
   refreshTokens as ckRefreshTokens,
   getEarnings,
-  getProfile,
 } from '../api/cashkaro';
-import { configureUserSession, refreshUserToken } from '../api/http/tokenManager';
+import { configureUserSession, refreshUserToken, isExpiring } from '../api/http/tokenManager';
+import { isApiError } from '../api/http/errors';
+import { qk } from '../query/keys';
+import { fetchProfile } from '../query/useProfile';
 import { queryClient } from '../query/queryClient';
 import { mapEarnings } from '../api/earningsMapper';
 import { analytics, Events } from '../analytics';
@@ -78,14 +80,14 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 function warmUserCache(accessToken: string): void {
   queryClient
     .prefetchQuery({
-      queryKey: ['ck', 'earnings', accessToken],
-      queryFn: async () => mapEarnings(await getEarnings(accessToken)),
+      queryKey: qk.user.earnings(),
+      queryFn: async ({ signal }) => mapEarnings(await getEarnings(accessToken, signal)),
     })
     .catch(() => undefined);
   queryClient
     .prefetchQuery({
-      queryKey: ['ck', 'profile', accessToken],
-      queryFn: async () => getProfile(accessToken),
+      queryKey: qk.user.profile(),
+      queryFn: ({ signal }) => fetchProfile(accessToken, signal),
     })
     .catch(() => undefined);
 }
@@ -114,8 +116,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // consistent handle that survives logout/login on the same device.
         analytics.identify(id);
         if (saved) {
-          setSession(saved);
-          setStatus('authenticated');
+          // Validate before trusting it: an expired access token is refreshed
+          // first. A rejected refresh token means signed out; a network
+          // failure keeps the session (the next call refreshes again).
+          let current: Session | null = saved;
+          if (isExpiring(saved.accessToken)) {
+            try {
+              const res = await ckRefreshTokens(saved.refreshToken);
+              current = { accessToken: res.accessToken, refreshToken: res.refreshToken || saved.refreshToken };
+              await saveSession(current);
+            } catch (e) {
+              const dead = isApiError(e) && e.kind === 'http' && (e.status === 401 || e.hasCode(2004));
+              if (dead) {
+                await clearSession();
+                current = null;
+              }
+            }
+          }
+          if (!active) return;
+          if (current) {
+            sessionRef.current = current;
+            setSession(current);
+            setStatus('authenticated');
+          } else {
+            setStatus('unauthenticated');
+          }
         } else {
           setStatus('unauthenticated');
         }
@@ -137,6 +162,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (next: Session) => {
     await saveSession(next);
+    // A new login never inherits the previous user's cache.
+    queryClient.clear();
     sessionRef.current = next;
     setSession(next);
     setStatus('authenticated');
@@ -211,16 +238,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     queryClient
       .fetchQuery({
-        queryKey: ['ck', 'profile', token],
-        queryFn: async () => {
-          try {
-            return await getProfile(token);
-          } catch (e) {
-            const fresh = await refreshSession();
-            if (fresh) return await getProfile(fresh);
-            throw e;
-          }
-        },
+        queryKey: qk.user.profile(),
+        queryFn: ({ signal }) => fetchProfile(token, signal),
       })
       .then((profile) => {
         if (active && profile?.id != null) {
@@ -236,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, [session?.accessToken, refreshSession]);
+  }, [session?.accessToken]);
 
   const signOut = useCallback(async () => {
     analytics.track(Events.LOGOUT);

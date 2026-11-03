@@ -48,9 +48,10 @@ export interface PaymentData {
  *  return data — it fails with HTTP 400 / error code 5002 ("a payment request
  *  from you is already pending"). Callers detect that via
  *  paymentInProcessAmountFromError() rather than a field on the success body. */
-export async function fetchPaymentInfo(token: string): Promise<any> {
+export async function fetchPaymentInfo(token: string, signal?: AbortSignal): Promise<any> {
   return ck('/payment/payment', { contract: ['payment/payment', Schemas.PaymentInfoResponse],
     auth: { userToken: token },
+    signal,
     query: { device: CK.device, paymentautomation: 'true', include: 'charities' },
   });
 }
@@ -205,6 +206,9 @@ export function verifyHasError(res: any): boolean {
   return !!(res?.error || (res?.data?.errors && res.data.errors.length > 0));
 }
 
+/** Deadline for a payout request (the server can be slow to confirm). */
+export const PAYOUT_TIMEOUT_MS = 30_000;
+
 export async function submitUPIPayment(
   token: string,
   paymentType: PaymentTypeKey,
@@ -214,6 +218,8 @@ export async function submitUPIPayment(
 ): Promise<any> {
   return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {
@@ -239,6 +245,8 @@ export async function submitAmazonPayment(
 ): Promise<any> {
   return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {
@@ -265,6 +273,8 @@ export async function submitFlipkartPayment(
 ): Promise<any> {
   return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {

@@ -48,6 +48,7 @@ export async function clearSession(): Promise<void> {
     SecureStore.deleteItemAsync(REFRESH_TOKEN),
     SecureStore.deleteItemAsync(DISPLAY_NAME),
     SecureStore.deleteItemAsync(NAME_PENDING),
+    SecureStore.deleteItemAsync('ck_user_id'),
   ]);
 }
 
@@ -83,4 +84,17 @@ export async function getDeviceId(): Promise<string> {
   const id = randomId();
   await SecureStore.setItemAsync(DEVICE_ID, id);
   return id;
+}
+
+// ── CashKaro user id (for click-out attribution) ────────────────────────────
+
+const USER_ID = 'ck_user_id';
+
+/** Persist the CK account id so attribution works instantly on next launch. */
+export async function saveUserId(id: string): Promise<void> {
+  await SecureStore.setItemAsync(USER_ID, id);
+}
+
+export async function loadUserId(): Promise<string | null> {
+  return SecureStore.getItemAsync(USER_ID);
 }

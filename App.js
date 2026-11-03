@@ -17,6 +17,8 @@ import {
 } from '@react-navigation/native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { connectOnlineManager } from './src/lib/network';
+import { OfflineBanner } from './src/molecules/OfflineBanner';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts,
@@ -102,6 +104,11 @@ export default function App() {
   // (refetchOnWindowFocus). Without this, RN has no "window focus" signal and
   // data would only refresh on a full restart. Per-screen re-entry is handled
   // separately by useRefetchOnFocus.
+  // Pause queries while offline and refetch on reconnect (NetInfo → React Query).
+  React.useEffect(() => {
+    connectOnlineManager();
+  }, []);
+
   React.useEffect(() => {
     const sub = AppState.addEventListener('change', (status) => {
       focusManager.setFocused(status === 'active');
@@ -160,6 +167,7 @@ export default function App() {
                 <StatusBar style="dark" />
                 <RootNavigator />
               </NavigationContainer>
+              <OfflineBanner />
             </BottomSheetModalProvider>
           </SafeAreaProvider>
         </AuthProvider>

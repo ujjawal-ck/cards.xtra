@@ -61,7 +61,15 @@
  * Imports: Header, OrderCard (organisms); Text (atoms).
  */
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, Pressable, ActivityIndicator, ImageBackground } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  ImageBackground,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import Svg, { Path } from 'react-native-svg';
@@ -187,7 +195,18 @@ export function OrdersList() {
     return f;
   }, [applied]);
 
-  const { data: rows, isLoading, isError, refetch, isFetching } = useOrders(apiFilters);
+  const { data: rows, isLoading, isError, refetch, isFetching, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useOrders(apiFilters);
+
+  // Load the next page of 20 when the user nears the bottom of the list.
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+      const nearEnd = layoutMeasurement.height + contentOffset.y >= contentSize.height - layoutMeasurement.height;
+      if (nearEnd && hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
 
   const openFilters = useCallback(
     (tab: OrdersFilterTab = 'status') => {
@@ -306,6 +325,8 @@ export function OrdersList() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: sizing.bottomNavHeight }}
+          onScroll={onScroll}
+          scrollEventThrottle={200}
         >
           {/* 2. Check Status card — vibrant blue hero (the same dark-blue
               backdrop as the "All Time Earnings" masthead), white copy +
@@ -424,6 +445,11 @@ export function OrdersList() {
                   }
                 />
               ))}
+              {isFetchingNextPage ? (
+                <View style={{ paddingVertical: spacing[16], alignItems: 'center' }}>
+                  <ActivityIndicator color={colors.action.primary.default} />
+                </View>
+              ) : null}
             </View>
           )}
         </ScrollView>
