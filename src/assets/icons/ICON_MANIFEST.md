@@ -1,0 +1,100 @@
+# Icon Manifest — src/assets/icons/
+
+87 SVG icons, named by meaning. Use via the Icon component: `<Icon name="nav-home-outline" />`
+
+## Naming
+- `nav-*` tab/navigation icons (outline + filled)
+- `feat-*` benefit/category icons (fuel, dining, travel, lounge, bank...)
+- `desc-*` status/descriptor icons (cashback, approve, pending...)
+- `pay-*` payment/partner logos (amazon, flipkart, UPI)
+- `social-*` social icons (facebook, instagram, whatsapp)
+- others: bell, cart, search(clipboard-search), star, check, wallet, clock, headset, message, copy
+
+## All icons
+- bell-filled
+- bell-outline
+- cart-filled
+- cart-outline
+- check-circle-filled
+- check-circle-outline
+- check-filled
+- check-outline
+- clipboard-search-filled
+- clipboard-search-outline
+- clock-filled
+- clock-outline
+- copy-filled
+- copy-outline
+- desc-approve
+- desc-cart
+- desc-cashback
+- desc-celebrate
+- desc-confirm
+- desc-confirmed
+- desc-cross
+- desc-exclamation
+- desc-missingcashback
+- desc-pending
+- desc-pendingcash
+- desc-replacement
+- desc-rewards
+- desc-right
+- desc-timeline
+- desc-withdraw
+- desc-withdrawcash
+- feat-bank-filled
+- feat-bank-outline
+- feat-celebration-filled
+- feat-celebration-outline
+- feat-daily-outline
+- feat-dining-filled
+- feat-dining-outline
+- feat-discount-filled
+- feat-discount-outline
+- feat-dot-filled
+- feat-dot-outline
+- feat-fuel-filled
+- feat-fuel-outline
+- feat-lounge-filled
+- feat-lounge-outline
+- feat-mobile-recharge-filled
+- feat-mobile-recharge-outline
+- feat-rewards-filled
+- feat-rewards-outline
+- feat-savings-filled
+- feat-savings-outline
+- feat-sparkle-filled
+- feat-sparkle-outline
+- feat-travel-filled
+- feat-travel-outline
+- headset-filled
+- headset-outline
+- message-filled
+- message-outline
+- nav-cards-filled
+- nav-cards-outline
+- nav-earnings-filled
+- nav-earnings-outline
+- nav-home-filled
+- nav-home-outline
+- nav-offers-filled
+- nav-offers-outline
+- nav-profile-filled
+- nav-profile-outline
+- pay-UPI
+- pay-amazon
+- pay-combined
+- pay-flipkart
+- phone-off-filled
+- phone-off-outline
+- social-app-outline
+- social-facebook-filled
+- social-facebook-outline
+- social-instagram-filled
+- social-instagram-outline
+- social-whatsapp-filled
+- social-whatsapp-outline
+- star-filled
+- star-outline
+- wallet-filled
+- wallet-outline

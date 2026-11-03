@@ -1,0 +1,7 @@
+{
+  "name": "cashback-guard",
+  "version": "0.1.0",
+  "description": "Android-only: detects when a partner shopping app is opened and shows a one-tap 'activate cashback' overlay. Local Expo module.",
+  "main": "index.ts",
+  "private": true
+}

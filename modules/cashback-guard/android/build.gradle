@@ -1,0 +1,27 @@
+// Standard Expo local-module gradle. If `expo prebuild` / autolinking ever
+// complains this file is out of date for your SDK, regenerate the boilerplate
+// with `npx create-expo-module@latest --local` and keep the src/ + manifest
+// files from this folder — only this gradle template tends to drift per SDK.
+apply plugin: 'com.android.library'
+
+group = 'expo.modules.cashbackguard'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+android {
+  namespace "expo.modules.cashbackguard"
+  defaultConfig {
+    // Accessibility + TYPE_APPLICATION_OVERLAY behaviour assumes API 24+.
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    compileSdkVersion safeExtGet("compileSdkVersion", 35)
+    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
