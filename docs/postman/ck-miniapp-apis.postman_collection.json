@@ -23,7 +23,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        }
       ],
       "url": "{{BASE}}/token",
@@ -62,7 +62,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        }
       ],
       "url": "{{BASE}}/token",
@@ -113,7 +113,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -160,7 +160,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -212,7 +212,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -261,7 +261,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -316,7 +316,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -372,7 +372,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -421,7 +421,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -476,7 +476,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -523,7 +523,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -572,7 +572,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -616,7 +616,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -661,7 +661,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -705,7 +705,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -747,7 +747,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -790,7 +790,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -833,7 +833,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -874,7 +874,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -915,7 +915,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -969,7 +969,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1019,7 +1019,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1068,7 +1068,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1139,7 +1139,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1194,7 +1194,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1236,7 +1236,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1278,7 +1278,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1320,7 +1320,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1361,7 +1361,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1402,7 +1402,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Authorization",
@@ -1448,7 +1448,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1499,7 +1499,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1547,7 +1547,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1596,7 +1596,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
@@ -1649,7 +1649,7 @@
        },
        {
         "key": "X-Chkr-App-Version",
-        "value": "4.6"
+        "value": "{{APP_VERSION}}"
        },
        {
         "key": "Content-Type",
