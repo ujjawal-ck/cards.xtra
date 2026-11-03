@@ -400,7 +400,10 @@ export async function logout(params: { userToken: string; deviceId: string }): P
     auth: { userToken: params.userToken },
     query: { device: CK.device },
     body: {
-      data: { type: 'user', attributes: { fcm_id: '', device_unique_id: params.deviceId } },
+      // fcm_id must be non-empty: staging rejects '' with 422 "The fcm id field
+      // is required" (verified 2026-11-03), which silently skipped logout. Same
+      // fallback as buildDeviceInfo: the per-install deviceId.
+      data: { type: 'user', attributes: { fcm_id: params.deviceId, device_unique_id: params.deviceId } },
     },
   });
 }
