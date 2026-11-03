@@ -25,6 +25,8 @@ export const Events = {
   OTP_REQUESTED: 'otp_requested',
   OTP_RESEND: 'otp_resend',
   OTP_SUBMITTED: 'otp_submitted',
+  // OTP verify rejected or failed. Params: flow ('login' | 'signup'), reason.
+  OTP_FAILED: 'otp_failed',
   LOGIN: 'login', // GA4 — param: method
   SIGN_UP: 'sign_up', // GA4 — param: method
   SIGN_UP_NAME_SET: 'sign_up_name_set',
@@ -34,14 +36,27 @@ export const Events = {
   SELECT_ITEM: 'select_item', // GA4 — card tile tapped
   VIEW_ITEM: 'view_item', // GA4 — card detail sheet opened
   CARD_VIEW_ALL_BENEFITS: 'card_view_all_benefits',
-  CARD_APPLY: 'card_apply', // outbound "Apply Now" click
+  // "Apply Now" tapped (intent). Params incl. gate_variant. The real
+  // outbound to the bank is CARD_APPLY_OUTBOUND — count conversions on that.
+  CARD_APPLY: 'card_apply',
+  CARD_APPLY_OUTBOUND: 'card_apply_outbound', // bank page opened (the conversion)
+  // A click-out we refused to open (no URL, or signed-in user id not loaded).
+  // Params: surface, reason ('no_url' | 'no_user_id'), item_id.
+  CLICKOUT_BLOCKED: 'clickout_blocked',
   SEARCH: 'search', // GA4 — param: search_term
+  // A typed query returned zero cards. Params: query_length (never the text).
+  SEARCH_NO_RESULTS: 'search_no_results',
   SEARCH_RESULT_SELECT: 'search_result_select',
   FILTER_APPLY: 'filter_apply',
   FILTER_CLEAR: 'filter_clear',
   CATEGORY_FILTER: 'category_filter',
   ELIGIBILITY_TOGGLE: 'eligibility_toggle',
   ELIGIBILITY_CHECK: 'eligibility_check',
+  // Per-card verdict actually shown to the user. Params: item_id, outcome
+  // ('eligible' | 'maybe' | 'ineligible'), gate_variant.
+  ELIGIBILITY_RESULT: 'eligibility_result',
+  // The CardGenius eligibility call failed. Params: surface.
+  ELIGIBILITY_ERROR: 'eligibility_error',
 
   // ── offers ─────────────────────────────────────────────────
   SELECT_CONTENT: 'select_content', // GA4 — partner card tapped

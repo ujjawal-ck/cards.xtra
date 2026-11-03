@@ -23,8 +23,10 @@ import { Platform } from 'react-native';
 
 type Stage = 'local' | 'staging' | 'prod';
 
-// Single switch for the whole app. Wire to EXPO_PUBLIC_STAGE later if needed.
-export const STAGE: Stage = 'staging';
+// Single switch for the whole app, set by EXPO_PUBLIC_STAGE in .env (or the
+// EAS build profile's env). Anything other than 'local' / 'prod' is staging.
+const RAW_STAGE = process.env.EXPO_PUBLIC_STAGE;
+export const STAGE: Stage = RAW_STAGE === 'prod' || RAW_STAGE === 'local' ? RAW_STAGE : 'staging';
 
 // Shared app identity sent to CashKaro.
 const APP_VERSION = '4.6'; // x-chkr-app-version (from CK env)
@@ -53,18 +55,38 @@ const CONFIG = {
     },
   },
   local: {
-    // TODO: fill when a local backend exists.
-    ck: { baseUrl: '', apiKey: '', basicAuthUser: '', basicAuthPass: '', trackingHost: '' },
-    bk: { baseUrl: '', partnerApiKey: '' },
+    // Point at a local/dev backend via .env. Secrets come from the same keys.
+    ck: {
+      baseUrl: process.env.EXPO_PUBLIC_CK_BASE_URL ?? '',
+      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
+      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
+      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
+      trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST ?? '',
+    },
+    bk: {
+      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL ?? '',
+      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
+    },
   },
   prod: {
-    // TODO: fill at prod cutover (see project-goal: staging → prod → stores).
-    // trackingHost is the production CashKaro click-out host (e.g.
-    // cktracking.cashkaro.com) — confirm with the CashKaro team before cutover.
-    ck: { baseUrl: '', apiKey: '', basicAuthUser: '', basicAuthPass: '', trackingHost: '' },
-    bk: { baseUrl: '', partnerApiKey: '' },
+    // Filled from .env / the EAS production profile at cutover. Production
+    // hosts and keys are NOT committed. Before prod, the CK basic-auth and the
+    // BK partner key should sit behind a server proxy (see docs/GAP_AUDIT.md P0
+    // #5); when that exists, point the base URLs at the proxy and leave the
+    // secret keys empty.
+    ck: {
+      baseUrl: process.env.EXPO_PUBLIC_CK_BASE_URL ?? '',
+      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
+      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
+      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
+      trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST ?? '',
+    },
+    bk: {
+      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL ?? '',
+      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
+    },
   },
-} as const;
+};
 
 const active = CONFIG[STAGE];
 

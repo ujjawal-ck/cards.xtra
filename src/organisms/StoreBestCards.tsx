@@ -36,8 +36,8 @@ import { spacing } from '../tokens';
 import { useCards } from '../query/useCards';
 import { applyFilters, EMPTY_FILTERS } from '../data/filterOptions';
 import { cardTagIdsForCategory } from '../data/storeCardMatch';
-import { openUrl, withTrackingUser } from '../lib/openUrl';
-import { useProfile } from '../query/useProfile';
+import { analytics, Events } from '../analytics';
+import { useTrackedClickout } from '../query/useTrackedClickout';
 import type { RootStackParamList } from '../navigation/types';
 
 // Max cards in the row — enough to feel like a curated set without flooding
@@ -70,7 +70,7 @@ export function StoreBestCards({ category, title, style }: StoreBestCardsProps) 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: cards = [] } = useCards();
-  const { data: profile } = useProfile();
+  const openClickout = useTrackedClickout();
 
   // Category match → fall back to the top cards when there's no confident
   // mapping (or the match returned nothing in this catalog).
@@ -147,7 +147,21 @@ export function StoreBestCards({ category, title, style }: StoreBestCardsProps) 
         initialCardId={selectedCard?.id}
         onActiveCardChange={setSelectedCard}
         onRecommendedPress={setSelectedCard}
-        onApply={(card) => openUrl(withTrackingUser(card.applyUrl, profile?.id))}
+        onApply={async (card) => {
+          const { opened, attributed } = await openClickout({
+            url: card.applyUrl,
+            surface: 'store_card_apply',
+            itemId: card.id,
+          });
+          if (opened) {
+            analytics.track(Events.CARD_APPLY_OUTBOUND, {
+              item_id: card.id,
+              item_name: card.name,
+              surface: 'store_page',
+              attributed,
+            });
+          }
+        }}
         onViewAllBenefits={handleViewAllBenefits}
       />
     </View>

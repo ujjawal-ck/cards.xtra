@@ -69,8 +69,7 @@ import {
 import { colors, spacing } from '../tokens';
 import { useOfferStore } from '../query/useOffers';
 import type { TimelineTile } from '../api/offersMapper';
-import { useProfile } from '../query/useProfile';
-import { openUrl, withTrackingUser } from '../lib/openUrl';
+import { useTrackedClickout } from '../query/useTrackedClickout';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -104,7 +103,7 @@ export function OffersBrandAmazon() {
   const { data: store, isLoading } = useOfferStore(slug);
   // Logged-in user id — injected into the cashback click-out so CashKaro
   // attributes the exit click (and the store shows up in Missing Cashback).
-  const { data: profile } = useProfile();
+  const openClickout = useTrackedClickout();
   const brandName = store?.name ?? 'Amazon';
   // First load of a real store: show a spinner rather than flashing the
   // Amazon placeholder content until the store's data arrives.
@@ -521,13 +520,20 @@ export function OffersBrandAmazon() {
           primaryIcon="trailing"
           primaryIconName="chevron-right"
           shine
-          onPrimary={() => {
-            // Outbound "Shop & Earn" click — the offers conversion.
+          onPrimary={async () => {
+            // Outbound "Shop & Earn" click — the offers conversion. Logged
+            // only once the store actually opened.
+            const { opened, attributed } = await openClickout({
+              url: store?.cashbackUrl,
+              surface: 'store_shop',
+              itemId: slug ?? undefined,
+            });
+            if (!opened) return;
             analytics.track(Events.OFFER_SHOP, {
               store: brandName,
               cashback_kind: store?.cashbackKind,
+              attributed,
             });
-            openUrl(withTrackingUser(store?.cashbackUrl, profile?.id));
           }}
         />
       </View>

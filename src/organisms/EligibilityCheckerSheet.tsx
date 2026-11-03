@@ -72,7 +72,8 @@ import { InlineMessage } from '../molecules';
 import { icons } from '../assets/icons';
 import { BottomSheetHeader } from './BottomSheetHeader';
 import { colors, spacing, radius, elevation } from '../tokens';
-import { fetchEligibility } from '../api/eligibility';
+import { fetchEligibility, ELIGIBILITY_ERROR_MESSAGE } from '../api/eligibility';
+import { analytics, Events } from '../analytics';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -259,6 +260,9 @@ export const EligibilityCheckerSheet = forwardRef<
   // 4439:291874).
   const [verdict, setVerdict] = useState<EligibilityVerdict | null>(null);
   const [pinError, setPinError] = useState(false);
+  // True when the last eligibility API call failed. We show an error and keep
+  // the sheet open; we never guess a verdict from income alone.
+  const [checkError, setCheckError] = useState(false);
 
   // Show the "Clear" CTA only when the sheet opened with SAVED details
   // (i.e. a check was committed in an earlier session and the caller
@@ -267,17 +271,14 @@ export const EligibilityCheckerSheet = forwardRef<
   // types — and only appears on a later reopen.
   const showClear = !!onClear && (defaultPincode.length > 0 || defaultIncome.length > 0);
 
-  // eligibleCount + parsed income → one of the three result states. Demo
-  // logic: any qualifying card OR income at/above the threshold → eligible;
-  // at least half the threshold → maybe; below that → ineligible.
+  // eligibleCount + parsed income → one of the three result states. The API
+  // decides "eligible"; income only separates "maybe" from "ineligible".
   const decideVerdict = (
     eligibleCount: number,
     incomeValue: number
   ): EligibilityVerdict => {
-    if (eligibleCount > 0 || (Number.isFinite(incomeValue) && incomeValue >= threshold)) {
-      return 'eligible';
-    }
-    if (Number.isFinite(incomeValue) && incomeValue >= threshold / 2) return 'maybe';
+    if (eligibleCount > 0) return 'eligible';
+    if (Number.isFinite(incomeValue) && incomeValue >= threshold * 0.8) return 'maybe';
     return 'ineligible';
   };
 
@@ -291,6 +292,7 @@ export const EligibilityCheckerSheet = forwardRef<
       return;
     }
     setPinError(false);
+    setCheckError(false);
     setIsChecking(true);
     const incomeValue = parseIncome(income);
     try {
@@ -313,18 +315,11 @@ export const EligibilityCheckerSheet = forwardRef<
         eligibleCardAliases: eligibleAliases,
       });
     } catch {
-      // Network/API failure — fall back to the income threshold so the
-      // flow never dead-ends during a demo.
-      if (!routeResultExternally) setVerdict(decideVerdict(0, incomeValue));
-      onCheck?.({
-        pincode,
-        incomeRaw: income,
-        incomeValue,
-        incomeType,
-        isEligible: Number.isFinite(incomeValue) && incomeValue >= threshold,
-        eligibleCount: 0,
-        eligibleCardAliases: [],
-      });
+      // Network/API failure: show the error and let the user retry. No
+      // fallback verdict, so nobody is told they qualify when we don't know.
+      setVerdict(null);
+      setCheckError(true);
+      analytics.track(Events.ELIGIBILITY_ERROR, { surface: 'checker_sheet' });
     } finally {
       setIsChecking(false);
     }
@@ -437,6 +432,11 @@ export const EligibilityCheckerSheet = forwardRef<
 
         {/* Result banner — eligible / maybe / ineligible (Figma 4439:291874).
             REUSES the InlineMessage molecule (baked desc-* icons + DS tones). */}
+        {checkError ? (
+          <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16] }}>
+            <InlineMessage tone="error" icon="desc-cross" message={ELIGIBILITY_ERROR_MESSAGE} />
+          </View>
+        ) : null}
         {verdict ? (
           <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16] }}>
             {verdict === 'eligible' ? (

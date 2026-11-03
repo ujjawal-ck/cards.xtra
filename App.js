@@ -35,6 +35,7 @@ import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { analytics, Events } from './src/analytics';
 import { STAGE, PLATFORM } from './src/config/env';
+import { initExperiments } from './src/experiments';
 
 // Super-props ride on EVERY event — set once, before anything is tracked.
 analytics.setSuperProps({ platform: PLATFORM, stage: STAGE });
@@ -51,7 +52,17 @@ if (Constants.executionEnvironment !== 'storeClient') {
     // Missing config / not yet built — fall back to console sink, never crash.
     console.warn('GA4 sink not registered:', e?.message ?? e);
   }
+  try {
+    // Crash reports + analytics breadcrumbs (Firebase Crashlytics).
+    require('./src/analytics/crashlyticsSink').registerCrashlyticsSink();
+  } catch (e) {
+    console.warn('Crashlytics not registered:', e?.message ?? e);
+  }
 }
+
+// A/B flags (Firebase Remote Config). Non-blocking: defaults apply until the
+// fetch lands, and Expo Go just uses defaults.
+initExperiments();
 
 export default function App() {
   const [fontsLoaded] = useFonts({

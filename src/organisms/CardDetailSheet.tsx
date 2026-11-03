@@ -110,6 +110,7 @@ import {
   Selector,
 } from '../atoms';
 import { Accordion, ListRow, TabsSecondary, InlineMessage } from '../molecules';
+import { analytics, Events } from '../analytics';
 import type { CardModel } from '../molecules';
 import type { IconName } from '../atoms';
 import { icons } from '../assets/icons';
@@ -119,7 +120,12 @@ import {
   formatIndianIncome,
   type IncomeType,
 } from './EligibilityCheckerSheet';
-import { fetchEligibility } from '../api/eligibility';
+import {
+  fetchEligibility,
+  classifyCardEligibility,
+  ELIGIBILITY_ERROR_MESSAGE,
+  type EligibilityCardInput,
+} from '../api/eligibility';
 import { Grid } from './Grid';
 import { CardDetailMasthead } from './CardDetailMasthead';
 import { CardDetailScreenAndroid } from './CardDetailScreenAndroid';
@@ -485,23 +491,16 @@ export function EligibilitySection({
 export type EligibilityOutcome = 'eligible' | 'maybe' | 'ineligible';
 
 /**
- * Resolve THIS card's outcome.
- *   eligible   — the card's alias is in the API's eligible set, OR (no alias
- *                data) the income clears the ₹50k bar.
- *   maybe      — income clears half the bar (≥ ₹25k).
- *   ineligible — below that.
- * Mirrors the Home checker's decideVerdict, with aliasHit standing in for
- * the aggregate eligible-count.
+ * Resolve THIS card's outcome. Thin wrapper over the shared
+ * classifyCardEligibility (api/eligibility.ts) so Home and this sheet can
+ * never disagree. The API is the only source of "eligible".
  */
 export function resolveCardOutcome(
-  cardAlias: string | undefined,
-  eligibleAliases: string[] | null | undefined,
+  card: EligibilityCardInput | null | undefined,
+  eligibleAliases: readonly string[] | null | undefined,
   income: number
 ): EligibilityOutcome {
-  const aliasHit = !!(cardAlias && eligibleAliases?.includes(cardAlias));
-  if (aliasHit || (Number.isFinite(income) && income >= 50000)) return 'eligible';
-  if (Number.isFinite(income) && income >= 25000) return 'maybe';
-  return 'ineligible';
+  return classifyCardEligibility(card, eligibleAliases ?? [], income);
 }
 
 /**
@@ -632,6 +631,9 @@ export function EligibilityChecker({
   // one to set, tapping the other flips it (natural single-select).
   const [incomeType, setIncomeType] = useState<IncomeType | null>(defaultIncomeType);
   const [isChecking, setIsChecking] = useState(false);
+  // Last API call failed → show an error and let the user retry. Never fall
+  // back to an income-only guess.
+  const [checkError, setCheckError] = useState(false);
 
   // Re-sync to remembered details when they change (e.g. opening another
   // card after entering details on Home) — useState only seeds once at
@@ -651,6 +653,7 @@ export function EligibilityChecker({
   const handleCheck = async () => {
     if (!isFormValid || incomeType === null || isChecking) return;
     setIsChecking(true);
+    setCheckError(false);
     const incomeValue = parseIncome(income);
     try {
       const { eligibleAliases } = await fetchEligibility({
@@ -660,7 +663,8 @@ export function EligibilityChecker({
       });
       onChecked?.({ pincode, income, incomeType, eligibleCardAliases: eligibleAliases });
     } catch {
-      onChecked?.({ pincode, income, incomeType, eligibleCardAliases: [] });
+      setCheckError(true);
+      analytics.track(Events.ELIGIBILITY_ERROR, { surface: 'card_detail' });
     } finally {
       setIsChecking(false);
     }
@@ -696,7 +700,11 @@ export function EligibilityChecker({
         {/* Result banner — appears at the top of the card once a check
             completes (eligible / maybe). The card's gap:24 spaces it from
             the form below. */}
-        {result ? <EligibilityResultBanner result={result} /> : null}
+        {checkError ? (
+          <InlineMessage tone="error" icon="desc-cross" message={ELIGIBILITY_ERROR_MESSAGE} />
+        ) : result ? (
+          <EligibilityResultBanner result={result} />
+        ) : null}
 
         <Text variant="body14SemiBold" color={colors.text.secondary}>
           Check Your Eligibility
@@ -2398,7 +2406,7 @@ const CardDetailSheetIOS = forwardRef<
     if (eligibilityDefaults) {
       setEligibilityResult(
         resolveCardOutcome(
-          card?.filterMeta?.cardAlias,
+          card,
           eligibleAliases,
           parseIncome(eligibilityDefaults.income)
         )
@@ -2406,7 +2414,7 @@ const CardDetailSheetIOS = forwardRef<
     } else {
       setEligibilityResult(null);
     }
-  }, [card?.id, eligibilityDefaults, eligibleAliases, card?.filterMeta?.cardAlias]);
+  }, [card, eligibilityDefaults, eligibleAliases]);
 
   // Wrap the caller's onEligibilityChecked: resolve THIS card's outcome, then
   // branch on whether details pre-existed —
@@ -2421,7 +2429,7 @@ const CardDetailSheetIOS = forwardRef<
       eligibleCardAliases: string[];
     }) => {
       const outcome = resolveCardOutcome(
-        card?.filterMeta?.cardAlias,
+        card,
         o.eligibleCardAliases,
         parseIncome(o.income)
       );
@@ -2432,7 +2440,7 @@ const CardDetailSheetIOS = forwardRef<
       }
       onEligibilityChecked?.(o);
     },
-    [card?.filterMeta?.cardAlias, onEligibilityChecked, onShowResultSheet]
+    [card, onEligibilityChecked, onShowResultSheet]
   );
 
   // "Edit" on the footer strip → ask the screen to present the
