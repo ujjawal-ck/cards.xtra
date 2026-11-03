@@ -20,6 +20,11 @@
  *                auto-advance to the next slide. White fill over a
  *                translucent-white track, sized to read over a banner.
  *
+ *   'dots'     — onboarding pager dots over a brand-blue hero (Figma
+ *                6893:27362). Active = 10px white circle, inactive = 7px
+ *                white @ 12% circles, gap 6. The dot grows/shrinks over
+ *                200 ms when the active slide changes.
+ *
  * Hex → token mapping:
  *   #eeeeee → colors.border.subtle3            (inactive pill / track bg)
  *   #aec3fd → colors.action.secondary.pressed  (active pill / thumb fill)
@@ -40,7 +45,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, primitives, spacing, radius } from '../tokens';
 
-export type IndicatorVariant = 'steps' | 'scroll' | 'progress';
+export type IndicatorVariant = 'steps' | 'scroll' | 'progress' | 'dots';
 
 export interface IndicatorProps {
   variant: IndicatorVariant;
@@ -63,6 +68,37 @@ const DOT_DIA = spacing[6];           // 6
 const ACTIVE_PILL_W = spacing[16];    // 16
 const TRACK_W = spacing[64];          // 64
 const THUMB_W = 36;                   // not in spacing scale; component-spec
+
+// 'dots' (onboarding) dimensions — Figma 6893:27362 draws 9.6 / 7.2 px dots.
+const ONCOLOR_DOT_ACTIVE = spacing[10];   // 10
+const ONCOLOR_DOT_INACTIVE = 7;           // component-spec; no 7 on the scale
+const ONCOLOR_DOT_GAP = spacing[6];       // 6
+
+function OnColorDot({ isActive }: { isActive: boolean }) {
+  const size = useSharedValue(isActive ? ONCOLOR_DOT_ACTIVE : ONCOLOR_DOT_INACTIVE);
+  useEffect(() => {
+    size.value = withTiming(isActive ? ONCOLOR_DOT_ACTIVE : ONCOLOR_DOT_INACTIVE, {
+      duration: 200,
+    });
+  }, [isActive, size]);
+  const dotStyle = useAnimatedStyle(() => ({
+    width: size.value,
+    height: size.value,
+  }));
+  return (
+    <Animated.View
+      style={[
+        {
+          borderRadius: radius.full,
+          backgroundColor: isActive
+            ? colors.indicatorOnColor.active
+            : colors.indicatorOnColor.inactive,
+        },
+        dotStyle,
+      ]}
+    />
+  );
+}
 
 // 'progress' (story-bar) dimensions — thin line per the design screenshot.
 const PROGRESS_H = spacing[4];        // 4 — line thickness
@@ -165,6 +201,28 @@ export function Indicator({
             durationMs={durationMs}
             activeIndex={active}
           />
+        ))}
+      </View>
+    );
+  }
+
+  if (variant === 'dots') {
+    return (
+      <View
+        accessibilityRole="progressbar"
+        accessibilityLabel={`Slide ${active + 1} of ${total}`}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: ONCOLOR_DOT_GAP,
+            height: ONCOLOR_DOT_ACTIVE,
+          },
+          style,
+        ]}
+      >
+        {Array.from({ length: total }).map((_, i) => (
+          <OnColorDot key={i} isActive={i === active} />
         ))}
       </View>
     );

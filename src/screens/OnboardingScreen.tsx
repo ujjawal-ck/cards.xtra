@@ -30,6 +30,7 @@ import {
   Dimensions,
   Keyboard,
   Platform,
+  Linking,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -63,6 +64,7 @@ import {
   spacing,
   radius,
   opacity,
+  typography,
 } from '../tokens';
 import { images } from '../assets/images';
 import { logos } from '../assets/logos';
@@ -85,11 +87,10 @@ const LOGO_H = 98;
 // progress Indicator's active bar fills over this same time, and the
 // active slide loops, so any small drift just replays seamlessly.
 const AUTO_ADVANCE_MS = 5350;
-// Headline box is locked to three display36 lines (3 × 42 lineHeight)
-// so a 2-line headline (slide 2) doesn't shrink the box and shove the
-// carousel up when the crossfade swaps text. Raw value — it's derived
-// from the type token, not on the spacing scale.
-const HEADLINE_HEIGHT = 42 * 3;
+// Headline box is locked to three display40 lines (Figma 6893:27357 sets
+// the headline at 40px ExtraBold) so headlines of different line counts
+// never shove the layout when the crossfade swaps text.
+const HEADLINE_HEIGHT = typography.display40ExtraBold.lineHeight * 3;
 
 interface OnboardingSlide {
   id: string;
@@ -129,7 +130,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: 'slide-2',
     source: require('../assets/animations/onboarding-2.json'),
-    headline: "Don't Just Apply.\nEarn Cashback",
+    headline: 'Don\u2019t Just\nApply. Earn\nCashback',
   },
   {
     id: 'slide-3',
@@ -147,6 +148,43 @@ const LOOP_SLIDES: OnboardingSlide[] = [
   ...SLIDES,
   { ...SLIDES[0], id: 'slide-1-loop' },
 ];
+
+// Legal pages linked from the login sheet's T&C line (Figma 6851:26627 /
+// 6851:26640). Opened in the browser: the login sheet is a gorhom modal
+// that floats above the navigator, so pushing the in-app PrivacyPolicy
+// route would render underneath it.
+const TERMS_URL = 'https://cashkaro.com/terms-and-conditions';
+const PRIVACY_URL = 'https://cashkaro.com/privacy-policy';
+
+function LegalFooter() {
+  return (
+    <Text
+      variant="body12Medium"
+      color={colors.text.secondary}
+      align="center"
+      style={{ width: '100%' }}
+    >
+      By continuing, you agree to Cashkaro's{' '}
+      <Text
+        variant="body12Medium"
+        color={colors.text.link}
+        accessibilityRole="link"
+        onPress={() => Linking.openURL(TERMS_URL).catch(() => undefined)}
+      >
+        Terms & Conditions
+      </Text>
+      {' '}and{' '}
+      <Text
+        variant="body12Medium"
+        color={colors.text.link}
+        accessibilityRole="link"
+        onPress={() => Linking.openURL(PRIVACY_URL).catch(() => undefined)}
+      >
+        Privacy Policy
+      </Text>
+    </Text>
+  );
+}
 
 export function OnboardingScreen() {
   const navigation = useNavigation<Nav>();
@@ -717,7 +755,7 @@ export function OnboardingScreen() {
           >
             <Animated.View style={headlineStyle}>
               <Text
-                variant="display36ExtraBold"
+                variant="display40ExtraBold"
                 color={colors.text.onColor}
                 align="center"
                 style={{ width: '100%' }}
@@ -727,24 +765,18 @@ export function OnboardingScreen() {
             </Animated.View>
           </View>
 
-          {/* Bottom group — progress bars + Get Started. */}
+          {/* Bottom group — pager dots + Get Started. */}
           <View
             pointerEvents="box-none"
             style={{ width: '100%', alignItems: 'center', gap: spacing[24] }}
           >
-            {/* Story-style timed progress bars — the same Indicator the
-                store details PromoBanner uses. The active segment fills
-                over the dwell time, so it reaches 100% exactly as the
-                carousel advances. Settle-driven (loopIndex), so the fill
-                stays in lockstep with the auto-advance timer. */}
+            {/* Pager dots (Figma 6893:27362) — white active dot, 12%
+                white inactive dots, settle-driven so they stay in step
+                with the auto-advance. */}
             <Indicator
-              variant="progress"
+              variant="dots"
               total={SLIDES.length}
               active={loopIndex % SLIDES.length}
-              durationMs={AUTO_ADVANCE_MS}
-              // 80% (not full bleed) — shrinks each equal-flex step by 20%
-              // per spec; the parent's alignItems:'center' keeps it centred.
-              style={{ width: '80%' }}
             />
 
             <Button
@@ -908,28 +940,8 @@ export function OnboardingScreen() {
                   </Text>
                 ) : null}
 
-                {/* T&C — inline Text per spec. */}
-                <Text
-                  variant="body12Medium"
-                  color={colors.text.secondary}
-                  align="center"
-                  style={{ width: '100%' }}
-                >
-                  By continuing, you agree to Cashkaro's{' '}
-                  <Text
-                    variant="body12Medium"
-                    color={colors.text.link}
-                  >
-                    Terms & Conditions
-                  </Text>
-                  {' '}and{' '}
-                  <Text
-                    variant="body12Medium"
-                    color={colors.text.link}
-                  >
-                    Privacy Policy
-                  </Text>
-                </Text>
+                {/* T&C — inline Text per spec; links open the legal pages. */}
+                <LegalFooter />
               </View>
 
               {/* -------- Panel 2: otp / "Enter OTP" ------------ */}
@@ -964,11 +976,13 @@ export function OnboardingScreen() {
                     color={colors.text.secondary}
                     align="center"
                   >
-                    OTP sent on +91 {loginPhoneFormatted}{'  '}
+                    Sent to {loginPhoneFormatted}{'  '}
                     <Text
                       variant="body14SemiBold"
                       color={colors.text.link}
                       onPress={goToPhone}
+                      accessibilityRole="link"
+                      accessibilityLabel="Change mobile number"
                     >
                       Change
                     </Text>
@@ -1021,7 +1035,7 @@ export function OnboardingScreen() {
                 ) : null}
 
                 <Button
-                  label="Verify OTP"
+                  label="Submit"
                   variant="solid"
                   tone="second"
                   size={52}
@@ -1030,6 +1044,9 @@ export function OnboardingScreen() {
                   disabled={otp.length !== OTP_LENGTH || verifying}
                   onPress={handleVerifyOtp}
                 />
+
+                {/* Figma 6851:26640 repeats the T&C line under Submit. */}
+                <LegalFooter />
               </View>
             </Animated.View>
           </View>

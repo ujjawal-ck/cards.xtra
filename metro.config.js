@@ -31,6 +31,18 @@ config.resolver = {
   // which resolves Firebase's internals fine and is compatible with the rest
   // of the dependency tree. Required for the GA4/Firebase sink to bundle.
   unstable_enablePackageExports: false,
+  // WEB ONLY: expo-secure-store has no web implementation, so the web
+  // preview (design QA) could never hold a session. Alias it to a
+  // localStorage stand-in for web bundles; native resolution is untouched.
+  resolveRequest: (context, moduleName, platform) => {
+    if (platform === 'web' && moduleName === 'expo-secure-store') {
+      return {
+        type: 'sourceFile',
+        filePath: path.resolve(__dirname, 'src/dev/secureStoreWeb.ts'),
+      };
+    }
+    return context.resolveRequest(context, moduleName, platform);
+  },
 };
 
 module.exports = config;

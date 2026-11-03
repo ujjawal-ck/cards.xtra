@@ -366,6 +366,15 @@ export const colors = {
   // One-off decorative colours (amber gradient + teal ring) not in the palette;
   // text reuses the amber-700 primitive.
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Indicator on colour — carousel dots drawn over a brand-blue hero
+  // (onboarding pager, Figma 6893:27362). Active dot is solid white,
+  // inactive dots are white @ 12%.
+  // ---------------------------------------------------------------------------
+  indicatorOnColor: {
+    active: primitives.slate[50],
+    inactive: primitives.transparentWhite[12],
+  },
   paymentProcessingPill: {
     gradientStart: '#ffc047',
     gradientEnd: '#f8b83c',
