@@ -75,7 +75,8 @@ export const primitives = {
     8: 'rgba(255,255,255,0.08)', 12: 'rgba(255,255,255,0.12)',
     16: 'rgba(255,255,255,0.16)', 24: 'rgba(255,255,255,0.24)',
     32: 'rgba(255,255,255,0.32)', 40: 'rgba(255,255,255,0.40)',
-    50: 'rgba(255,255,255,0.50)', 80: 'rgba(255,255,255,0.80)',
+    50: 'rgba(255,255,255,0.50)', 70: 'rgba(255,255,255,0.70)',
+    80: 'rgba(255,255,255,0.80)',
   },
 } as const;
 
@@ -119,6 +120,9 @@ export const colors = {
     placeholder: primitives.slate[600],
     disabled: primitives.slate[500],
     inverse: primitives.slate[50],
+    /** Secondary text on dark surfaces — inactive bottom-nav labels
+     *  (Figma 3614:171539; matches the nav outline icons' 0.7 stroke). */
+    inverseMuted: primitives.transparentWhite[70],
     onColor: primitives.slate[50],
     link: primitives.cobalt[700],
     linkHover: primitives.cobalt[800],

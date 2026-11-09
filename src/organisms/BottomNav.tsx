@@ -1,61 +1,58 @@
 /**
  * BottomNav — organism (Figma set 394:23561, refined 3614:171539)
  *
- * Full-width floating dark pill with 4 tabs and a small "light source"
- * flourish that sits above the active tab's icon and follows the active
- * state. Standalone component — positioning is the caller's
- * responsibility (the wrapper in TabNavigator handles the absolute
- * placement above the home indicator).
+ * Floating dark pill with 4 tabs and a "light source" spotlight above the
+ * active tab. Positioning is the caller's job (TabNavigator places it above
+ * the home indicator).
  *
- * Container:
- *   bg colors.surface.dark, borderRadius radius.full, height 60,
- *   paddingVertical spacing[12], paddingHorizontal spacing[48],
- *   flex row, justifyContent space-between, alignItems center.
- *   Custom drop shadow per spec (#000 @ 16%, y4, blur12 — closest
- *   elevation token is neutral.md with 18%/blur16, but the spec values
- *   are inlined here for fidelity).
+ * Layout
+ *   • Pill: colors.surface.dark, radius.full, 60 tall, 8 inner padding.
+ *   • Tabs: equal width (flex: 1) and full pill height, so every tab has the
+ *     same ~76 × 60 tap area and the tabs sit on an even rhythm. (They were
+ *     content-width with space-between, which left uneven gaps and
+ *     28 × 36 targets.)
  *
- * Tabs (28 × 36, vertical column, gap spacing[4], centred):
- *   • icon 22×22 — nav-*-filled when active, nav-*-outline when inactive
- *   • label caption10SemiBold when active, caption10Regular when inactive
- *   • label colour text.inverse (white) in BOTH states
+ * States (Figma 3614:171539)
+ *   • Active:   filled icon, label caption10SemiBold, colors.text.inverse.
+ *   • Inactive: outline icon (baked at 70 % white), label caption10Regular,
+ *               colors.text.inverseMuted — the active tab now reads at a
+ *               glance instead of every label being pure white.
  *
- * Light source flourish (the new detail in 3614:171539):
- *   • 32 × 12 region positioned at the TOP edge of the pill, horizontally
- *     centred above the ACTIVE tab.
- *   • Downward-fading white gradient wash (~30% → 0% alpha) reads as a
- *     beam of light dropping onto the icon.
- *   • 16 × 2 rounded white bar (~90% alpha) sitting along the very top
- *     edge — the "emitter" of the beam.
- *   • Re-positions whenever activeTab changes because the flourish is
- *     rendered as an absolute child of each tab's Pressable; React only
- *     mounts the flourish on the active tab, so it visually "moves".
+ * Spotlight
+ *   • One shared spotlight, not one per tab: it slides between tabs on a
+ *     spring, so a tab switch reads as one continuous motion.
+ *   • Drawn in SVG as a radial glow (soft on every edge) under a small
+ *     rounded emitter bar. The old version was a rectangular linear
+ *     gradient that rendered as a hard-edged grey box on Android.
  *
- * Token mapping:
- *   #000000 → colors.surface.dark
- *   #ffffff → colors.text.inverse (label) / transparentWhite primitives (light flourish)
- *   transparent-black primitives are used for the small shadow on the
- *   light_source bar (also decorative/illustration use).
+ * Motion
+ *   • Press: content scales to 0.92 and springs back.
+ *   • Activate: icon does a small settle (0.86 → 1) as the spotlight lands.
+ *   • No size change between states, so labels never jiggle.
+ *
+ * Accessibility: container role "tablist", tabs role "tab" with selected
+ * state.
  */
-import React, { useCallback, useEffect } from 'react';
-import { View, Pressable, StyleProp, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Pressable,
+  StyleProp,
+  ViewStyle,
+  LayoutChangeEvent,
+} from 'react-native';
 import Animated, {
   Easing,
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Text, Icon } from '../atoms';
 import type { IconName } from '../atoms';
-import {
-  colors,
-  primitives,
-  spacing,
-  radius,
-} from '../tokens';
+import { colors, primitives, spacing, radius } from '../tokens';
 
 export type BottomNavTab = 'home' | 'offers' | 'earnings' | 'profile';
 
@@ -81,57 +78,50 @@ const TABS: TabSpec[] = [
 
 // Component-spec dims — not in the shared scales.
 const PILL_HEIGHT = 60;
+const PILL_PAD_X = spacing[8];
 const ICON_SIZE = 22;
-const LIGHT_W = 46;
-const LIGHT_H = 40;
-const LIGHT_BAR_W = 16;
-const LIGHT_BAR_H = 2;
+// Spotlight: soft glow box + the emitter bar on the pill's top edge.
+const GLOW_W = 56;
+const GLOW_H = 40;
+const EMITTER_W = 20;
+const EMITTER_H = 3;
+
+const SPRING = { damping: 18, stiffness: 210, mass: 0.7 };
 
 // ----------------------------------------------------------------------------
-// LightSource — recreated programmatically (no SVG asset shipped).
-// Sized 32×12. Top-rim 16×2 white bar + downward gradient wash.
+// Spotlight — radial glow falling from the top edge + a bright emitter bar.
 // ----------------------------------------------------------------------------
-function LightSource() {
+function Spotlight() {
   return (
-    <View
-      pointerEvents="none"
-      style={{ width: LIGHT_W, height: LIGHT_H }}
-    >
-      {/* Downward spotlight wash — brighter at the emitter, holding a mid
-          glow longer before fading to 0 so the beam spreads further down
-          onto the icon and reads as a true spotlight. */}
-      <LinearGradient
-        colors={[
-          primitives.transparentWhite[40],
-          primitives.transparentWhite[16],
-          'transparent',
-        ]}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: LIGHT_W,
-          height: LIGHT_H,
-        }}
-      />
-      {/* Top-rim white bar (~90% alpha) with a small drop shadow */}
+    <View pointerEvents="none" style={{ width: GLOW_W, height: GLOW_H, alignItems: 'center' }}>
+      <Svg width={GLOW_W} height={GLOW_H} style={{ position: 'absolute', top: 0, left: 0 }}>
+        <Defs>
+          {/* Centred on the top edge; the ellipse reaches the bottom of the
+              box so the light falls onto the icon and fades out on all
+              sides with no visible edge. */}
+          <RadialGradient
+            id="navSpot"
+            cx="50%"
+            cy="0%"
+            rx="50%"
+            ry="100%"
+            fx="50%"
+            fy="0%"
+          >
+            <Stop offset="0" stopColor={colors.text.inverse} stopOpacity={0.42} />
+            <Stop offset="0.5" stopColor={colors.text.inverse} stopOpacity={0.14} />
+            <Stop offset="1" stopColor={colors.text.inverse} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x={0} y={0} width={GLOW_W} height={GLOW_H} fill="url(#navSpot)" />
+      </Svg>
       <View
         style={{
-          position: 'absolute',
-          top: 0,
-          left: (LIGHT_W - LIGHT_BAR_W) / 2,
-          width: LIGHT_BAR_W,
-          height: LIGHT_BAR_H,
-          borderRadius: LIGHT_BAR_H / 2,
+          width: EMITTER_W,
+          height: EMITTER_H,
+          borderBottomLeftRadius: EMITTER_H,
+          borderBottomRightRadius: EMITTER_H,
           backgroundColor: primitives.transparentWhite[80],
-          shadowColor: primitives.slate[1000],
-          shadowOpacity: 0.25,
-          shadowOffset: { width: 0, height: 4 },
-          shadowRadius: 4,
-          elevation: 2,
         }}
       />
     </View>
@@ -139,15 +129,7 @@ function LightSource() {
 }
 
 // ----------------------------------------------------------------------------
-// TabButton — single tab with delightful press + active-state animations:
-//   • Press feedback: brief scale-down (1 → 0.92) on pressIn, springs back
-//     on pressOut.  Adds a tactile "click" feel — the bar no longer snaps.
-//   • Active state: spring (damping 16, stiffness 220) drives the icon/label
-//     pop (scale 1 → 1.08) and the LightSource flourish fade-in (opacity
-//     0 → 1, scale 0.7 → 1, translateY 4 → 0). Both motions share one
-//     `activeProgress` shared value so they stay phase-locked.
-//   • The flourish is now ALWAYS mounted (just invisible when inactive)
-//     so we can animate it in/out instead of mount-on-active (which snaps).
+// TabButton
 // ----------------------------------------------------------------------------
 function TabButton({
   tab,
@@ -159,49 +141,29 @@ function TabButton({
   onPress: () => void;
 }) {
   const pressed = useSharedValue(0);
-  const activeProgress = useSharedValue(isActive ? 1 : 0);
+  const settle = useSharedValue(1);
 
+  // Small settle on the icon as the spotlight lands on it.
   useEffect(() => {
-    activeProgress.value = withSpring(isActive ? 1 : 0, {
-      damping: 16,
-      stiffness: 220,
-      mass: 0.6,
-    });
-  }, [isActive, activeProgress]);
+    if (!isActive) return;
+    settle.value = withSequence(
+      withTiming(0.86, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withSpring(1, SPRING)
+    );
+  }, [isActive, settle]);
 
   const handlePressIn = useCallback(() => {
-    pressed.value = withTiming(1, {
-      duration: 80,
-      easing: Easing.out(Easing.cubic),
-    });
+    pressed.value = withTiming(1, { duration: 80, easing: Easing.out(Easing.cubic) });
   }, [pressed]);
   const handlePressOut = useCallback(() => {
-    pressed.value = withTiming(0, {
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-    });
+    pressed.value = withSpring(0, SPRING);
   }, [pressed]);
 
-  // Icon + label wrapper — combines press scale (1 → 0.92) and active
-  // pop (1 → 1.08). Multiplying lets both effects co-exist.
-  const contentStyle = useAnimatedStyle(() => {
-    const pressScale = 1 - pressed.value * 0.08;
-    const activeScale = 1 + activeProgress.value * 0.08;
-    return {
-      transform: [
-        { scale: pressScale * activeScale },
-      ] as unknown as { scale: number }[],
-    };
-  });
-
-  // LightSource flourish — fades in + rises + scales up when this tab
-  // becomes active; reverses when another tab takes over.
-  const flourishStyle = useAnimatedStyle(() => ({
-    opacity: activeProgress.value,
-    transform: [
-      { translateY: interpolate(activeProgress.value, [0, 1], [4, 0]) },
-      { scale: interpolate(activeProgress.value, [0, 1], [0.7, 1]) },
-    ] as unknown as { translateY: number }[],
+  const contentStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * 0.08 }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: settle.value }],
   }));
 
   return (
@@ -209,51 +171,23 @@ function TabButton({
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      accessibilityRole="button"
+      accessibilityRole="tab"
       accessibilityState={{ selected: isActive }}
       accessibilityLabel={tab.label}
-      hitSlop={spacing[8]}
       style={{
+        flex: 1,
+        alignSelf: 'stretch',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: spacing[4],
       }}
     >
-      {/* Flourish — always mounted, animated visibility. */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            top: -spacing[12],
-            left: 0,
-            right: 0,
-            alignItems: 'center',
-          },
-          flourishStyle,
-        ]}
-      >
-        <LightSource />
-      </Animated.View>
-
-      {/* Icon + label — animated wrapper handles press + active scaling.
-          The icon/label themselves still swap instantly (outline →
-          filled, Regular → SemiBold) because RN can't morph weights /
-          shapes; the scale around them masks the swap so it doesn't
-          read as a hard snap. */}
-      <Animated.View
-        style={[
-          { alignItems: 'center', gap: spacing[4] },
-          contentStyle,
-        ]}
-      >
-        <Icon
-          name={isActive ? tab.filled : tab.outline}
-          size={ICON_SIZE}
-        />
+      <Animated.View style={[{ alignItems: 'center', gap: spacing[4] }, contentStyle]}>
+        <Animated.View style={iconStyle}>
+          <Icon name={isActive ? tab.filled : tab.outline} size={ICON_SIZE} />
+        </Animated.View>
         <Text
           variant={isActive ? 'caption10SemiBold' : 'caption10Regular'}
-          color={colors.text.inverse}
+          color={isActive ? colors.text.inverse : colors.text.inverseMuted}
           align="center"
           numberOfLines={1}
         >
@@ -264,21 +198,44 @@ function TabButton({
   );
 }
 
-export function BottomNav({
-  activeTab,
-  onTabPress,
-  style,
-}: BottomNavProps) {
+export function BottomNav({ activeTab, onTabPress, style }: BottomNavProps) {
+  const activeIndex = Math.max(0, TABS.findIndex((t) => t.id === activeTab));
+  const [tabWidth, setTabWidth] = useState(0);
+  const spotX = useSharedValue(0);
+  const spotOpacity = useSharedValue(0);
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    setTabWidth((e.nativeEvent.layout.width - PILL_PAD_X * 2) / TABS.length);
+  }, []);
+
+  // Centre of the active tab, minus half the glow. First placement jumps
+  // (no slide-in from the left edge on mount); later changes spring.
+  useEffect(() => {
+    if (tabWidth === 0) return;
+    const x = PILL_PAD_X + tabWidth * activeIndex + (tabWidth - GLOW_W) / 2;
+    if (spotOpacity.value === 0) {
+      spotX.value = x;
+      spotOpacity.value = withTiming(1, { duration: 180 });
+    } else {
+      spotX.value = withSpring(x, SPRING);
+    }
+  }, [activeIndex, tabWidth, spotX, spotOpacity]);
+
+  const spotStyle = useAnimatedStyle(() => ({
+    opacity: spotOpacity.value,
+    transform: [{ translateX: spotX.value }],
+  }));
+
   return (
     <View
+      onLayout={onLayout}
+      accessibilityRole="tablist"
       style={[
         {
           height: PILL_HEIGHT,
           flexDirection: 'row',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          paddingVertical: spacing[12],
-          paddingHorizontal: spacing[48],
+          paddingHorizontal: PILL_PAD_X,
           borderRadius: radius.full,
           backgroundColor: colors.surface.dark,
           // Custom shadow per spec — #000 @ 16%, y4, blur12.
@@ -291,6 +248,25 @@ export function BottomNav({
         style,
       ]}
     >
+      {/* Clipped to the pill shape so the glow never spills past the
+          rounded ends on the outer tabs. Separate from the outer view,
+          which must not clip (that would cut its shadow on iOS). */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: radius.full,
+          overflow: 'hidden',
+        }}
+      >
+        <Animated.View style={[{ position: 'absolute', top: 0, left: 0 }, spotStyle]}>
+          <Spotlight />
+        </Animated.View>
+      </View>
       {TABS.map((tab) => (
         <TabButton
           key={tab.id}

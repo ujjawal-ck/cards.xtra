@@ -29,7 +29,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -64,6 +64,9 @@ type Nav = CompositeNavigationProp<
 export function EarningsScreen() {
   // Scroll padding that clears the floating tab bar (+ Android nav bar).
   const navClearance = useFloatingNavClearance();
+  // Re-tapping this tab in the bottom nav scrolls back to the top.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const navigation = useNavigation<Nav>();
   // Live earnings for the signed-in user. While the first fetch is in
   // flight every money figure shows a pulsing skeleton (via each
@@ -123,6 +126,7 @@ export function EarningsScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             // Earnings is a TAB section, not a pushed screen — no Header /

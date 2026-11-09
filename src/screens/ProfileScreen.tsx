@@ -18,7 +18,7 @@ import React, { useRef } from 'react';
 import { View, ScrollView, Pressable, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -56,6 +56,9 @@ type Nav = CompositeNavigationProp<
 export function ProfileScreen() {
   // Scroll padding that clears the floating tab bar (+ Android nav bar).
   const navClearance = useFloatingNavClearance();
+  // Re-tapping this tab in the bottom nav scrolls back to the top.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const navigation = useNavigation<Nav>();
   const { data: profile } = useProfile();
   const { signOut, displayName } = useAuth();
@@ -105,6 +108,7 @@ export function ProfileScreen() {
 
       <SafeAreaView edges={['left', 'right']} style={{ flex: 1 }}>
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             paddingBottom: navClearance,

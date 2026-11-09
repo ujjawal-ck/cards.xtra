@@ -41,7 +41,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useScrollToTop } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -92,6 +92,9 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'OffersBrandAmazon'>;
 export function OffersScreen() {
   // Scroll padding that clears the floating tab bar (+ Android nav bar).
   const navClearance = useFloatingNavClearance();
+  // Re-tapping this tab in the bottom nav scrolls back to the top.
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop(scrollRef);
   const navigation = useNavigation<Nav>();
 
   // Top safe-area inset — the saffron buffer that keeps the pinned
@@ -360,6 +363,7 @@ export function OffersScreen() {
       <Animated.View style={[{ height: insets.top }, tintStyle]} />
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}

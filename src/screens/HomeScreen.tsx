@@ -48,7 +48,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused, useScrollToTop } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -380,6 +380,8 @@ export function HomeScreen() {
   // filter is applied from search (so the filtered cards read as "new
   // results" rather than resuming mid-scroll).
   const listRef = useRef<FlatList<any>>(null);
+  // Re-tapping this tab in the bottom nav scrolls back to the top.
+  useScrollToTop(listRef);
   const sheetRef = useRef<BottomSheetModal>(null);
   // ShareSheet — screen-centred RN <Modal> (not a bottom sheet)
   // stacked on top of CardDetailSheet when the Share glyph on the
