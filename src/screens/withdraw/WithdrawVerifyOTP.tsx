@@ -31,7 +31,7 @@ import { Header, Masthead, FooterButtons } from '../../organisms';
 import { colors, spacing } from '../../tokens';
 import { analytics, Events } from '../../analytics';
 import { play } from '../../lib/haptics';
-import type { WithdrawStackParamList } from '../../navigation/types';
+import type { RootStackParamList, WithdrawStackParamList } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
 import {
   sendPaymentRequestOTP,
@@ -90,12 +90,17 @@ export function WithdrawVerifyOTP() {
   const showUnconfirmed = () => {
     Alert.alert(
       "Couldn't confirm your withdrawal",
-      'Your request may already have gone through. Please check Payment History before trying again.',
+      // Payment History still shows sample payouts, so don't send people
+      // there. Earnings re-reads the live balance, and tapping Withdraw again
+      // shows "payment in process" if this request did go through.
+      'Your request may already have gone through. Check Earnings in a few minutes before trying again: a payout in progress shows up when you tap Withdraw.',
       [
         {
-          text: 'View Payment History',
+          text: 'Go to Earnings',
           onPress: () =>
-            navigation.getParent()?.navigate('ProfilePaymentHistory' as never),
+            navigation
+              .getParent<NativeStackNavigationProp<RootStackParamList>>()
+              ?.navigate('MainTabs', { screen: 'Earnings' }),
         },
         { text: 'OK', style: 'cancel' },
       ],

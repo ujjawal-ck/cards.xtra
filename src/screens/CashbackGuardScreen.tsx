@@ -17,7 +17,7 @@
  * available" note (isSupported === false).
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, ScrollView, Linking } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,7 +33,6 @@ import { useCashbackGuardSync } from '../query/useCashbackGuard';
 const SUPPORTED_APPS = ['Amazon', 'Flipkart', 'AJIO'];
 // SecureStore key persisting the user's opt-in so OFF stays OFF across launches.
 const ENABLED_KEY = 'never_miss_cashback_enabled';
-const PRIVACY_URL = 'https://cashkaro.com/privacy-policy';
 
 export function CashbackGuardScreen() {
   const navigation = useNavigation();
@@ -198,7 +197,8 @@ export function CashbackGuardScreen() {
               <Text
                 variant="body12SemiBold"
                 color={colors.text.link}
-                onPress={() => Linking.openURL(PRIVACY_URL)}
+                // In-app Cards.xtra policy (was cashkaro.com's privacy page).
+                onPress={() => navigation.navigate('PrivacyPolicy' as never)}
                 style={{ marginTop: spacing[4] }}
               >
                 Read our Privacy Policy

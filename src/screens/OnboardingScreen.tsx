@@ -37,7 +37,7 @@ import {
 import LottieView from 'lottie-react-native';
 import type { LottieViewProps } from 'lottie-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -575,6 +575,28 @@ export function OnboardingScreen() {
   // handler doesn't also navigate back.
   const signedInRef = useRef(false);
 
+  // "Privacy Policy" in the sheet: close the sheet (a modal would cover the
+  // policy screen), open the in-app policy, and reopen the sheet with the
+  // typed number intact on return. The flag stops the dismiss handler from
+  // resetting the form or navigating back meanwhile.
+  const legalDetourRef = useRef(false);
+  const openPrivacyPolicy = useCallback(() => {
+    legalDetourRef.current = true;
+    Keyboard.dismiss();
+    loginSheetRef.current?.dismiss();
+    setTimeout(() => navigation.navigate('PrivacyPolicy' as never), 150);
+  }, [navigation]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!legalDetourRef.current) return;
+      const t = setTimeout(() => {
+        legalDetourRef.current = false;
+        loginSheetRef.current?.present();
+      }, 300);
+      return () => clearTimeout(t);
+    }, [])
+  );
+
   useEffect(() => {
     if (!loginOnly) return;
     // Let the screen transition settle before the sheet slides up.
@@ -585,6 +607,8 @@ export function OnboardingScreen() {
   // Reset to the phone stage whenever the sheet closes, so the next
   // present() starts clean.
   const handleSheetDismiss = useCallback(() => {
+    // Closed only to show the privacy policy: keep the form, stay here.
+    if (legalDetourRef.current) return;
     if (loginOnly && !signedInRef.current && navigation.canGoBack()) {
       navigation.goBack();
     }
@@ -974,17 +998,17 @@ export function OnboardingScreen() {
                   align="center"
                   style={{ width: '100%' }}
                 >
-                  By continuing, you agree to Cashkaro's{' '}
+                  {/* Privacy Policy opens the in-app Cards.xtra policy. There
+                      is no Terms document in the app yet, so Terms is plain
+                      text rather than a link that does nothing (both were
+                      link-styled and inert, and said "Cashkaro's"). */}
+                  By continuing, you agree to the Terms & Conditions and{' '}
                   <Text
                     variant="body12Medium"
                     color={colors.text.link}
-                  >
-                    Terms & Conditions
-                  </Text>
-                  {' '}and{' '}
-                  <Text
-                    variant="body12Medium"
-                    color={colors.text.link}
+                    onPress={openPrivacyPolicy}
+                    accessibilityRole="link"
+                    suppressHighlighting
                   >
                     Privacy Policy
                   </Text>
