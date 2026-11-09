@@ -26,7 +26,7 @@
 import React, { useRef, useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,7 +37,9 @@ import {
   Header,
   MissingCashbackSummarySheet,
   type MissingCashbackSummarySheetRef,
+  ScreenState,
 } from '../organisms';
+import { images } from '../assets/images';
 import { HelpTicketCard, TrackMoreBanner } from '../molecules';
 import { useClaims, type ClaimTab } from '../query/useMissingCashback';
 import type { ClaimCard, OthersClaimCard } from '../api/missingCashbackMapper';
@@ -165,12 +167,14 @@ export function MissingCashbackDidYouShop() {
   const isOthers = tabName === 'Others';
   const listEmpty = isOthers ? othersCards.length === 0 : cards.length === 0;
 
-  const emptyCopy =
+  // Per-tab empty copy. "In Review" used to say "Cashbacks being tracked
+  // show up here" — that describes the Closed tab (Figma 4129:23827).
+  const emptyState =
     tabName === 'Closed'
-      ? 'Successfully tracked Cashbacks will show up here.'
+      ? { title: 'No closed claims yet', body: 'Cashback being tracked shows up here.' }
       : tabName === 'In Review'
-        ? 'Cashbacks being tracked show up here.'
-        : 'Raised tickets will show up here.';
+        ? { title: 'Nothing under review', body: 'Claims you raise show up here while we check them.' }
+        : { title: 'No tickets yet', body: 'Raised tickets will show up here.' };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
@@ -198,22 +202,18 @@ export function MissingCashbackDidYouShop() {
               <ActivityIndicator color={colors.action.primary.default} />
             </View>
           ) : isError ? (
-            <View style={{ paddingHorizontal: spacing[24], alignItems: 'center', gap: spacing[8] }}>
-              <Text variant="body14SemiBold" color={colors.text.primary} align="center">
-                Couldn’t load your claims.
-              </Text>
-              <Pressable accessibilityRole="button" onPress={() => refetch()} hitSlop={spacing[8]}>
-                <Text variant="body14SemiBold" color={colors.action.accent.default}>
-                  {isFetching ? 'Retrying…' : 'Retry'}
-                </Text>
-              </Pressable>
-            </View>
+            <ScreenState
+              title="Couldn’t load your claims"
+              body="Something went wrong. Please try again."
+              actionLabel={isFetching ? 'Retrying…' : 'Try again'}
+              onAction={() => refetch()}
+            />
           ) : listEmpty ? (
-            <View style={{ paddingHorizontal: spacing[24], paddingVertical: spacing[24], alignItems: 'center' }}>
-              <Text variant="body14Regular" color={colors.text.secondary} align="center">
-                {emptyCopy}
-              </Text>
-            </View>
+            <ScreenState
+              image={images.screenstate.tracking}
+              title={emptyState.title}
+              body={emptyState.body}
+            />
           ) : isOthers ? (
             othersCards.map((card) => (
               <View key={card.ticketId} style={{ paddingHorizontal: spacing[16], width: '100%' }}>

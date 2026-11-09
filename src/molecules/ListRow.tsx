@@ -461,7 +461,8 @@ function MenuOption({ icon, title, onPress }: ListRowProps) {
           <Icon
             name={icon}
             size={iconSize[24]}
-            color={colors.text.primary}
+            // Figma menu icons are icon/Features grey, not the text colour.
+            color={colors.icon.features}
           />
         ) : null}
         <Text

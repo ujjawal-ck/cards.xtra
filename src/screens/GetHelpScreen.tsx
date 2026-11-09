@@ -17,16 +17,17 @@
  * Cashback or Rewards" routes into the existing missing-cashback flow; the
  * others are no-ops for now (their target screens aren't in scope yet).
  */
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   ScrollView,
   ImageBackground,
   Pressable,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,6 +46,9 @@ import { images } from '../assets/images';
 import { haptics } from '../lib/haptics';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
+import { HowItWorksSheet } from '../organisms';
+import type { HowItWorksSheetRef } from '../organisms';
+import { SUPPORT_PHONE_URL } from '../config/support';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'GetHelp'>;
 
@@ -73,19 +77,37 @@ export function GetHelpScreen() {
   // exact half-width (page minus gutters minus the single inter-column gap,
   // halved) pins every card — paired or alone — to the same size.
   const cardWidth = (width - GRID_PAD * 2 - GRID_GAP) / 2;
+  const howItWorksRef = useRef<HowItWorksSheetRef>(null);
+
+  // Once the cobalt hero scrolls away, back the status bar with the page
+  // colour and switch to dark icons — light icons over the white cards were
+  // unreadable, and content slid under them.
+  const heroHeight = width / MASTHEAD_ASPECT;
+  const [pastHero, setPastHero] = useState(false);
 
   // Five help topics — icons use tintable outline glyphs (the desc-* /
-  // nav-* icons bake multi-colour art that ignores the tint).
+  // nav-* icons bake multi-colour art that ignores the tint). Every tile now
+  // leads somewhere: four of five used to do nothing on tap.
+  const callSupport = () => Linking.openURL(SUPPORT_PHONE_URL).catch(() => undefined);
   const topics: HelpTopic[] = [
-    { icon: 'feat-sparkle-outline', label: 'How CARDS.xtra Works?' },
-    { icon: 'feat-savings-outline', label: 'Your Cashback' },
+    {
+      icon: 'feat-sparkle-outline',
+      label: 'How Cards.xtra Works?',
+      onPress: () => howItWorksRef.current?.present(),
+    },
+    {
+      icon: 'feat-savings-outline',
+      label: 'Your Cashback',
+      onPress: () => navigation.navigate('MainTabs', { screen: 'Earnings' }),
+    },
     {
       icon: 'clipboard-search-outline',
       label: 'Missing Cashback or Rewards',
       onPress: () => navigation.navigate('MissingCashbackHelp'),
     },
-    { icon: 'wallet-outline', label: 'Payment related' },
-    { icon: 'phone-off-outline', label: 'Unable to Login?' },
+    // No self-serve content for these yet — connect to support directly.
+    { icon: 'wallet-outline', label: 'Payment related', onPress: callSupport },
+    { icon: 'phone-off-outline', label: 'Unable to Login?', onPress: callSupport },
   ];
 
   // Chunk into rows of 2 (the trailing odd card keeps half width via a spacer).
@@ -94,11 +116,16 @@ export function GetHelpScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
-      {/* Light status-bar icons read against the cobalt hero. */}
-      <StatusBar style="light" />
+      {/* Light status-bar icons over the cobalt hero; dark once it's gone. */}
+      <StatusBar style={pastHero ? 'dark' : 'light'} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          const next = e.nativeEvent.contentOffset.y > heroHeight - insets.top;
+          if (next !== pastHero) setPastHero(next);
+        }}
         contentContainerStyle={{
           gap: spacing[24],
           paddingBottom: insets.bottom + spacing[24],
@@ -114,12 +141,34 @@ export function GetHelpScreen() {
             borderBottomRightRadius: radius['2xl'],
           }}
         >
-          <View
-            style={{
-              paddingTop: insets.top + spacing[4],
-              paddingHorizontal: spacing[16],
-            }}
-          >
+          {/* Back button is pinned outside the ScrollView (below) so it never
+              scrolls up under the status bar. */}
+        </ImageBackground>
+
+        {/* 2. Help-topic grid — 2 columns, rows of 2. Each card carries an
+            explicit half-width so the lone trailing card matches a paired one. */}
+        <View style={{ paddingHorizontal: spacing[16], gap: spacing[8] }}>
+          {rows.map((row, ri) => (
+            <View
+              key={ri}
+              style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing[8] }}
+            >
+              {row.map((topic) => (
+                <HelpCard key={topic.label} topic={topic} width={cardWidth} />
+              ))}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: insets.top + spacing[4],
+          left: spacing[16],
+        }}
+      >
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -144,23 +193,23 @@ export function GetHelpScreen() {
               <BackArrowGlyph size={iconSize[24]} color={colors.text.primary} />
             </Pressable>
           </View>
-        </ImageBackground>
 
-        {/* 2. Help-topic grid — 2 columns, rows of 2. Each card carries an
-            explicit half-width so the lone trailing card matches a paired one. */}
-        <View style={{ paddingHorizontal: spacing[16], gap: spacing[8] }}>
-          {rows.map((row, ri) => (
-            <View
-              key={ri}
-              style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing[8] }}
-            >
-              {row.map((topic) => (
-                <HelpCard key={topic.label} topic={topic} width={cardWidth} />
-              ))}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+      {/* Status-bar backing, shown once the hero has scrolled away. */}
+      {pastHero ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: insets.top,
+            backgroundColor: colors.background.muted,
+          }}
+        />
+      ) : null}
+
+      <HowItWorksSheet ref={howItWorksRef} title="How Cards.xtra works" />
     </View>
   );
 }

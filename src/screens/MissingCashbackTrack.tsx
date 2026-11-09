@@ -32,7 +32,7 @@
 import React from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -108,7 +108,7 @@ export function MissingCashbackTrack() {
         {/* FLOOR 1 — Header (REUSED organism) */}
         <Header
           leading="back"
-          title="Track Missing Cashback"
+          title="Did You Shop?"
           onLeadingPress={() => navigation.goBack()}
         />
 

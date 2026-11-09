@@ -45,7 +45,7 @@ import { colors, spacing, radius } from '../tokens';
 export type EarningStatusVariant = 'pending' | 'paid';
 
 export interface EarningStatusSheetProps {
-  /** Amount shown large, e.g. "₹1500.0". Default "₹0.0". */
+  /** Amount shown large, e.g. "₹1500.0". Default "₹0". */
   amount?: string;
   /** Which lifecycle state to explain. Default 'pending'. */
   variant?: EarningStatusVariant;
@@ -72,7 +72,7 @@ const VARIANT_CONTENT: Record<
 export const EarningStatusSheet = forwardRef<
   BottomSheetModalRef,
   EarningStatusSheetProps
->(function EarningStatusSheet({ amount = '₹0.0', variant = 'pending' }, ref) {
+>(function EarningStatusSheet({ amount = '₹0', variant = 'pending' }, ref) {
   const content = VARIANT_CONTENT[variant];
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);

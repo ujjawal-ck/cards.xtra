@@ -286,7 +286,9 @@ function ProfileMasthead({
           // below produces the spec'd 16-px gutter on each side of
           // the inner card.
           width: '100%',
-          height: CONTAINER_H,
+          // minHeight (not height): with larger OS text the card grows
+          // instead of pushing the Edit Profile button out of it.
+          minHeight: CONTAINER_H,
           paddingTop: spacing[80],
           paddingHorizontal: spacing[16],
           paddingBottom: 0,
@@ -301,7 +303,7 @@ function ProfileMasthead({
         style={[
           {
             width: '100%',
-            height: CARD_H,
+            minHeight: CARD_H,
             borderRadius: radius.xl,
             // overflow stays visible so the elevation shadow can paint
             // outside the card bounds. The ImageBackground itself
@@ -328,7 +330,12 @@ function ProfileMasthead({
           <Text variant="heading22Bold" color={colors.text.primary}>
             {name}
           </Text>
-          <Text variant="body12Regular" color={colors.text.secondary}>
+          <Text
+            variant="body12Regular"
+            color={colors.text.secondary}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
             {contact}
           </Text>
           <View
@@ -487,7 +494,7 @@ function EarningsMasthead({
   totalEarnings = '₹1,500',
   subtitle = 'Your All Time Earnings',
   cashbackValue = '₹1500.0',
-  rewardsValue = '₹0.0',
+  rewardsValue = '₹0',
   loading = false,
   rollToken,
   onInfoPress,
@@ -1316,24 +1323,29 @@ export function OffersCategoryStrip({
                 SVG `category-selector-bg`. Inside the scroll content
                 so it tracks the items as the user scrolls. left
                 animates via reanimated (300 ms ease-in-out cubic). */}
-            <Animated.View
-              style={[
-                {
-                  position: 'absolute',
-                  bottom: 0,
-                  width: OFFER_DECO_W,
-                  height: OFFER_DECO_H,
-                },
-                indicatorAnimatedStyle,
-              ]}
-              pointerEvents="none"
-            >
-              <Icon
-                name="category-selector-bg"
-                size={OFFER_DECO_W}
-                color={colors.background.default}
-              />
-            </Animated.View>
+            {/* Only when there ARE categories: with an empty list (loading
+                or a failed fetch) the lone white capsule rendered as an odd
+                blank shape under the search bar. */}
+            {categories.length > 0 ? (
+              <Animated.View
+                style={[
+                  {
+                    position: 'absolute',
+                    bottom: 0,
+                    width: OFFER_DECO_W,
+                    height: OFFER_DECO_H,
+                  },
+                  indicatorAnimatedStyle,
+                ]}
+                pointerEvents="none"
+              >
+                <Icon
+                  name="category-selector-bg"
+                  size={OFFER_DECO_W}
+                  color={colors.background.default}
+                />
+              </Animated.View>
+            ) : null}
 
             {categories.map((cat, i) => (
               <OfferCategoryItem

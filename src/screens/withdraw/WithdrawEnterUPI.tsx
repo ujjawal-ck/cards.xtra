@@ -10,9 +10,11 @@
  * rejected valid handles).
  */
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Alert } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,7 +27,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
@@ -40,6 +42,7 @@ export function WithdrawEnterUPI() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const insets = useSafeAreaInsets();
+  const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
 
@@ -90,7 +93,7 @@ export function WithdrawEnterUPI() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>
@@ -127,9 +130,10 @@ export function WithdrawEnterUPI() {
         </View>
       </SafeAreaView>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* Lifts the footer above the keyboard. KeyboardAvoidingView did
+          nothing on Android under edge-to-edge (see useKeyboardInset.ts),
+          so the keys covered the CTA and T&C checkbox. */}
+      <Animated.View style={keyboardPad}>
         <FooterButtons
           buttons="single"
           size={52}
@@ -146,7 +150,7 @@ export function WithdrawEnterUPI() {
           onPrimary={handleGetPaid}
           style={{ paddingBottom: insets.bottom }}
         />
-      </KeyboardAvoidingView>
+      </Animated.View>
     </View>
   );
 }

@@ -24,7 +24,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-import { colors, radius, spacing, iconSize, sizing } from '../tokens';
+import { colors, radius, spacing, iconSize, sizing, borderWidth } from '../tokens';
 import { haptics } from '../lib/haptics';
 
 export type SwitchSize = 'md' | 'sm';
@@ -97,6 +97,11 @@ export function Switch({
           height: spec.trackH,
           borderRadius: radius.full,
           backgroundColor: trackBg,
+          // Hairline outline in the OFF state: the pale off track (#ebf0ff)
+          // on a white card was ~1.1:1 contrast — the switch looked missing.
+          // Always present (transparent when on) so geometry never shifts.
+          borderWidth: borderWidth.thin,
+          borderColor: !value && !disabled ? colors.border.strong : 'transparent',
           justifyContent: 'center',
           paddingHorizontal: THUMB_PADDING,
           opacity: pressed && !disabled ? 0.85 : 1,

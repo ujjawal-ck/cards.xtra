@@ -17,13 +17,13 @@
 import React, { useRef } from 'react';
 import { View, ScrollView, Pressable, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
-import { Text, Divider } from '../atoms';
+import { Text, Divider, Icon } from '../atoms';
 import { ListRow } from '../molecules';
 import { Masthead, LogoutConfirmSheet, StaggeredEntrance } from '../organisms';
 import type { LogoutConfirmSheetRef } from '../organisms';
@@ -33,6 +33,7 @@ import {
   radius,
   elevation,
   borderWidth,
+  iconSize,
 } from '../tokens';
 import { useProfile } from '../query/useProfile';
 import { useAuth } from '../auth/AuthContext';
@@ -40,6 +41,8 @@ import { analytics, Events } from '../analytics';
 import { nameInitials } from '../lib/nameInitials';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
 import { useWithdrawGate } from './withdraw/useWithdrawGate';
+import { SUPPORT_PHONE_URL } from '../config/support';
+import { maskEmail, maskMobileShort } from '../lib/mask';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
 // Profile sits inside the bottom-tab navigator, which is itself a screen of
@@ -72,14 +75,12 @@ export function ProfileScreen() {
   // wins over the backend fullname — there's no profile-update API, so the
   // name the user picked on Home lives client-side.
   const name = displayName || profile?.fullname || undefined;
-  const email = profile?.email;
-  const mobile = profile?.mobileNumber ? String(profile.mobileNumber) : undefined;
-  // "email · 2550" (last 4 of the mobile), matching the masthead spec.
-  const contact = email
-    ? mobile
-      ? `${email} · ${mobile.slice(-4)}`
-      : email
-    : undefined;
+  // Masked contact line, Figma 4448:23847: "ma****an@gmail.com · 83********24".
+  // (Was the full, unmasked email + last 4 digits — it wrapped to two lines
+  // and pushed Edit Profile out of the card.)
+  const email = maskEmail(profile?.email);
+  const mobile = maskMobileShort(profile?.mobileNumber);
+  const contact = [email, mobile].filter(Boolean).join(' · ') || undefined;
   // First + last initial ("Praveen Singh" → "PS"); single names → one letter.
   const avatarInitial = nameInitials(name);
 
@@ -154,17 +155,11 @@ export function ProfileScreen() {
                 title="Withdraw Cashback"
                 onPress={onMenu('withdraw', startWithdraw)}
               />
-              <Divider style="solid" />
-              <ListRow
-                type="menu-option"
-                icon="clock-outline"
-                title="Payment History"
-                // Not linked yet: ProfilePaymentHistory still renders Figma
-                // sample payouts (₹80.80 …), not /payment/history data, so
-                // opening it would show users fake payments. Wire it once the
-                // live history API is mapped.
-                onPress={onMenu('payment_history')}
-              />
+              {/* "Payment History" row intentionally hidden: the
+                  ProfilePaymentHistory screen still renders Figma sample
+                  payouts (₹80.80 …), not /payment/history data, and a row
+                  that does nothing is a dead end. Restore it (navigate to
+                  'ProfilePaymentHistory') once the live history is mapped. */}
               <Divider style="solid" />
               {/* `desc-*` icons bake multi-colour illustrations; on this
                   list it clashed with the clean outline icons. Use a
@@ -212,7 +207,7 @@ export function ProfileScreen() {
                 type="menu-option"
                 icon="message-outline"
                 title="Call Us"
-                onPress={onMenu('call_us', () => Linking.openURL('tel:+918527264999'))}
+                onPress={onMenu('call_us', () => Linking.openURL(SUPPORT_PHONE_URL))}
               />
               <Divider style="solid" />
               <ListRow
@@ -238,38 +233,40 @@ export function ProfileScreen() {
             >
               <ListRow
                 type="menu-option"
-                icon="desc-approve"
+                // Figma 4448:23861 lock glyph — outline + tintable like every
+                // other menu icon (desc-approve baked a green filled badge).
+                icon="lock-outline"
                 title="Privacy Policy"
                 onPress={onMenu('privacy_policy', () => navigation.navigate('PrivacyPolicy'))}
               />
             </View>
           </View>
 
-          {/* 5. Logout — small red-OUTLINE pill (red border + red label,
-              transparent fill). The Button atom has no destructive-outline
-              variant, so this is a token-bound custom pill. Tapping it opens
-              the confirmation sheet rather than signing out immediately. */}
-          <View style={{ paddingHorizontal: spacing[16], alignItems: 'center' }}>
+          {/* 5. Logout — Figma 4448:23863: a left-aligned row in the 16-px
+              gutter, Body/14/Medium in feedback/error (was a centred
+              outlined pill). Opens the confirmation sheet. */}
+          <View style={{ paddingHorizontal: spacing[16] }}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Logout"
               onPress={() => logoutSheetRef.current?.present()}
+              hitSlop={spacing[8]}
               style={({ pressed }) => ({
+                alignSelf: 'flex-start',
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                // 36 = Button size-36 height; not on the spacing scale (the
-                // Button atom hardcodes the same value for the same reason).
-                height: 36,
-                paddingHorizontal: spacing[24],
-                borderRadius: radius.full,
-                borderWidth: borderWidth.thin,
-                borderColor: colors.action.destructive.default,
-                backgroundColor: colors.surface.default,
+                gap: spacing[12],
+                paddingVertical: spacing[12],
+                paddingHorizontal: spacing[12],
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text variant="body12Medium" color={colors.action.destructive.default}>
+              <Icon
+                name="logout-outline"
+                size={iconSize[24]}
+                color={colors.feedback.error.default}
+              />
+              <Text variant="body14Medium" color={colors.feedback.error.default}>
                 Logout
               </Text>
             </Pressable>

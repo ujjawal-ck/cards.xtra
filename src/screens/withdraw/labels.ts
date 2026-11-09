@@ -16,3 +16,18 @@ export function withdrawTitle(
 ): string {
   return kind === 'rewards' ? 'Withdraw Rewards' : 'Withdraw Cashback';
 }
+
+/**
+ * Masthead subtitle under the amount — which bucket is being paid out. The
+ * UPI / Amazon / Flipkart / OTP screens hard-coded the cashback line, so a
+ * rewards or combined withdrawal was mislabelled "Cashback Available".
+ */
+export function withdrawSubtitle(
+  kind: WithdrawPaymentType | WithdrawGiftCardVariant
+): string {
+  if (kind === 'rewards') return 'Withdrawing Available Rewards';
+  if (kind === 'cashback_and_rewards' || kind === 'combined') {
+    return 'Withdrawing Total Amount (Cashback + Rewards)';
+  }
+  return 'Cashback Available For Payment';
+}

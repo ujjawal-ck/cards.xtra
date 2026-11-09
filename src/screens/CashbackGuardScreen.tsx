@@ -19,7 +19,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
@@ -81,7 +81,8 @@ export function CashbackGuardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
       <StatusBar style="dark" />
-      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+      {/* 'bottom' too: the last lines sat under the Android nav bar. */}
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1 }}>
         <Header
           leading="back"
           title="Never Miss Cashback"
@@ -157,8 +158,9 @@ export function CashbackGuardScreen() {
               }}
             >
               <View style={{ flex: 1, gap: spacing[2] }}>
+                {/* Not a repeat of the header title. */}
                 <Text variant="body16SemiBold" color={colors.text.primary}>
-                  Never Miss Cashback
+                  Cashback reminders
                 </Text>
                 <Text variant="body12Regular" color={colors.text.secondary}>
                   {enabled

@@ -65,9 +65,9 @@ export interface EarningsBreakupSheetProps {
   variant?: EarningsBreakupVariant;
   /** Confirmed / withdrawable amount, e.g. "₹1500.0". */
   confirmed?: string;
-  /** Pending amount, e.g. "₹0.0". */
+  /** Pending amount, e.g. "₹0". */
   pending?: string;
-  /** Already-paid amount, e.g. "₹0.0". */
+  /** Already-paid amount, e.g. "₹0". */
   paid?: string;
 }
 
@@ -76,26 +76,48 @@ const TITLE: Record<EarningsBreakupVariant, string> = {
   rewards: 'Rewards Breakup',
 };
 
-// Legend rows — dot colour + bold label + body copy. Matches the Figma
-// (which reuses the cashback wording on both sheets); only the third
-// label is corrected from "Confirmed" → "Paid".
-const LEGEND: Array<{ dot: string; label: string; body: string }> = [
-  {
-    dot: colors.feedback.success.default,
-    label: 'Confirmed Cashback:',
-    body: ' Earnings after the return/cancellation period, which is available for withdrawal via bank transfer, UPI or NEFT. You will need a minimum of ₹250 confirmed Cashback to proceed.',
-  },
-  {
-    dot: colors.feedback.success.default,
-    label: 'Pending Cashback:',
-    body: ' Earnings before the return/cancellation period.',
-  },
-  {
-    dot: colors.action.primary.default,
-    label: 'Paid Cashback:',
-    body: ' Earnings that have already been paid to you.',
-  },
-];
+// Legend rows — dot colour + bold label + body copy. Dots use the SAME
+// colours as the status badges above them (colors.status.*): the Figma's
+// green/green/saffron dots contradicted the green/yellow/blue badges.
+// The Rewards sheet gets its own wording — it used to describe rewards as
+// "Cashback" withdrawable via bank/UPI, but rewards pay out as gift cards.
+type LegendItem = { dot: string; label: string; body: string };
+const LEGEND: Record<EarningsBreakupVariant, LegendItem[]> = {
+  cashback: [
+    {
+      dot: colors.status.confirmed.dot,
+      label: 'Confirmed Cashback:',
+      body: ' Earnings after the return/cancellation period, which is available for withdrawal via UPI or as a gift card. You will need a minimum of ₹250 confirmed Cashback to proceed.',
+    },
+    {
+      dot: colors.status.pending.dot,
+      label: 'Pending Cashback:',
+      body: ' Earnings before the return/cancellation period.',
+    },
+    {
+      dot: colors.status.paid.dot,
+      label: 'Paid Cashback:',
+      body: ' Earnings that have already been paid to you.',
+    },
+  ],
+  rewards: [
+    {
+      dot: colors.status.confirmed.dot,
+      label: 'Confirmed Rewards:',
+      body: ' Rewards you can withdraw as an Amazon or Flipkart gift card.',
+    },
+    {
+      dot: colors.status.pending.dot,
+      label: 'Pending Rewards:',
+      body: ' Rewards that are still being confirmed.',
+    },
+    {
+      dot: colors.status.paid.dot,
+      label: 'Paid Rewards:',
+      body: ' Rewards that have already been paid to you.',
+    },
+  ],
+};
 
 // Legend dot — small filled circle, sat in a fixed-width column so the
 // wrapped body text hangs to its right (matches the Figma 16-px icon slot).
@@ -149,7 +171,7 @@ export const EarningsBreakupSheet = forwardRef<
   BottomSheetModalRef,
   EarningsBreakupSheetProps
 >(function EarningsBreakupSheet(
-  { variant = 'cashback', confirmed = '₹0.0', pending = '₹0.0', paid = '₹0.0' },
+  { variant = 'cashback', confirmed = '₹0', pending = '₹0', paid = '₹0' },
   ref
 ) {
   const insets = useSafeAreaInsets();
@@ -227,7 +249,7 @@ export const EarningsBreakupSheet = forwardRef<
 
           {/* Legend */}
           <View style={{ gap: spacing[8] }}>
-            {LEGEND.map((item) => (
+            {LEGEND[variant].map((item) => (
               <LegendRow key={item.label} {...item} />
             ))}
           </View>

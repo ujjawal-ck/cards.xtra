@@ -12,7 +12,7 @@
  *   2. Rows group:
  *       - <AmountActionRow caption='Confirmed' value='₹1500.0'
  *                          buttonLabel='Withdraw' buttonVariant='solid' />
- *       - <AmountActionRow caption='Pending'   value='₹0.0'
+ *       - <AmountActionRow caption='Pending'   value='₹0'
  *                          buttonLabel='Know Why?' buttonVariant='outline' />
  *   3. List card (white, radius.xl, elevation.light.xs):
  *       Three <ListRow type='menu-option' …> stacked with <Divider />
@@ -28,7 +28,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -172,7 +172,7 @@ export function EarningsScreen() {
               // matching what the Withdraw flow actually pays out. Showing
               // `confirmed` (cashback only) hid a positive rewards balance and
               // made the ₹0 block disagree with the working Withdraw button.
-              value={earnings?.combined ?? '₹0.0'}
+              value={earnings?.combined ?? '₹0'}
               buttonLabel="Withdraw"
               buttonVariant="solid"
               buttonTone="main"
@@ -184,13 +184,12 @@ export function EarningsScreen() {
               iconName="desc-pendingcash"
               caption="Pending"
               loading={loading}
-              value={earnings?.pending ?? '₹0.0'}
+              value={earnings?.pending ?? '₹0'}
               buttonLabel="Know Why?"
               buttonVariant="outline"
               buttonTone="main"
               // Text matches the outline stroke (saffron-400) rather than
               // the darker saffron-700 default — a single-tone CTA.
-              buttonLabelColor={colors.action.tertiary.border}
               // Explains why the pending amount can't be withdrawn yet.
               onButtonPress={() => earningStatusRef.current?.present()}
             />
@@ -200,13 +199,12 @@ export function EarningsScreen() {
               loading={loading}
               // Already paid out to the user — live from the earnings API
               // (paid_cashback, mapped in earningsMapper).
-              value={earnings?.paid ?? '₹0.0'}
+              value={earnings?.paid ?? '₹0'}
               buttonLabel="View"
               buttonVariant="outline"
               buttonTone="main"
               // Text matches the outline stroke (saffron-400) rather than
               // the darker saffron-700 default — a single-tone CTA.
-              buttonLabelColor={colors.action.tertiary.border}
               // Explains the paid amount in a sheet (Cashback Paid).
               onButtonPress={() => paidStatusRef.current?.present()}
             />
@@ -251,7 +249,7 @@ export function EarningsScreen() {
                 type="menu-option"
                 icon="headset-outline"
                 title="Get Help"
-                onPress={() => undefined}
+                onPress={() => navigation.navigate('GetHelp')}
               />
             </View>
           </View>
@@ -263,16 +261,16 @@ export function EarningsScreen() {
       <EarningsBreakupSheet
         ref={cashbackSheetRef}
         variant="cashback"
-        confirmed={earnings?.confirmed ?? '₹0.0'}
-        pending={earnings?.pending ?? '₹0.0'}
-        paid={earnings?.paid ?? '₹0.0'}
+        confirmed={earnings?.confirmed ?? '₹0'}
+        pending={earnings?.pending ?? '₹0'}
+        paid={earnings?.paid ?? '₹0'}
       />
       <EarningsBreakupSheet
         ref={rewardsSheetRef}
         variant="rewards"
-        confirmed={earnings?.rewardsValue ?? '₹0.0'}
-        pending="₹0.0"
-        paid="₹0.0"
+        confirmed={earnings?.rewardsValue ?? '₹0'}
+        pending="₹0"
+        paid="₹0"
       />
 
       {/* Withdraw gate sheets (₹0 / payout settling) — from useWithdrawGate. */}
@@ -281,14 +279,14 @@ export function EarningsScreen() {
       {/* Pending-state sheet — opened from the Know Why? CTA. */}
       <EarningStatusSheet
         ref={earningStatusRef}
-        amount={earnings?.pending ?? '₹0.0'}
+        amount={earnings?.pending ?? '₹0'}
       />
 
       {/* Paid breakdown — opened from the Paid row's "View" CTA. */}
       <EarningStatusSheet
         ref={paidStatusRef}
         variant="paid"
-        amount={earnings?.paid ?? '₹0.0'}
+        amount={earnings?.paid ?? '₹0'}
       />
     </View>
   );

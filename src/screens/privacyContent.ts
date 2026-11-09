@@ -26,7 +26,7 @@ export interface PrivacySection {
 export const PRIVACY_SECTIONS: PrivacySection[] = [
   {
     heading: 'Introduction',
-    body: 'CARDS.xtra ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our mobile app, website, or services.',
+    body: 'Cards.xtra ("we", "our", "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our mobile app, website, or services.',
   },
   {
     heading: 'Information We Collect',
@@ -67,7 +67,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
   },
   {
     heading: "Children's Privacy",
-    body: 'CARDS.xtra is not intended for users under 18 years of age. We do not knowingly collect information from children. If you believe a child has provided us with information, please contact us immediately.',
+    body: 'Cards.xtra is not intended for users under 18 years of age. We do not knowingly collect information from children. If you believe a child has provided us with information, please contact us immediately.',
   },
   {
     heading: 'Changes to This Policy',

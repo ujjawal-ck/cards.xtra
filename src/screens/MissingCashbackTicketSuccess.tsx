@@ -13,7 +13,7 @@
 import React from 'react';
 import { View, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -21,18 +21,20 @@ import { Text, Button } from '../atoms';
 import { Header } from '../organisms';
 import { colors, spacing, elevation } from '../tokens';
 import type { RootStackParamList } from '../navigation/types';
+import { useExitToClaims } from './useExitToClaims';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackTicketSuccess'>;
 
 export function MissingCashbackTicketSuccess() {
   const navigation = useNavigation<Nav>();
+  const exitToClaims = useExitToClaims();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
-          <Header leading="back" onLeadingPress={() => navigation.goBack()} />
+          <Header leading="back" onLeadingPress={exitToClaims} />
 
           {/* Copy block */}
           <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[8], gap: spacing[8] }}>
@@ -42,7 +44,12 @@ export function MissingCashbackTicketSuccess() {
             <Text variant="body14Regular" color={colors.text.primary}>
               Thanks for raising the ticket.
             </Text>
-            <Pressable accessibilityRole="link" hitSlop={spacing[8]} onPress={() => undefined}>
+            <Pressable
+              accessibilityRole="link"
+              hitSlop={spacing[8]}
+              // Was a no-op link.
+              onPress={() => navigation.navigate('MissingCashbackHelp')}
+            >
               <Text variant="body14SemiBold" color={colors.action.accent.default}>
                 Learn More →
               </Text>
@@ -69,7 +76,7 @@ export function MissingCashbackTicketSuccess() {
               tone="second"
               size={52}
               fullWidth
-              onPress={() => navigation.navigate('MissingCashbackDidYouShop')}
+              onPress={exitToClaims}
             />
           </View>
         </View>

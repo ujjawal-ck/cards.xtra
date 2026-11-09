@@ -27,6 +27,12 @@ import {
 import { typography, colors } from '../tokens';
 
 export type TextVariant = keyof typeof typography;
+
+// Note: app text follows the OS font-size setting UNCAPPED. A cap
+// (maxFontSizeMultiplier) was tried and reverted: on Android's new
+// architecture capped text is measured and drawn at different sizes, which
+// clipped labels ("Yes Bank" → "Yes"). Components grow with text instead
+// (minHeight boxes, 2-line rail labels, single-line buttons).
 export type TextAlign = 'left' | 'center' | 'right';
 
 export interface TextProps extends RNTextProps {

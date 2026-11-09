@@ -93,7 +93,9 @@ export function Selector({
   // equal-split row instead of the default 160 fixed).
   const containerStyle: ViewStyle = {
     width: '100%',
-    height: CHIP_H,
+    // minHeight + 2-line title: "Self-employed" was cut to "Self Emplo…"
+    // at larger OS font sizes on a 360-dp phone.
+    minHeight: CHIP_H,
     borderRadius: radius.lg,
     borderWidth: borderWidth.thin,
     borderColor,
@@ -135,7 +137,8 @@ export function Selector({
         variant="body12Medium"
         color={titleColor}
         align="left"
-        numberOfLines={1}
+        numberOfLines={2}
+        style={{ flexShrink: 1 }}
       >
         {title}
       </Text>
@@ -178,7 +181,7 @@ export function Selector({
       // Default to the Figma-fixed 160×48 footprint; callers can pass
       // `style={{ flex: 1 }}` to take an equal share of a parent row
       // (the inner container is width: '100%' so it follows).
-      style={[{ width: CHIP_W, height: CHIP_H }, style]}
+      style={[{ width: CHIP_W, minHeight: CHIP_H }, style]}
     >
       {body}
     </Pressable>

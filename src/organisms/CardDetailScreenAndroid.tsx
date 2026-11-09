@@ -61,6 +61,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { Image as ExpoImage } from 'expo-image';
 import {
   BottomSheetModal,
@@ -99,7 +100,7 @@ import {
   type EligibilityOutcome,
 } from './CardDetailSheet';
 import { images } from '../assets/images';
-import { colors, spacing, radius, opacity } from '../tokens';
+import { colors, spacing, radius, opacity, borderWidth, iconSize } from '../tokens';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -110,6 +111,14 @@ const PAGE_W = SCREEN_W;
 const HERO_TOP_GAP = spacing[20];
 const HERO_BOTTOM_GAP = spacing[24];
 const HERO_FADE_H = 120;
+
+// Top bar (status bar + ✕ / share row) turns solid as the page scrolls past
+// the hero, so scrolled content never runs under the status-bar icons or
+// collides with the floating buttons. Fades in between these scroll offsets.
+const TOPBAR_FADE_START = spacing[96];
+const TOPBAR_FADE_END = spacing[128] + spacing[64];
+// MastheadHeader's round icon buttons (its BUTTON_SIZE).
+const MASTHEAD_BUTTON_SIZE = iconSize[40];
 
 // Zoom-open / zoom-close: the whole page scales from this up to 1 as the sheet
 // opens (animatedIndex −1 → 0) and shrinks back on dismiss. We also CANCEL
@@ -243,9 +252,14 @@ function CardPageAndroid({
   onLearnHow,
   onViewAllBenefits,
   onRecommendedPress,
+  onScrollY,
 }: {
   card: CardModel;
   active: boolean;
+  /** Vertical scroll offset of this page (the pager ignores non-active
+   *  pages). Always passed — gorhom's scrollable keeps the FIRST onScroll it
+   *  receives, so a callback added later (on settle) never fired. */
+  onScrollY?: (index: number, y: number) => void;
   /** Mount the heavy below-the-fold sections — deferred until after the open
    *  animation so the first render (and thus the open) isn't blocked by them. */
   showDetail: boolean;
@@ -325,7 +339,7 @@ function CardPageAndroid({
         }}
       >
         <Text
-          variant="heading22Bold"
+          variant="heading20SemiBold"
           color={colors.text.primary}
           align="center"
           numberOfLines={2}
@@ -427,7 +441,7 @@ function CardPageAndroid({
           <Footer
             theme="dark"
             headline={'Found the\nright card?'}
-            subtext="Apply now and get cash back"
+            subtext="Apply now and earn cashback."
           />
         </View>
       </View>
@@ -450,6 +464,9 @@ function CardPageAndroid({
     >
       <BottomSheetScrollView
         scrollEnabled={active}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) =>
+          onScrollY?.(index, e.nativeEvent.contentOffset.y)
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: spacing[128] }}
       >
@@ -514,6 +531,16 @@ function AndroidPagerBody({
   bottomInset: number;
 }) {
   const listRef = useRef<FlatList<CardModel>>(null);
+  // Active page's vertical scroll → drives the solid top bar below.
+  const pageScrollY = useSharedValue(0);
+  // Settled page index, readable from the stable scroll callback below.
+  const settledIndexRef = useRef(0);
+  const handlePageScrollY = useCallback(
+    (index: number, y: number) => {
+      if (index === settledIndexRef.current) pageScrollY.value = y;
+    },
+    [pageScrollY]
+  );
   const indexOf = useCallback(
     (id?: string) => {
       const i = id ? cards.findIndex((c) => c.id === id) : -1;
@@ -524,6 +551,7 @@ function AndroidPagerBody({
   // Page structure is keyed to the SETTLED card (updated only at momentum end),
   // so it never changes mid-swipe → no flicker.
   const [settledIndex, setSettledIndex] = useState(() => indexOf(initialCardId));
+  settledIndexRef.current = settledIndex;
 
   // Defer the heavy detail sections until interactions (the open animation)
   // finish, so the first render is light and the open starts without a delay.
@@ -579,6 +607,8 @@ function AndroidPagerBody({
       }
       setSettledIndex(clamped);
       if (clamped !== lastReportedIndex.current) {
+        // New card → its page starts at the top; hide the solid top bar.
+        pageScrollY.value = 0;
         lastReportedIndex.current = clamped;
         onActiveCardChange?.(cards[clamped]);
       }
@@ -692,6 +722,7 @@ function AndroidPagerBody({
         onRecommendedPress={
           onRecommendedPress ? handleRecommendedPress : undefined
         }
+        onScrollY={handlePageScrollY}
       />
     ),
     [
@@ -707,6 +738,7 @@ function AndroidPagerBody({
       onViewAllBenefits,
       onRecommendedPress,
       handleRecommendedPress,
+      handlePageScrollY,
     ]
   );
 
@@ -717,6 +749,15 @@ function AndroidPagerBody({
   // that), but a snappy open spring + the origin zoom make "expand from the
   // card" the dominant read. Corners square off at full screen; the gap around
   // the scaled page reveals the dimmed backdrop.
+  const topBarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      pageScrollY.value,
+      [TOPBAR_FADE_START, TOPBAR_FADE_END],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+  }));
+
   const zoomStyle = useAnimatedStyle(() => {
     const s = interpolate(
       animatedIndex.value,
@@ -798,6 +839,31 @@ function AndroidPagerBody({
         initialNumToRender={1}
         maxToRenderPerBatch={2}
         removeClippedSubviews={false}
+      />
+
+      {/* Dark status-bar icons while the detail is open: the page (peach hero,
+          then the solid top bar) is light, but Home underneath asks for
+          light icons for its blue masthead. Unmounts with the sheet. */}
+      <StatusBar style="dark" />
+
+      {/* Solid top bar behind the status bar + close / share row. Invisible
+          over the hero, fades in once the page scrolls past it. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: topInset + spacing[12] * 2 + MASTHEAD_BUTTON_SIZE,
+            backgroundColor: colors.surface.sunken,
+            borderBottomWidth: borderWidth.thin,
+            borderBottomColor: colors.border.subtle,
+            zIndex: opacity[100],
+          },
+          topBarStyle,
+        ]}
       />
 
       {/* Fixed header — close / share. */}

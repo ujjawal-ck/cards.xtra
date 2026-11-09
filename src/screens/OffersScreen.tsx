@@ -30,6 +30,7 @@ import {
   View,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -40,7 +41,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,6 +55,7 @@ import {
   StaggeredEntrance,
   SearchTopSheet,
   PromoTopSheet,
+  ScreenState,
 } from '../organisms';
 import type { SearchTopSheetRecent } from '../organisms';
 import { images } from '../assets/images';
@@ -111,7 +113,8 @@ export function OffersScreen() {
   // The Offers strip — fetched live from the CashKaro "CK MINI APP" category
   // (parent "All" tab + its sub-categories). Drives the strip, the grid path,
   // the thematic accent, and the search category list.
-  const { data: categories = [] } = useOfferCategories();
+  const catQ = useOfferCategories();
+  const categories = catQ.data ?? [];
 
   // Which category's stores the grid shows. Driven by the sticky category
   // strip; defaults to the "All" tab (the miniapp parent — every store).
@@ -121,7 +124,18 @@ export function OffersScreen() {
   // Undefined until a category is tapped (the default set has no clean card
   // category, so the brand page falls back to top cards).
   const [categoryLabel, setCategoryLabel] = useState<string | undefined>(undefined);
-  const { data: stores = [], isLoading, isError } = useCategoryOffers(categoryPath);
+  const {
+    data: stores = [],
+    isLoading,
+    isError,
+    isRefetching,
+    refetch,
+  } = useCategoryOffers(categoryPath);
+  // Pull-to-refresh / "Try again" reload both the category strip and stores.
+  const reloadOffers = () => {
+    catQ.refetch();
+    refetch();
+  };
 
   // ----- Thematic top tint -------------------------------------------------
   // The saffron header subtly shifts toward the SELECTED category's prominent
@@ -348,6 +362,16 @@ export function OffersScreen() {
         // scrolls off first, so the search bar hides and the strip locks
         // to the top on any upward scroll.
         stickyHeaderIndices={[1]}
+        // Pull down to reload offers (the old error text promised this but
+        // there was no RefreshControl).
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={reloadOffers}
+            colors={[colors.action.primary.default]}
+            tintColor={colors.action.primary.default}
+          />
+        }
         contentContainerStyle={{
           // Reserve room for the floating BottomNav so the last
           // tile row never hides beneath it.
@@ -372,7 +396,9 @@ export function OffersScreen() {
           <SearchBar
             state="default"
             placeholder="Search stores"
-            placeholders={SEARCH_TICKER}
+            // Only cycle store names when stores actually loaded — otherwise
+            // it suggested "Search for Flipkart" on an empty Offers page.
+            placeholders={stores.length > 0 ? SEARCH_TICKER : undefined}
             onFocus={() => setSearchOpen(true)}
             style={{ width: '100%' }}
           />
@@ -404,10 +430,16 @@ export function OffersScreen() {
         >
           {isLoading ? (
             <ActivityIndicator color={colors.action.primary.default} />
-          ) : isError ? (
-            <Text variant="body14Regular" color={colors.text.secondary} align="center">
-              Couldn’t load offers. Pull to retry.
-            </Text>
+          ) : isError || catQ.isError ? (
+            // No illustration: the only candidate ("No cashback on this
+            // brand") says the wrong thing. Copy doesn't blame the user's
+            // connection — the failure is usually server-side.
+            <ScreenState
+              title="Couldn’t load offers"
+              body="Something went wrong on our side. Please try again in a bit."
+              actionLabel="Try again"
+              onAction={reloadOffers}
+            />
           ) : offerRows.length > 0 ? (
             <StaggeredEntrance key={categoryPath} style={{ gap: spacing[8] }}>
               {offerRows.map((row, ri) => (
@@ -415,9 +447,10 @@ export function OffersScreen() {
               ))}
             </StaggeredEntrance>
           ) : (
-            <Text variant="body14Regular" color={colors.text.secondary} align="center">
-              No offers in this category yet.
-            </Text>
+            <ScreenState
+              title="No offers here yet"
+              body="New stores are added often. Pull down to refresh."
+            />
           )}
         </View>
       </ScrollView>

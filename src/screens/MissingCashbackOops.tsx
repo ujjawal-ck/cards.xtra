@@ -2,7 +2,7 @@
  * MissingCashbackOops — no-visits state (Figma 3632:194517).
  *
  * Reached from the "Did You Shop? → Yes" branch when the user has not visited
- * any retailer via CARDS.xtra in the last 30 days. Layout on a background.muted
+ * any retailer via Cards.xtra in the last 30 days. Layout on a background.muted
  * page:
  *   1. Cobalt "Missing Cashback?" hero (MissingCashbackMasthead).
  *   2. "Oops" + explanatory copy + a "Learn More" link that opens the
@@ -10,7 +10,7 @@
  */
 import React, { useRef } from 'react';
 import { View, ScrollView, Linking } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,7 +58,7 @@ export function MissingCashbackOops() {
             Oops
           </Text>
           <Text variant="body16Regular" color={colors.text.primary}>
-            Looks like you have not visited any website via CARDS.xtra in last
+            Looks like you have not visited any website via Cards.xtra in last
             30 days
           </Text>
           <Text variant="body14Regular" color={colors.text.primary}>

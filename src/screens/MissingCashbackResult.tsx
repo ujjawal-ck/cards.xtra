@@ -14,7 +14,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -24,6 +24,7 @@ import { Text, Button } from '../atoms';
 import { Header } from '../organisms';
 import { colors, spacing, elevation } from '../tokens';
 import type { RootStackParamList } from '../navigation/types';
+import { useExitToClaims } from './useExitToClaims';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackResult'>;
 type Rt = RouteProp<RootStackParamList, 'MissingCashbackResult'>;
@@ -76,6 +77,7 @@ function ResultGlyph({ variant }: { variant: 'tracked' | 'tracking' | 'queued' }
 
 export function MissingCashbackResult() {
   const navigation = useNavigation<Nav>();
+  const exitToClaims = useExitToClaims();
   const route = useRoute<Rt>();
   const { variant, title, message, cashbackId } = route.params;
 
@@ -86,7 +88,7 @@ export function MissingCashbackResult() {
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
-          <Header leading="back" onLeadingPress={() => navigation.goBack()} />
+          <Header leading="back" onLeadingPress={exitToClaims} />
 
           {/* Centered result block */}
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing[24], gap: spacing[16] }}>
@@ -121,7 +123,7 @@ export function MissingCashbackResult() {
                 if (canViewOrder) {
                   navigation.navigate('OrdersDetail', { id: String(cashbackId) });
                 } else {
-                  navigation.navigate('MissingCashbackDidYouShop');
+                  exitToClaims();
                 }
               }}
             />

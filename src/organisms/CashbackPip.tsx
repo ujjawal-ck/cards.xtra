@@ -96,7 +96,9 @@ export function CashbackPip({ onPress }: CashbackPipProps) {
 
   // Pip top-left, in absolute screen coords. Starts docked toward bottom-right.
   const x = useSharedValue(maxX);
-  const y = useSharedValue(clamp(SCREEN_H * 0.42, minY, maxY));
+  // Start docked low (bottom-right) rather than mid-screen, where it covered
+  // centred content such as the Orders empty state. Still draggable.
+  const y = useSharedValue(maxY);
   const startX = useSharedValue(0);
   const startY = useSharedValue(0);
   // 0 = expanded pip, 1 = collapsed notch. Drives the genie. Starts as the

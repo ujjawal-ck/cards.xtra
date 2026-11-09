@@ -107,8 +107,8 @@ export function Accordion({
       {
         rotate: rotation.interpolate({
           inputRange: [0, 1],
-          // 90° = '›' pointing down; 270° = pointing up.
-          outputRange: ['90deg', '270deg'],
+          // chevron-down icon: 0° closed, 180° open.
+          outputRange: ['0deg', '180deg'],
         }),
       },
     ],
@@ -170,15 +170,9 @@ export function Accordion({
               chevronRotate,
             ]}
           >
-            <RNText
-              style={{
-                fontSize: iconSize[24],
-                lineHeight: iconSize[24],
-                color: colors.text.primary,
-              }}
-            >
-              ›
-            </RNText>
+            {/* Token-sized chevron icon. The Unicode '›' glyph scaled with the
+                OS font size and drifted ~8 px between open and closed rows. */}
+            <Icon name="chevron-down" size={iconSize[24]} color={colors.icon.actions} />
           </Animated.View>
         ) : null}
       </View>

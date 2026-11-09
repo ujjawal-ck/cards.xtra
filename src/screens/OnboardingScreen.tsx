@@ -37,6 +37,7 @@ import LottieView from 'lottie-react-native';
 import type { LottieViewProps } from 'lottie-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   BottomSheetModal,
@@ -587,7 +588,9 @@ export function OnboardingScreen() {
             {...props}
             disappearsOnIndex={-1}
             appearsOnIndex={0}
-            opacity={opacity[80]}
+            // 90% (was 80%): the carousel headline behind still showed
+            // through and collided with the Cards.xtra logo above the sheet.
+            opacity={opacity[90]}
             pressBehavior="close"
           />
           <Animated.View
@@ -614,6 +617,8 @@ export function OnboardingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface.default }}>
+      {/* Light icons over the blue onboarding / dimmed login backdrop. */}
+      <StatusBar style="light" />
       {/* Base brand backdrop — also the fallback behind the Lottie while
           it loads and at the edges `cover` may not reach on odd aspect
           ratios. */}

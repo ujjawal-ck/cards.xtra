@@ -7,9 +7,11 @@
  * and the T&C is checked; the email is validated server-side at submit.
  */
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Alert, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,7 +24,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
@@ -53,6 +55,7 @@ export function WithdrawFlipkart() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const insets = useSafeAreaInsets();
+  const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
 
@@ -62,6 +65,12 @@ export function WithdrawFlipkart() {
   const [sending, setSending] = useState(false);
 
   const valid = EMAIL_RE.test(email.trim()) && email.trim() === confirm.trim();
+  // Inline errors (Figma 3283:51858 / 3283:52088). Email is checked once the
+  // user leaves the field; the confirm field as soon as it diverges.
+  const [emailTouched, setEmailTouched] = useState(false);
+  const emailInvalid = emailTouched && email.trim().length > 0 && !EMAIL_RE.test(email.trim());
+  const confirmMismatch =
+    confirm.length > 0 && confirm.trim() !== email.trim().slice(0, confirm.trim().length);
 
   const handleGetPaid = async () => {
     if (!accessToken || sending) return;
@@ -91,7 +100,13 @@ export function WithdrawFlipkart() {
       <StatusBar style="dark" />
 
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
-        <View style={{ gap: spacing[24] }}>
+        {/* Scrollable so the second field and the note can be brought into
+            view above the keyboard. */}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing[24], paddingBottom: spacing[24] }}
+        >
           <Header
             leading="back"
             title={withdrawTitle(params.paymentType)}
@@ -101,7 +116,7 @@ export function WithdrawFlipkart() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>
@@ -119,10 +134,13 @@ export function WithdrawFlipkart() {
                 size="sm"
                 value={email}
                 onChangeText={setEmail}
+                onBlur={() => setEmailTouched(true)}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 returnKeyType="next"
+                state={emailInvalid ? 'error' : undefined}
+                hint={emailInvalid ? 'Invalid Email ID' : undefined}
               />
               <Input
                 label="Confirm Email"
@@ -133,6 +151,8 @@ export function WithdrawFlipkart() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 returnKeyType="done"
+                state={confirmMismatch ? 'error' : undefined}
+                hint={confirmMismatch ? "Emails don't match. Please re-enter email" : undefined}
               />
               <NoteBox>
                 The Gift Card will be sent to above email within 5 minutes. In
@@ -140,12 +160,13 @@ export function WithdrawFlipkart() {
               </NoteBox>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* Lifts the footer above the keyboard. KeyboardAvoidingView did
+          nothing on Android under edge-to-edge (see useKeyboardInset.ts),
+          so the keys covered the CTA and T&C checkbox. */}
+      <Animated.View style={keyboardPad}>
         <FooterButtons
           buttons="single"
           size={52}
@@ -162,7 +183,7 @@ export function WithdrawFlipkart() {
           onPrimary={handleGetPaid}
           style={{ paddingBottom: insets.bottom }}
         />
-      </KeyboardAvoidingView>
+      </Animated.View>
     </View>
   );
 }

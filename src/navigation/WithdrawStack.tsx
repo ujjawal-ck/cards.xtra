@@ -39,7 +39,12 @@ export function WithdrawStack() {
       <Stack.Screen name="WithdrawFlipkart" component={WithdrawFlipkart} />
       <Stack.Screen name="WithdrawVerifyOTP" component={WithdrawVerifyOTP} />
       <Stack.Screen name="WithdrawGiftCard" component={WithdrawGiftCard} />
-      <Stack.Screen name="WithdrawSuccess" component={WithdrawSuccess} />
+      <Stack.Screen
+        name="WithdrawSuccess"
+        component={WithdrawSuccess}
+        // No swipe-back into the finished payout flow.
+        options={{ gestureEnabled: false }}
+      />
       <Stack.Screen name="WithdrawTerms" component={WithdrawTerms} />
     </Stack.Navigator>
   );

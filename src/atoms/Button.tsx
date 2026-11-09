@@ -164,8 +164,11 @@ function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
       return tone === 'main'
         ? {
             bg: colors.surface.default,
-            border: colors.action.tertiary.border,
-            label: colors.action.tertiary.text,
+            // Figma 3609:170274: button/primary-border #eeddd3 and
+            // button/primary-subtle-text #e55a0e (= saffron 600, the
+            // action.primary.hover value).
+            border: colors.action.primary.border,
+            label: colors.action.primary.hover,
           }
         : {
             bg: colors.surface.default,
@@ -249,7 +252,10 @@ export function Button({
       height: isLink ? config.linkLineHeight : config.height,
       width: isIconOnly ? config.height : undefined,
       borderRadius: isLink ? 0 : config.radius,
-      paddingHorizontal: isLink || isIconOnly ? 0 : config.padH,
+      // Full-width buttons centre their label, so the size's large side
+      // padding only steals room from it ("Apply Filter" was clipped to
+      // "Apply" at larger font sizes). Keep a small 16-px inset instead.
+      paddingHorizontal: isLink || isIconOnly ? 0 : fullWidth ? spacing[16] : config.padH,
       backgroundColor: palette.bg,
       borderWidth: palette.border ? borderWidth.thin : 0,
       borderColor: palette.border,
@@ -278,9 +284,14 @@ export function Button({
             <Text
               variant={config.labelVariant}
               color={resolvedLabelColor}
-              style={
-                isLink ? { textDecorationLine: 'underline' } : undefined
-              }
+              // A button label is one line ("Apply Filter" broke onto two
+              // lines at larger font sizes). No adjustsFontSizeToFit: on
+              // Android it cut the label at a word ("Apply") instead of
+              // shrinking it.
+              numberOfLines={1}
+              style={[
+                isLink ? { textDecorationLine: 'underline' } : undefined,
+              ]}
             >
               {label}
             </Text>

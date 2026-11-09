@@ -306,18 +306,10 @@ export const HowItWorksSheet = forwardRef<
                     elevation.light.md,
                   ]}
                 />
-              ) : (
-                <View
-                  style={{
-                    width: CARD_W,
-                    height: CARD_H,
-                    borderRadius: radius.lg,
-                    backgroundColor: colors.surface.sunken,
-                    marginBottom: -PANEL_OVERLAP,
-                    zIndex: 2,
-                  }}
-                />
-              )}
+              ) : null}
+              {/* No card (e.g. the general "How Cards.xtra works" from Help):
+                  no art slot at all — the grey placeholder box read as a
+                  broken image. The panel drops its overlap padding below. */}
 
               {/* White panel — content-driven height, rounded on all corners
                   (it floats, not anchored to the screen bottom). */}
@@ -327,7 +319,7 @@ export const HowItWorksSheet = forwardRef<
                   backgroundColor: colors.surface.default,
                   borderRadius: radius['2xl'],
                   overflow: 'hidden',
-                  paddingTop: PANEL_OVERLAP + spacing[8],
+                  paddingTop: cardImage ? PANEL_OVERLAP + spacing[8] : spacing[24],
                 }}
               >
                 {/* Peach band behind the card's lower half */}

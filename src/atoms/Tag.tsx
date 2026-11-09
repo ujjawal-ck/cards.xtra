@@ -151,7 +151,9 @@ export function Tag({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: spacing[4],
-    height: config.height,
+    // minHeight: a fixed height clipped descenders ("Shopping", "Dining")
+    // at larger OS font sizes.
+    minHeight: config.height,
     paddingHorizontal: config.padH,
     borderRadius: br,
     borderWidth: borderWidth.thin,

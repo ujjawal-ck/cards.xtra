@@ -28,7 +28,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -104,7 +104,7 @@ export function MissingCashbackNewUserCheck() {
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         <View style={{ flex: 1, gap: spacing[24] }}>
           {/* 1. Header — back-only (no title) */}
-          <Header leading="back" onLeadingPress={() => navigation.goBack()} />
+          <Header leading="back" title="Did You Shop?" onLeadingPress={() => navigation.goBack()} />
 
           {/* 2. Info text */}
           <View style={{ paddingHorizontal: spacing[16], gap: spacing[8] }}>
@@ -116,7 +116,13 @@ export function MissingCashbackNewUserCheck() {
               {`${merchant} gives different Cashbacks to new and existing users.`}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}>
-              <Button label="Learn More" variant="link" size={36} />
+              {/* Was a link with no action. */}
+              <Button
+                label="Learn More"
+                variant="link"
+                size={36}
+                onPress={() => navigation.navigate('MissingCashbackHelp')}
+              />
               <ForwardArrowGlyph size={iconSize[20]} color={colors.text.link} />
             </View>
             {error ? (

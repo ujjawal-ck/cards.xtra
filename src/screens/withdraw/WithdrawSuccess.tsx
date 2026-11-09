@@ -19,7 +19,7 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,7 +32,7 @@ import type {
   WithdrawStackParamList,
   RootStackParamList,
 } from '../../navigation/types';
-import { formatRupees, formatRupeesDecimal } from './amount';
+import { formatRupees } from './amount';
 import type { WithdrawMethod } from '../../navigation/types';
 import { play } from '../../lib/haptics';
 
@@ -64,7 +64,7 @@ function successCopy(method: WithdrawMethod, amount: number): {
     case 'bank':
     default:
       return {
-        title: `${formatRupeesDecimal(amount)}\nwithdrawn Successfully!`,
+        title: `${formatRupees(amount)}\nwithdrawn Successfully!`,
         body: "It may take up to 72 hours for the payment to reflect in your account. We'll notify you once it's processed.",
       };
   }

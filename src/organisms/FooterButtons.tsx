@@ -57,6 +57,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../atoms';
 import type { ButtonIcon, IconName } from '../atoms';
 import { StripAlert, TermsAndConditions } from '../molecules';
+import type { ToneName } from '../tokens';
 import {
   colors,
   radius,
@@ -85,6 +86,8 @@ export interface FooterButtonsProps {
   primaryLabel: string;
   secondaryLabel?: string;
   stripText?: string;
+  /** Tone of the 'caption' strip. Default 'info' (cobalt). */
+  stripTone?: ToneName;
   /** Checkbox state for strip='tnc'. */
   tncChecked?: boolean;
   /** Fired when the T&C checkbox toggles. */
@@ -126,6 +129,7 @@ export function FooterButtons({
   primaryLabel,
   secondaryLabel = 'Cancel',
   stripText,
+  stripTone = 'info',
   tncChecked = false,
   onTncToggle,
   stripLinkLabels = ['Terms', 'Privacy Policy'],
@@ -159,7 +163,7 @@ export function FooterButtons({
     >
       {/* Optional strip above the action row */}
       {strip === 'caption' && stripText ? (
-        <StripAlert tone="info" layout="center" text={stripText} />
+        <StripAlert tone={stripTone} layout="center" text={stripText} />
       ) : null}
       {strip === 'tnc' && stripText ? (
         // Real checkbox + multi-line body, default placement (FooterButtons

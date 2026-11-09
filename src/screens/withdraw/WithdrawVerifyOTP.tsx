@@ -16,12 +16,12 @@ import {
   View,
   Pressable,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -43,7 +43,7 @@ import {
 } from '../../api/payments';
 import { ApiError } from '../../api/client';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
@@ -57,6 +57,7 @@ export function WithdrawVerifyOTP() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const insets = useSafeAreaInsets();
+  const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { draft, maskedMobile } = params;
 
@@ -157,7 +158,13 @@ export function WithdrawVerifyOTP() {
         amount: draft.amount,
       });
       inFlight.current = false;
-      navigation.navigate('WithdrawSuccess', { amount: draft.amount, method });
+      // Replace the whole withdraw stack with the success screen: Back from
+      // success used to reopen this OTP screen frozen behind its busy overlay
+      // (and could invite a resubmit).
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'WithdrawSuccess', params: { amount: draft.amount, method } }],
+      });
     } catch (e: any) {
       done();
       play('error');
@@ -206,7 +213,7 @@ export function WithdrawVerifyOTP() {
       ? 'Enter a valid OTP'
       : error === 'expired'
       ? 'OTP is expired'
-      : 'Help text';
+      : undefined; // no hint below the boxes unless there's an error (was placeholder "Help text")
   const otpResend = busy ? 'hidden' : error === 'expired' ? 'ready' : 'timer';
 
   return (
@@ -224,7 +231,7 @@ export function WithdrawVerifyOTP() {
           <Masthead
             variant="payment"
             amount={formatRupees(draft.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(draft.paymentType)}
           />
 
           <View style={{ gap: spacing[24] }}>
@@ -276,9 +283,10 @@ export function WithdrawVerifyOTP() {
         </View>
       </SafeAreaView>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* Lifts the footer above the keyboard. KeyboardAvoidingView did
+          nothing on Android under edge-to-edge (see useKeyboardInset.ts),
+          so the keys covered the CTA and T&C checkbox. */}
+      <Animated.View style={keyboardPad}>
         <FooterButtons
           buttons="single"
           size={52}
@@ -288,7 +296,7 @@ export function WithdrawVerifyOTP() {
           onPrimary={verifyAndPay}
           style={{ paddingBottom: insets.bottom }}
         />
-      </KeyboardAvoidingView>
+      </Animated.View>
 
       {/* Block input while verifying/submitting (Figma "verifying" overlay). */}
       {busy ? (

@@ -15,7 +15,7 @@
 import React, { useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -106,7 +106,7 @@ export function MissingCashbackEnterOrderId() {
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={{ flex: 1, gap: spacing[24] }}>
-            <Header leading="back" onLeadingPress={() => navigation.goBack()} />
+            <Header leading="back" title="Did You Shop?" onLeadingPress={() => navigation.goBack()} />
 
             <View style={{ gap: CONTENT_GAP }}>
               <View style={{ paddingHorizontal: spacing[16], gap: spacing[8] }}>

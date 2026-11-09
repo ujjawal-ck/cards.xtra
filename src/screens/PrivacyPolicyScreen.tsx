@@ -17,7 +17,7 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -33,22 +33,25 @@ export function PrivacyPolicyScreen() {
   const navigation = useNavigation<Nav>();
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
+    // White page with a pinned header (Figma 4439:291870) — the header used
+    // to scroll away inside the ScrollView, unlike every other screen.
+    <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
 
-      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1 }}>
+        <Header
+          leading="back"
+          title="Privacy Policy"
+          onLeadingPress={() => navigation.goBack()}
+        />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             gap: spacing[16],
+            paddingTop: spacing[8],
             paddingBottom: spacing[24],
           }}
         >
-          <Header
-            leading="back"
-            title="Privacy Policy"
-            onLeadingPress={() => navigation.goBack()}
-          />
 
           {/* Last-updated caption. */}
           <View style={{ paddingHorizontal: spacing[24] }}>

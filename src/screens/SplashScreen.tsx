@@ -18,6 +18,8 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors } from '../tokens';
@@ -34,6 +36,7 @@ const SPLASH_SAFETY_MS = 7000;
 export function SplashScreen() {
   const navigation = useNavigation<Nav>();
   const { status } = useAuth();
+  const insets = useSafeAreaInsets();
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
 
@@ -61,8 +64,14 @@ export function SplashScreen() {
       style={{
         flex: 1,
         backgroundColor: colors.surface.default,
+        // Keep the animation above the Android navigation bar (edge-to-edge):
+        // its "Powered by CashKaro" footer was drawn underneath the system
+        // buttons.
+        paddingBottom: insets.bottom,
       }}
     >
+      {/* Light icons over the deep-blue splash animation. */}
+      <StatusBar style="light" />
       <LottieView
         source={require('../assets/animations/splash-animation.json')}
         autoPlay

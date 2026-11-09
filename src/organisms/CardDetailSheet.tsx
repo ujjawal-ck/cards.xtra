@@ -251,11 +251,8 @@ function FeeStat({ label, amount, sub }: FeeStatData) {
       <Text variant="body12Regular" color={colors.text.primary}>
         {label}
       </Text>
-      <Text
-        variant="heading24Bold"
-        color={colors.text.primary}
-        style={{ opacity: opacity[90] }}
-      >
+      {/* Figma 3914:43697: Heading/24/Semi Bold, full opacity. */}
+      <Text variant="heading24SemiBold" color={colors.text.primary}>
         {amount}
       </Text>
       {sub ? (
@@ -308,16 +305,20 @@ export function FeeSection({
           width: '100%',
           flexDirection: 'row',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          // Top-aligned: with a "(₹500 + GST)" line under only one amount,
+          // centring pushed the other column's label ~12 px lower.
+          alignItems: 'flex-start',
           paddingHorizontal: spacing[40],
         }}
       >
-        <FeeStat {...annual} />
+        {/* Joining first, then Annual — the same order as the card tile
+            (the two screens used to list them in opposite orders). */}
+        <FeeStat {...joining} />
         {/* 50-px vertical line between stats — REUSED DividerVertical
             'solid' variant. The atom defaults to 80; passing height=50
             sizes it to spec. */}
         <DividerVertical style="solid" height={FEE_DIVIDER_H} />
-        <FeeStat {...joining} />
+        <FeeStat {...annual} />
       </View>
 
       {/* 2. Price/benefits card */}
@@ -674,8 +675,9 @@ export function EligibilityChecker({
         gap: spacing[24],
         paddingHorizontal: spacing[16],
         paddingVertical: spacing[32],
-        // Flat cobalt fill — see file-level flag above.
-        backgroundColor: colors.text.link,
+        // Flat cobalt fill (Figma action/accent/default — a background, so
+        // not the text.link token it used to borrow).
+        backgroundColor: colors.action.accent.default,
       }}
     >
       {/* White card */}
@@ -688,7 +690,7 @@ export function EligibilityChecker({
             borderColor: colors.border.subtle2,
             borderRadius: radius.lg,
             padding: spacing[16],
-            gap: spacing[24],
+            gap: spacing[16],
           },
           elevation.light.md,
         ]}
@@ -769,21 +771,13 @@ export function EligibilityChecker({
           disabled={!isFormValid || isChecking}
           onPress={handleCheck}
         />
-      </View>
 
-      {/* Disclaimer — sits OUTSIDE the white card on the cobalt bg.
-          body12Regular (12-px) + text.inverse (white) so it reads
-          legibly against the deep-cobalt background.
-          paddingHorizontal: spacing[24] is the nearest existing token
-          to the spec'd 28 (spacing scale jumps 24 → 32). */}
-      <Text
-        variant="body12Regular"
-        color={colors.text.inverse}
-        align="center"
-        style={{ width: '100%', paddingHorizontal: spacing[24] }}
-      >
-        Don't worry! Entering this info will not affect your Credit Score and will not be shared with anyone.
-      </Text>
+        {/* Disclaimer — inside the card, under the CTA (Figma 3914:43713):
+            Caption/10/Regular, text.tertiary. */}
+        <Text variant="caption10Regular" color={colors.text.tertiary} align="center">
+          Don't worry! Entering this info will not affect your Credit Score and will not be shared with anyone.
+        </Text>
+      </View>
     </View>
   );
 }
@@ -920,7 +914,7 @@ export function RecommendedCards({
         color={colors.text.primary}
         style={{ paddingHorizontal: spacing[16] }}
       >
-        Recommended Credit Cards
+        Recommended Cards
       </Text>
       {/* REUSED CreditCardOffer — image / name / CashbackBadge stack
           inside a horizontal scroller. Its own contentContainerStyle
@@ -1314,7 +1308,7 @@ function CardPage({
               }}
             >
               <Text
-                variant="heading22Bold"
+                variant="heading20SemiBold"
                 color={colors.text.primary}
                 align="center"
                 numberOfLines={2}
@@ -1433,7 +1427,7 @@ function CardPage({
         }}
       >
         <Text
-          variant="heading22Bold"
+          variant="heading20SemiBold"
           color={colors.text.primary}
           align="center"
           numberOfLines={2}
@@ -1586,7 +1580,7 @@ function CardPage({
           <Footer
             theme="dark"
             headline={'Found the\nright card?'}
-            subtext="Apply now and get cash back"
+            subtext="Apply now and earn cashback."
           />
         </View>
       </View>
@@ -1976,7 +1970,7 @@ export function ApplyBar({
     const extra = animatedIndex
       ? interpolate(animatedIndex.value, [0, 1], [0, bottomInset], Extrapolation.CLAMP)
       : bottomInset;
-    return { paddingBottom: spacing[14] + extra };
+    return { paddingBottom: spacing[16] + extra };
   });
 
   // Continuous L→R shine on the Apply Now CTA — a soft white band
@@ -2038,7 +2032,8 @@ export function ApplyBar({
             overflow: 'hidden',
             flexDirection: 'row',
             paddingHorizontal: spacing[16],
-            paddingTop: spacing[14],
+            // Figma 3914:43756: 72-dp bar = 12 top + 44 button + 16 bottom.
+            paddingTop: spacing[12],
           },
           padStyle,
         ]}
@@ -2048,7 +2043,7 @@ export function ApplyBar({
               label="Apply Now"
               variant="solid"
               tone="main"
-              size={52}
+              size={44}
               fullWidth
               onPress={onApply}
             />

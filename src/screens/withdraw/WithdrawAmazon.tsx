@@ -8,9 +8,11 @@
  * server-side at submit.
  */
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Alert, ScrollView } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,7 +25,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
-import { withdrawTitle } from './labels';
+import { withdrawTitle, withdrawSubtitle } from './labels';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../../lib/phone';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawAmazon'>;
@@ -55,6 +57,7 @@ export function WithdrawAmazon() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const insets = useSafeAreaInsets();
+  const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
 
@@ -63,7 +66,14 @@ export function WithdrawAmazon() {
   const [agreed, setAgreed] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const valid = /^\d{10}$/.test(mobile) && mobile === confirm;
+  const valid = /^[6-9]\d{9}$/.test(mobile) && mobile === confirm;
+  // Inline error on the first field (Figma 3283:52824): flagged once the user
+  // leaves it with a partial number, or as soon as 10 digits don't form a
+  // valid Indian mobile (6–9 start).
+  const [mobileTouched, setMobileTouched] = useState(false);
+  const mobileInvalid =
+    (mobile.length === 10 && !/^[6-9]/.test(mobile)) ||
+    (mobileTouched && mobile.length > 0 && mobile.length < 10);
   // Inline mismatch error on the re-enter field: flag as soon as what's typed
   // diverges from the first number (not only once both are full length).
   const confirmMismatch =
@@ -97,7 +107,13 @@ export function WithdrawAmazon() {
       <StatusBar style="dark" />
 
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
-        <View style={{ gap: spacing[24] }}>
+        {/* Scrollable so the second field and the note can be brought into
+            view above the keyboard. */}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing[24], paddingBottom: spacing[24] }}
+        >
           <Header
             leading="back"
             title={withdrawTitle(params.paymentType)}
@@ -107,7 +123,7 @@ export function WithdrawAmazon() {
           <Masthead
             variant="payment"
             amount={formatRupees(params.amount)}
-            subtitle="Cashback Available For Payment"
+            subtitle={withdrawSubtitle(params.paymentType)}
           />
 
           <View style={{ gap: BODY_GROUP_GAP }}>
@@ -125,9 +141,12 @@ export function WithdrawAmazon() {
                 size="sm"
                 value={mobile}
                 onChangeText={(t) => setMobile(normalizeIndianMobile(t))}
+                onBlur={() => setMobileTouched(true)}
                 keyboardType="number-pad"
                 maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="next"
+                state={mobileInvalid ? 'error' : undefined}
+                hint={mobileInvalid ? 'Invalid mobile number' : undefined}
               />
               <Input
                 label="Re-enter Mobile No."
@@ -147,12 +166,13 @@ export function WithdrawAmazon() {
               </NoteBox>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* Lifts the footer above the keyboard. KeyboardAvoidingView did
+          nothing on Android under edge-to-edge (see useKeyboardInset.ts),
+          so the keys covered the CTA and T&C checkbox. */}
+      <Animated.View style={keyboardPad}>
         <FooterButtons
           buttons="single"
           size={52}
@@ -169,7 +189,7 @@ export function WithdrawAmazon() {
           onPrimary={handleGetPaid}
           style={{ paddingBottom: insets.bottom }}
         />
-      </KeyboardAvoidingView>
+      </Animated.View>
     </View>
   );
 }

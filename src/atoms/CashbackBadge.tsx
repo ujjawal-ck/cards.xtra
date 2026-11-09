@@ -108,26 +108,31 @@ export function CashbackBadge({
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: spacing[4],
           paddingVertical: spacing[4],
           paddingHorizontal: config.padH,
         }}
       >
-        {renderPrefix ? (
-          <Text variant={config.prefixVariant} color={fg}>
-            {prefix}
-          </Text>
-        ) : null}
-        {/* Shrinks to fit (down to 75%) instead of overflowing the pill. */}
+        {/* ONE text run (prefix nested inside) so that when space is tight
+            the whole label shrinks together. Shrinking only the value made
+            "Flat" visibly larger than "₹1,200 Rewards" on narrow tiles. */}
         <Text
-          variant={config.valueVariant}
+          variant={renderPrefix ? config.prefixVariant : config.valueVariant}
           color={fg}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.75}
           style={{ flexShrink: 1 }}
         >
-          {value}
+          {renderPrefix ? (
+            <>
+              {prefix}{' '}
+              <Text variant={config.valueVariant} color={fg}>
+                {value}
+              </Text>
+            </>
+          ) : (
+            value
+          )}
         </Text>
       </LinearGradient>
     </View>

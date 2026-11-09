@@ -22,7 +22,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
   BottomSheetBackdrop,
@@ -909,9 +909,12 @@ export function HomeScreen() {
       <BottomSheetFooter {...props} bottomInset={0}>
         <FooterButtons
           buttons="dual"
-          size={52}
+          // 44 per Figma 1791:4029 (52 left no room for "Apply Filter").
+          size={44}
           shadow="on"
           strip="caption"
+          // Saffron strip per Figma 1791:4029 (was the cobalt info tone).
+          stripTone="brand"
           stripText={`${filtersSelectedCount} filter${filtersSelectedCount === 1 ? '' : 's'} selected`}
           color="second"
           primaryLabel="Apply Filter"
@@ -1463,7 +1466,9 @@ export function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
-      <StatusBar style="light" />
+      {/* Light icons over the dark-blue masthead; dark once the light
+          frosted header has faded in on scroll. */}
+      <StatusBar style={frostedInteractive ? 'dark' : 'light'} />
       {/* Real content — wrapped in an entrance Animated.View that
           fades + rises into place after the skeleton starts dissolving. */}
       <Animated.View style={[{ flex: 1 }, contentEntranceStyle]}>
@@ -1541,7 +1546,7 @@ export function HomeScreen() {
             <Footer
               theme="dark"
               headline={'Found the\nright card?'}
-              subtext="Apply now and get cash back"
+              subtext="Apply now and earn cashback."
             />
           </View>
         }

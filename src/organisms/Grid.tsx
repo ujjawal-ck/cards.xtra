@@ -327,7 +327,9 @@ function SkeletonFeatureTile() {
     <View
       style={{
         flex: 1,
-        height: FEATURE_TILE_H,
+        // minHeight, not height: at larger OS font sizes 3 lines need more
+        // than 96px and the text was clipped by the tile's bottom border.
+        minHeight: FEATURE_TILE_H,
         paddingVertical: spacing[8],
         paddingHorizontal: spacing[12],
         gap: spacing[4],
@@ -355,7 +357,9 @@ function FeatureTile({ item }: { item: FeatureItem }) {
     <View
       style={{
         flex: 1,
-        height: FEATURE_TILE_H,
+        // minHeight, not height: at larger OS font sizes 3 lines need more
+        // than 96px and the text was clipped by the tile's bottom border.
+        minHeight: FEATURE_TILE_H,
         paddingVertical: spacing[8],
         paddingHorizontal: spacing[12],
         gap: spacing[4],
@@ -376,8 +380,10 @@ function FeatureTile({ item }: { item: FeatureItem }) {
         // 1.5-px stroke width baked into the SVG is preserved and tints
         // to icon/info via the `color` prop above.
       />
+      {/* Caption/10/Regular per Figma 3914:43667 (was Body/12, which ran
+          long benefit text out of the tile). */}
       <Text
-        variant="body12Regular"
+        variant="caption10Regular"
         color={colors.text.primary}
         align="center"
         numberOfLines={3}

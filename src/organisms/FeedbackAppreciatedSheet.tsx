@@ -94,8 +94,8 @@ export const FeedbackAppreciatedSheet = forwardRef<
         >
           <SealCheck size={SEAL_SIZE} />
           <Text variant="body16Regular" color={colors.text.primary} align="center">
-            Thank you for sharing the details. Our team will get back to you
-            within 48 hours, maybe even sooner.
+            Thank you for sharing your feedback. It helps us make Cards.xtra
+            better.
           </Text>
         </View>
 

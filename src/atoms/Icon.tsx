@@ -99,6 +99,9 @@ const ICON_REGISTRY = {
   'headset-outline': require('../assets/icons/headset-outline.svg').default,
   'message-filled': require('../assets/icons/message-filled.svg').default,
   'message-outline': require('../assets/icons/message-outline.svg').default,
+  // Figma 4448:23861 / 4448:23863 (Profile Privacy + Logout), tintable.
+  'lock-outline': require('../assets/icons/lock-outline.svg').default,
+  'logout-outline': require('../assets/icons/logout-outline.svg').default,
   'nav-cards-filled': require('../assets/icons/nav-cards-filled.svg').default,
   'nav-cards-outline': require('../assets/icons/nav-cards-outline.svg').default,
   'nav-earnings-filled': require('../assets/icons/nav-earnings-filled.svg').default,

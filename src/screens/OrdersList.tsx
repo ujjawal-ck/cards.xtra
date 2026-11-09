@@ -63,7 +63,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, ActivityIndicator, ImageBackground } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import Svg, { Path } from 'react-native-svg';
 import {
   BottomSheetModal,
@@ -86,6 +86,7 @@ import {
   ORDER_STATUS_OPTIONS,
   ORDER_TYPE_OPTIONS,
   ORDER_DATE_PRESETS,
+  ScreenState,
 } from '../organisms';
 import { images } from '../assets/images';
 import type { OrdersFilterTab, OrderStoreOption } from '../organisms';
@@ -377,30 +378,29 @@ export function OrdersList() {
               <ActivityIndicator color={colors.action.primary.default} />
             </View>
           ) : isError ? (
-            <View style={{ paddingVertical: spacing[40], paddingHorizontal: spacing[24], alignItems: 'center', gap: spacing[8] }}>
-              <Text variant="body14SemiBold" color={colors.text.primary} align="center">
-                Couldn’t load your orders.
-              </Text>
-              <Pressable accessibilityRole="button" onPress={() => refetch()} hitSlop={spacing[8]}>
-                <Text variant="body14SemiBold" color={colors.action.accent.default}>
-                  {isFetching ? 'Retrying…' : 'Retry'}
-                </Text>
-              </Pressable>
-            </View>
+            <ScreenState
+              title="Couldn’t load your orders"
+              body="Something went wrong. Please try again."
+              actionLabel={isFetching ? 'Retrying…' : 'Try again'}
+              onAction={() => refetch()}
+            />
           ) : !filteredRows || filteredRows.length === 0 ? (
-            // Empty: distinguish "no orders at all" from "filters excluded all".
-            <View style={{ paddingVertical: spacing[40], paddingHorizontal: spacing[24], alignItems: 'center', gap: spacing[8] }}>
-              <Text variant="body14SemiBold" color={colors.text.secondary} align="center">
-                {appliedCount > 0 ? 'No orders match these filters.' : 'No orders yet.'}
-              </Text>
-              {appliedCount > 0 ? (
-                <Pressable accessibilityRole="button" onPress={clearFilters} hitSlop={spacing[8]}>
-                  <Text variant="body14SemiBold" color={colors.action.accent.default}>
-                    Clear filters
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
+            // Empty: distinguish "no orders at all" from "filters excluded all"
+            // (Figma section 27 "No matching results" pattern).
+            appliedCount > 0 ? (
+              <ScreenState
+                title="No matching results"
+                body="Try adjusting your filters."
+                actionLabel="Clear filters"
+                onAction={clearFilters}
+              />
+            ) : (
+              <ScreenState
+                image={images.screenstate.appOrders}
+                title="No orders yet"
+                body="Shop via Cards.xtra and your orders will show up here."
+              />
+            )
           ) : (
             // Revamped list — a stack of timeline-style cards (Figma
             // orders/list-v2-timeline). px16 gutter, spacing[12] between cards.

@@ -209,11 +209,14 @@ export function CardTile({
           }}
         >
           {tags.map((t, i) => (
+            // Sky tone, subtle fill, dark label — Figma 1929:31753
+            // (#edfbff bg / #a6e2f4 border). Was cobalt info gradient.
             <Tag
               key={i}
-              tone="info"
+              tone="sky"
               size="sm"
-              appearance="gradient"
+              appearance="subtle"
+              labelColor={colors.text.primary}
               label={t}
             />
           ))}

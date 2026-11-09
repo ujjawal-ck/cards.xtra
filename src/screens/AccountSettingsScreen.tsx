@@ -41,7 +41,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { normalizeIndianMobile } from '../lib/phone';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -57,9 +58,11 @@ import type { RootStackParamList, EditContactField } from '../navigation/types';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AccountSettings'>;
 type Rt = RouteProp<RootStackParamList, 'AccountSettings'>;
 
-/** Mask a mobile number to "989****087" (first 3 · **** · last 3). */
+/** Mask a mobile number to "989****087" (first 3 · **** · last 3) of the
+ *  10-digit national number. The API returns it with the 91 country code
+ *  ("919876543210"), which used to render as a misleading "919****210". */
 function maskMobile(raw?: string): string {
-  const digits = (raw ?? '').replace(/\D/g, '');
+  const digits = normalizeIndianMobile(raw ?? '');
   if (digits.length < 7) return raw ?? '';
   return `${digits.slice(0, 3)}****${digits.slice(-3)}`;
 }
@@ -97,7 +100,8 @@ export function AccountSettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
-      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+      {/* 'bottom' too: the sticky Save button sat under the Android nav bar. */}
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1 }}>
         <Header
           leading="back"
           title="Account Settings"
@@ -144,6 +148,9 @@ export function AccountSettingsScreen() {
                   label="Email"
                   size="sm"
                   value={email}
+                  // Read-only display: show the START of the value (a long email
+                  // used to render scrolled to its end, "07879902@…").
+                  selection={{ start: 0, end: 0 }}
                   onChangeText={() => undefined}
                   trailingIcon="edit-outline"
                 />
@@ -161,6 +168,9 @@ export function AccountSettingsScreen() {
                   label="Mobile Number"
                   size="sm"
                   value={mobile}
+                  // Read-only display: show the START of the value (a long email
+                  // used to render scrolled to its end, "07879902@…").
+                  selection={{ start: 0, end: 0 }}
                   onChangeText={() => undefined}
                   trailingIcon="edit-outline"
                 />

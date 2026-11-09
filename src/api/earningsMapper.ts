@@ -7,6 +7,7 @@
  *   confirmed_cashback · pending_cashback   (also: paid_cashback,
  *   payment_threshold, firstname/email — not shown here).
  */
+import { formatINR } from '../lib/money';
 interface EarningsValues {
   /** "₹1,500" — all-time / total earnings (masthead headline). */
   totalEarnings: string;
@@ -33,29 +34,19 @@ interface EarningsValues {
   hasData: boolean;
 }
 
-/** Indian digit grouping: 1234567 → "12,34,567". */
-function groupIndian(n: number): string {
-  const s = Math.round(Math.abs(n)).toString();
-  if (s.length <= 3) return s;
-  const last3 = s.slice(-3);
-  const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-  return `${rest},${last3}`;
-}
-
 function toAmount(v: unknown): number | null {
   if (v === null || v === undefined) return null;
-  const n = Number(String(v).replace(/[^\d.]/g, ''));
-  return isFinite(n) ? n : null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const t = String(v).trim();
+  // Only a plain (optionally signed, comma-grouped) decimal counts. "",
+  // "N/A", "1e3", "12.34.56" are NOT amounts — they used to read as 0, 13
+  // or 0 and still mark the response as "hasData". The minus sign is kept
+  // (it was stripped, so a -₹50 reversal showed as ₹50).
+  const m = t.replace(/[₹,\s]/g, '').match(/^-?\d+(\.\d+)?$/);
+  return m ? Number(m[0]) : null;
 }
 
-/** "₹10,000" when whole, "₹775.60" when there are paise. */
-function money(n: number): string {
-  const whole = Math.trunc(n);
-  const frac = Math.round((Math.abs(n) - Math.abs(whole)) * 100);
-  return frac > 0
-    ? `₹${groupIndian(whole)}.${String(frac).padStart(2, '0')}`
-    : `₹${groupIndian(whole)}`;
-}
+const money = formatINR;
 
 export function mapEarnings(res: any): EarningsValues {
   // `data` is an array of one `user` row.
@@ -67,8 +58,11 @@ export function mapEarnings(res: any): EarningsValues {
   const paid = toAmount(a.paid_cashback);
   const cashback = toAmount(a.total_cashback_earned) ?? toAmount(a.total_cashback);
   const rewards = toAmount(a.total_rewards_earned) ?? toAmount(a.total_rewards);
+  // Derived total only when there's something to derive it from — a bare 0
+  // made an all-empty response look like real data.
   const total =
-    toAmount(a.total_earned) ?? ((confirmed ?? 0) + (pending ?? 0));
+    toAmount(a.total_earned) ??
+    (confirmed !== null || pending !== null ? (confirmed ?? 0) + (pending ?? 0) : null);
 
   const hasData = [confirmed, pending, cashback, rewards, total].some((x) => x !== null);
 
@@ -83,9 +77,10 @@ export function mapEarnings(res: any): EarningsValues {
     // separate confirmed/pending split in the API, so the full rewards
     // balance is treated as withdrawable. Sum = the combined bucket.
     combined: money((confirmed ?? 0) + (rewards ?? 0)),
-    confirmedNum: Math.round(confirmed ?? 0),
-    rewardsNum: Math.round(rewards ?? 0),
-    combinedNum: Math.round((confirmed ?? 0) + (rewards ?? 0)),
+    // Exact amounts (no rounding): ₹99.60 must not become a withdrawable 100.
+    confirmedNum: confirmed ?? 0,
+    rewardsNum: rewards ?? 0,
+    combinedNum: (confirmed ?? 0) + (rewards ?? 0),
     hasData,
   };
 }

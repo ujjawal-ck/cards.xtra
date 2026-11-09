@@ -47,8 +47,11 @@ import { FooterButtons } from './FooterButtons';
 import { colors, spacing, radius } from '../tokens';
 
 export interface CashbackNotConfirmedSheetProps {
-  /** Pending amount shown in the body, e.g. "₹123". Default "₹0.0". */
+  /** Pending amount shown in the body, e.g. "₹123". Default "₹0". */
   pendingAmount?: string;
+  /** Balance is positive but under the payout minimum → explain that
+   *  instead of the pending / zero-state copy. */
+  belowMinimum?: { balance: string; minimum: string };
 }
 
 // Illustration placeholder — the Figma uses a 156-px 3D stopwatch+cash
@@ -61,7 +64,7 @@ const EMOJI_SIZE = 96;
 export const CashbackNotConfirmedSheet = forwardRef<
   BottomSheetModalRef,
   CashbackNotConfirmedSheetProps
->(function CashbackNotConfirmedSheet({ pendingAmount = '₹0.0' }, ref) {
+>(function CashbackNotConfirmedSheet({ pendingAmount = '₹0', belowMinimum }, ref) {
   // With nothing pending either, "You have ₹0 pending… once confirmed, they
   // can be withdrawn" made no sense — show a plain "nothing yet" message.
   const hasPending = Number(pendingAmount.replace(/[^\d.]/g, '')) > 0;
@@ -132,16 +135,23 @@ export const CashbackNotConfirmedSheet = forwardRef<
                 color={colors.text.primary}
                 align="center"
               >
-                {hasPending ? 'Cashback Not Confirmed' : 'No Cashback Yet'}
+                {/* Zero state copy per Figma 2898:164825. */}
+                {belowMinimum
+                  ? `Minimum ${belowMinimum.minimum} to withdraw`
+                  : hasPending
+                    ? 'Cashback Not Confirmed'
+                    : 'No Cashback Yet!'}
               </Text>
               <Text
                 variant="body16Regular"
                 color={colors.text.secondary}
                 align="center"
               >
-                {hasPending
+                {belowMinimum
+                  ? `You have ${belowMinimum.balance} ready to withdraw.`
+                  : hasPending
                   ? `You have ${pendingAmount} pending in your Cards.xtra account.`
-                  : "You don't have any cashback to withdraw yet."}
+                  : "You haven't shopped via Cards.xtra so far. Shop & earn Cashback today! 😍"}
               </Text>
             </View>
             <Text
@@ -149,9 +159,11 @@ export const CashbackNotConfirmedSheet = forwardRef<
               color={colors.text.secondary}
               align="center"
             >
-              {hasPending
+              {belowMinimum
+                ? `You can withdraw once your balance reaches ${belowMinimum.minimum}. Keep shopping to earn more!`
+                : hasPending
                 ? 'Once confirmed, they can be withdrawn. Until then, grab deals & earn more!'
-                : 'Shop through Cards.xtra to start earning cashback.'}
+                : 'Note - If shopped, Cashback tracks within 5mins to 48 hrs'}
             </Text>
           </View>
         </View>

@@ -119,19 +119,35 @@ const PREVIEW_FOOTER_TOP = 385;
 const SOCIAL_TILE = 40;
 
 // ---- Single share tile (icon + label) ------------------------------
+// Every tile opens the system share sheet (the tiles used to be inert
+// Views). Targeting a specific app needs per-app deep-link support that
+// Expo Go can't guarantee; the OS sheet lists WhatsApp / Instagram /
+// Facebook directly.
 function ShareTile({
   iconName,
   label,
   bg,
   tint,
+  onPress,
 }: {
   iconName: 'social-whatsapp-filled' | 'social-instagram-filled' | 'social-facebook-filled';
   label: string;
   bg?: string;
   tint?: string;
+  onPress: () => void;
 }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: spacing[4] }}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Share via ${label}`}
+      style={({ pressed }) => ({
+        flex: 1,
+        alignItems: 'center',
+        gap: spacing[4],
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
       <View
         style={{
           width: SOCIAL_TILE,
@@ -148,13 +164,23 @@ function ShareTile({
       <Text variant="caption10Medium" color={colors.text.tertiary} align="center">
         {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
-function MoreTile() {
+function MoreTile({ onPress }: { onPress: () => void }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: spacing[4] }}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="More share options"
+      style={({ pressed }) => ({
+        flex: 1,
+        alignItems: 'center',
+        gap: spacing[4],
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
       <View
         style={{
           width: SOCIAL_TILE,
@@ -172,7 +198,7 @@ function MoreTile() {
       <Text variant="caption10Medium" color={colors.text.tertiary} align="center">
         More
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -187,7 +213,7 @@ function ShareSheetBody({
   const handleShare = useCallback(() => {
     if (onShare) return onShare();
     Share.share({
-      message: `Found ${cardName} on CashKaro — earn ${cashbackValue} on activation.`,
+      message: `Found ${cardName} on Cards.xtra by CashKaro — earn ${cashbackValue} on activation.`,
     }).catch(() => undefined);
   }, [onShare, cardName, cashbackValue]);
 
@@ -309,15 +335,16 @@ function ShareSheetBody({
           paddingHorizontal: spacing[24],
         }}
       >
-        <ShareTile iconName="social-whatsapp-filled" label="WhatsApp" />
-        <ShareTile iconName="social-instagram-filled" label="Instagram" />
+        <ShareTile iconName="social-whatsapp-filled" label="WhatsApp" onPress={handleShare} />
+        <ShareTile iconName="social-instagram-filled" label="Instagram" onPress={handleShare} />
         <ShareTile
           iconName="social-facebook-filled"
           label="Facebook"
           bg={primitives.cobalt[450]}
           tint={colors.text.inverse}
+          onPress={handleShare}
         />
-        <MoreTile />
+        <MoreTile onPress={handleShare} />
       </View>
 
       {/* 3. CTA --------------------------------------------------- */}

@@ -232,7 +232,8 @@ function RailItemRow({
         variant={active ? 'body14Medium' : 'body14Regular'}
         color={active ? colors.action.accent.default : colors.text.tertiary}
         style={{ flex: 1 }}
-        numberOfLines={1}
+        // Two lines so "Card Network" is never cut to "Card Netw…".
+        numberOfLines={2}
       >
         {item.label}
       </Text>

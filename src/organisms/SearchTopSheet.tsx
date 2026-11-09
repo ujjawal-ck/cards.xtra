@@ -59,8 +59,9 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-import { Chip } from '../atoms';
+import { Chip, Text } from '../atoms';
 import type { IconName } from '../atoms';
 import { SearchBar, SearchResults } from '../molecules';
 import type { SearchResultSection } from '../molecules';
@@ -224,6 +225,10 @@ export function SearchTopSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
+      {/* Dark status-bar icons while the white panel is open (Home's are
+          light for its blue hero, so the clock/battery vanished). Only while
+          visible, so closing restores the screen's own style. */}
+      {visible ? <StatusBar style="dark" /> : null}
       {/* Dim backdrop — tap to dismiss */}
       <Pressable
         accessibilityLabel="Close search"
@@ -306,11 +311,31 @@ export function SearchTopSheet({
                     onResultPress={onResultPress}
                   />
                 </ScrollView>
-              ) : !value?.trim() && recentSearches.length > 0 ? (
+              ) : value?.trim() ? (
+                /* Typed query with nothing matching — say so (the panel used
+                   to collapse to just the bar, which read as broken), and
+                   offer the quick suggestions as a way out. */
+                <View style={{ gap: spacing[12] }}>
+                  <View style={{ gap: spacing[4] }}>
+                    <Text variant="body14SemiBold" color={colors.text.primary}>
+                      No results for “{value.trim()}”
+                    </Text>
+                    <Text variant="body12Regular" color={colors.text.secondary}>
+                      Try a bank name like HDFC or SBI, or a card name.
+                    </Text>
+                  </View>
+                  <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+                </View>
+              ) : recentSearches.length > 0 ? (
                 /* Empty query → quick suggestions (top banks + a card),
                    Figma 1985:36934. Once the user types, the results
                    above take over and these hide. */
-                <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+                <View style={{ gap: spacing[8] }}>
+                  <Text variant="body12Medium" color={colors.text.tertiary}>
+                    Popular searches
+                  </Text>
+                  <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+                </View>
               ) : null}
             </>
           ) : (

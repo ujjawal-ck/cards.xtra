@@ -24,7 +24,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -34,6 +34,7 @@ import { colors, spacing } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { useProfile } from '../query/useProfile';
 import type { RootStackParamList } from '../navigation/types';
+import { normalizeIndianMobile } from '../lib/phone';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'DeleteAccountOtp'>;
 
@@ -42,7 +43,8 @@ const RESEND_SECONDS = 30;
 
 /** Mask a mobile number to "967XXXX551" (first 3 · XXXX · last 3). */
 function maskMobile(raw?: string): string {
-  const digits = (raw ?? '').replace(/\D/g, '');
+  // National 10 digits — the API value carries the 91 country code.
+  const digits = normalizeIndianMobile(raw ?? '');
   if (digits.length < 7) return '••••••••••';
   return `${digits.slice(0, 3)}XXXX${digits.slice(-3)}`;
 }

@@ -241,7 +241,10 @@ export function HomeHeader({
           transparent at the BOTTOM. start=top, end=bottom so colors[0]
           (= 48% alpha) anchors at the top edge. */}
       <LinearGradient
-        colors={[cobaltAlpha(0.48), cobaltAlpha(0)]}
+        // Opaque lavender → white (Figma 1929:32667). The translucent cobalt
+        // wash let the masthead and the inline filter row show through, so
+        // two chip rows appeared stacked while scrolling.
+        colors={[colors.background.lavender, colors.surface.default]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={{
@@ -287,7 +290,8 @@ export function HomeHeader({
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing[8],
-          flexWrap: 'wrap',
+          // No wrapping: Eligibility used to drop onto a second line over
+          // the search bar. One 32-dp row, like the inline FilterRow.
         }}
       >
         <Chip

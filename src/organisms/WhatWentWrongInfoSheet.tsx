@@ -85,7 +85,7 @@ export const WhatWentWrongInfoSheet = forwardRef<
         >
           <Text variant="body16Regular" color={colors.text.primary}>
             We get commission (and pay you Cashback) only when you visit the
-            website via CARDS.xtra and shop. If you shopped via CARDS.xtra over
+            website via Cards.xtra and shop. If you shopped via Cards.xtra over
             30 days ago, please reach out at {supportEmail}
           </Text>
         </View>

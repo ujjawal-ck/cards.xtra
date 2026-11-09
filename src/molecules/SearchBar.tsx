@@ -72,6 +72,7 @@ import {
   radius,
   borderWidth,
   iconSize,
+  typography,
 } from '../tokens';
 
 // ----------------------------------------------------------------------------
@@ -287,7 +288,8 @@ function ResultRow({
         alignItems: 'center',
         gap: spacing[12],
         paddingVertical: spacing[12],
-        height: ROW_H,
+        // minHeight: long card names wrapped and overlapped the next row.
+        minHeight: ROW_H,
         opacity: pressed ? 0.7 : 1,
       })}
     >
@@ -316,12 +318,12 @@ function ResultRow({
       </View>
 
       <View style={{ flex: 1, gap: spacing[4] }}>
-        <Text variant="body16Regular" color={colors.text.primary}>
+        <Text variant="body16Regular" color={colors.text.primary} numberOfLines={1}>
           {row.title}
         </Text>
         <Text
           variant="body14Medium"
-          color={colors.action.primary.default}
+          color={colors.cashback.default}
         >
           {row.subtitle}
         </Text>
@@ -469,11 +471,20 @@ export function SearchBar({
             onChangeText={onChangeText}
             onBlur={onBlur}
             selectionColor={colors.action.primary.default}
-            style={{
-              flex: 1,
-              padding: 0,
-              color: colors.text.primary,
-            }}
+            // Placeholder stays visible while active (it vanished the moment
+            // the bar opened), and the input uses the app's Outfit type
+            // instead of the system font.
+            placeholder={placeholder}
+            placeholderTextColor={colors.text.placeholder}
+            returnKeyType="search"
+            style={[
+              typography.body14Regular,
+              {
+                flex: 1,
+                padding: 0,
+                color: colors.text.primary,
+              },
+            ]}
             accessibilityLabel="Search input"
           />
         )}
