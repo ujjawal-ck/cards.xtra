@@ -5,7 +5,13 @@
  *   useOfferStore(slug)     → a single store/brand page
  */
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { getCategoryOffers, getOfferCategoryTree, getOfferStore } from '../api/cashkaro';
+import {
+  getCategoryOffers,
+  getOfferCategories,
+  getOfferCategoryTree,
+  getOfferStore,
+} from '../api/cashkaro';
+import { ApiError } from '../api/client';
 import {
   mapCategoryOffers,
   mapOfferStore,
@@ -15,6 +21,7 @@ import {
 import {
   MINIAPP_PARENT_PATH,
   buildOfferCategoriesFromApi,
+  buildOfferCategoriesFromTopLevel,
   type OfferCategory,
 } from '../data/offerCategories';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
@@ -28,7 +35,19 @@ export function useOfferCategories() {
   const query = useQuery<OfferCategory[]>({
     queryKey: ['ck', 'offer-categories', MINIAPP_PARENT_PATH],
     staleTime: 5 * 60 * 1000,
-    queryFn: async () => buildOfferCategoriesFromApi(await getOfferCategoryTree(MINIAPP_PARENT_PATH)),
+    queryFn: async () => {
+      try {
+        return buildOfferCategoriesFromApi(await getOfferCategoryTree(MINIAPP_PARENT_PATH));
+      } catch (e) {
+        // Production has no `miniapp` parent yet (400 "Invalid Category").
+        // Fall back to the real top-level categories instead of failing the
+        // whole page. Network errors (status 0) still surface as errors.
+        if (e instanceof ApiError && e.status === 400) {
+          return buildOfferCategoriesFromTopLevel(await getOfferCategories());
+        }
+        throw e;
+      }
+    },
   });
   useRefetchOnFocus(query);
   return query;

@@ -50,6 +50,7 @@ import {
   ScrollView,
   StyleProp,
   ViewStyle,
+  useWindowDimensions,
 } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import Animated, {
@@ -82,6 +83,7 @@ import {
   mediaSize,
   sizing,
   elevation,
+  typography,
 } from '../tokens';
 
 // ----------------------------------------------------------------------------
@@ -1067,11 +1069,11 @@ const OFFER_CATEGORY_W = 64;
 const OFFER_CATEGORY_CIRCLE = mediaSize[56]; // 56
 const OFFER_BASE_BAR_H = 4;
 const OFFER_ROW_TOP_OFFSET = 7;
-// Label safe-text width — pinned to the circle's 56-px footprint
-// (mediaSize[56]) so labels always wrap to 2 lines and truncate
-// before they extend wider than the icon above them. Sits inside
-// the 64-px item bounds so no negative-margin trick is needed.
-const OFFER_LABEL_SAFE_W = mediaSize[56]; // 56
+// Label width — the 64-px item plus 4 px into each 12-px gap (72). At 56
+// (the circle's width) single words like "Electronics" split mid-word
+// ("Electroni / cs") and the second line fell onto the white body below,
+// white on white. Neighbouring labels still keep a 4-px gap.
+const OFFER_LABEL_SAFE_W = OFFER_CATEGORY_W + spacing[8]; // 72
 // Slide duration for the indicator + smooth in/out cubic easing.
 const OFFER_INDICATOR_ANIM_MS = 300;
 // Row top inset — pushes the items down so the circle + label stack
@@ -1200,6 +1202,13 @@ export function OffersCategoryStrip({
   // and the per-item label colour/weight. Default active = item 0
   // ("New on CashKaro") per spec.
   const [activeIndex, setActiveIndex] = React.useState(0);
+  // Strip height grows with the OS font size so a 2-line label always ends
+  // on the orange strip: at 130 % the second line ran ~4 px onto the white
+  // body below, where unselected (white) labels disappeared. 112 at 1×.
+  const { fontScale } = useWindowDimensions();
+  const stripH =
+    OFFER_STRIP_H +
+    Math.ceil(Math.max(0, fontScale - 1) * 2 * typography.caption10Medium.lineHeight);
 
   // Horizontal scroll ref — on selecting a category we advance the strip so
   // the categories to its right come into view (it doesn't scroll on its own).
@@ -1293,7 +1302,7 @@ export function OffersCategoryStrip({
       style={[
         {
           width: '100%',
-          height: OFFER_STRIP_H,
+          height: stripH,
           overflow: 'hidden',
         },
         bgAnimStyle,
@@ -1327,7 +1336,7 @@ export function OffersCategoryStrip({
               // so the indicator (bottom: 0) anchors to the same bottom
               // edge as the 4-px white bar — they read as one
               // continuous shape.
-              height: OFFER_STRIP_H,
+              height: stripH,
               // Push items down so they're vertically centred inside
               // the indicator's footprint (was 7 px, items hugged the
               // top of the strip while the indicator sat lower, making
@@ -1447,7 +1456,13 @@ function OfferCategoryItem({
           item bounds so no overflow trick is needed; both Medium and
           SemiBold weights wrap to 2 lines uniformly and truncate
           beyond. */}
-      <View style={{ width: OFFER_LABEL_SAFE_W, alignItems: 'center' }}>
+      <View
+        style={{
+          width: OFFER_LABEL_SAFE_W,
+          marginHorizontal: (OFFER_CATEGORY_W - OFFER_LABEL_SAFE_W) / 2,
+          alignItems: 'center',
+        }}
+      >
         <Text
           variant={labelVariant}
           color={labelColor}

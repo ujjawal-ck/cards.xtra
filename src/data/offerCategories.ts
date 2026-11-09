@@ -128,3 +128,72 @@ export function buildOfferCategoriesFromApi(res: any): OfferCategory[] {
 
   return [all, ...subCategories];
 }
+
+// ----------------------------------------------------------------------------
+// Fallback: production without the `miniapp` parent
+// ----------------------------------------------------------------------------
+// On ckminapps.com (prod) the `miniapp` parent doesn't exist yet: the API
+// answers 400 code 10003 "Invalid Category", which used to leave Offers on
+// "Couldn't load offers". Until CashKaro configures it, the strip is built
+// from the real top-level categories (`/offers/categories`, which works), so
+// the page shows live categories and lights up as soon as stores are mapped.
+
+/** Top-level slugs that aren't shopping categories (product feeds, internal
+ *  buckets, the credit-card store set used for card rates). */
+const NON_SHOPPING_SLUGS = new Set([
+  'product',
+  'most-popular-products',
+  'popular-today',
+  'ck-white-labels',
+  'exclude',
+  'home-categories-exclusive',
+  'best-cards-shopping-hp-exp',
+]);
+
+/** Short strip labels + fitting icons for the known top-level categories.
+ *  The API names ("Highest Cashback Stores", "More Categories") are too long
+ *  for the 2-line strip and broke mid-word; three also fell back to the same
+ *  "NEW" badge. Unknown categories keep the API name and the keyword icon. */
+const TOP_LEVEL_DISPLAY: Record<string, { label: string; image: ImageSourcePropType }> = {
+  'highest-cashback-stores': { label: 'Top Cashback', image: images.categories.loans },
+  '100percent-cashback': { label: '100% Cashback', image: images.categories.banking },
+  'voucher-deals': { label: 'New User', image: images.categories.newOnCashkaro },
+  'health-beauty': { label: 'Beauty', image: images.categories.beautyAndGrooming },
+  'electronics-category': { label: 'Electronics', image: images.categories.electronics },
+  'more-category-offers': { label: 'More', image: images.categories.departmental },
+};
+
+/** Shown first when present: the broadest store sets lead the strip. */
+const LEADING_SLUGS = ['highest-cashback-stores', '100percent-cashback', 'voucher-deals'];
+
+/**
+ * Build the strip from a `/offers/categories` response (top-level categories
+ * only, internal buckets removed). Paths are the top-level slugs, which the
+ * category-offers endpoint accepts directly.
+ */
+export function buildOfferCategoriesFromTopLevel(res: any): OfferCategory[] {
+  const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+  const cats = rows
+    .map((r) => {
+      const a = r?.attributes ?? {};
+      const slug = a.unique_identifier ?? r?.id;
+      if (!slug || NON_SHOPPING_SLUGS.has(String(slug))) return null;
+      if (a.parent_id != null && Number(a.parent_id) !== 0) return null;
+      return { slug: String(slug), label: String(a.name ?? slug) };
+    })
+    .filter((c): c is { slug: string; label: string } => c !== null);
+
+  const rank = (slug: string) => {
+    const i = LEADING_SLUGS.indexOf(slug);
+    return i === -1 ? LEADING_SLUGS.length : i;
+  };
+  cats.sort((a, b) => rank(a.slug) - rank(b.slug));
+
+  return cats.map((c, i) => ({
+    label: TOP_LEVEL_DISPLAY[c.slug]?.label ?? c.label,
+    path: c.slug,
+    image: TOP_LEVEL_DISPLAY[c.slug]?.image ?? iconFor(c.slug, c.label),
+    // First tab keeps the saffron base, like the "All" tab it replaces.
+    accent: i === 0 ? SAFFRON : ACCENT_PALETTE[(i - 1) % ACCENT_PALETTE.length],
+  }));
+}

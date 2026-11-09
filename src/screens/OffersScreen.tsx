@@ -123,7 +123,14 @@ export function OffersScreen() {
 
   // Which category's stores the grid shows. Driven by the sticky category
   // strip; defaults to the "All" tab (the miniapp parent — every store).
-  const [categoryPath, setCategoryPath] = useState(DEFAULT_OFFER_CATEGORY_PATH);
+  const [selectedPath, setCategoryPath] = useState(DEFAULT_OFFER_CATEGORY_PATH);
+  // The grid follows a path that exists in the loaded strip. On production
+  // the default `miniapp` parent isn't configured, so the strip falls back to
+  // top-level categories and the grid starts on the first of them (instead
+  // of requesting `miniapp` and failing). Null until the strip has loaded.
+  const categoryPath = categories.some((c) => c.path === selectedPath)
+    ? selectedPath
+    : categories[0]?.path ?? null;
   // The selected category LABEL (e.g. "Fashion") — threaded to the brand page
   // so its "Best cards to use here" floor can match cards to the category.
   // Undefined until a category is tapped (the default set has no clean card
@@ -437,7 +444,7 @@ export function OffersScreen() {
             backgroundColor: colors.surface.default,
           }}
         >
-          {isLoading ? (
+          {isLoading || catQ.isLoading ? (
             // Skeleton in the shape of the 2-column store grid (was a bare
             // spinner) so the page reads as "offers loading here".
             <View style={{ gap: spacing[8] }}>

@@ -78,7 +78,8 @@ Verified on the device unless noted.
 5. Static content: Review Us reviews (2023), sign-up auto-generated name + dummy email. (Notifications now show an empty state.)
 
 **Needs backend**
-- Offers on production: `miniapp` category missing, categories empty, store pages 400.
+- Offers on production (probed read-only against ckminapps.com with the Postman "ck-miniapp-apis" requests): the API is up and authenticates; `/offers/categories` returns 15 top-level categories. But no stores are mapped to the mini-app key: all 95 valid category paths return `total_records: 0`, the `miniapp` parent the app was built on returns 400 code 10003 "Invalid Category", and every store page (amazon, flipkart, myntra, ajio, nykaa) returns 400 code 10001 "Invalid Offer". CashKaro needs to map stores to this key (ideally under a `miniapp` parent). The staging host (ckapistaging.lmssecure.com) no longer resolves, so it can't stand in.
+  - App side (done): when `miniapp` is rejected, the Offers strip is built from the real top-level categories (short labels, distinct icons) and each shows "No offers here yet" instead of "Couldn't load offers". Once stores are mapped, they appear with no code change; once a `miniapp` parent exists, the app switches back to it automatically.
 - Payment History API mapping (`/payment/history`) before the Profile row returns.
 - Coupon codes on brand pages; rejected-claim reasons.
 - Write Review: the comment only goes to analytics and is discarded, yet the toast says it was submitted. Needs a feedback endpoint (or the toast copy changed).
