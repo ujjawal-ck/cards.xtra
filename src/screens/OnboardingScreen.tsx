@@ -75,7 +75,7 @@ import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
 import { markOnboarded } from '../auth/tokenStore';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
-import { eccentricName, randomPassword } from '../lib/eccentricName';
+import { randomPassword } from '../lib/eccentricName';
 import { isValidContact } from './editContact';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
@@ -161,7 +161,7 @@ export function OnboardingScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, 'Onboarding'>>();
   const loginOnly = !!params?.login;
   const insets = useSafeAreaInsets();
-  const { signIn, deviceId } = useAuth();
+  const { signIn, deviceId, setDisplayName } = useAuth();
   const screenW = Dimensions.get('window').width;
   // One carousel page = the full screen width — the Lottie slides play
   // full-bleed (the chrome floats on top). Used for both scrollToIndex
@@ -367,6 +367,15 @@ export function OnboardingScreen() {
   const [signupEmail, setSignupEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
   const signupEmailValid = isValidContact('email', signupEmail);
+  // Real name for the new account (was a random "Velvet Tiger"-style handle
+  // sent to CashKaro). Also becomes the display name, so the separate
+  // "What should we call you?" step is skipped for these signups.
+  const [signupName, setSignupName] = useState('');
+  // At least two characters including a letter (Latin or Devanagari);
+  // avoids regex Unicode property escapes for Hermes.
+  const signupNameValid =
+    /[A-Za-z\u00C0-\u024F\u0900-\u097F]/.test(signupName) && signupName.trim().length >= 2;
+  const signupDetailsValid = signupNameValid && signupEmailValid;
   const showEmailError = emailTouched && signupEmail.trim().length > 0 && !signupEmailValid;
   // Surfaced API failure (send / resend / verify), shown under the input.
   const [error, setError] = useState<string | null>(null);
@@ -520,21 +529,20 @@ export function OnboardingScreen() {
       setError('Something went wrong. Please request a new OTP.');
       return;
     }
-    if (isSignup && !signupEmailValid) {
+    if (isSignup && !signupDetailsValid) {
       setEmailTouched(true);
-      setError('Enter your email to create your account.');
+      setError('Enter your name and email to create your account.');
       return;
     }
     setVerifying(true);
     setError(null);
     try {
-      // New number → create the account with the email they typed. The
-      // required fullname/password are still filled behind the scenes (the
-      // name step after signup asks "what should we call you?").
+      // New number → create the account with the name and email they typed
+      // (the password is generated: login is OTP-only, nobody types it).
       // Existing number → plain login.
       const session = isSignup
         ? await signup({
-            fullname: eccentricName(),
+            fullname: signupName.trim(),
             email: signupEmail.trim(),
             password: randomPassword(),
             mobileNumber: loginPhone,
@@ -553,6 +561,7 @@ export function OnboardingScreen() {
         success: true,
       });
       await signIn(session);
+      if (isSignup) await setDisplayName(signupName.trim()).catch(() => undefined);
       analytics.track(isSignup ? Events.SIGN_UP : Events.LOGIN, { method: 'otp' });
       markOnboarded().catch(() => undefined);
       signedInRef.current = true;
@@ -563,7 +572,8 @@ export function OnboardingScreen() {
       // the cross-fade, so the handoff reads as one continuous moment.
       setTimeout(() => {
         if (isSignup) {
-          navigation.navigate('NameInput' as never);
+          // Name already collected with the email → straight to the greeting.
+          navigation.navigate('Greeting', { name: signupName.trim() });
         } else if (loginOnly && navigation.canGoBack()) {
           // Opened from "Log in to earn" / a signed-out tab: return to the
           // card, store or tab they came from, now signed in.
@@ -581,7 +591,7 @@ export function OnboardingScreen() {
       );
       setVerifying(false);
     }
-  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly, signupEmail, signupEmailValid]);
+  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly, signupEmail, signupName, signupDetailsValid, setDisplayName]);
 
   // Login is optional. "Get Started" enters the app as a guest (Home, card
   // discovery and Offers need no account); the phone + OTP sheet is one tap
@@ -638,6 +648,7 @@ export function OnboardingScreen() {
     setOtpGuid(undefined);
     setIsSignup(false);
     setSignupEmail('');
+    setSignupName('');
     setEmailTouched(false);
     setLoginPhone('');
     setError(null);
@@ -1129,8 +1140,21 @@ export function OnboardingScreen() {
                 {isSignup ? (
                   <View style={{ width: '100%', gap: spacing[8] }}>
                     <Text variant="body12Regular" color={colors.text.secondary}>
-                      New to CashKaro? Add your email to create your account.
+                      New to CashKaro? Add your name and email to create your account.
                     </Text>
+                    <Input
+                      label="Full name"
+                      placeholder="Your name"
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      autoComplete="name"
+                      textContentType="name"
+                      value={signupName}
+                      onChangeText={(t) => {
+                        setSignupName(t);
+                        if (error) setError(null);
+                      }}
+                    />
                     <Input
                       label="Email"
                       placeholder="you@example.com"
@@ -1159,7 +1183,7 @@ export function OnboardingScreen() {
                   fullWidth
                   loading={verifying}
                   disabled={
-                    otp.length !== OTP_LENGTH || verifying || (isSignup && !signupEmailValid)
+                    otp.length !== OTP_LENGTH || verifying || (isSignup && !signupDetailsValid)
                   }
                   onPress={handleVerifyOtp}
                 />
