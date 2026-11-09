@@ -73,22 +73,12 @@ export interface CardFeeStripProps {
 function FeeColumn({ label, amount }: { label: string; amount: string }) {
   return (
     <View style={{ flexShrink: 1, minWidth: 0 }}>
-      <Text
-        variant="caption10Regular"
-        color={colors.text.tertiary}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.85}
-      >
+      {/* No adjustsFontSizeToFit: Android shrank the label to unreadable
+          type at large OS font sizes. The label may wrap to a 2nd line. */}
+      <Text variant="caption10Regular" color={colors.text.tertiary} numberOfLines={2}>
         {label}
       </Text>
-      <Text
-        variant="body14SemiBold"
-        color={colors.text.primary}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.8}
-      >
+      <Text variant="body14SemiBold" color={colors.text.primary} numberOfLines={1}>
         {amount}
       </Text>
     </View>

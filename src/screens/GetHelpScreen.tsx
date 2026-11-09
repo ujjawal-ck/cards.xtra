@@ -24,8 +24,10 @@ import {
   ImageBackground,
   Pressable,
   Linking,
+  Image,
   useWindowDimensions,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
@@ -63,6 +65,8 @@ const GRID_GAP = 8; // spacing[8]
 
 interface HelpTopic {
   icon: IconName;
+  /** Raster art shown instead of the icon (the app-logo tile). */
+  image?: ImageSourcePropType;
   label: string;
   onPress?: () => void;
 }
@@ -91,23 +95,27 @@ export function GetHelpScreen() {
   const callSupport = () => Linking.openURL(SUPPORT_PHONE_URL).catch(() => undefined);
   const topics: HelpTopic[] = [
     {
+      // Figma 3632:194976 glyphs: app-logo tile, cash note, ticket, ₹,
+      // user-off (were sparkle / piggy bank / clipboard / wallet / phone-off;
+      // the sparkle baked a blue fill — the only coloured icon).
       icon: 'feat-sparkle-outline',
+      image: images.help.appLogo,
       label: 'How Cards.xtra Works?',
       onPress: () => howItWorksRef.current?.present(),
     },
     {
-      icon: 'feat-savings-outline',
+      icon: 'help-cash-outline',
       label: 'Your Cashback',
       onPress: () => navigation.navigate('MainTabs', { screen: 'Earnings' }),
     },
     {
-      icon: 'clipboard-search-outline',
+      icon: 'help-ticket-outline',
       label: 'Missing Cashback or Rewards',
       onPress: () => navigation.navigate('MissingCashbackHelp'),
     },
     // No self-serve content for these yet — connect to support directly.
-    { icon: 'wallet-outline', label: 'Payment related', onPress: callSupport },
-    { icon: 'phone-off-outline', label: 'Unable to Login?', onPress: callSupport },
+    { icon: 'help-rupee-outline', label: 'Payment related', onPress: callSupport },
+    { icon: 'help-user-off-outline', label: 'Unable to Login?', onPress: callSupport },
   ];
 
   // Chunk into rows of 2 (the trailing odd card keeps half width via a spacer).
@@ -238,7 +246,15 @@ function HelpCard({ topic, width }: { topic: HelpTopic; width: number }) {
         elevation.light.xs,
       ]}
     >
-      <Icon name={topic.icon} size={iconSize[24]} color={colors.text.primary} />
+      {topic.image ? (
+        <Image
+          source={topic.image}
+          style={{ width: iconSize[24], height: iconSize[24], borderRadius: radius.xs }}
+          resizeMode="contain"
+        />
+      ) : (
+        <Icon name={topic.icon} size={iconSize[24]} color={colors.text.primary} />
+      )}
       <Text variant="body14SemiBold" color={colors.text.primary}>
         {topic.label}
       </Text>

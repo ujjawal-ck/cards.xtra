@@ -48,7 +48,9 @@ import {
 } from '../tokens';
 
 export type MastheadIconType = 'solid' | 'overlay';
-export type MastheadLeading = 'back' | 'close';
+/** 'collapse' = chevron-down, for dismissing a sheet-like page (Figma
+ *  3914:43753 card detail). */
+export type MastheadLeading = 'back' | 'close' | 'collapse';
 /** Inline-drawn trailing glyphs for cases where no registered Icon
  *  asset matches. Use `trailingIcon` (an IconName) when an SVG ships. */
 export type MastheadTrailingGlyph = 'share';
@@ -239,6 +241,8 @@ export function MastheadHeader({
   const renderLeadingGlyph = () =>
     leading === 'back' ? (
       <BackArrowGlyph size={BUTTON_ICON_SIZE} color={iconColor} />
+    ) : leading === 'collapse' ? (
+      <Icon name="chevron-down" size={BUTTON_ICON_SIZE} color={iconColor} />
     ) : (
       <CloseGlyph size={BUTTON_ICON_SIZE} color={iconColor} />
     );
@@ -261,7 +265,9 @@ export function MastheadHeader({
       <CircleButton
         iconType={iconType}
         onPress={onLeadingPress}
-        accessibilityLabel={leading === 'back' ? 'Back' : 'Close'}
+        accessibilityLabel={
+          leading === 'back' ? 'Back' : leading === 'collapse' ? 'Collapse' : 'Close'
+        }
       >
         {renderLeadingGlyph()}
       </CircleButton>

@@ -28,6 +28,7 @@ import React from 'react';
 import {
   View,
   Pressable,
+  ScrollView,
   StyleProp,
   ViewStyle,
 } from 'react-native';
@@ -285,13 +286,19 @@ export function HomeHeader({
           padding halved (12 → 6); Eligibility + edit pencil read as one
           segmented unit. The only difference from the main row is colour:
           the pencil keeps the masthead's dark `iconColor`, not cobalt. */}
-      <View
-        style={{
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        // Scrolls instead of clipping when large OS text makes the chips
+        // wider than the screen (Eligibility ran off the right edge).
+        // flexGrow keeps Eligibility pinned right (marginLeft:'auto')
+        // whenever the row does fit.
+        contentContainerStyle={{
+          flexGrow: 1,
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing[8],
-          // No wrapping: Eligibility used to drop onto a second line over
-          // the search bar. One 32-dp row, like the inline FilterRow.
         }}
       >
         <Chip
@@ -375,7 +382,7 @@ export function HomeHeader({
             </Pressable>
           ) : null}
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

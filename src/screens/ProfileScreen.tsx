@@ -198,14 +198,15 @@ export function ProfileScreen() {
               <Divider style="solid" />
               <ListRow
                 type="menu-option"
-                icon="headset-outline"
+                // Figma 4448:23859: chat bubble (was a headset).
+                icon="chat-outline"
                 title="Get Help"
                 onPress={onMenu('get_help', () => navigation.navigate('GetHelp'))}
               />
               <Divider style="solid" />
               <ListRow
                 type="menu-option"
-                icon="message-outline"
+                icon="phone-outline"
                 title="Call Us"
                 onPress={onMenu('call_us', () => Linking.openURL(SUPPORT_PHONE_URL))}
               />

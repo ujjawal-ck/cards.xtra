@@ -278,9 +278,11 @@ export function OrdersList() {
       <BottomSheetFooter {...props} bottomInset={0}>
         <FooterButtons
           buttons="dual"
-          size={52}
+          // Same as Home's Filters footer (Figma 1791:4029): 44 dp, saffron strip.
+          size={44}
           shadow="on"
           strip="caption"
+          stripTone="brand"
           stripText={`${draftCount} filter${draftCount === 1 ? '' : 's'} selected`}
           color="second"
           primaryLabel="Apply Filter"
@@ -344,7 +346,10 @@ export function OrdersList() {
           {/* 3. Filter row — left-aligned chips, in the same language as the
               Home filter pills: a "Filter" chip + a "Brand" chip with a
               dropdown caret. Both open the Filters sheet (Brand lands on the
-              Store rail). Counts flip a chip into the selected look. */}
+              Store rail). Counts flip a chip into the selected look.
+              Hidden when there are no orders at all and no filter applied —
+              filtering an empty list is a dead end. */}
+          {(rows?.length ?? 0) > 0 || appliedCount > 0 ? (
           <View
             style={{
               flexDirection: 'row',
@@ -369,6 +374,7 @@ export function OrdersList() {
               onPress={() => openFilters('store')}
             />
           </View>
+          ) : null}
 
           {/* 4. Order list — full-bleed rows (each carries its own bottom
               border). Live from CashKaro /users/orders; loading / empty /
@@ -468,7 +474,11 @@ export function OrdersList() {
       {/* Draggable "Never miss your cashback" pip — floats over the screen,
           collapses to a right-edge notch (genie), and links to the
           Never-Miss-Cashback setup. Android-only; renders nothing elsewhere. */}
-      <CashbackPip onPress={() => navigation.navigate('CashbackGuard')} />
+      <CashbackPip
+        onPress={() => navigation.navigate('CashbackGuard')}
+        // Stay a side notch over the empty state so it doesn't cover the copy.
+        autoExpand={(rows?.length ?? 0) > 0}
+      />
     </View>
   );
 }

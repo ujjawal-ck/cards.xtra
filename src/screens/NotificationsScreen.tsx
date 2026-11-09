@@ -25,7 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Chip, Button, Icon, Divider } from '../atoms';
 import type { IconName } from '../atoms';
-import { Header } from '../organisms';
+import { Header, ScreenState } from '../organisms';
 import {
   colors,
   spacing,
@@ -50,16 +50,11 @@ interface NotificationItem {
   kind: TabKey;
 }
 
-// Static demo feed (Figma 5784:25661 shows the referral card under "Older").
-const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'referral',
-    icon: 'desc-cashback',
-    text: 'Earn Rs. 50 for every friend you invite! They get Rs. 50 too',
-    cta: 'Start Earning',
-    kind: 'information',
-  },
-];
+// No notifications feed is wired yet. The Figma demo item (5784:25661, a
+// "Earn Rs. 50 for every friend you invite" referral whose CTA did nothing)
+// was shown to every production user — a promise the app can't keep. Empty
+// until a real feed (push / CashKaro inbox API) is connected.
+const NOTIFICATIONS: NotificationItem[] = [];
 
 const AVATAR_SIZE = spacing[40]; // 40 — circular icon frame
 
@@ -174,14 +169,11 @@ export function NotificationsScreen() {
             ))}
           </>
         ) : (
-          <Text
-            variant="body14Regular"
-            color={colors.text.secondary}
-            align="center"
+          <ScreenState
+            title="You're all caught up"
+            body="Offers and updates about your cashback will show up here."
             style={{ paddingTop: spacing[48] }}
-          >
-            No notifications here yet.
-          </Text>
+          />
         )}
       </ScrollView>
     </SafeAreaView>

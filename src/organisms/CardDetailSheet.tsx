@@ -1927,7 +1927,8 @@ function SheetBody({
       >
         <MastheadHeader
           iconType="solid"
-          leading="close"
+          // Chevron-down "collapse" per Figma 3914:43753 (was ✕).
+          leading="collapse"
           trailingGlyph="share"
           onLeadingPress={() => sheet.close()}
           onTrailingPress={() => onSharePress?.(activeCard)}

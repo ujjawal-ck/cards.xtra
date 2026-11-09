@@ -136,6 +136,10 @@ const NUDGE_DELAY_MS = 650;
 // When the nudge eases back, and when the hard reset onto the card runs.
 const NUDGE_RETURN_MS = 280;
 const NUDGE_SETTLE_MS = 450;
+// The peek hint teaches the swipe ONCE per app session. Per-mount, it
+// replayed every time the sheet re-opened (e.g. back from All Benefits),
+// visibly shoving the card sideways each time.
+let pagerNudgeShown = false;
 
 // Gesture thresholds for the sheet's content pan: wait for clear VERTICAL
 // intent before treating a drag as dismiss, and FAIL on horizontal movement so
@@ -647,7 +651,7 @@ function AndroidPagerBody({
     nudgeTimers.current = [];
   }, []);
   useEffect(() => {
-    if (nudgedRef.current) return;
+    if (nudgedRef.current || pagerNudgeShown) return;
     if (cards.length <= 1) return;
     const initial = indexOf(initialCardId);
     if (initial >= cards.length - 1 && initial > 0) return; // last card, no next
@@ -661,6 +665,7 @@ function AndroidPagerBody({
       );
     later(NUDGE_DELAY_MS, () => {
       nudgedRef.current = true;
+      pagerNudgeShown = true;
       listRef.current?.scrollToOffset({
         offset: base + NUDGE_PEEK * peekDir,
         animated: true,
@@ -682,6 +687,7 @@ function AndroidPagerBody({
     // The user took over — stop any pending nudge so it can't fight the drag.
     userDraggedRef.current = true;
     nudgedRef.current = true;
+    pagerNudgeShown = true; // they've found the swipe — no hint needed
     clearNudge();
   }, [clearNudge]);
 
@@ -879,7 +885,8 @@ function AndroidPagerBody({
       >
         <MastheadHeader
           iconType="solid"
-          leading="close"
+          // Chevron-down "collapse" per Figma 3914:43753 (was ✕).
+          leading="collapse"
           trailingGlyph="share"
           onLeadingPress={onClose}
           onTrailingPress={() => onSharePress?.(activeCard)}

@@ -27,7 +27,7 @@
  *   line 2 text  → body14SemiBold / text.inverse
  *   close glyph  → inline white X on a translucent dark disc (contrast-safe)
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,9 +81,14 @@ function CloseGlyph({ size, color }: { size: number; color: string }) {
 export interface CashbackPipProps {
   /** Fired when the user taps the expanded pip body. */
   onPress: () => void;
+  /** When false the pip stays docked as the side notch instead of genie-ing
+   *  out. Orders passes false while it shows its empty state, where the
+   *  240-tall pip covered the "No orders yet" copy. Expands once it turns
+   *  true (only the first time, so a user's collapse is respected). */
+  autoExpand?: boolean;
 }
 
-export function CashbackPip({ onPress }: CashbackPipProps) {
+export function CashbackPip({ onPress, autoExpand = true }: CashbackPipProps) {
   const { width: SCREEN_W, height: SCREEN_H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -107,13 +112,16 @@ export function CashbackPip({ onPress }: CashbackPipProps) {
   const collapse = useSharedValue(1);
   const [collapsed, setCollapsed] = useState(true);
 
+  const autoExpanded = useRef(false);
   useEffect(() => {
+    if (!autoExpand || autoExpanded.current) return;
     const t = setTimeout(() => {
+      autoExpanded.current = true;
       setCollapsed(false);
       collapse.value = withSpring(0, { damping: 18, stiffness: 130, mass: 0.9 });
     }, 650);
     return () => clearTimeout(t);
-  }, [collapse]);
+  }, [collapse, autoExpand]);
 
   // Once the user has granted both permissions (feature fully set up), the
   // nudge has done its job — hide the pip + notch entirely. Re-checked every

@@ -505,6 +505,13 @@ function EarningsMasthead({
   // Tapping the info circle toggles a tooltip explaining the total-earnings
   // figure (Figma 5820:27081).
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  // The tooltip had no way to close except re-tapping the small icon. It now
+  // closes on tap and on its own after a few seconds.
+  useEffect(() => {
+    if (!tooltipVisible) return;
+    const t = setTimeout(() => setTooltipVisible(false), EARNINGS_TOOLTIP_MS);
+    return () => clearTimeout(t);
+  }, [tooltipVisible]);
 
   return (
     <View
@@ -565,7 +572,10 @@ function EarningsMasthead({
             </Pressable>
 
             {tooltipVisible ? (
-              <View
+              <Pressable
+                onPress={() => setTooltipVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close earnings info"
                 style={{
                   position: 'absolute',
                   // Just below the 18-px icon; the caret points up at it.
@@ -579,11 +589,13 @@ function EarningsMasthead({
                   position="bottom"
                   size="sm"
                   arrowAlign="end"
-                  maxWidth={220}
+                  // Figma 5820:27081 tooltip is 247 wide (220 left one
+                  // letter of the subtitle peeking out beside it).
+                  maxWidth={EARNINGS_TOOLTIP_W}
                   title="This is the total Earnings accumulated from the beginning until now."
                   style={{ alignSelf: 'flex-end' }}
                 />
-              </View>
+              </Pressable>
             ) : null}
           </View>
 
@@ -914,6 +926,10 @@ function CashbackStatusMasthead({
 // ----------------------------------------------------------------------------
 
 const HOME_MASTHEAD_H = 408;
+// Earnings info tooltip width — Figma 5820:27081 (component spec).
+const EARNINGS_TOOLTIP_W = 247;
+// Auto-dismiss delay for the earnings info tooltip.
+const EARNINGS_TOOLTIP_MS = 4000;
 
 function HomeMasthead({
   background,

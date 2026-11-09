@@ -39,20 +39,34 @@
 - Orders: designed empty / no-match / error states; reminder pip starts low so it doesn't cover content.
 - Privacy: pinned header, white page; Never Miss Cashback: visible off-state switch, non-duplicate card title; Review Us caption "And Counting".
 
+## Second pass (same day)
+
+All verified on the device unless noted.
+
+- **Notifications:** the static "Earn Rs. 50…" list and the permanent bell badge are gone. The screen shows an honest empty state ("You're all caught up") until a notifications API exists.
+- **Figma assets exported:** Profile Get Help / Call Us use the Figma chat and phone glyphs (4448:23859); the Get Help tiles use the Figma glyphs and app logo (3632:194976). All are tintable `*-outline` icons.
+- **Card detail:** the leading control is a collapse chevron (it dismisses downward), not a back arrow. The swipe-hint nudge plays once per session, not on every open. Back closes the detail and returns to Home.
+- **Narrow screen / large font:** Home's filter row and the scrolled-header chip row scroll horizontally instead of clipping. Category tiles grow with 2-line labels. Fee labels wrap instead of shrinking.
+- **Offers:** loading shows a 2-column skeleton instead of a spinner.
+- **Earnings tooltip:** it is 247 wide (Figma 5820:27081). It now closes on tap and after 4 s; before, only re-tapping the 18-dp icon closed it.
+- **Orders empty state:** the filter chips are hidden when there is nothing to filter. The "Never miss cashback" pip stays docked as the side notch, so it no longer covers the "No orders yet" copy, and expands only once orders exist.
+
 ## Still open
 
-**Needs Figma asset export** (phone icon for "Call Us"; Help-tile glyphs; "No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
+**Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
 
 **Needs a product decision**
 1. Primary CTA colour: Figma uses Cobalt for Get OTP / Apply Filter / tile Apply Now; CLAUDE.md says Saffron is primary. Pick one rule.
 2. Android card detail opens full screen; CLAUDE.md's non-negotiable is a ~55–60 % sheet that expands on scroll.
 3. OTP length (app 6, Figma 4) — backend to confirm.
 4. Home masthead is ~40 dp taller than Figma (status-bar height counted twice), pushing the first card's Apply below the fold. Fixing it reframes the hero video; needs design sign-off.
-5. Static content: notifications ("Earn Rs. 50…" + permanent badge), Review Us reviews (2023), sign-up auto-generated name + dummy email.
+5. Static content: Review Us reviews (2023), sign-up auto-generated name + dummy email. (Notifications now show an empty state.)
 
 **Needs backend**
 - Offers on production: `miniapp` category missing, categories empty, store pages 400.
 - Payment History API mapping (`/payment/history`) before the Profile row returns.
-- Coupon codes on brand pages; rejected-claim reasons; feedback endpoint.
+- Coupon codes on brand pages; rejected-claim reasons.
+- Write Review: the comment only goes to analytics and is discarded, yet the toast says it was submitted. Needs a feedback endpoint (or the toast copy changed).
+- Notifications feed API (screen is an empty state until then).
 
 **Not tested on device:** login/OTP UI after these changes (would require logging out of the production test account), withdraw forms (₹0 account is gated before them), claim submission.

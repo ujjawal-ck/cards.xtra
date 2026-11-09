@@ -1,0 +1,7 @@
+<svg width="24" height="24" viewBox="192 30 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Exported from Figma 3632:194976 (Get Help grid), cropped to the 24 icon box; #262626 → currentColor via svgr. -->
+<path d="M201 42C201 42.7956 201.316 43.5587 201.879 44.1213C202.441 44.6839 203.204 45 204 45C204.796 45 205.559 44.6839 206.121 44.1213C206.684 43.5587 207 42.7956 207 42C207 41.2044 206.684 40.4413 206.121 39.8787C205.559 39.3161 204.796 39 204 39C203.204 39 202.441 39.3161 201.879 39.8787C201.316 40.4413 201 41.2044 201 42Z" stroke="#262626" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M195 38C195 37.4696 195.211 36.9609 195.586 36.5858C195.961 36.2107 196.47 36 197 36H211C211.53 36 212.039 36.2107 212.414 36.5858C212.789 36.9609 213 37.4696 213 38V46C213 46.5304 212.789 47.0391 212.414 47.4142C212.039 47.7893 211.53 48 211 48H197C196.47 48 195.961 47.7893 195.586 47.4142C195.211 47.0391 195 46.5304 195 46V38Z" stroke="#262626" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M210 42H210.01" stroke="#262626" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M198 42H198.01" stroke="#262626" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

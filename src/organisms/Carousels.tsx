@@ -247,7 +247,10 @@ export function CategoryTiles({
             style={[
               {
                 width: CATEGORY_TILE_W,
-                height: CATEGORY_TILE_H,
+                // minHeight + 2-line label: "Food Ordering" was cut to
+                // "Food Ord…" at larger OS font sizes. Tiles in the row
+                // stretch to the tallest, so they stay uniform.
+                minHeight: CATEGORY_TILE_H,
                 borderRadius: radius.lg,
                 backgroundColor: colors.surface.default,
               },
@@ -285,7 +288,7 @@ export function CategoryTiles({
                   variant="body12Medium"
                   color={colors.text.primary}
                   align="center"
-                  numberOfLines={1}
+                  numberOfLines={2}
                 >
                   {cat.label}
                 </Text>

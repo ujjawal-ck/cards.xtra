@@ -101,6 +101,13 @@ const ICON_REGISTRY = {
   'message-outline': require('../assets/icons/message-outline.svg').default,
   // Figma 4448:23861 / 4448:23863 (Profile Privacy + Logout), tintable.
   'lock-outline': require('../assets/icons/lock-outline.svg').default,
+  'phone-outline': require('../assets/icons/phone-outline.svg').default,
+  // Get Help topic glyphs — Figma 3632:194976.
+  'help-cash-outline': require('../assets/icons/help-cash-outline.svg').default,
+  'help-ticket-outline': require('../assets/icons/help-ticket-outline.svg').default,
+  'help-rupee-outline': require('../assets/icons/help-rupee-outline.svg').default,
+  'help-user-off-outline': require('../assets/icons/help-user-off-outline.svg').default,
+  'chat-outline': require('../assets/icons/chat-outline.svg').default,
   'logout-outline': require('../assets/icons/logout-outline.svg').default,
   'nav-cards-filled': require('../assets/icons/nav-cards-filled.svg').default,
   'nav-cards-outline': require('../assets/icons/nav-cards-outline.svg').default,

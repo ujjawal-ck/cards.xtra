@@ -247,7 +247,7 @@ export function EarningsScreen() {
               <Divider style="solid" />
               <ListRow
                 type="menu-option"
-                icon="headset-outline"
+                icon="chat-outline"
                 title="Get Help"
                 onPress={() => navigation.navigate('GetHelp')}
               />

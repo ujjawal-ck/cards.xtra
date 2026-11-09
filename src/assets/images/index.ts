@@ -109,6 +109,9 @@ export const images = {
     // Cobalt hero for the "We're here to help!" page — gradient + headset
     // illustration + baked heading, exported from Figma (node 6308:31058).
     masthead: require('./help/help-masthead.png'),
+    // Cards.xtra app-logo tile for the "How Cards.xtra Works?" help topic
+    // (Figma 3632:194976).
+    appLogo: require('./help/help-app-logo.png'),
     // Cobalt "Missing Cashback?" hero — gradient + phone-checklist illustration
     // + baked heading, exported from Figma (Masthead/Main, node 3437:72827).
     missingCashbackMasthead: require('./help/missing-cashback-masthead.png'),

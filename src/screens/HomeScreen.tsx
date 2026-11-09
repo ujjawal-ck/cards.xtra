@@ -19,6 +19,7 @@ import {
   FlatList,
   Platform,
   Pressable,
+  ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -1557,7 +1558,9 @@ export function HomeScreen() {
             SearchTopSheet). */}
         <Masthead
           variant="home"
-          notificationCount={1}
+          // No unread badge: there's no notifications feed yet (it was a
+          // hard-coded "1" that never cleared).
+          notificationCount={0}
           background={
             <HeroVideo source={require('../assets/videos/home-hero.mp4')} />
           }
@@ -1590,13 +1593,20 @@ export function HomeScreen() {
               padX 12, padY 8). The existing Chip type='toggle' variant
               ships with a trailing edit button which doesn't fit this
               spec, so the toggle row is composed from atoms here. */}
-        <View
-          style={{
+        {/* Horizontal scroll row: at large OS font sizes the chips no longer
+            fit and Eligibility ran off the right edge. When they fit,
+            flexGrow + space-between keeps Eligibility pinned right. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: spacing[16], flexGrow: 0 }}
+          contentContainerStyle={{
+            flexGrow: 1,
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: spacing[8],
             paddingHorizontal: spacing[16],
-            marginTop: spacing[16],
           }}
         >
           {/* Left — filter section. During a "clear" the chips are briefly
@@ -1704,7 +1714,7 @@ export function HomeScreen() {
               </Pressable>
             ) : null}
           </View>
-        </View>
+        </ScrollView>
 
         {/* Active-bank banner — appears when a bank filter is on (a search
             bank tap lands here). Names the bank + count so the filtered
@@ -1953,7 +1963,9 @@ export function HomeScreen() {
       >
         <HomeHeader
           scrolled
-          notificationCount={1}
+          // No unread badge: there's no notifications feed yet (it was a
+          // hard-coded "1" that never cleared).
+          notificationCount={0}
           filtersCategoryLabel="Category"
           categoryCount={categoryFilterCount}
           filtersCount={otherFilterCount}

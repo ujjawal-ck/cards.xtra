@@ -29,7 +29,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -46,7 +45,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '../atoms';
+import { Text, AmountSkeleton } from '../atoms';
 import { SearchBar } from '../molecules';
 import type { SearchResultSection } from '../molecules';
 import {
@@ -61,7 +60,7 @@ import type { SearchTopSheetRecent } from '../organisms';
 import { images } from '../assets/images';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
-import { colors, spacing } from '../tokens';
+import { colors, spacing, radius } from '../tokens';
 import { analytics, Events } from '../analytics';
 
 // Once-per-launch gate for the welcome promo banner. A module-level flag
@@ -69,6 +68,9 @@ import { analytics, Events } from '../analytics';
 // session and re-appears after a cold start — but not on tab re-visits
 // within the same session.
 let promoSeenThisSession = false;
+
+// Height of a loading placeholder tile — matches Grid's brand card (156).
+const OFFER_SKELETON_H = 156;
 
 // Beat between landing on Offers and the promo sliding in.
 const PROMO_DELAY_MS = 900;
@@ -429,7 +431,16 @@ export function OffersScreen() {
           }}
         >
           {isLoading ? (
-            <ActivityIndicator color={colors.action.primary.default} />
+            // Skeleton in the shape of the 2-column store grid (was a bare
+            // spinner) so the page reads as "offers loading here".
+            <View style={{ gap: spacing[8] }}>
+              {[0, 1, 2].map((r) => (
+                <View key={r} style={{ flexDirection: 'row', gap: spacing[8] }}>
+                  <AmountSkeleton width="49%" height={OFFER_SKELETON_H} style={{ borderRadius: radius.lg }} />
+                  <AmountSkeleton width="49%" height={OFFER_SKELETON_H} style={{ borderRadius: radius.lg }} />
+                </View>
+              ))}
+            </View>
           ) : isError || catQ.isError ? (
             // No illustration: the only candidate ("No cashback on this
             // brand") says the wrong thing. Copy doesn't blame the user's
