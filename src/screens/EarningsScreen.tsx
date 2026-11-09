@@ -34,13 +34,16 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
-import { Divider } from '../atoms';
+import { Divider, Text } from '../atoms';
+import { useAuth } from '../auth/AuthContext';
+import { analytics, Events } from '../analytics';
 import { ListRow, AmountActionRow } from '../molecules';
 import {
   Masthead,
   EarningsBreakupSheet,
   EarningStatusSheet,
   StaggeredEntrance,
+  GuestPrompt,
 } from '../organisms';
 import type {
   EarningsBreakupSheetRef,
@@ -109,6 +112,59 @@ export function EarningsScreen() {
     onProceed: () => navigation.navigate('WithdrawStack'),
     onBrowseDeals: () => navigation.navigate('Offers'),
   });
+
+  // Login is optional. Signed out, the money figures have no account behind
+  // them, so the tab explains what logging in unlocks instead of showing ₹0s.
+  const { status } = useAuth();
+  if (status === 'unauthenticated') {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+          <ScrollView
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingTop: spacing[16],
+              paddingHorizontal: spacing[16],
+              paddingBottom: navClearance,
+              gap: spacing[16],
+            }}
+          >
+            <Text variant="heading20SemiBold" color={colors.text.primary}>
+              My Earnings
+            </Text>
+            <GuestPrompt
+              title="See every rupee you earn"
+              body="Log in to track cashback from card applications and shopping, and withdraw it to UPI or a gift card."
+              onLogin={() => {
+                analytics.track(Events.LOGIN_PROMPT_TAP, { source: 'earnings' });
+                navigation.navigate('Onboarding', { login: true });
+              }}
+            />
+            <View
+              style={[
+                {
+                  backgroundColor: colors.surface.default,
+                  borderRadius: radius.xl,
+                  paddingVertical: spacing[12],
+                  paddingHorizontal: spacing[16],
+                },
+                elevation.light.xs,
+              ]}
+            >
+              <ListRow
+                type="menu-option"
+                icon="chat-outline"
+                title="Get Help"
+                onPress={() => navigation.navigate('GetHelp')}
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View

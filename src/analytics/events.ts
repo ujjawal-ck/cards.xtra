@@ -29,12 +29,17 @@ export const Events = {
   SIGN_UP: 'sign_up', // GA4 — param: method
   SIGN_UP_NAME_SET: 'sign_up_name_set',
   LOGOUT: 'logout',
+  ONBOARDING_GUEST_START: 'onboarding_guest_start', // "Get Started" without logging in
+  LOGIN_PROMPT_TAP: 'login_prompt_tap', // param: source (earnings | profile | …)
 
   // ── cards (Home) ───────────────────────────────────────────
   SELECT_ITEM: 'select_item', // GA4 — card tile tapped
   VIEW_ITEM: 'view_item', // GA4 — card detail sheet opened
   CARD_VIEW_ALL_BENEFITS: 'card_view_all_benefits',
   CARD_APPLY: 'card_apply', // outbound "Apply Now" click
+  // Every outbound card / store click: kind, item_id, item_name, click_id,
+  // attributed (bool), link_type (ck | partner). For reconciling with partners.
+  CLICK_OUT: 'click_out',
   SEARCH: 'search', // GA4 — param: search_term
   SEARCH_RESULT_SELECT: 'search_result_select',
   FILTER_APPLY: 'filter_apply',

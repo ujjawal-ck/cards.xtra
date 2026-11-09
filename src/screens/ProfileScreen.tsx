@@ -25,7 +25,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 
 import { Text, Divider, Icon } from '../atoms';
 import { ListRow } from '../molecules';
-import { Masthead, LogoutConfirmSheet, StaggeredEntrance } from '../organisms';
+import { Masthead, LogoutConfirmSheet, StaggeredEntrance, GuestPrompt } from '../organisms';
 import type { LogoutConfirmSheetRef } from '../organisms';
 import {
   colors,
@@ -61,7 +61,11 @@ export function ProfileScreen() {
   useScrollToTop(scrollRef);
   const navigation = useNavigation<Nav>();
   const { data: profile } = useProfile();
-  const { signOut, displayName } = useAuth();
+  const { signOut, displayName, status } = useAuth();
+  // Login is optional: signed out, the account card and account-only rows
+  // (earnings, withdraw, missing cashback, logout) give way to a login prompt;
+  // help, call, review and privacy still work.
+  const signedOut = status === 'unauthenticated';
   const logoutSheetRef = useRef<LogoutConfirmSheetRef>(null);
   const insets = useSafeAreaInsets();
 
@@ -96,10 +100,11 @@ export function ProfileScreen() {
 
   const handleLogout = async () => {
     await signOut();
-    // Clear the stack and send the user to the login/sign-up screen.
+    // Login is optional, so logging out keeps the person in the app as a
+    // guest (Home), rather than sending them back through onboarding.
     navigation
       .getParent<NativeStackNavigationProp<RootStackParamList>>()
-      ?.reset({ index: 0, routes: [{ name: 'Onboarding' }] });
+      ?.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   };
 
   return (
@@ -121,6 +126,19 @@ export function ProfileScreen() {
           {/* 1. Masthead — REUSED 'profile' variant (defaults match
               spec: Manikandan / maan@gmail.com · 8324 + saffron
               avatar + cobalt Edit Profile via the Button atom). */}
+          {signedOut ? (
+            <View style={{ paddingHorizontal: spacing[16], paddingTop: insets.top + spacing[16] }}>
+              <GuestPrompt
+                icon="feat-rewards-outline"
+                title="Your CashKaro account"
+                body="Log in to see your earnings, withdraw cashback and raise missing-cashback claims."
+                onLogin={() => {
+                  analytics.track(Events.LOGIN_PROMPT_TAP, { source: 'profile' });
+                  navigation.navigate('Onboarding', { login: true });
+                }}
+              />
+            </View>
+          ) : (
           <Masthead
             variant="profile"
             name={name}
@@ -128,8 +146,10 @@ export function ProfileScreen() {
             avatarInitial={avatarInitial}
             onEditProfile={onMenu('edit_profile', () => navigation.navigate('AccountSettings'))}
           />
+          )}
 
           {/* 2. List #1 — 4 rows (earnings, payments, history, missing) */}
+          {signedOut ? null : (
           <View style={{ paddingHorizontal: spacing[16] }}>
             <View
               style={[
@@ -178,6 +198,8 @@ export function ProfileScreen() {
               />
             </View>
           </View>
+
+          )}
 
           {/* 3. List #2 — 3 rows (help, call, review) */}
           <View style={{ paddingHorizontal: spacing[16] }}>
@@ -249,7 +271,8 @@ export function ProfileScreen() {
 
           {/* 5. Logout — Figma 4448:23863: a left-aligned row in the 16-px
               gutter, Body/14/Medium in feedback/error (was a centred
-              outlined pill). Opens the confirmation sheet. */}
+              outlined pill). Opens the confirmation sheet. Signed in only. */}
+          {signedOut ? null : (
           <View style={{ paddingHorizontal: spacing[16] }}>
             <Pressable
               accessibilityRole="button"
@@ -276,6 +299,7 @@ export function ProfileScreen() {
               </Text>
             </Pressable>
           </View>
+          )}
           </StaggeredEntrance>
         </ScrollView>
       </SafeAreaView>

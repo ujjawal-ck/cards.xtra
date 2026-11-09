@@ -88,3 +88,18 @@ export async function getDeviceId(): Promise<string> {
   await SecureStore.setItemAsync(DEVICE_ID, id);
   return id;
 }
+
+// ── Onboarding seen (per install) ───────────────────────────────────────────
+// Login is optional: "Get Started" lets people into the app as a guest. This
+// flag sends returning guests straight to Home instead of replaying
+// onboarding on every launch. Deliberately NOT cleared on logout — the
+// person has already seen onboarding on this device.
+const ONBOARDED = 'onboarding_seen';
+
+export async function markOnboarded(): Promise<void> {
+  await SecureStore.setItemAsync(ONBOARDED, '1');
+}
+
+export async function loadOnboarded(): Promise<boolean> {
+  return (await SecureStore.getItemAsync(ONBOARDED)) === '1';
+}

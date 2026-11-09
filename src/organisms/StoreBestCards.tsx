@@ -36,8 +36,7 @@ import { spacing } from '../tokens';
 import { useCards } from '../query/useCards';
 import { applyFilters, EMPTY_FILTERS } from '../data/filterOptions';
 import { cardTagIdsForCategory } from '../data/storeCardMatch';
-import { openUrl, withTrackingUser } from '../lib/openUrl';
-import { useProfile } from '../query/useProfile';
+import { useClickOut } from '../lib/useClickOut';
 import type { RootStackParamList } from '../navigation/types';
 
 // Max cards in the row — enough to feel like a curated set without flooding
@@ -70,7 +69,7 @@ export function StoreBestCards({ category, title, style }: StoreBestCardsProps) 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: cards = [] } = useCards();
-  const { data: profile } = useProfile();
+  const { openClickOut, clickOutSheets } = useClickOut();
 
   // Category match → fall back to the top cards when there's no confident
   // mapping (or the match returned nothing in this catalog).
@@ -147,9 +146,12 @@ export function StoreBestCards({ category, title, style }: StoreBestCardsProps) 
         initialCardId={selectedCard?.id}
         onActiveCardChange={setSelectedCard}
         onRecommendedPress={setSelectedCard}
-        onApply={(card) => openUrl(withTrackingUser(card.applyUrl, profile?.id))}
+        onApply={(card) =>
+          openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name })
+        }
         onViewAllBenefits={handleViewAllBenefits}
       />
+      {clickOutSheets}
     </View>
   );
 }

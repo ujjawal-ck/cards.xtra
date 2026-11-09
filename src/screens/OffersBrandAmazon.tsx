@@ -69,8 +69,7 @@ import {
 import { colors, spacing } from '../tokens';
 import { useOfferStore } from '../query/useOffers';
 import type { TimelineTile } from '../api/offersMapper';
-import { useProfile } from '../query/useProfile';
-import { openUrl, withTrackingUser } from '../lib/openUrl';
+import { useClickOut } from '../lib/useClickOut';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -104,7 +103,9 @@ export function OffersBrandAmazon() {
   const { data: store, isLoading } = useOfferStore(slug);
   // Logged-in user id — injected into the cashback click-out so CashKaro
   // attributes the exit click (and the store shows up in Missing Cashback).
-  const { data: profile } = useProfile();
+  // Shop & Earn click-out: login-to-earn for guests, user id on the link,
+  // CLICK_OUT logged (src/lib/useClickOut.tsx).
+  const { openClickOut, clickOutSheets } = useClickOut();
   const brandName = store?.name ?? 'Amazon';
   // First load of a real store: show a spinner rather than flashing the
   // Amazon placeholder content until the store's data arrives.
@@ -527,10 +528,13 @@ export function OffersBrandAmazon() {
               store: brandName,
               cashback_kind: store?.cashbackKind,
             });
-            openUrl(withTrackingUser(store?.cashbackUrl, profile?.id));
+            openClickOut({ kind: 'store', url: store?.cashbackUrl, itemId: slug ?? undefined, itemName: brandName });
           }}
         />
       </View>
+
+      {/* Guest "Log in to earn cashback" sheet for Shop & Earn. */}
+      {clickOutSheets}
 
       {/* Shared offer-detail sheet — opened by the floor hyperlinks above.
           Drag-down / scrim dismiss it (gorhom). */}

@@ -77,6 +77,18 @@ Verified on the device.
 
 **Testing note:** a third-party cleaner app on the test phone (`com.phoneclean.sentrypro`) keeps bringing up Android's "Display over other apps" settings page over the app. Cards.xtra never requests that permission.
 
+## Optional login and click-out attribution (same day)
+
+Type-checked and unit-checked; **not yet verified on the device** (phone disconnected).
+
+- **Optional login:** "Get Started" enters the app as a guest; "Already on CashKaro? Log in" opens the phone + OTP sheet; returning guests skip onboarding; logout returns to Home as a guest. Signed out, Earnings and Profile show a login card (`organisms/GuestPrompt.tsx`), and Get Help → Missing Cashback asks guests to log in.
+- **Click-outs (`lib/useClickOut.tsx`, `lib/clickOut.ts`):** every card "Apply Now" and store "Shop & Earn" goes through one path.
+  - Guests get "Log in to earn cashback" (`organisms/EarnLoginSheet.tsx`) with a "continue without cashback" option.
+  - Signed-in users: the CashKaro user id is resolved first (profile refetched if needed); the app refuses to open an unattributed link.
+  - CashKaro tracker links get `id=<user id>`. BankKaro links (production today, no CK tracking host yet) keep their `{user_id}` / `{click_id}` placeholders and are filled per click (they were stripped before, so card clicks carried no user). Checked against all 281 production card links.
+  - Every click logs `click_out` (kind, item, click id, attributed, link type).
+  - After logging in from "Log in to earn", the user returns to the card or store they were on.
+
 ## Still open
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
@@ -95,6 +107,7 @@ Verified on the device.
 - Coupon codes on brand pages; rejected-claim reasons.
 - Write Review: the comment only goes to analytics and is discarded, yet the toast says it was submitted. Needs a feedback endpoint (or the toast copy changed).
 - Notifications feed API (screen is an empty state until then).
+- CK tracking host for card click-outs (`CK.trackingHost`, prod): until set, card clicks go to BankKaro with user and click id filled; confirm with BankKaro that `p1`/`p2` are reported back to CashKaro so the cashback can be credited.
 - BankKaro data: Scapia Credit Card has fees "1" / "1" while its note says "no joining fee, it is lifetime free"; the app shows ₹1. Fix the record.
 
 **Not tested on device:** login/OTP UI after these changes (would require logging out of the production test account), withdraw forms (₹0 account is gated before them), claim submission.

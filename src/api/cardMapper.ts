@@ -484,14 +484,13 @@ export function mapBkCardToCardModel(
     detail: buildDetail(bk),
     filterMeta: buildFilterMeta(bk, bankDir),
     cashkaroStoreId: bk.ck_store_id != null ? Number(bk.ck_store_id) : undefined,
-    // "Apply Now" routes through CashKaro for attribution: the
-    // `…/visitretailer/app/<ck_store_id>?id=` tracker (the empty id= slot is the
-    // user id, filled at click via withTrackingUser). Falls back to BankKaro's
-    // network_url (placeholders stripped, trimmed) when there's no store id.
+    // "Apply Now" routes through CashKaro for attribution when a tracking host
+    // is configured: `…/visitretailer/app/<ck_store_id>?id=` (id = the CashKaro
+    // user, filled at click). Otherwise BankKaro's network_url, kept RAW: its
+    // `{user_id}` / `{click_id}` placeholders are filled per click by
+    // buildClickOutUrl (src/lib/clickOut.ts). They used to be stripped here,
+    // so card clicks carried no user and no click id.
     applyUrl:
-      cardTrackingUrl(bk.ck_store_id) ??
-      (bk.network_url
-        ? bk.network_url.replace(/\{[^}]*\}/g, '').trim() || undefined
-        : undefined),
+      cardTrackingUrl(bk.ck_store_id) ?? (bk.network_url?.trim() || undefined),
   };
 }

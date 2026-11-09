@@ -46,6 +46,7 @@ import {
 } from '../tokens';
 import { images } from '../assets/images';
 import { haptics } from '../lib/haptics';
+import { useAuth } from '../auth/AuthContext';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 import { HowItWorksSheet } from '../organisms';
@@ -92,6 +93,7 @@ export function GetHelpScreen() {
   // Five help topics — icons use tintable outline glyphs (the desc-* /
   // nav-* icons bake multi-colour art that ignores the tint). Every tile now
   // leads somewhere: four of five used to do nothing on tap.
+  const { status } = useAuth();
   const callSupport = () => Linking.openURL(SUPPORT_PHONE_URL).catch(() => undefined);
   const topics: HelpTopic[] = [
     {
@@ -111,7 +113,12 @@ export function GetHelpScreen() {
     {
       icon: 'help-ticket-outline',
       label: 'Missing Cashback or Rewards',
-      onPress: () => navigation.navigate('MissingCashbackHelp'),
+      // Claims need the account's store visits; a guest would be told
+      // "no visits found", so they log in first.
+      onPress: () =>
+        status === 'unauthenticated'
+          ? navigation.navigate('Onboarding', { login: true })
+          : navigation.navigate('MissingCashbackHelp'),
     },
     // No self-serve content for these yet — connect to support directly.
     { icon: 'help-rupee-outline', label: 'Payment related', onPress: callSupport },

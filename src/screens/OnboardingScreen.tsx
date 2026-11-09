@@ -32,11 +32,13 @@ import {
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Pressable,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import type { LottieViewProps } from 'lottie-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -70,6 +72,7 @@ import { logos } from '../assets/logos';
 import type { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../auth/AuthContext';
 import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
+import { markOnboarded } from '../auth/tokenStore';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
 import { eccentricName, dummyEmail, randomPassword } from '../lib/eccentricName';
@@ -152,6 +155,10 @@ const LOOP_SLIDES: OnboardingSlide[] = [
 
 export function OnboardingScreen() {
   const navigation = useNavigation<Nav>();
+  // `login: true` → opened from a signed-out Earnings / Profile prompt: show
+  // the login sheet straight away, and go back if it's dismissed.
+  const { params } = useRoute<RouteProp<RootStackParamList, 'Onboarding'>>();
+  const loginOnly = !!params?.login;
   const insets = useSafeAreaInsets();
   const { signIn, deviceId } = useAuth();
   const screenW = Dimensions.get('window').width;
@@ -526,6 +533,8 @@ export function OnboardingScreen() {
       });
       await signIn(session);
       analytics.track(isSignup ? Events.SIGN_UP : Events.LOGIN, { method: 'otp' });
+      markOnboarded().catch(() => undefined);
+      signedInRef.current = true;
       loginSheetRef.current?.dismiss();
       // Fresh signups go through the post-OTP name-capture + greeting handoff
       // (NameInput → Greeting → MainTabs); returning logins drop straight into
@@ -534,6 +543,10 @@ export function OnboardingScreen() {
       setTimeout(() => {
         if (isSignup) {
           navigation.navigate('NameInput' as never);
+        } else if (loginOnly && navigation.canGoBack()) {
+          // Opened from "Log in to earn" / a signed-out tab: return to the
+          // card, store or tab they came from, now signed in.
+          navigation.goBack();
         } else {
           navigation.reset({
             index: 0,
@@ -547,11 +560,34 @@ export function OnboardingScreen() {
       );
       setVerifying(false);
     }
-  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation]);
+  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly]);
+
+  // Login is optional. "Get Started" enters the app as a guest (Home, card
+  // discovery and Offers need no account); the phone + OTP sheet is one tap
+  // away via "Log in", and again from Earnings / Profile.
+  const enterAsGuest = useCallback(() => {
+    markOnboarded().catch(() => undefined);
+    analytics.track(Events.ONBOARDING_GUEST_START);
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' as never }] });
+  }, [navigation]);
+
+  // Set just before a successful sign-in dismisses the sheet, so the dismiss
+  // handler doesn't also navigate back.
+  const signedInRef = useRef(false);
+
+  useEffect(() => {
+    if (!loginOnly) return;
+    // Let the screen transition settle before the sheet slides up.
+    const t = setTimeout(() => loginSheetRef.current?.present(), 350);
+    return () => clearTimeout(t);
+  }, [loginOnly]);
 
   // Reset to the phone stage whenever the sheet closes, so the next
   // present() starts clean.
   const handleSheetDismiss = useCallback(() => {
+    if (loginOnly && !signedInRef.current && navigation.canGoBack()) {
+      navigation.goBack();
+    }
     setStage('phone');
     setOtp('');
     setOtpGuid(undefined);
@@ -562,7 +598,7 @@ export function OnboardingScreen() {
     setVerifying(false);
     setRequesting(false);
     stageProgress.value = 0;
-  }, [stageProgress]);
+  }, [stageProgress, loginOnly, navigation]);
 
   const renderLoginBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => {
@@ -749,14 +785,35 @@ export function OnboardingScreen() {
               style={{ width: '80%' }}
             />
 
-            <Button
-              label="Get Started"
-              variant="solid"
-              tone="main"
-              size={52}
-              fullWidth
-              onPress={() => loginSheetRef.current?.present()}
-            />
+            <View style={{ width: '100%', alignItems: 'center', gap: spacing[12] }}>
+              <Button
+                label="Get Started"
+                variant="solid"
+                tone="main"
+                size={52}
+                fullWidth
+                onPress={enterAsGuest}
+              />
+              <Pressable
+                onPress={() => loginSheetRef.current?.present()}
+                accessibilityRole="button"
+                accessibilityLabel="Log in with your CashKaro account"
+                hitSlop={spacing[8]}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  gap: spacing[4],
+                  paddingVertical: spacing[8],
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Text variant="body14Regular" color={colors.text.inverseMuted}>
+                  Already on CashKaro?
+                </Text>
+                <Text variant="body14SemiBold" color={colors.text.inverse}>
+                  Log in
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </SafeAreaView>

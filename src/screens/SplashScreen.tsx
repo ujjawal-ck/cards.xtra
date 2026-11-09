@@ -24,6 +24,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { colors } from '../tokens';
 import { useAuth } from '../auth/AuthContext';
+import { loadOnboarded } from '../auth/tokenStore';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
@@ -39,17 +40,29 @@ export function SplashScreen() {
   const insets = useSafeAreaInsets();
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
+  // Whether onboarding was already seen on this install. Login is optional,
+  // so a returning guest goes straight to Home rather than onboarding again.
+  const onboardedRef = useRef(false);
+  useEffect(() => {
+    loadOnboarded()
+      .then((v) => {
+        onboardedRef.current = v;
+      })
+      .catch(() => undefined);
+  }, []);
 
   // Idempotent — both the Lottie callback AND the safety timeout race
   // to call this; whichever fires first wins, the other becomes a
-  // no-op. A persisted session skips the auth flow and lands on the
-  // tabs; otherwise we continue to Onboarding → Login. (If the session
-  // bootstrap is somehow still pending, default to the auth flow.)
+  // no-op. A persisted session, or a guest who has already seen onboarding,
+  // lands on the tabs; a first launch goes to Onboarding. (If the session
+  // bootstrap is somehow still pending, default to onboarding.)
   const goNext = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
     if (safetyRef.current) clearTimeout(safetyRef.current);
-    navigation.replace(status === 'authenticated' ? 'MainTabs' : 'Onboarding');
+    navigation.replace(
+      status === 'authenticated' || onboardedRef.current ? 'MainTabs' : 'Onboarding'
+    );
   }, [navigation, status]);
 
   useEffect(() => {

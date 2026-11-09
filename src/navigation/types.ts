@@ -37,7 +37,9 @@ export type RootStackParamList = {
   // TEMPORARY: foundation verification screen. Remove this route and
   // set initialRouteName back to 'Login' once foundations are signed off.
   FoundationCheck: undefined;
-  Onboarding: undefined;
+  /** `login: true` opens the phone + OTP sheet straight away (used by the
+   *  signed-out Earnings / Profile prompts). Dismissing it goes back. */
+  Onboarding: { login?: boolean } | undefined;
   Login: undefined;
   Otp: { phone?: string; otpGuid?: string } | undefined;
   /** Post-OTP name capture for a fresh signup ("what should we call you?").

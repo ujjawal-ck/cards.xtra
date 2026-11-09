@@ -101,8 +101,7 @@ import {
 import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
-import { openUrl, withTrackingUser } from '../lib/openUrl';
-import { useProfile } from '../query/useProfile';
+import { useClickOut } from '../lib/useClickOut';
 import { analytics, Events } from '../analytics';
 import { haptics, play } from '../lib/haptics';
 import { Image as ExpoImage } from 'expo-image';
@@ -304,7 +303,9 @@ export function HomeScreen() {
   const { data: cards = [], isLoading, isError, refetch } = useCards();
   // The logged-in user id fills the empty `id=` slot on the CashKaro tracker so
   // the apply click is attributed to this user (same as the offers flow).
-  const { data: profile } = useProfile();
+  // Card "Apply Now" click-outs: login-to-earn for guests, user + click id
+  // on the link, CLICK_OUT logged (src/lib/useClickOut.tsx).
+  const { openClickOut, clickOutSheets } = useClickOut();
 
   // Warm expo-image's cache with every card image the moment the catalog
   // loads. The Home CardTiles use RN <Image> (a separate cache), so without
@@ -1451,9 +1452,9 @@ export function HomeScreen() {
         pincode_prefix: eligibilityDetails ? pincodePrefix(eligibilityDetails.pincode) : undefined,
         redirect: true,
       });
-      openUrl(withTrackingUser(card.applyUrl, profile?.id));
+      openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
     },
-    [eligibilityDetails, profile?.id]
+    [eligibilityDetails, openClickOut]
   );
   // "Continue to Apply" / "Apply Now" on a result sheet → close it + open the
   // card's apply page (details exist by now, so handleApply proceeds).
@@ -1986,6 +1987,9 @@ export function HomeScreen() {
           }}
         />
       </Animated.View>
+
+      {/* Guest "Log in to earn cashback" sheet for Apply Now. */}
+      {clickOutSheets}
 
       <CardDetailSheet
         ref={sheetRef}
