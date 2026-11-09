@@ -480,7 +480,12 @@ export function OnboardingScreen() {
     return `${d.slice(0, 5)}-${d.slice(5)}`;
   }, [loginPhone]);
 
+  // One resend at a time: a double tap sent two SMS and the otp_guid could
+  // end up from the other one, so the code typed failed as "invalid".
+  const resendingRef = useRef(false);
   const handleResend = useCallback(async () => {
+    if (resendingRef.current) return;
+    resendingRef.current = true;
     setOtp('');
     setError(null);
     try {
@@ -496,6 +501,8 @@ export function OnboardingScreen() {
       setError(
         e instanceof ApiError ? e.message : 'Could not resend OTP. Please try again.'
       );
+    } finally {
+      resendingRef.current = false;
     }
   }, [loginPhone, isSignup]);
 

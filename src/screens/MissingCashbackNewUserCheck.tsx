@@ -25,7 +25,7 @@
  * slip); corrected to "Yes, I'm a new user" here.
  */
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { View, Alert } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
@@ -77,7 +77,8 @@ export function MissingCashbackNewUserCheck() {
   const [error, setError] = useState<string | null>(null);
 
   const merchant = draft.storeName;
-  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.stores.myntra31;
+  // Neutral app logo when the store has none (was Myntra's, shown on any store's claim).
+  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.logos.darkSmall;
 
   // B1: PUT the user_type onto the queued claim, then show the result.
   const submitUserType = async (userType: 'New' | 'Existing') => {
@@ -116,12 +117,18 @@ export function MissingCashbackNewUserCheck() {
               {`${merchant} gives different Cashbacks to new and existing users.`}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}>
-              {/* Was a link with no action. */}
+              {/* Explains the choice in place. It used to open the
+                  "Did you shop?" intake, restarting the claim mid-way. */}
               <Button
                 label="Learn More"
                 variant="link"
                 size={36}
-                onPress={() => navigation.navigate('MissingCashbackHelp')}
+                onPress={() =>
+                  Alert.alert(
+                    'New or existing user?',
+                    `${merchant} pays a different cashback rate on a customer's first order. Choose "new user" only if this was your first ever order with ${merchant}; otherwise choose "existing user".`
+                  )
+                }
               />
               <ForwardArrowGlyph size={iconSize[20]} color={colors.text.link} />
             </View>

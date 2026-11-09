@@ -212,6 +212,21 @@ export function NameInputScreen() {
     transform: [{ translateY: 20 * (1 - form.value) }],
   }));
 
+  // The account already exists at this point. Android Back (and any other
+  // "go back") used to return to Onboarding while signed in, showing
+  // "Get Started / Log in" to a logged-in user. Treat it as skipping the name
+  // step instead (the signup already assigned a fallback display name).
+  useEffect(() => {
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      const t = e.data.action.type;
+      if (t !== 'GO_BACK' && t !== 'POP') return;
+      // beforeRemove is preventable at runtime; this Nav type omits it.
+      (e as unknown as { preventDefault: () => void }).preventDefault();
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' as never }] });
+    });
+    return unsub;
+  }, [navigation]);
+
   const handleSubmit = () => {
     if (!isValid) return;
     Keyboard.dismiss();

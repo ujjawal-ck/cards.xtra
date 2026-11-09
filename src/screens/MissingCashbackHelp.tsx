@@ -18,7 +18,7 @@
  *           FeedbackAppreciatedSheet.
  */
 import React, { useRef } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -47,13 +47,22 @@ export function MissingCashbackHelp() {
   const insets = useSafeAreaInsets();
 
   // Drives the Yes branch — empty/error retailer list ⇒ the Oops screen.
-  const { data: retailers, isLoading } = useRetailers();
+  const { data: retailers, isLoading, isError, refetch } = useRetailers();
 
   const feedbackRef = useRef<BottomSheetModalRef>(null);
   const successRef = useRef<BottomSheetModalRef>(null);
 
   const onYes = () => {
     if (isLoading) return; // button shows a spinner; wait for the query
+    // A failed lookup is not "no visits": it used to send people to the Oops
+    // screen saying they hadn't shopped via CashKaro in 30 days.
+    if (isError) {
+      Alert.alert('Couldn’t check your store visits', 'Check your connection and try again.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Try again', onPress: () => refetch() },
+      ]);
+      return;
+    }
     const hasVisits = (retailers?.length ?? 0) > 0;
     analytics.track(Events.MISSING_CASHBACK_STEP, {
       step: 'did_you_shop',

@@ -242,7 +242,10 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           keyboardType="number-pad"
-          maxLength={length}
+          // Room for pasted text like "123 456" or "OTP: 482913"; handleChange
+          // strips non-digits and cuts to `length`. A maxLength of `length`
+          // truncated the raw paste first, losing digits.
+          maxLength={length + 24}
           textContentType="oneTimeCode"
           autoComplete="one-time-code"
           autoFocus={autoFocus}

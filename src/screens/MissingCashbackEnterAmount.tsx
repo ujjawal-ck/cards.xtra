@@ -12,7 +12,7 @@
  * Imports: Header (back-only), BrandLogoTile, Input, Button (atoms);
  * useMissingCashbackActions, flow helpers.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
@@ -44,13 +44,19 @@ export function MissingCashbackEnterAmount() {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Synchronous guard: `busy` is state, so a fast double tap could POST the
+  // claim twice before it re-renders.
+  const inFlight = useRef(false);
 
-  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.stores.myntra31;
+  // Neutral app logo when the store has none (was Myntra's, shown on any store's claim).
+  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.logos.darkSmall;
 
   const onContinue = async () => {
-    const value = amount.trim();
-    if (!value || !(Number(value) > 0)) {
-      setError('Please enter the amount you paid.');
+    if (inFlight.current) return;
+    // Accept "1,299" / "1 299"; reject "1e5", "12.345" and other non-amounts.
+    const value = amount.replace(/[,\s]/g, '');
+    if (!/^\d+(\.\d{1,2})?$/.test(value) || !(Number(value) > 0)) {
+      setError('Please enter the amount you paid, e.g. 1299 or 1299.50.');
       return;
     }
     if (!draft.exitDate || !draft.orderId) {
@@ -58,6 +64,7 @@ export function MissingCashbackEnterAmount() {
       return;
     }
     setError(null);
+    inFlight.current = true;
     setBusy(true);
     try {
       const res = await submit(draft.storeId, draft.exitDate, draft.orderId, value);
@@ -68,6 +75,7 @@ export function MissingCashbackEnterAmount() {
     } catch (e) {
       setError((e as Error)?.message || 'Could not submit your claim. Please try again.');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };

@@ -194,13 +194,19 @@ export function WithdrawScreen() {
   // one type has a balance. Rule:
   //   only cashback  → Cashback
   //   only rewards   → Rewards
-  //   both           → Cashback + Reward (combined; gift-card-only)
+  //   both           → Cashback (UPI / gift card) AND Cashback + Reward
+  //                      (combined; gift-card-only). Showing only the combined
+  //                      section hid UPI from anyone with even ₹5 of rewards.
   // Until earnings resolve, default to Cashback (amounts read 0).
   const hasCashback = amountNum('cashback') > 0;
   const hasRewards = amountNum('rewards') > 0;
-  const visibleBucket: WithdrawBucket =
-    hasCashback && hasRewards ? 'combined' : hasRewards ? 'rewards' : 'cashback';
-  const sections = SECTION_META.filter((s) => s.bucket === visibleBucket);
+  const visibleBuckets: WithdrawBucket[] =
+    hasCashback && hasRewards
+      ? ['cashback', 'combined']
+      : hasRewards
+      ? ['rewards']
+      : ['cashback'];
+  const sections = SECTION_META.filter((s) => visibleBuckets.includes(s.bucket));
 
   // Rows per bucket, with live navigation wired in.
   const rowsFor = (bucket: WithdrawBucket): MethodRowItem[] => {

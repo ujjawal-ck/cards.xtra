@@ -194,10 +194,16 @@ export function RootNavigator() {
       <Stack.Screen
         name="MissingCashbackTicketSuccess"
         component={MissingCashbackTicketSuccess}
+        // Claim already submitted: no iOS swipe back into the filled form
+        // (Android Back is handled by useExitToClaims).
+        options={{ gestureEnabled: false }}
       />
       <Stack.Screen
         name="MissingCashbackResult"
         component={MissingCashbackResult}
+        // Claim already submitted: no iOS swipe back into the filled form
+        // (Android Back is handled by useExitToClaims).
+        options={{ gestureEnabled: false }}
       />
       <Stack.Screen
         name="MissingCashbackTicketStatusReview"

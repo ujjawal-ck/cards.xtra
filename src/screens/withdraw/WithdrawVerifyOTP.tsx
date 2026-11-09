@@ -67,16 +67,15 @@ export function WithdrawVerifyOTP() {
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState<OtpError>('none');
 
-  // Resend countdown — paused while busy / once expired.
+  // Resend countdown — paused while busy. Reaching 0 only re-enables
+  // "Resend"; it does NOT expire the code. It used to mark the OTP expired
+  // after 30 s and block Verify, so a user who took 35 s to read the SMS
+  // couldn't submit a code the server would still accept.
   useEffect(() => {
-    if (busy || error === 'expired') return;
-    if (seconds <= 0) {
-      setError('expired');
-      return;
-    }
+    if (busy || seconds <= 0) return;
     const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(t);
-  }, [seconds, busy, error]);
+  }, [seconds, busy]);
 
   // Synchronous re-entry guard. `busy` is React state, so the auto-submit
   // effect and a Verify tap landing in the same frame could both pass the
@@ -108,7 +107,7 @@ export function WithdrawVerifyOTP() {
   };
 
   const verifyAndPay = async () => {
-    if (inFlight.current || busy || error === 'expired' || otp.length !== OTP_LENGTH) return;
+    if (inFlight.current || busy || otp.length !== OTP_LENGTH) return;
     if (!accessToken || !otpGuid) {
       Alert.alert('Session expired', 'Please request a new OTP.');
       return;
@@ -186,13 +185,13 @@ export function WithdrawVerifyOTP() {
 
   // Auto-submit once the final digit lands.
   useEffect(() => {
-    if (otp.length === OTP_LENGTH && !busy && error !== 'expired') verifyAndPay();
+    if (otp.length === OTP_LENGTH && !busy) verifyAndPay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp]);
 
   const handleChange = (v: string) => {
     setOtp(v);
-    if (error === 'invalid') setError('none');
+    if (error !== 'none') setError('none');
   };
 
   const handleResend = async () => {
@@ -219,7 +218,7 @@ export function WithdrawVerifyOTP() {
       : error === 'expired'
       ? 'OTP is expired'
       : undefined; // no hint below the boxes unless there's an error (was placeholder "Help text")
-  const otpResend = busy ? 'hidden' : error === 'expired' ? 'ready' : 'timer';
+  const otpResend = busy ? 'hidden' : seconds <= 0 ? 'ready' : 'timer';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -264,10 +263,12 @@ export function WithdrawVerifyOTP() {
                   onPress={() => navigation.goBack()}
                   hitSlop={spacing[8]}
                   accessibilityRole="button"
-                  accessibilityLabel="Edit mobile"
+                  // Goes back to the UPI / Amazon / Flipkart form; the OTP
+                  // number itself can't be changed here.
+                  accessibilityLabel="Edit details"
                 >
                   <Text variant="caption10SemiBold" color={colors.text.link}>
-                    Edit mobile
+                    Edit details
                   </Text>
                 </Pressable>
               </View>

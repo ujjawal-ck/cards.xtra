@@ -14,6 +14,7 @@
  * anywhere in the screen tree).
  */
 import React, { useRef, useState } from 'react';
+import { Alert } from 'react-native';
 
 import {
   CashbackNotConfirmedSheet,
@@ -35,28 +36,54 @@ export function useWithdrawGate({
   onProceed: () => void;
   onBrowseDeals: () => void;
 }) {
-  const { data: earnings } = useEarnings();
-  const { data: paymentInfo } = usePaymentInfo();
+  const earningsQ = useEarnings();
+  const paymentQ = usePaymentInfo();
+  const earnings = earningsQ.data;
+  const paymentInfo = paymentQ.data;
   const notConfirmedRef = useRef<CashbackNotConfirmedSheetRef>(null);
   const processingRef = useRef<PaymentProcessingSheetRef>(null);
   const [belowMinimum, setBelowMinimum] = useState<{ balance: string; minimum: string } | null>(null);
 
-  const startWithdraw = () => {
+  const startWithdraw = async () => {
+    // Not loaded yet (tapped right after opening) or failed to load: fetch
+    // first. Treating "unknown" as ₹0 told people with a real balance that
+    // their cashback wasn't confirmed.
+    let e = earnings;
+    let p = paymentInfo;
+    if (!e || !p) {
+      try {
+        const [er, pr] = await Promise.all([
+          e ? Promise.resolve({ data: e }) : earningsQ.refetch(),
+          p ? Promise.resolve({ data: p }) : paymentQ.refetch(),
+        ]);
+        e = er.data;
+        p = pr.data;
+      } catch {
+        // handled below
+      }
+    }
+    if (!e || !p) {
+      Alert.alert(
+        'Couldn’t load your balance',
+        'Check your connection and try again.'
+      );
+      return;
+    }
     // Withdrawable balance = confirmed cashback + rewards (combined). Rewards
     // have no pending split and are withdrawable as gift cards, so a user
     // with ₹0 confirmed cashback but a positive rewards balance can still
     // withdraw.
-    const balance = earnings?.combinedNum ?? 0;
+    const balance = e.combinedNum ?? 0;
     const hasBalance = balance > 0;
     // The payout API rejects requests under the threshold (Postman: 400 code
     // 5003 "below ₹250"); stop here instead of failing after UPI + OTP.
-    const minimum = paymentInfo?.paymentThreshold ?? 250;
+    const minimum = p?.paymentThreshold ?? 250;
     analytics.track(Events.WITHDRAW_START, {
       has_balance: hasBalance,
-      confirmed_balance: earnings?.combinedNum ?? 0,
-      payment_in_process: !!paymentInfo?.paymentInProcess,
+      confirmed_balance: e.combinedNum ?? 0,
+      payment_in_process: !!p?.paymentInProcess,
     });
-    if (paymentInfo?.paymentInProcess) {
+    if (p?.paymentInProcess) {
       // Only one payout may be in flight at a time.
       processingRef.current?.present();
     } else if (!hasBalance) {

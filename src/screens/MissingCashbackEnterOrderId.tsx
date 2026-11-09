@@ -12,7 +12,7 @@
  * Imports: Header (back-only), BrandLogoTile, Input, Button (atoms);
  * useExitClickDates (meta), useMissingCashbackActions, flow helpers.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
@@ -47,16 +47,23 @@ export function MissingCashbackEnterOrderId() {
   const [formatError, setFormatError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Synchronous guard against a double tap submitting twice (group D posts here).
+  const inFlight = useRef(false);
+  // Pasted IDs often carry a trailing space or line break, which failed the
+  // format check and was sent as-is.
+  const cleanId = (v: string) => v.replace(/[\r\n\t]/g, '').trim();
 
-  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.stores.myntra31;
+  // Neutral app logo when the store has none (was Myntra's, shown on any store's claim).
+  const logoSource = draft.storeLogoUri ? { uri: draft.storeLogoUri } : images.logos.darkSmall;
   const hint = meta?.orderid_hint_message || (meta?.sample_orderid ? `Order ID looks like ${meta.sample_orderid}` : ' ');
 
   const onChange = (v: string) => {
     setOrderId(v);
     setError(null);
-    if (v && meta?.orderid_format && Object.keys(meta.orderid_format).length > 0) {
+    const id = cleanId(v);
+    if (id && meta?.orderid_format && Object.keys(meta.orderid_format).length > 0) {
       setFormatError(
-        isOrderIdValid(v, meta.orderid_format)
+        isOrderIdValid(id, meta.orderid_format)
           ? null
           : `Enter a correct Order ID — it should look like ${meta.sample_orderid || 'the sample format'}.`,
       );
@@ -66,11 +73,13 @@ export function MissingCashbackEnterOrderId() {
   };
 
   const onContinue = async () => {
-    if (!orderId.trim()) {
+    if (inFlight.current) return;
+    const id = cleanId(orderId);
+    if (!id) {
       setError('Please enter your Order ID.');
       return;
     }
-    if (meta?.orderid_format && !isOrderIdValid(orderId, meta.orderid_format)) {
+    if (meta?.orderid_format && !isOrderIdValid(id, meta.orderid_format)) {
       setFormatError(`Enter a correct Order ID — it should look like ${meta.sample_orderid || 'the sample format'}.`);
       return;
     }
@@ -79,23 +88,25 @@ export function MissingCashbackEnterOrderId() {
       return;
     }
     setError(null);
+    inFlight.current = true;
     setBusy(true);
     try {
-      await validate(draft.storeId, draft.exitDate, orderId);
+      await validate(draft.storeId, draft.exitDate, id);
       analytics.track(Events.MISSING_CASHBACK_STEP, { step: 'order_id', group: draft.group });
       // Group D never asks for an amount — submit "0" now and branch.
       if (!groupRequiresOrderAmount(draft.group)) {
-        const res = await submit(draft.storeId, draft.exitDate, orderId, '0');
+        const res = await submit(draft.storeId, draft.exitDate, id, '0');
         analytics.track(Events.MISSING_CASHBACK_SUBMIT, { group: draft.group, has_amount: false });
-        const draft2 = { ...draft, orderId, orderAmount: '0', queueId: res?.data?.id ? String(res.data.id) : draft.queueId };
+        const draft2 = { ...draft, orderId: id, orderAmount: '0', queueId: res?.data?.id ? String(res.data.id) : draft.queueId };
         goToSubmitOutcome(navigation, decideSubmitOutcome(res, draft.group), draft2);
       } else {
-        navigation.navigate('MissingCashbackEnterAmount', { draft: { ...draft, orderId } });
+        navigation.navigate('MissingCashbackEnterAmount', { draft: { ...draft, orderId: id } });
       }
     } catch (e) {
       const msg = (e as Error)?.message || 'Could not validate your Order ID. Please check and try again.';
       setError(msg);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };

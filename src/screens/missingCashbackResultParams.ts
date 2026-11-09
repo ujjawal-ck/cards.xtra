@@ -33,12 +33,15 @@ export function resultParamsFromOutcome(outcome: SubmitOutcome): ResultParams {
  *   tracked / success → the result screen
  * `draft` must already carry the queueId from the submit response.
  */
+// `replace`, not `navigate`: the claim is already submitted, so the form that
+// submitted it leaves the stack. With navigate, Back returned to the filled
+// form and Submit posted the claim a second time.
 export function goToSubmitOutcome(navigation: RootNav, outcome: SubmitOutcome, draft: McClaimDraft): void {
   if (outcome.kind === 'collect') {
-    if (outcome.group === 'B1') navigation.navigate('MissingCashbackNewUserCheck', { draft });
-    else if (outcome.group === 'C1') navigation.navigate('MissingCashbackCategorySelect', { draft });
-    else navigation.navigate('MissingCashbackInvoiceUpload', { draft });
+    if (outcome.group === 'B1') navigation.replace('MissingCashbackNewUserCheck', { draft });
+    else if (outcome.group === 'C1') navigation.replace('MissingCashbackCategorySelect', { draft });
+    else navigation.replace('MissingCashbackInvoiceUpload', { draft });
     return;
   }
-  navigation.navigate('MissingCashbackResult', resultParamsFromOutcome(outcome));
+  navigation.replace('MissingCashbackResult', resultParamsFromOutcome(outcome));
 }
