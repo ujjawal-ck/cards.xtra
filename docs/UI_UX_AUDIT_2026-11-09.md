@@ -113,12 +113,12 @@ Type-checked; static change, no layout impact.
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
 
-**Needs a product decision**
-1. Primary CTA colour: Figma uses Cobalt for Get OTP / Apply Filter / tile Apply Now; CLAUDE.md says Saffron is primary. Pick one rule.
-2. Android card detail opens full screen; CLAUDE.md's non-negotiable is a ~55–60 % sheet that expands on scroll.
-3. OTP length (app 6, Figma 4) — backend to confirm.
-4. Home masthead is ~40 dp taller than Figma (status-bar height counted twice), pushing the first card's Apply below the fold. Fixing it reframes the hero video; needs design sign-off.
-5. Static content: Review Us reviews (2023) — the row is hidden. (Notifications now show an empty state.)
+**Product decisions (settled 9 Nov 2026, see `decision.md` D17–D20)**
+1. Solid buttons are Saffron everywhere; Cobalt only for links, outline buttons, selected chips and the partner Shop & Earn CTA. Done in `Button`.
+2. Android card detail stays full screen.
+3. OTP stays 6 digits; Figma to be updated.
+4. Home masthead height stays as is.
+5. Static content: Review Us reviews (2023) — the row is hidden.
 
 **Needs backend**
 - Offers on production (probed read-only against ckminapps.com with the Postman "ck-miniapp-apis" requests): the API is up and authenticates; `/offers/categories` returns 15 top-level categories. But no stores are mapped to the mini-app key: all 95 valid category paths return `total_records: 0`, the `miniapp` parent the app was built on returns 400 code 10003 "Invalid Category", and every store page (amazon, flipkart, myntra, ajio, nykaa) returns 400 code 10001 "Invalid Offer". CashKaro needs to map stores to this key (ideally under a `miniapp` parent). The staging host (ckapistaging.lmssecure.com) no longer resolves, so it can't stand in.

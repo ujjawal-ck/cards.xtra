@@ -31,7 +31,8 @@
  *
  * Colour → primary Button tone:
  *   'main'   → tone='main'   (saffron primary)
- *   'second' → tone='second' (cobalt primary)
+ *   'second' → tone='second' (solid stays saffron — brand rule; outline is the
+ *                              cobalt-grey secondary style)
  *   'mixed'  → tone='main'   (saffron primary alongside the outline secondary,
  *                              whose label colour is the cobalt-700 from
  *                              the Button atom's outline palette)

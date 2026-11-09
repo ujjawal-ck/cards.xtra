@@ -34,7 +34,7 @@
  * Hex → token:
  *   #262626  → colors.text.primary
  *   #5c5c5c  → colors.text.secondary
- *   #0741ef  → colors.action.accent.default (via Button tone='second')
+ *   Edit button fill → colors.action.primary.default (solid buttons are saffron)
  *   #ff6d1d  → colors.action.primary.default
  *   #f5f7f9  → colors.surface.sunken
  *   white    → colors.text.inverse

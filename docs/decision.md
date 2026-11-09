@@ -6,6 +6,29 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D20. Home masthead keeps its current height
+2026-11-09 · no code change
+
+The Home header is ~40 dp taller than Figma (status-bar height counted twice), which pushes the first card's Apply below the fold. Shortening it re-crops the hero video, whose copy is baked in, so it stays as is.
+
+## D19. OTP stays 6 digits
+2026-11-09 · no code change
+
+CashKaro production sends 6-digit codes, so the login and withdraw OTP inputs keep 6 boxes. Figma (4 boxes) should be updated to match.
+
+## D18. Card detail stays full screen on Android
+2026-11-09 · no code change
+
+Android keeps the full-screen card detail (it replaced the sheet after the sheet's Android issues, see `android-card-interaction-issues.md`). iOS keeps the 55–60 % sheet that expands on scroll. This overrides the CLAUDE.md requirement for Android.
+
+## D17. Saffron is the only solid button colour
+2026-11-09 · see git log for “Saffron”
+
+Every solid (filled) button is Saffron `action.primary`, including the places Figma draws Cobalt (Get OTP, Apply Filter, card tile Apply Now, missing-cashback steps, logout and login sheets). Cobalt stays for links, outline/secondary buttons, selected chips, and the partner “Shop & Earn upto X%” CTA, which CLAUDE.md specifies as blue.
+
+- `Button` (`src/atoms/Button.tsx`): `tone="main"` and `tone="second"` both render Saffron when solid; `tone="accent"` is the opt-in Cobalt fill. Outline `tone="second"` keeps the cobalt-grey secondary style.
+- Figma should be updated so design and build agree.
+
 ## D16. App icon and native splash come from the brand logo
 2026-11-09 · `fd2990c`
 
@@ -95,9 +118,6 @@ The screen still renders sample payouts; `/payment/history` exists but isn't map
 
 | Question | Options | Notes |
 |---|---|---|
-| Primary button colour | Cobalt (Figma) / Saffron (CLAUDE.md rule) | Figma uses cobalt for Get OTP, Apply Filter, tile Apply Now. |
-| Card detail on Android | Full screen (today) / ~55–60 % sheet that expands on scroll (original spec) | |
-| OTP length | 6 (backend today) / 4 (Figma) | Backend decides; app follows. |
 | APK size | Keep 97 MB / slim to ~40–50 MB | arm64-only or app bundle, R8 shrinking, drop Rive, keep dev launcher out of release, WebP images. |
 | Card click-out tracking | CashKaro tracking host / BankKaro direct with postback | Needs CK mini-app team and BankKaro. |
 | Signup IP field | Keep `api.ipify.org` lookup / backend reads the request IP | See `auth-and-secrets.md`. |

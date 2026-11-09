@@ -29,7 +29,7 @@
  *   tnc heading      → body14SemiBold / text.primary
  *   tnc body         → body14Regular / text.secondary
  *   footer bar       → surface.default + elevation.light.up
- *   action buttons   → Button tone='second' (cobalt) — outline + solid
+ *   action buttons   → Button tone='second' (solid renders saffron, outline cobalt-grey) — outline + solid
  */
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';

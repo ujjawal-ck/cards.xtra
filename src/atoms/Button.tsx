@@ -3,7 +3,12 @@
  *
  * Props
  *   variant : 'solid' | 'outline' | 'subtle' | 'destructive' | 'ghost' | 'link'   default 'solid'
- *   tone    : 'main' | 'second'                                                    default 'main'  (only affects solid)
+ *   tone    : 'main' | 'second' | 'accent'                                         default 'main'
+ *             Solid buttons are ALWAYS Saffron (brand rule, CLAUDE.md; decided
+ *             9 Nov 2026) for 'main' and 'second'. Only tone='accent' gives a
+ *             solid Cobalt fill — reserved for the partner "Shop & Earn upto X%"
+ *             CTA. On outline buttons 'main' = saffron outline, 'second' =
+ *             cobalt-grey secondary outline.
  *   size    : 36 | 44 | 52                                                         default 44
  *   icon    : 'none' | 'leading' | 'trailing' | 'only'                             default 'none'
  *   iconName: IconName from src/assets/icons (required when icon != 'none')
@@ -13,7 +18,7 @@
  * Token mapping (every Figma hex → semantic token, sourced via grep on
  * colors.ts so no hand-coded hex leaks into the component):
  *   #ff6d1d  → colors.action.primary.default      (solid + main fill)
- *   #0741ef  → colors.action.accent.default       (solid + second fill)
+ *   #0741ef  → colors.action.accent.default       (solid + accent fill)
  *   #d41000  → colors.action.destructive.default  (destructive fill)
  *   #fff     → colors.surface.default             (outline fill)
  *                  / colors.action.{primary|accent|destructive}.text
@@ -57,7 +62,7 @@ export type ButtonVariant =
   | 'destructive'
   | 'ghost'
   | 'link';
-export type ButtonTone = 'main' | 'second';
+export type ButtonTone = 'main' | 'second' | 'accent';
 export type ButtonSize = 36 | 44 | 52;
 export type ButtonIcon = 'none' | 'leading' | 'trailing' | 'only';
 
@@ -147,7 +152,9 @@ type Palette = {
 function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
   switch (variant) {
     case 'solid':
-      return tone === 'second'
+      // Saffron is the one primary-action colour. Cobalt solid is opt-in via
+      // tone='accent' (partner Shop & Earn CTA only).
+      return tone === 'accent'
         ? {
             bg: colors.action.accent.default,
             label: colors.action.accent.text,

@@ -123,7 +123,7 @@ export function PartnerCard({ partner, onPress, style }: PartnerCardProps) {
       <Button
         label={`Shop & Earn upto ${partner.rate}`}
         variant="solid"
-        tone="second"
+        tone="accent"
         size={36}
         fullWidth
         onPress={onPress}
