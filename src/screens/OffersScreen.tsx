@@ -411,7 +411,7 @@ export function OffersScreen() {
               results happen there, not inline. */}
           <SearchBar
             state="default"
-            placeholder="Search stores"
+            placeholder="Search stores & categories"
             // Only cycle store names when stores actually loaded — otherwise
             // it suggested "Search for Flipkart" on an empty Offers page.
             placeholders={stores.length > 0 ? SEARCH_TICKER : undefined}
@@ -472,9 +472,13 @@ export function OffersScreen() {
               ))}
             </StaggeredEntrance>
           ) : (
+            // A way forward instead of a dead end: the cards on Home are
+            // live even while this category has no stores.
             <ScreenState
               title="No offers here yet"
-              body="New stores are added often. Pull down to refresh."
+              body="New stores are added often. Pull down to refresh, or find a card that earns you cashback."
+              actionLabel="Explore cards"
+              onAction={() => navigation.navigate('MainTabs', { screen: 'Home' })}
             />
           )}
         </View>
@@ -493,7 +497,12 @@ export function OffersScreen() {
           setSearchOpen(false);
           setSearchQuery('');
         }}
-        placeholder="Search categories & stores"
+        placeholder="Search stores & categories"
+        noResultsHint={
+          stores.length > 0
+            ? 'Try a store like Amazon or Myntra, or a category like Fashion.'
+            : 'Try a category like Fashion or Travel.'
+        }
         sections={searchSections}
         recentSearches={searchQuickChips}
         onRecentPress={handleSearchChipPress}

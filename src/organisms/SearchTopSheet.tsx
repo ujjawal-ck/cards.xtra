@@ -88,6 +88,9 @@ export interface SearchTopSheetProps {
   recentSearches?: SearchTopSheetRecent[];
   value?: string;
   placeholder?: string;
+  /** Hint under "No results for …". Defaults to Home's card/bank wording;
+   *  Offers passes store/category wording (it showed the bank hint). */
+  noResultsHint?: string;
   onClose: () => void;
   onChangeText?: (text: string) => void;
   onClear?: () => void;
@@ -112,6 +115,7 @@ export function SearchTopSheet({
   sections = [],
   recentSearches = [],
   value,
+  noResultsHint = 'Try a bank name like HDFC or SBI, or a card name.',
   placeholder,
   onClose,
   onChangeText,
@@ -156,8 +160,16 @@ export function SearchTopSheet({
   }, []);
 
   useEffect(() => {
+    let raf: number | undefined;
     if (visible) {
-      setMounted(true);
+      // Android: a Modal's window copies the screen's status-bar style once,
+      // when it is created. The dark <StatusBar> (rendered outside the Modal,
+      // below) applies on the next tick; mounting the Modal two frames later
+      // lets it land first, so the open sheet doesn't get white icons on
+      // white (the clock/battery vanished on Home and Offers).
+      raf = requestAnimationFrame(() => {
+        raf = requestAnimationFrame(() => setMounted(true));
+      });
       translateY.value = withTiming(0, {
         duration: SLIDE_DURATION_MS,
         easing: Easing.out(Easing.cubic),
@@ -183,6 +195,9 @@ export function SearchTopSheet({
         easing: Easing.in(Easing.cubic),
       });
     }
+    return () => {
+      if (raf !== undefined) cancelAnimationFrame(raf);
+    };
   }, [visible, mounted, screenH, translateY, backdropAlpha]);
 
   const sheetAnim = useAnimatedStyle(() => ({
@@ -215,9 +230,18 @@ export function SearchTopSheet({
       spacing[8] // breathing room above the keyboard
   );
 
-  if (!mounted) return null;
+  // Dark status-bar icons while the white panel is open (Home's are light
+  // for its blue hero, Offers' for its saffron header). Rendered OUTSIDE the
+  // Modal and before it mounts, so the style is already dark when Android
+  // creates the Modal window (which copies it once, at creation). Only
+  // while visible, so closing restores the screen's own style.
+  const statusBar = visible ? <StatusBar style="dark" /> : null;
+
+  if (!mounted) return statusBar;
 
   return (
+    <>
+    {statusBar}
     <Modal
       visible
       transparent
@@ -225,10 +249,6 @@ export function SearchTopSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {/* Dark status-bar icons while the white panel is open (Home's are
-          light for its blue hero, so the clock/battery vanished). Only while
-          visible, so closing restores the screen's own style. */}
-      {visible ? <StatusBar style="dark" /> : null}
       {/* Dim backdrop — tap to dismiss */}
       <Pressable
         accessibilityLabel="Close search"
@@ -321,7 +341,7 @@ export function SearchTopSheet({
                       No results for “{value.trim()}”
                     </Text>
                     <Text variant="body12Regular" color={colors.text.secondary}>
-                      Try a bank name like HDFC or SBI, or a card name.
+                      {noResultsHint}
                     </Text>
                   </View>
                   <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
@@ -362,6 +382,7 @@ export function SearchTopSheet({
         </View>
       </Animated.View>
     </Modal>
+    </>
   );
 }
 

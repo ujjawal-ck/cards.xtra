@@ -66,6 +66,17 @@ Verified on the device unless noted.
 
 **Checked, no issue:** Earnings Cashback / Rewards / Pending / Paid sheets (Figma copy), Back from card detail (tile and search entry), search result tap with keyboard up, search status bar.
 
+## Offers pass (same day)
+
+Verified on the device.
+
+- **Search status bar (Offers and Home):** with search open, the time and battery were white on the white sheet. Cause: Android creates the search Modal's window with a copy of the screen's status-bar style, and the sheet's own "dark" setting arrived after that copy. The dark style is now set before the Modal mounts.
+- **Search copy:** the Offers no-results hint said "Try a bank name like HDFC or SBI, or a card name" (Home's wording). It now suggests stores and categories. The bar and the open sheet both say "Search stores & categories" (they differed).
+- **Empty Offers:** "No offers here yet" now has a way forward, an "Explore cards" button to Home, instead of a dead end.
+- **Checked, no issue:** Back from Offers goes to Home; category switching re-tints the header; the promo stays away while there are no stores.
+
+**Testing note:** a third-party cleaner app on the test phone (`com.phoneclean.sentrypro`) keeps bringing up Android's "Display over other apps" settings page over the app. Cards.xtra never requests that permission.
+
 ## Still open
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
