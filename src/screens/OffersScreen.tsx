@@ -58,7 +58,8 @@ import {
 import type { SearchTopSheetRecent } from '../organisms';
 import { images } from '../assets/images';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
-import { colors, spacing, sizing } from '../tokens';
+import { useFloatingNavClearance } from '../navigation/floatingNav';
+import { colors, spacing } from '../tokens';
 import { analytics, Events } from '../analytics';
 
 // Once-per-launch gate for the welcome promo banner. A module-level flag
@@ -85,6 +86,8 @@ import type { RootStackParamList } from '../navigation/types';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'OffersBrandAmazon'>;
 
 export function OffersScreen() {
+  // Scroll padding that clears the floating tab bar (+ Android nav bar).
+  const navClearance = useFloatingNavClearance();
   const navigation = useNavigation<Nav>();
 
   // Top safe-area inset — the saffron buffer that keeps the pinned
@@ -348,7 +351,7 @@ export function OffersScreen() {
         contentContainerStyle={{
           // Reserve room for the floating BottomNav so the last
           // tile row never hides beneath it.
-          paddingBottom: sizing.bottomNavHeight + spacing[48],
+          paddingBottom: navClearance,
         }}
       >
         {/* [0] Search row — tinted with the active category's accent (the

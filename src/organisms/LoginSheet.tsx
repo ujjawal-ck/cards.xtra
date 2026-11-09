@@ -43,6 +43,7 @@ import { TermsAndConditions } from '../molecules';
 import { BottomSheetHeader } from './BottomSheetHeader';
 import { logos } from '../assets/logos';
 import { colors, spacing, radius } from '../tokens';
+import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 // Logo dimensions — Figma fixed 124.972 × 98.503; rounded to clean px.
 const LOGO_W = 125;
@@ -198,9 +199,9 @@ export const LoginSheet = forwardRef<BottomSheetModalRef, LoginSheetProps>(
               keyboardType="phone-pad"
               value={phone}
               onChangeText={(t) =>
-                setPhone(t.replace(/\D/g, '').slice(0, 10))
+                setPhone(normalizeIndianMobile(t))
               }
-              maxLength={10}
+              maxLength={PHONE_INPUT_MAX_LENGTH}
             />
           </View>
 

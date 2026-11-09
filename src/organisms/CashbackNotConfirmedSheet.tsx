@@ -62,6 +62,9 @@ export const CashbackNotConfirmedSheet = forwardRef<
   BottomSheetModalRef,
   CashbackNotConfirmedSheetProps
 >(function CashbackNotConfirmedSheet({ pendingAmount = '₹0.0' }, ref) {
+  // With nothing pending either, "You have ₹0 pending… once confirmed, they
+  // can be withdrawn" made no sense — show a plain "nothing yet" message.
+  const hasPending = Number(pendingAmount.replace(/[^\d.]/g, '')) > 0;
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef);
@@ -129,14 +132,16 @@ export const CashbackNotConfirmedSheet = forwardRef<
                 color={colors.text.primary}
                 align="center"
               >
-                Cashback Not Confirmed
+                {hasPending ? 'Cashback Not Confirmed' : 'No Cashback Yet'}
               </Text>
               <Text
                 variant="body16Regular"
                 color={colors.text.secondary}
                 align="center"
               >
-                You have {pendingAmount} pending in your Cards.xtra account.
+                {hasPending
+                  ? `You have ${pendingAmount} pending in your Cards.xtra account.`
+                  : "You don't have any cashback to withdraw yet."}
               </Text>
             </View>
             <Text
@@ -144,8 +149,9 @@ export const CashbackNotConfirmedSheet = forwardRef<
               color={colors.text.secondary}
               align="center"
             >
-              Once confirmed, they can be withdrawn. Until then, grab deals &
-              earn more!
+              {hasPending
+                ? 'Once confirmed, they can be withdrawn. Until then, grab deals & earn more!'
+                : 'Shop through Cards.xtra to start earning cashback.'}
             </Text>
           </View>
         </View>

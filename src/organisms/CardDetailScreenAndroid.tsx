@@ -124,6 +124,9 @@ const DEFAULT_ORIGIN_Y = SCREEN_H * 0.42;
 // when (after the open zoom has settled).
 const NUDGE_PEEK = SCREEN_W * 0.14;
 const NUDGE_DELAY_MS = 650;
+// When the nudge eases back, and when the hard reset onto the card runs.
+const NUDGE_RETURN_MS = 280;
+const NUDGE_SETTLE_MS = 450;
 
 // Gesture thresholds for the sheet's content pan: wait for clear VERTICAL
 // intent before treating a drag as dismiss, and FAIL on horizontal movement so
@@ -565,8 +568,15 @@ function AndroidPagerBody({
   const lastReportedIndex = useRef(indexOf(initialCardId));
   const handleMomentumEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const i = Math.round(e.nativeEvent.contentOffset.x / PAGE_W);
+      const x = e.nativeEvent.contentOffset.x;
+      const i = Math.round(x / PAGE_W);
       const clamped = Math.max(0, Math.min(cards.length - 1, i));
+      // Never rest BETWEEN two cards. A programmatic scroll (the peek nudge
+      // below) doesn't snap, and an off-grid pager let the next vertical drag
+      // snap to the neighbour mid-scroll, painting two cards' content at once.
+      if (Math.abs(x - PAGE_W * clamped) > 1) {
+        listRef.current?.scrollToOffset({ offset: PAGE_W * clamped, animated: true });
+      }
       setSettledIndex(clamped);
       if (clamped !== lastReportedIndex.current) {
         lastReportedIndex.current = clamped;
@@ -594,7 +604,18 @@ function AndroidPagerBody({
   // One-time peek NUDGE — after the open zoom settles, flick the pager a little
   // to reveal the next card, then ease back. Teaches the swipe gesture. Runs
   // once, only if the user hasn't already swiped and there's a next card.
+  //
+  // On a real device the animated scroll BACK could be cut short, leaving the
+  // pager parked ~50px into the next card (title clipped on the left, next
+  // card peeking on the right). So: cancel the nudge the moment the user
+  // drags, and after it finishes hard-reset the pager exactly onto the card.
   const nudgedRef = useRef(false);
+  const userDraggedRef = useRef(false);
+  const nudgeTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const clearNudge = useCallback(() => {
+    nudgeTimers.current.forEach(clearTimeout);
+    nudgeTimers.current = [];
+  }, []);
   useEffect(() => {
     if (nudgedRef.current) return;
     if (cards.length <= 1) return;
@@ -602,20 +623,37 @@ function AndroidPagerBody({
     if (initial >= cards.length - 1 && initial > 0) return; // last card, no next
     const base = PAGE_W * initial;
     const peekDir = initial < cards.length - 1 ? 1 : -1;
-    const t = setTimeout(() => {
-      if (nudgedRef.current) return;
+    const later = (ms: number, fn: () => void) =>
+      nudgeTimers.current.push(
+        setTimeout(() => {
+          if (!userDraggedRef.current) fn();
+        }, ms)
+      );
+    later(NUDGE_DELAY_MS, () => {
       nudgedRef.current = true;
       listRef.current?.scrollToOffset({
         offset: base + NUDGE_PEEK * peekDir,
         animated: true,
       });
-      setTimeout(() => {
-        listRef.current?.scrollToOffset({ offset: base, animated: true });
-      }, 280);
-    }, NUDGE_DELAY_MS);
-    return () => clearTimeout(t);
+    });
+    later(NUDGE_DELAY_MS + NUDGE_RETURN_MS, () =>
+      listRef.current?.scrollToOffset({ offset: base, animated: true })
+    );
+    // Safety net: guarantee we end exactly on the card.
+    later(NUDGE_DELAY_MS + NUDGE_RETURN_MS + NUDGE_SETTLE_MS, () => {
+      listRef.current?.scrollToOffset({ offset: base, animated: false });
+      scrollX.value = base;
+    });
+    return clearNudge;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleScrollBeginDrag = useCallback(() => {
+    // The user took over — stop any pending nudge so it can't fight the drag.
+    userDraggedRef.current = true;
+    nudgedRef.current = true;
+    clearNudge();
+  }, [clearNudge]);
 
   // Tapping a recommended card → jump to it without an animated slide.
   const handleRecommendedPress = useCallback(
@@ -750,6 +788,7 @@ function AndroidPagerBody({
           )
         }
         onMomentumScrollEnd={handleMomentumEnd}
+        onScrollBeginDrag={handleScrollBeginDrag}
         // Wider window so neighbours mount (and their card art decodes) well
         // before they slide into view — kills the dark placeholder flash that
         // showed when a freshly-mounted card painted its bg before its image.

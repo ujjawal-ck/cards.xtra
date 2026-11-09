@@ -91,6 +91,9 @@ export function CashbackBadge({
       style={[
         {
           alignSelf: 'flex-start',
+          // Never wider than its column: long values ("Flat ₹1,200 Rewards"
+          // on a 360dp phone) used to run past the tile edge and get clipped.
+          maxWidth: '100%',
           borderRadius: radius.full,
           overflow: 'hidden',
         },
@@ -115,7 +118,15 @@ export function CashbackBadge({
             {prefix}
           </Text>
         ) : null}
-        <Text variant={config.valueVariant} color={fg}>
+        {/* Shrinks to fit (down to 75%) instead of overflowing the pill. */}
+        <Text
+          variant={config.valueVariant}
+          color={fg}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+          style={{ flexShrink: 1 }}
+        >
           {value}
         </Text>
       </LinearGradient>

@@ -33,6 +33,7 @@ import { colors } from './src/tokens';
 import { queryClient } from './src/query/queryClient';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { SheetBackHandler } from './src/navigation/SheetBackHandler';
 import { analytics, Events } from './src/analytics';
 import { STAGE, PLATFORM } from './src/config/env';
 
@@ -124,6 +125,8 @@ export default function App() {
               >
                 <StatusBar style="dark" />
                 <RootNavigator />
+                {/* Android Back closes an open bottom sheet first. */}
+                <SheetBackHandler />
               </NavigationContainer>
             </BottomSheetModalProvider>
           </SafeAreaProvider>

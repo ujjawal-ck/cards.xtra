@@ -24,6 +24,7 @@ import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
 import { withdrawTitle } from './labels';
+import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../../lib/phone';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawAmazon'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawAmazon'>;
@@ -123,18 +124,18 @@ export function WithdrawAmazon() {
                 label="Mobile No."
                 size="sm"
                 value={mobile}
-                onChangeText={setMobile}
+                onChangeText={(t) => setMobile(normalizeIndianMobile(t))}
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="next"
               />
               <Input
                 label="Re-enter Mobile No."
                 size="sm"
                 value={confirm}
-                onChangeText={setConfirm}
+                onChangeText={(t) => setConfirm(normalizeIndianMobile(t))}
                 keyboardType="number-pad"
-                maxLength={10}
+                maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="done"
                 state={confirmMismatch ? 'error' : undefined}
                 hint={confirmMismatch ? 'Mobile numbers do not match' : undefined}

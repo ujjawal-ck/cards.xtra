@@ -42,6 +42,7 @@ import { OffersScreen } from '../screens/OffersScreen';
 import { EarningsScreen } from '../screens/EarningsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { play } from '../lib/haptics';
+import { useFloatingNavOffset } from './floatingNav';
 
 // ----------------------------------------------------------------------------
 // BottomNav visibility — shared between FloatingBottomNav (consumer)
@@ -137,9 +138,9 @@ const FADE_COLORS: [string, string] = [
 
 function FloatingBottomNav({ state, navigation }: BottomTabBarProps) {
   // Visual gap below the floating nav, measured from the screen's bottom
-  // edge. ~20 px (down from 32) so the pill sits lower with less empty
-  // space beneath it, while still clearing the iOS home indicator.
-  const bottomOffset = spacing[20];
+  // edge: 20 px on iOS; on Android it clears the system navigation bar
+  // (see floatingNav.ts).
+  const bottomOffset = useFloatingNavOffset();
 
   const activeRouteName = state.routes[state.index]
     .name as keyof TabParamList;

@@ -72,6 +72,7 @@ import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
 import { eccentricName, dummyEmail, randomPassword } from '../lib/eccentricName';
+import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
 
@@ -875,10 +876,10 @@ export function OnboardingScreen() {
                     autoFocus
                     value={loginPhone}
                     onChangeText={(t) => {
-                      setLoginPhone(t.replace(/\D/g, '').slice(0, 10));
+                      setLoginPhone(normalizeIndianMobile(t));
                       if (error) setError(null);
                     }}
-                    maxLength={10}
+                    maxLength={PHONE_INPUT_MAX_LENGTH}
                   />
                 </View>
 

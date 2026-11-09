@@ -67,13 +67,28 @@ export interface CardFeeStripProps {
 /** One fee column — label + GST-inclusive total amount. No tooltip; the
  *  value is the full price (Figma 1929:31123: Caption/10 label, Body/14
  *  SemiBold value). */
+// Columns may shrink (minWidth 0) and keep each line to one row, so on a
+// 360dp phone the fees fit beside the Apply Now button instead of running
+// underneath it (the annual fee was hidden behind the button).
 function FeeColumn({ label, amount }: { label: string; amount: string }) {
   return (
-    <View>
-      <Text variant="caption10Regular" color={colors.text.tertiary}>
+    <View style={{ flexShrink: 1, minWidth: 0 }}>
+      <Text
+        variant="caption10Regular"
+        color={colors.text.tertiary}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+      >
         {label}
       </Text>
-      <Text variant="body14SemiBold" color={colors.text.primary}>
+      <Text
+        variant="body14SemiBold"
+        color={colors.text.primary}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
         {amount}
       </Text>
     </View>
@@ -207,8 +222,9 @@ function WithFees({
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: spacing[12],
+          gap: spacing[8],
           flex: 1,
+          minWidth: 0,
         }}
       >
         <FeeColumn label="Joining Fees" amount={joiningFee} />

@@ -62,6 +62,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '../atoms';
 import { Choice } from '../molecules';
 import { Grid } from './Grid';
@@ -120,7 +121,7 @@ const RAIL_ITEMS: RailItem[] = [
 const ANNUAL_FEE_OPTIONS = ANNUAL_FEE_BUCKETS.map((b) => b.label);
 const CARD_NETWORK_OPTIONS = NETWORK_OPTIONS;
 
-const CHECKBOX_HELPER_TEXT = 'Select all that options you wish to apply';
+const CHECKBOX_HELPER_TEXT = 'Select all the options you wish to apply';
 
 export interface FilterMenuProps {
   /** Active left-rail tab. Default 'category'. */
@@ -269,6 +270,7 @@ export function FilterMenu({
   bankOptions = [],
   style,
 }: FilterMenuProps) {
+  const insets = useSafeAreaInsets();
   const tiles: FilterTileItem[] = CATEGORY_OPTIONS.map((t, i) => ({
     image: images.filters[t.imageKey],
     label: t.label,
@@ -339,7 +341,9 @@ export function FilterMenu({
         contentContainerStyle={{
           paddingTop: spacing[20],
           paddingHorizontal: spacing[16],
-          paddingBottom: SCROLL_BOTTOM_RESERVE,
+          // + bottom inset: the footer now sits above the nav bar, so it is
+          // that much taller.
+          paddingBottom: SCROLL_BOTTOM_RESERVE + insets.bottom,
           gap: spacing[16],
         }}
         showsVerticalScrollIndicator={false}

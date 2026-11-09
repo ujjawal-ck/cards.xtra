@@ -258,7 +258,10 @@ export const EligibilityCheckerSheet = forwardRef<
   // both shown inline in the sheet after the user taps Check (Figma
   // 4439:291874).
   const [verdict, setVerdict] = useState<EligibilityVerdict | null>(null);
-  const [pinError, setPinError] = useState(false);
+  // Validation messages (null = valid). An empty PIN used to say "Incorrect
+  // Pin Code" and an empty income was never flagged at all.
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [incomeError, setIncomeError] = useState<string | null>(null);
 
   // Show the "Clear" CTA only when the sheet opened with SAVED details
   // (i.e. a check was committed in an earlier session and the caller
@@ -283,16 +286,24 @@ export const EligibilityCheckerSheet = forwardRef<
 
   const handleCheck = async () => {
     if (isChecking) return;
-    // Validate the pincode first — must be 6 digits (Indian PIN).
+    // Validate both fields — PIN must be 6 digits (Indian PIN), income > 0.
     const pinDigits = pincode.replace(/\D/g, '');
-    if (pinDigits.length !== 6) {
-      setPinError(true);
+    const nextPinError =
+      pinDigits.length === 0
+        ? 'Enter your 6-digit PIN code'
+        : pinDigits.length !== 6
+        ? 'Enter a valid 6-digit PIN code'
+        : null;
+    const incomeValue = parseIncome(income);
+    const nextIncomeError =
+      Number.isFinite(incomeValue) && incomeValue > 0 ? null : 'Enter your monthly income';
+    setPinError(nextPinError);
+    setIncomeError(nextIncomeError);
+    if (nextPinError || nextIncomeError) {
       setVerdict(null);
       return;
     }
-    setPinError(false);
     setIsChecking(true);
-    const incomeValue = parseIncome(income);
     try {
       // Real eligibility lookup. The API returns one row per card with an
       // `eligible` boolean; the user is "eligible" if any card qualifies.
@@ -362,7 +373,8 @@ export const EligibilityCheckerSheet = forwardRef<
                 setIncome('');
                 setIncomeType('salaried');
                 setVerdict(null);
-                setPinError(false);
+                setPinError(null);
+                setIncomeError(null);
                 onClear?.();
               }}
             />
@@ -405,7 +417,8 @@ export const EligibilityCheckerSheet = forwardRef<
       android_keyboardInputMode="adjustResize"
       onDismiss={() => {
         setVerdict(null);
-        setPinError(false);
+        setPinError(null);
+        setIncomeError(null);
         onDismiss?.();
       }}
       footerComponent={renderFooter}
@@ -486,10 +499,10 @@ export const EligibilityCheckerSheet = forwardRef<
               maxLength={6}
               value={pincode}
               state={pinError ? 'error' : undefined}
-              hint={pinError ? 'Incorrect Pin Code' : undefined}
+              hint={pinError ?? undefined}
               onChangeText={(t) => {
                 setPincode(t.replace(/[^0-9]/g, ''));
-                if (pinError) setPinError(false);
+                if (pinError) setPinError(null);
                 if (verdict) setVerdict(null);
               }}
             />
@@ -499,9 +512,12 @@ export const EligibilityCheckerSheet = forwardRef<
               leadingText="₹"
               keyboardType="number-pad"
               value={income}
+              state={incomeError ? 'error' : undefined}
+              hint={incomeError ?? undefined}
               onChangeText={(t) => {
                 // Re-group into the Indian (lakh) format on every keystroke.
                 setIncome(formatIndianIncome(t));
+                if (incomeError) setIncomeError(null);
                 if (verdict) setVerdict(null);
               }}
             />

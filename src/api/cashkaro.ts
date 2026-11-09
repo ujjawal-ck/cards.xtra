@@ -15,7 +15,7 @@
  */
 import { Platform, Dimensions, PixelRatio } from 'react-native';
 import { CK } from '../config/env';
-import { httpRequest, basicAuthHeader, ApiError } from './client';
+import { httpRequest, basicAuthHeader, ApiError, otpValue } from './client';
 import type { LoginOtpResult, AuthSession, UserProfile } from './types';
 
 type Auth = 'aws' | { userToken: string } | undefined;
@@ -160,7 +160,7 @@ export async function login(params: {
         attributes: {
           mobile_number: Number(params.mobileNumber),
           otp_guid: params.otpGuid,
-          otp: Number(params.otp),
+          otp: otpValue(params.otp),
           device_info: buildDeviceInfo(params.deviceId),
         },
       },
@@ -210,7 +210,7 @@ export async function signup(params: {
           password: params.password,
           mobile_number: Number(params.mobileNumber),
           otp_guid: params.otpGuid,
-          otp: Number(params.otp),
+          otp: otpValue(params.otp),
           referral_user: params.referralUser ?? null,
           // Required by /signupV1 (login doesn't need it). Top-level only —
           // device_info has a strict schema that rejects unknown keys ("the

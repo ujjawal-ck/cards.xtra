@@ -93,7 +93,6 @@ import {
   spacing,
   radius,
   borderWidth,
-  sizing,
   elevation,
   opacity,
   iconSize,
@@ -115,6 +114,7 @@ import {
   type AppliedFilters,
 } from '../data/filterOptions';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
+import { useFloatingNavClearance } from '../navigation/floatingNav';
 
 // Scroll Y at which the frosted scrolled HomeHeader fully appears.
 // Roughly the masthead height (≈ 408) — pick a value past the
@@ -291,6 +291,8 @@ const CATEGORY_SKELETON_ROWS = Array.from({ length: 4 }, (_, i) => ({
 }));
 
 export function HomeScreen() {
+  // Scroll padding that clears the floating tab bar (+ Android nav bar).
+  const navClearance = useFloatingNavClearance();
   const [eligibilityOn, setEligibilityOn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -895,6 +897,8 @@ export function HomeScreen() {
     []
   );
 
+  const insets = useSafeAreaInsets();
+
   // Filters sheet sticky footer. Uses the FooterButtons organism with
   // strip='caption' so the StripAlert above the action row shows a
   // live count of currently-selected filters. BottomSheetFooter pins
@@ -914,16 +918,18 @@ export function HomeScreen() {
           secondaryLabel="Clear"
           onPrimary={commitFilters}
           onSecondary={clearFilters}
+          // Lift Clear / Apply Filter above the Android navigation bar
+          // (edge-to-edge) — they were drawn underneath it.
+          style={{ paddingBottom: insets.bottom }}
         />
       </BottomSheetFooter>
     ),
-    [filtersSelectedCount, commitFilters, clearFilters]
+    [filtersSelectedCount, commitFilters, clearFilters, insets.bottom]
   );
 
   // Scroll-driven UI state. scrollY drives the frosted HomeHeader's
   // fade-in via reanimated; the lastY ref + setHidden drive the
   // floating BottomNav hide/reveal via the shared TabNavigator context.
-  const insets = useSafeAreaInsets();
   const { setHidden } = useBottomNavVisibility();
   const scrollY = useSharedValue(0);
   const lastY = useRef(0);
@@ -1526,7 +1532,7 @@ export function HomeScreen() {
         removeClippedSubviews
         contentContainerStyle={{
           // Reserve space for the floating tab pill.
-          paddingBottom: sizing.bottomNavHeight + spacing[48],
+          paddingBottom: navClearance,
         }}
         ListFooterComponent={
           // Bottom Footer — REUSED Footer organism, theme='dark' (the

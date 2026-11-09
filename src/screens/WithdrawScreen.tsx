@@ -220,13 +220,15 @@ export function WithdrawScreen() {
             });
           },
         },
-        // Bank Transfer has no Figma design yet → no-op (flagged).
+        // Bank Transfer has no Figma design / payout API wiring yet, so it
+        // shows as unavailable instead of a tappable row that does nothing.
         // Icon rendered at 80% — its art has less intrinsic padding than
         // the other method glyphs.
         {
           icon: 'pay-bank-transfer',
           iconSize: Math.round(mediaSize[32] * 0.8),
           label: 'Bank Transfer',
+          unavailableNote: 'Coming soon',
         },
         {
           glyph: <GiftCardGlyph />,

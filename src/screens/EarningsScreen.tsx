@@ -39,21 +39,17 @@ import { ListRow, AmountActionRow } from '../molecules';
 import {
   Masthead,
   EarningsBreakupSheet,
-  CashbackNotConfirmedSheet,
   EarningStatusSheet,
-  PaymentProcessingSheet,
   StaggeredEntrance,
 } from '../organisms';
 import type {
   EarningsBreakupSheetRef,
-  CashbackNotConfirmedSheetRef,
   EarningStatusSheetRef,
-  PaymentProcessingSheetRef,
 } from '../organisms';
-import { colors, spacing, radius, sizing, elevation } from '../tokens';
-import { analytics, Events } from '../analytics';
+import { colors, spacing, radius, elevation } from '../tokens';
 import { useEarnings } from '../query/useEarnings';
-import { usePaymentInfo } from '../query/usePaymentInfo';
+import { useWithdrawGate } from './withdraw/useWithdrawGate';
+import { useFloatingNavClearance } from '../navigation/floatingNav';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
 
 // Composite nav — Earnings sits inside the bottom-tab navigator,
@@ -66,6 +62,8 @@ type Nav = CompositeNavigationProp<
 >;
 
 export function EarningsScreen() {
+  // Scroll padding that clears the floating tab bar (+ Android nav bar).
+  const navClearance = useFloatingNavClearance();
   const navigation = useNavigation<Nav>();
   // Live earnings for the signed-in user. While the first fetch is in
   // flight every money figure shows a pulsing skeleton (via each
@@ -75,10 +73,6 @@ export function EarningsScreen() {
   const { data: earnings, isLoading } = useEarnings();
   const loading = isLoading && !earnings;
 
-  // Payment info carries the "a previous payout is still settling" flag. When
-  // set, tapping Withdraw opens the PaymentProcessingSheet instead of starting
-  // a new request (you can only have one payout in flight at a time).
-  const { data: paymentInfo } = usePaymentInfo();
 
   // Replay the All Time Earnings slot-machine roll every time the
   // Earnings tab comes into focus (not just on first mount). Bumping
@@ -98,41 +92,20 @@ export function EarningsScreen() {
   const cashbackSheetRef = useRef<EarningsBreakupSheetRef>(null);
   const rewardsSheetRef = useRef<EarningsBreakupSheetRef>(null);
 
-  // Pending-state sheets (Figma 2898:166460 / 2898:166477):
-  //   • Withdraw with ₹0 confirmed → "Cashback Not Confirmed"
-  //   • Pending row "Know Why?"     → "Earning Status"
-  const cashbackNotConfirmedRef = useRef<CashbackNotConfirmedSheetRef>(null);
+  // Pending-state sheet (Figma 2898:166477): Pending row "Know Why?" →
+  // "Earning Status". The Withdraw-side sheets (₹0 "Cashback Not Confirmed",
+  // payment-in-process) live in useWithdrawGate, shared with Profile.
   const earningStatusRef = useRef<EarningStatusSheetRef>(null);
   // Paid row's "View" opens the same Earning-Status sheet in its 'paid'
   // variant (Cashback Paid), rather than navigating to payment history.
   const paidStatusRef = useRef<EarningStatusSheetRef>(null);
 
-  // Payment-in-process sheet (Figma 2047:25729) — a previous payout is still
-  // settling, so a new request is blocked until it completes.
-  const paymentProcessingRef = useRef<PaymentProcessingSheetRef>(null);
-
-  const handleWithdraw = () => {
-    // Withdrawable balance = confirmed cashback + rewards (combined). Rewards
-    // have no pending split and are withdrawable as gift cards, so a user with
-    // ₹0 confirmed cashback but a positive rewards balance can still withdraw.
-    // Gating on `confirmed` alone wrongly blocked that case.
-    const hasBalance = (earnings?.combinedNum ?? 0) > 0;
-    analytics.track(Events.WITHDRAW_START, {
-      has_balance: hasBalance,
-      confirmed_balance: earnings?.combinedNum ?? 0,
-      payment_in_process: !!paymentInfo?.paymentInProcess,
-    });
-    if (paymentInfo?.paymentInProcess) {
-      // A previous payout is still settling — only one request allowed at a
-      // time. Explain instead of starting another.
-      paymentProcessingRef.current?.present();
-    } else if (!hasBalance) {
-      // Nothing confirmed to withdraw yet — explain the pending balance.
-      cashbackNotConfirmedRef.current?.present();
-    } else {
-      navigation.navigate('WithdrawStack');
-    }
-  };
+  // Shared withdraw entry check (₹0 / payout already settling) — same gate
+  // as Profile's "Withdraw Cashback" row.
+  const { startWithdraw: handleWithdraw, gateSheets } = useWithdrawGate({
+    onProceed: () => navigation.navigate('WithdrawStack'),
+    onBrowseDeals: () => navigation.navigate('Offers'),
+  });
 
   return (
     <View
@@ -158,7 +131,7 @@ export function EarningsScreen() {
             paddingTop: spacing[12],
             // Reserve enough room for the floating BottomNav (provided
             // by TabNavigator) so the list never hides beneath it.
-            paddingBottom: sizing.bottomNavHeight + spacing[48],
+            paddingBottom: navClearance,
           }}
         >
           {/* Staggered entrance — each section block fades + rises into place a
@@ -302,11 +275,10 @@ export function EarningsScreen() {
         paid="₹0.0"
       />
 
-      {/* Pending-state sheets — opened from the Withdraw / Know Why? CTAs. */}
-      <CashbackNotConfirmedSheet
-        ref={cashbackNotConfirmedRef}
-        pendingAmount={earnings?.pending ?? '₹0.0'}
-      />
+      {/* Withdraw gate sheets (₹0 / payout settling) — from useWithdrawGate. */}
+      {gateSheets}
+
+      {/* Pending-state sheet — opened from the Know Why? CTA. */}
       <EarningStatusSheet
         ref={earningStatusRef}
         amount={earnings?.pending ?? '₹0.0'}
@@ -317,13 +289,6 @@ export function EarningsScreen() {
         ref={paidStatusRef}
         variant="paid"
         amount={earnings?.paid ?? '₹0.0'}
-      />
-
-      {/* Payment-in-process — opened from Withdraw when a payout is settling. */}
-      <PaymentProcessingSheet
-        ref={paymentProcessingRef}
-        amount={`₹${Math.round(paymentInfo?.paymentInProcessAmount ?? 0)}`}
-        onBrowseDeals={() => navigation.navigate('Offers')}
       />
     </View>
   );

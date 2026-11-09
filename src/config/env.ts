@@ -23,11 +23,13 @@ import { Platform } from 'react-native';
 
 type Stage = 'local' | 'staging' | 'prod';
 
-// Single switch for the whole app. Wire to EXPO_PUBLIC_STAGE later if needed.
-export const STAGE: Stage = 'staging';
+// Single switch for the whole app, read from EXPO_PUBLIC_STAGE in .env
+// (staging | prod | local). Defaults to staging; anything unrecognised also
+// falls back to staging so a typo can never silently point at prod.
+const STAGES: readonly Stage[] = ['local', 'staging', 'prod'];
+const envStage = process.env.EXPO_PUBLIC_STAGE as Stage | undefined;
+export const STAGE: Stage = envStage && STAGES.includes(envStage) ? envStage : 'staging';
 
-// Shared app identity sent to CashKaro.
-const APP_VERSION = '4.6'; // x-chkr-app-version (from CK env)
 const DEVICE = 'App'; // ?device=App on most CK calls
 
 const CONFIG = {
@@ -36,6 +38,8 @@ const CONFIG = {
       // helper_url root; sub-resources are paths under it
       // (e.g. /users/profile, /offers/...). See docs/api collections.
       baseUrl: 'https://ckapistaging.lmssecure.com/v1',
+      // x-chkr-app-version (from the CK staging env).
+      appVersion: '4.6',
       apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
       basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
       basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
@@ -54,15 +58,29 @@ const CONFIG = {
   },
   local: {
     // TODO: fill when a local backend exists.
-    ck: { baseUrl: '', apiKey: '', basicAuthUser: '', basicAuthPass: '', trackingHost: '' },
+    ck: { baseUrl: '', appVersion: '4.6', apiKey: '', basicAuthUser: '', basicAuthPass: '', trackingHost: '' },
     bk: { baseUrl: '', partnerApiKey: '' },
   },
   prod: {
-    // TODO: fill at prod cutover (see project-goal: staging → prod → stores).
-    // trackingHost is the production CashKaro click-out host (e.g.
-    // cktracking.cashkaro.com) — confirm with the CashKaro team before cutover.
-    ck: { baseUrl: '', apiKey: '', basicAuthUser: '', basicAuthPass: '', trackingHost: '' },
-    bk: { baseUrl: '', partnerApiKey: '' },
+    ck: {
+      // CK Mini Apps production host (Postman "ck-miniapp-apis" collection).
+      baseUrl: 'https://ckminapps.com/v1',
+      // ckminapps rejects every other app version with 401 (verified: 4.6 → 401).
+      appVersion: '4.9',
+      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
+      // Prod /token needs only x-api-key; Basic auth is optional (empty is fine).
+      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
+      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
+      // TODO: production click-out host (e.g. cktracking.cashkaro.com) —
+      // confirm with the CashKaro team. Empty = card "Apply" falls back to
+      // BankKaro's network_url instead of a CashKaro-attributed link.
+      trackingHost: '',
+    },
+    bk: {
+      // BankKaro PROD host (Great.Cards Partner Guide).
+      baseUrl: 'https://platform.bankkaro.com/partner',
+      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
+    },
   },
 } as const;
 
@@ -71,13 +89,12 @@ const active = CONFIG[STAGE];
 /** CashKaro config + the headers every CK call shares. */
 export const CK = {
   ...active.ck,
-  appVersion: APP_VERSION,
   device: DEVICE,
   /** Base headers present on every CashKaro request. */
   headers(): Record<string, string> {
     return {
       Accept: 'application/vnd.api+json',
-      'x-chkr-app-version': APP_VERSION,
+      'x-chkr-app-version': active.ck.appVersion,
       'x-api-key': active.ck.apiKey,
     };
   },

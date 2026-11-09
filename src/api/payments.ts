@@ -12,7 +12,7 @@
  * client-side format gate (an invalid value surfaces as a submit error).
  */
 import { ck } from './cashkaro';
-import { ApiError } from './client';
+import { ApiError, otpValue } from './client';
 import { CK } from '../config/env';
 
 export type PaymentTypeKey = 'cashback' | 'rewards' | 'cashback_and_rewards';
@@ -169,7 +169,7 @@ export async function verifyPaymentRequestOTP(
     body: {
       data: {
         type: 'user_otp',
-        attributes: { otp_guid: otpGuid, otp: parseInt(otp.trim(), 10) },
+        attributes: { otp_guid: otpGuid, otp: otpValue(otp) },
       },
     },
   });

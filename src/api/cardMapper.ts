@@ -136,22 +136,53 @@ function groupIndian(n: number): string {
   return `${rest},${last3}`;
 }
 
-/** "3500" → "₹3,500" · "0" → "Free" · "N/A"/empty → "—" · non-numeric → as-is. */
-function formatFee(raw?: string): string {
-  const t = (raw ?? '').trim();
-  if (t === '' || t.toUpperCase() === 'N/A') return '—';
-  const n = Number(t.replace(/[^\d.]/g, ''));
-  if (!isFinite(n)) return t;
-  if (n === 0) return 'Free';
-  return `₹${groupIndian(n)}`;
+/**
+ * One parser for BankKaro fee text, shared by every fee display + filter.
+ *
+ * Previously each site stripped ALL non-digits and called Number(), so
+ * "500 (waived on 1.5L spend)" became 5001.5 (shown as "₹5,002") and
+ * non-numeric text like "Contact bank" became Number("") = 0 → "Free".
+ * Now only a LEADING amount counts ("₹500 + GST", "Rs. 1,499"); explicit
+ * "Free"/"Nil" text is free; anything else is unknown text, shown as-is and
+ * never treated as free. Numbers (the API sometimes sends them) are accepted.
+ */
+type ParsedFee =
+  | { kind: 'na' }
+  | { kind: 'free' }
+  | { kind: 'amount'; value: number }
+  | { kind: 'text'; text: string };
+
+const LEADING_AMOUNT = /^(?:₹|rs\.?|inr)?\s*(\d[\d,]*(?:\.\d+)?)/i;
+
+function parseFee(raw: unknown): ParsedFee {
+  if (typeof raw === 'number') {
+    if (!isFinite(raw)) return { kind: 'na' };
+    return raw === 0 ? { kind: 'free' } : { kind: 'amount', value: raw };
+  }
+  if (typeof raw !== 'string') return { kind: 'na' };
+  const t = raw.trim();
+  if (t === '' || t.toUpperCase() === 'N/A') return { kind: 'na' };
+  const m = t.match(LEADING_AMOUNT);
+  if (m) {
+    const value = Number(m[1].replace(/,/g, ''));
+    if (isFinite(value)) return value === 0 ? { kind: 'free' } : { kind: 'amount', value };
+  }
+  if (/\b(free|nil)\b/i.test(t)) return { kind: 'free' };
+  return { kind: 'text', text: t };
 }
 
-/** True only when the fee text is a real, numeric zero. */
-function isZeroFee(raw?: string): boolean {
-  const t = (raw ?? '').trim();
-  if (t === '' || t.toUpperCase() === 'N/A') return false;
-  const n = Number(t.replace(/[^\d.]/g, ''));
-  return isFinite(n) && n === 0;
+/** "3500" → "₹3,500" · "0"/"Lifetime Free" → "Free" · "N/A"/empty → "—" · other text → as-is. */
+function formatFee(raw?: unknown): string {
+  const f = parseFee(raw);
+  if (f.kind === 'na') return '—';
+  if (f.kind === 'free') return 'Free';
+  if (f.kind === 'text') return f.text;
+  return `₹${groupIndian(f.value)}`;
+}
+
+/** True only when the fee is genuinely zero / explicitly free. */
+function isZeroFee(raw?: unknown): boolean {
+  return parseFee(raw).kind === 'free';
 }
 
 function deriveFeeType(bk: BkCard): CardModel['feeType'] {
@@ -179,12 +210,16 @@ function ckRateValue(rate?: CkRate | null): string {
 
 // ── CardDetailSheet body data ──────────────────────────────────────────────
 const DASH = '—';
-const isNA = (raw?: string) =>
-  !raw || raw.trim() === '' || raw.trim().toUpperCase() === 'N/A';
+// Non-strings (numbers/booleans from the API) are not "N/A"; callers that
+// need a string coerce with String(). Previously raw.trim() crashed on them.
+const isNA = (raw?: unknown) =>
+  raw === null ||
+  raw === undefined ||
+  (typeof raw === 'string' && (raw.trim() === '' || raw.trim().toUpperCase() === 'N/A'));
 
 /** "21-65" → "21-65Y" (age criteria), "N/A" → "—". */
 function ageValue(raw?: string): string {
-  return isNA(raw) ? DASH : `${raw!.trim()}Y`;
+  return isNA(raw) ? DASH : `${String(raw).trim()}Y`;
 }
 
 /** income_salaried/self_emp are LPA figures (e.g. "3"); fall back to the
@@ -224,16 +259,17 @@ function eligibilityRows(bk: BkCard, kind: 'salaried' | 'self'): CardEligibility
   ];
 }
 
-/** Numeric value from a fee text ("3500" → 3500, "0"/"N/A"/"" → 0). */
-function feeNumber(raw?: string): number {
-  if (isNA(raw)) return 0;
-  const n = Number(String(raw).replace(/[^\d.]/g, ''));
-  return isFinite(n) ? n : 0;
+/** Numeric fee for filter buckets: "3500" → 3500, free/"N/A" → 0, unknown
+ *  text → NaN (so it matches no ₹ range and is never counted as free). */
+function feeNumber(raw?: unknown): number {
+  const f = parseFee(raw);
+  if (f.kind === 'amount') return f.value;
+  if (f.kind === 'text') return NaN;
+  return 0;
 }
 
 function buildFilterMeta(bk: BkCard, bankDir: BankDirectory): CardFilterMeta {
   const annualFeeValue = feeNumber(bk.annual_fee_text);
-  const joiningFeeValue = feeNumber(bk.joining_fee_text);
   const info = bk.bank_id != null ? bankDir[bk.bank_id] : undefined;
   return {
     cardAlias: bk.card_alias,
@@ -246,7 +282,7 @@ function buildFilterMeta(bk: BkCard, bankDir: BankDirectory): CardFilterMeta {
     network: (bk.card_type ?? '').trim(),
     categoryIds: (bk.tags ?? []).map((t) => t?.id).filter((id): id is number => id != null),
     annualFeeValue,
-    isFree: annualFeeValue === 0 && joiningFeeValue === 0,
+    isFree: isZeroFee(bk.annual_fee_text) && isZeroFee(bk.joining_fee_text),
   };
 }
 
@@ -254,10 +290,12 @@ function buildFilterMeta(bk: BkCard, bankDir: BankDirectory): CardFilterMeta {
 // (what the bank actually charges) with the base + GST breakdown revealed
 // on the info ("i") tap.
 const GST_RATE = 0.18;
-function feeStat(label: string, raw?: string): { label: string; amount: string; sub: string } {
-  if (isNA(raw)) return { label, amount: DASH, sub: '' };
-  const base = Number(String(raw).replace(/[^\d.]/g, ''));
-  if (!isFinite(base) || base === 0) return { label, amount: 'Free', sub: '' };
+function feeStat(label: string, raw?: unknown): { label: string; amount: string; sub: string } {
+  const f = parseFee(raw);
+  if (f.kind === 'na') return { label, amount: DASH, sub: '' };
+  if (f.kind === 'free') return { label, amount: 'Free', sub: '' };
+  if (f.kind === 'text') return { label, amount: f.text, sub: '' };
+  const base = f.value;
   const withGst = Math.round(base * (1 + GST_RATE));
   return {
     label,
@@ -269,7 +307,7 @@ function feeStat(label: string, raw?: string): { label: string; amount: string; 
 function buildDetail(bk: BkCard): CardDetail {
   const bullets = [bk.annual_fee_waiver, bk.joining_fee_comment]
     .filter((b): b is string => !isNA(b))
-    .map((b) => b.trim());
+    .map((b) => String(b).trim());
   return {
     fee: {
       annual: feeStat('Annual Fees', bk.annual_fee_text),

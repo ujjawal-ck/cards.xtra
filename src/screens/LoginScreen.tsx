@@ -32,6 +32,7 @@ import { loginOtp } from '../api/cashkaro';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
 import type { RootStackParamList } from '../navigation/types';
+import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -186,10 +187,10 @@ export function LoginScreen() {
             keyboardType="phone-pad"
             value={phone}
             onChangeText={(t) => {
-              setPhone(t.replace(/\D/g, '').slice(0, 10));
+              setPhone(normalizeIndianMobile(t));
               if (error) setError(null);
             }}
-            maxLength={10}
+            maxLength={PHONE_INPUT_MAX_LENGTH}
           />
 
           {error ? (

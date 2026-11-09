@@ -143,23 +143,53 @@ export async function httpRequest<T = any>(
 }
 
 /**
+ * Serialize a user-typed OTP for a request body.
+ *
+ * Sent as a digit STRING, never Number(): a JSON number cannot keep leading
+ * zeros, so "045812" would reach the server as 45812 and always fail
+ * verification (~1 in 10 OTPs start with 0). Single helper so login, signup
+ * and payment OTPs stay consistent.
+ */
+export function otpValue(otp: string): string {
+  return otp.replace(/\D/g, '');
+}
+
+/**
  * Build a `Basic <base64(user:pass)>` Authorization value.
  * Uses an inline base64 encoder so we don't depend on btoa/Buffer being
  * present in the Hermes runtime.
  */
-const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+// Index 64 is the '=' padding character (used when the input length is not a
+// multiple of 3 bytes).
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+
+/** UTF-8 encode a string into bytes (so non-ASCII credentials encode correctly). */
+function utf8Bytes(input: string): number[] {
+  const bytes: number[] = [];
+  for (const ch of input) {
+    const cp = ch.codePointAt(0)!;
+    if (cp < 0x80) bytes.push(cp);
+    else if (cp < 0x800) bytes.push(0xc0 | (cp >> 6), 0x80 | (cp & 63));
+    else if (cp < 0x10000) bytes.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+    else bytes.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+  }
+  return bytes;
+}
+
 export function basicAuthHeader(user: string, pass: string): string {
-  const input = `${user}:${pass}`;
+  const bytes = utf8Bytes(`${user}:${pass}`);
   let output = '';
-  for (let i = 0; i < input.length; i += 3) {
-    const c1 = input.charCodeAt(i);
-    const c2 = input.charCodeAt(i + 1);
-    const c3 = input.charCodeAt(i + 2);
-    const e1 = c1 >> 2;
-    const e2 = ((c1 & 3) << 4) | (c2 >> 4);
-    const e3 = isNaN(c2) ? 64 : ((c2 & 15) << 2) | (c3 >> 6);
-    const e4 = isNaN(c3) ? 64 : c3 & 63;
-    output += B64[e1] + B64[e2] + B64[e3] + B64[e4];
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b1 = bytes[i];
+    const has2 = i + 1 < bytes.length;
+    const has3 = i + 2 < bytes.length;
+    const b2 = has2 ? bytes[i + 1] : 0;
+    const b3 = has3 ? bytes[i + 2] : 0;
+    output +=
+      B64[b1 >> 2] +
+      B64[((b1 & 3) << 4) | (b2 >> 4)] +
+      B64[has2 ? ((b2 & 15) << 2) | (b3 >> 6) : 64] +
+      B64[has3 ? b3 & 63 : 64];
   }
   return `Basic ${output}`;
 }

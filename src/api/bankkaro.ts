@@ -22,9 +22,11 @@ import { httpRequest, ApiError } from './client';
 import type { CardListFilters, EligibilityPayload } from './types';
 
 let partnerToken: string | null = null;
+// Shared in-flight mint, so parallel calls (Home fires several at once) don't
+// each request a new JWT.
+let minting: Promise<string> | null = null;
 
-async function getPartnerToken(): Promise<string> {
-  if (partnerToken) return partnerToken;
+async function mintPartnerToken(): Promise<string> {
   const res = await httpRequest<any>(BK.baseUrl, '/token', {
     method: 'POST',
     headers: { 'partner-token': BK.partnerApiKey, 'Content-Type': 'application/json' },
@@ -32,8 +34,22 @@ async function getPartnerToken(): Promise<string> {
   });
   const value = res?.data?.jwttoken;
   if (!value) throw new ApiError('Could not authenticate with BankKaro.', 0, res);
-  partnerToken = value;
   return value;
+}
+
+async function getPartnerToken(): Promise<string> {
+  if (partnerToken) return partnerToken;
+  if (!minting) {
+    minting = mintPartnerToken()
+      .then((value) => {
+        partnerToken = value;
+        return value;
+      })
+      .finally(() => {
+        minting = null;
+      });
+  }
+  return minting;
 }
 
 /** Force the next call to re-mint the partner JWT. */
@@ -46,9 +62,23 @@ async function bk<T = any>(
   opts: { method?: 'GET' | 'POST'; body?: unknown } = {},
 ): Promise<T> {
   const { method = 'GET', body } = opts;
-  const headers: Record<string, string> = { 'partner-token': await getPartnerToken() };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
-  return httpRequest<T>(BK.baseUrl, path, { method, body, headers });
+  const send = async () => {
+    const headers: Record<string, string> = { 'partner-token': await getPartnerToken() };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    return httpRequest<T>(BK.baseUrl, path, { method, body, headers });
+  };
+  try {
+    return await send();
+  } catch (e) {
+    // The partner JWT expires server-side but was cached forever, so every
+    // call 401'd until the app restarted. On an auth rejection, mint a fresh
+    // JWT and retry exactly once.
+    if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+      resetPartnerToken();
+      return send();
+    }
+    throw e;
+  }
 }
 
 /** Bootstrap data: banks, networks, tags, filter options. */

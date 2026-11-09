@@ -122,20 +122,27 @@ export interface MethodRowItem {
   label: string;
   /** Tap handler — opens the next step of the chosen withdraw method. */
   onPress?: () => void;
+  /** Not available yet: rendered muted with this note (e.g. "Coming soon")
+   *  and no chevron, and not tappable — so it no longer looks like a
+   *  working option that silently does nothing. */
+  unavailableNote?: string;
 }
 
 export function MethodRow({ item }: { item: MethodRowItem }) {
+  const unavailable = !!item.unavailableNote;
   return (
     <Pressable
-      onPress={item.onPress}
+      onPress={unavailable ? undefined : item.onPress}
+      disabled={unavailable}
       accessibilityRole="button"
-      accessibilityLabel={item.label}
+      accessibilityLabel={unavailable ? `${item.label}, ${item.unavailableNote}` : item.label}
+      accessibilityState={{ disabled: unavailable }}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: spacing[8],
-        opacity: pressed ? 0.7 : 1,
+        opacity: pressed && !unavailable ? 0.7 : 1,
       })}
     >
       <View
@@ -179,11 +186,21 @@ export function MethodRow({ item }: { item: MethodRowItem }) {
             />
           ) : null}
         </View>
-        <Text variant="body15Medium" color={colors.text.primary} style={{ flex: 1 }}>
-          {item.label}
-        </Text>
+        <View style={{ flex: 1, gap: spacing[2] }}>
+          <Text
+            variant="body15Medium"
+            color={unavailable ? colors.text.disabled : colors.text.primary}
+          >
+            {item.label}
+          </Text>
+          {unavailable ? (
+            <Text variant="body12Regular" color={colors.text.disabled}>
+              {item.unavailableNote}
+            </Text>
+          ) : null}
+        </View>
       </View>
-      <ChevronRightGlyph color={colors.text.secondary} />
+      {unavailable ? null : <ChevronRightGlyph color={colors.text.secondary} />}
     </Pressable>
   );
 }

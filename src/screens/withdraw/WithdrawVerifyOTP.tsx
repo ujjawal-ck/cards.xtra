@@ -11,7 +11,7 @@
  * expired" + Resend (re-sends a fresh OTP). A submit failure (e.g. invalid
  * UPI/email) surfaces as an alert.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Pressable,
@@ -41,6 +41,7 @@ import {
   submitAmazonPayment,
   submitFlipkartPayment,
 } from '../../api/payments';
+import { ApiError } from '../../api/client';
 import { formatRupees } from './amount';
 import { withdrawTitle } from './labels';
 
@@ -76,26 +77,64 @@ export function WithdrawVerifyOTP() {
     return () => clearTimeout(t);
   }, [seconds, busy, error]);
 
+  // Synchronous re-entry guard. `busy` is React state, so the auto-submit
+  // effect and a Verify tap landing in the same frame could both pass the
+  // `busy` check and submit the payout twice.
+  const inFlight = useRef(false);
+  // otpGuids whose payout POST went out but whose outcome is unknown (timeout /
+  // network drop). Never auto-resubmit those: the server may already have
+  // accepted the withdrawal, and a retry could request a second payout.
+  const unconfirmedGuids = useRef(new Set<string>());
+
+  const showUnconfirmed = () => {
+    Alert.alert(
+      "Couldn't confirm your withdrawal",
+      'Your request may already have gone through. Please check Payment History before trying again.',
+      [
+        {
+          text: 'View Payment History',
+          onPress: () =>
+            navigation.getParent()?.navigate('ProfilePaymentHistory' as never),
+        },
+        { text: 'OK', style: 'cancel' },
+      ],
+    );
+  };
+
   const verifyAndPay = async () => {
-    if (busy || error === 'expired' || otp.length !== OTP_LENGTH) return;
+    if (inFlight.current || busy || error === 'expired' || otp.length !== OTP_LENGTH) return;
     if (!accessToken || !otpGuid) {
       Alert.alert('Session expired', 'Please request a new OTP.');
       return;
     }
+    if (unconfirmedGuids.current.has(otpGuid)) {
+      showUnconfirmed();
+      return;
+    }
+    inFlight.current = true;
     setBusy(true);
+    const done = () => {
+      inFlight.current = false;
+      setBusy(false);
+    };
 
     // 1) Verify OTP.
     let verifyRes: any;
     try {
       verifyRes = await verifyPaymentRequestOTP(accessToken, otpGuid, otp);
-    } catch {
-      setBusy(false);
+    } catch (e) {
+      done();
       play('error');
-      setError('invalid');
+      // A timeout / network drop is not a wrong OTP — don't tell the user it is.
+      if (e instanceof ApiError && e.status === 0) {
+        Alert.alert('Connection problem', e.message);
+      } else {
+        setError('invalid');
+      }
       return;
     }
     if (verifyHasError(verifyRes)) {
-      setBusy(false);
+      done();
       play('error');
       setError('invalid');
       return;
@@ -117,11 +156,19 @@ export function WithdrawVerifyOTP() {
         payment_type: paymentType,
         amount: draft.amount,
       });
+      inFlight.current = false;
       navigation.navigate('WithdrawSuccess', { amount: draft.amount, method });
     } catch (e: any) {
-      setBusy(false);
+      done();
       play('error');
-      Alert.alert('Payment failed', e?.message ?? 'Please try again.');
+      if (e instanceof ApiError && e.status === 0) {
+        // Timed out / connection dropped AFTER the request was sent: the
+        // outcome is unknown, so don't claim it failed or invite a blind retry.
+        unconfirmedGuids.current.add(otpGuid);
+        showUnconfirmed();
+      } else {
+        Alert.alert('Payment failed', e?.message ?? 'Please try again.');
+      }
     }
   };
 

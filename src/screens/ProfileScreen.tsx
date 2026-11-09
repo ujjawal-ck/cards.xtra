@@ -16,7 +16,7 @@
  */
 import React, { useRef } from 'react';
 import { View, ScrollView, Pressable, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -31,7 +31,6 @@ import {
   colors,
   spacing,
   radius,
-  sizing,
   elevation,
   borderWidth,
 } from '../tokens';
@@ -40,6 +39,8 @@ import { useAuth } from '../auth/AuthContext';
 import { analytics, Events } from '../analytics';
 import { nameInitials } from '../lib/nameInitials';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
+import { useWithdrawGate } from './withdraw/useWithdrawGate';
+import { useFloatingNavClearance } from '../navigation/floatingNav';
 
 // Profile sits inside the bottom-tab navigator, which is itself a screen of
 // the root stack. To push a root-stack route (MissingCashbackDidYouShop or
@@ -50,10 +51,21 @@ type Nav = CompositeNavigationProp<
 >;
 
 export function ProfileScreen() {
+  // Scroll padding that clears the floating tab bar (+ Android nav bar).
+  const navClearance = useFloatingNavClearance();
   const navigation = useNavigation<Nav>();
   const { data: profile } = useProfile();
   const { signOut, displayName } = useAuth();
   const logoutSheetRef = useRef<LogoutConfirmSheetRef>(null);
+  const insets = useSafeAreaInsets();
+
+  // Same entry check as Earnings' Withdraw button (₹0 / payout settling).
+  // Navigating straight to WithdrawStack let a ₹0 account open the payout
+  // methods.
+  const { startWithdraw, gateSheets } = useWithdrawGate({
+    onProceed: () => navigation.navigate('WithdrawStack'),
+    onBrowseDeals: () => navigation.navigate('Offers'),
+  });
 
   // Display values from the real profile (fall back while loading). The local
   // displayName (chosen in the first-time prompt, or auto-assigned on skip)
@@ -94,7 +106,7 @@ export function ProfileScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingBottom: sizing.bottomNavHeight + spacing[48],
+            paddingBottom: navClearance,
           }}
         >
           {/* Staggered entrance — masthead + each list card fade + rise into
@@ -140,13 +152,17 @@ export function ProfileScreen() {
                 type="menu-option"
                 icon="wallet-outline"
                 title="Withdraw Cashback"
-                onPress={onMenu('withdraw', () => navigation.navigate('WithdrawStack'))}
+                onPress={onMenu('withdraw', startWithdraw)}
               />
               <Divider style="solid" />
               <ListRow
                 type="menu-option"
                 icon="clock-outline"
                 title="Payment History"
+                // Not linked yet: ProfilePaymentHistory still renders Figma
+                // sample payouts (₹80.80 …), not /payment/history data, so
+                // opening it would show users fake payments. Wire it once the
+                // live history API is mapped.
                 onPress={onMenu('payment_history')}
               />
               <Divider style="solid" />
@@ -262,8 +278,26 @@ export function ProfileScreen() {
         </ScrollView>
       </SafeAreaView>
 
+      {/* Status-bar backing: the list scrolls edge-to-edge, so without this
+          the masthead's Edit Profile button slid under (and over) the
+          status-bar icons. Same colour as the screen background. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: colors.background.muted,
+        }}
+      />
+
       {/* Logout confirmation — opened by the Logout row; "Yes" signs out. */}
       <LogoutConfirmSheet ref={logoutSheetRef} onConfirm={handleLogout} />
+
+      {/* Withdraw gate sheets (₹0 / payout settling) — from useWithdrawGate. */}
+      {gateSheets}
     </View>
   );
 }
