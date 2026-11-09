@@ -44,6 +44,7 @@ import {
   EarningStatusSheet,
   StaggeredEntrance,
   GuestPrompt,
+  ScreenState,
 } from '../organisms';
 import type {
   EarningsBreakupSheetRef,
@@ -76,7 +77,7 @@ export function EarningsScreen() {
   // component's `loading` prop) rather than the masthead's ₹1,500
   // default, so the screen reads as loading instead of flashing a fake
   // value that then changes.
-  const { data: earnings, isLoading } = useEarnings();
+  const { data: earnings, isLoading, isError, refetch } = useEarnings();
   const loading = isLoading && !earnings;
 
 
@@ -160,6 +161,38 @@ export function EarningsScreen() {
                 onPress={() => navigation.navigate('GetHelp')}
               />
             </View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  // Failed to load (offline / server error) with nothing cached: say so.
+  // Falling through showed ₹0 everywhere, which reads as an empty balance.
+  if (isError && !earnings) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+          <ScrollView
+            ref={scrollRef}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              paddingTop: spacing[16],
+              paddingHorizontal: spacing[16],
+              paddingBottom: navClearance,
+              gap: spacing[16],
+            }}
+          >
+            <Text variant="heading20SemiBold" color={colors.text.primary}>
+              My Earnings
+            </Text>
+            <ScreenState
+              title="Couldn’t load your earnings"
+              body="Check your connection and try again."
+              actionLabel="Try again"
+              onAction={() => refetch()}
+            />
           </ScrollView>
         </SafeAreaView>
       </View>

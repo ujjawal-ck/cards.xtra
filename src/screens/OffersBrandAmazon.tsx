@@ -139,10 +139,12 @@ export function OffersBrandAmazon() {
   //   • else the Offer/How-to block when there's how-to data or coupons
   //     (coupons hint passed from the grid's coupons_count).
   //   • Upsell adds the bonus card + timer to the cashback block.
-  const hasCoupons = !!route.params?.hasCoupons;
   const showBenefits = (store?.benefits?.length ?? 0) > 0;
-  const showOfferDetails =
-    !showBenefits && (!!store?.hasHowTo || hasCoupons || !slug);
+  // Coupons are not fetched (the API's coupon include isn't mapped), so the
+  // offer block shows only when the store has real "how to get" steps. It
+  // used to render for any store with coupons, with a sample headline
+  // ("Upto 90% Off across categories"), "See +5 Offers" and code MCCK300.
+  const showOfferDetails = !showBenefits && !!store?.hasHowTo;
 
   const noop = () => undefined;
 
@@ -428,11 +430,11 @@ export function OffersBrandAmazon() {
             />
           ) : showOfferDetails ? (
             <StoreOfferDetails
-              copyCode={hasCoupons}
-              howToGetThisOffer={!hasCoupons && (store?.hasHowTo ?? !slug)}
-              title={`Top ${brandName} Offers`}
-              offerText="Upto 90% Off across categories"
-              seeDetailsLabel="See +5 Offers"
+              copyCode={false}
+              howToGetThisOffer
+              title={`${brandName} Offer`}
+              offerText={`${store?.cashbackPrefix ?? ''} ${store?.cashbackValue ?? ''} ${store?.cashbackKind ?? ''}`.trim()}
+              seeDetailsLabel="See offer details"
               onSeeDetails={openOfferDetails}
               onHowToGet={openHowToGet}
               style={{ width: '100%' }}

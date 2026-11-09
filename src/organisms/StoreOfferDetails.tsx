@@ -38,11 +38,12 @@ import { Text, Icon } from '../atoms';
 import { colors, spacing, radius, borderWidth, iconSize, sizing } from '../tokens';
 import { HowToGetOfferCard, ForwardArrowGlyph } from './HowToGetOfferCard';
 
-// Default copy — the Figma sample strings.
+// Neutral defaults: callers pass the store's real copy. (Were the Figma
+// sample strings, including the placeholder code MCCK300.)
 const DEFAULTS = {
-  title: 'Top <Brand> Offers',
-  offerText: 'Flat ₹300 Off Code on Orders over ₹999 + Flat 15% Cashback',
-  code: 'MCCK300',
+  title: 'Offers',
+  offerText: '',
+  code: '',
 } as const;
 
 export interface StoreOfferDetailsProps {
@@ -54,7 +55,7 @@ export interface StoreOfferDetailsProps {
   title?: string;
   /** Offer description line (wraps). Default Figma sample. */
   offerText?: string;
-  /** Promo code shown in the dashed chip. Default "MCCK300". */
+  /** Promo code shown in the dashed chip (only with copyCode). */
   code?: string;
   /** Fired when "Copy Code" is tapped. */
   onCopyCode?: () => void;
