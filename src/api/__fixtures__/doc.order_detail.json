@@ -1,0 +1,36 @@
+{
+ "data": {
+  "type": "orderdetails",
+  "id": "15488874",
+  "attributes": {
+   "order_amount": "589.00",
+   "exit_id": "LCCHKR20210204413534",
+   "merchant_name": "Amazon India's largest shop",
+   "pending_comments": "",
+   "delay_validation_comments": "",
+   "confirmed_comments": "",
+   "pending_cashback_reward_tracked_incorrect_ans": "",
+   "cashback_type": "Referral",
+   "cancelled_comments": "",
+   "cashoutid": null,
+   "referral_name": "<redacted>",
+   "cashout_amount": null,
+   "payment_name": null,
+   "cashback_amount": "25.00",
+   "expected_confirmation_date": "",
+   "transaction_date": "2021-02-04T00:00:00Z",
+   "payment_request_date_time": null,
+   "order_id": "TXN6854",
+   "cashback_status": "Cancelled",
+   "merchant_image_url": "https://asset5.ckassets.com/resources/image/stores/amazon-1586422650.png",
+   "bonus_type": null,
+   "raisequery": "yes"
+  },
+  "links": {
+   "related": "https://ckapi.iamsavings.co.uk/v1/users/raisequery/15488874",
+   "meta": {
+    "method": "POST"
+   }
+  }
+ }
+}

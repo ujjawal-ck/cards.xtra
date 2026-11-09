@@ -1026,7 +1026,7 @@ export const CardDetailScreenAndroid = forwardRef<
       if (eligibilityDefaults) {
         setEligibilityResult(
           resolveCardOutcome(
-            card?.filterMeta?.cardAlias,
+            card,
             eligibleAliases,
             parseIncome(eligibilityDefaults.income)
           )
@@ -1034,12 +1034,7 @@ export const CardDetailScreenAndroid = forwardRef<
       } else {
         setEligibilityResult(null);
       }
-    }, [
-      card?.id,
-      eligibilityDefaults,
-      eligibleAliases,
-      card?.filterMeta?.cardAlias,
-    ]);
+    }, [card, eligibilityDefaults, eligibleAliases]);
 
     const handleEligibilityChecked = useCallback(
       (o: {
@@ -1049,7 +1044,7 @@ export const CardDetailScreenAndroid = forwardRef<
         eligibleCardAliases: string[];
       }) => {
         const outcome = resolveCardOutcome(
-          card?.filterMeta?.cardAlias,
+          card,
           o.eligibleCardAliases,
           parseIncome(o.income)
         );
@@ -1060,7 +1055,7 @@ export const CardDetailScreenAndroid = forwardRef<
         }
         onEligibilityChecked?.(o);
       },
-      [card?.filterMeta?.cardAlias, onEligibilityChecked, onShowResultSheet]
+      [card, onEligibilityChecked, onShowResultSheet]
     );
 
     const handleClose = useCallback(() => {

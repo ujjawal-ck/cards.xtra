@@ -1,0 +1,1005 @@
+{
+ "data": {
+  "type": "offers",
+  "id": "27129",
+  "attributes": {
+   "name": "AJIO",
+   "network_id": 216,
+   "cashback_type": "Cashback",
+   "offer_type": "Cashback + Coupons",
+   "payment_date": "2027-01-02T00:00:00Z",
+   "accept_ticket": true,
+   "tracking_speed": "5 Minutes",
+   "expected_confirmation_days": 60,
+   "cashback_button_text": "Earn Cashback on AJIO",
+   "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/27129?id=",
+   "unique_identifier": "ajio-coupons",
+   "cashback": {
+    "payment_type": "percent",
+    "amount": "7",
+    "details": "Cashback for New Users of AJIO (Excluding Fine Jewellery, Gold & Silver Coins)",
+    "strike_out_value": 5
+   },
+   "short_description": "",
+   "final_terms_condition": "* Cashback is calculated on order amount excluding what is paid via wallet, credits or gift vouchers\r\n\r\n\r\n",
+   "terms_and_conditions": "* Cashback is not applicable on Fine Jewellery, Gold & Silver Coins\r\n* No Cashback on transactions made via AJIO's Business Account\r\n* Only use coupon codes mentioned on CashKaro and AJIO app/website\r\n* Your Cashback might track on different amount but will be corrected at the time of validation.\r\n* Cashback is calculated based on the order value, excluding platform/shipment fee and payments made using AJIO's wallet, supercash or Gift vouchers.\r\n* No Cashback on orders placed using Employee codes or Alliance codes.\r\n* Cashback is not applicable on Fine Jewellery, Gold & Silver Coins\r\n* Cashback will be cancelled if the order is exchanged or replaced.\r\n* In case of multi-item orders, each item may track separately.\r\n* If your Cashback does not track, raise a Missing Cashback ticket within 30 days of the order date.\r\n\r\n\r\n",
+   "full_description": "",
+   "image_url": "https://asset11.ckassets.com/resources/image/stores/ajio-coupons-1735561339.jpg",
+   "banner_image_url": "https://asset11.ckassets.com/resources/image/stores/banner/ajio-coupons-1731061623.png",
+   "cashback_ribbon_text": "Sale Live Now",
+   "calendar_cashback_rules_type": "Default",
+   "cashback_segment_id": [],
+   "report_storename": "AJIO",
+   "report_store_categoryname": "Fashion",
+   "app_tracking_enabled_android": 0,
+   "app_tracking_enabled_ios": 0,
+   "is_custom_override_case": 1,
+   "intermediate_page_text": "",
+   "seo_h1_tag": "AJIO Coupon Codes",
+   "rating_value": "4.9",
+   "rating_count": null,
+   "seo_description": "Discover the trendiest, freshest, and most unique styles at AJIO, your ultimate fashion destination offering on-trend collections at unbeatable prices on brands like Levis, Adidas, Nike, Marks & Spencers. With CashKaro, enjoy exclusive coupon codes and cashback on top of their existing discounts. When you shop through CashKaro, we earn a commission from AJIO and pass it on to you as Cashback, which you can easily transfer to your bank.",
+   "app_orders": "yes",
+   "store_banners": {
+    "desktop": {
+     "data": [
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/desktop-banner1-1790261810.png"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/desktop-banner2-1790321057.png"
+      },
+      {
+       "type": "lottie",
+       "value": "https://asset11.ckassets.com/resources/image/stores/desktop-banner4-1768883211.json"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/desktop-banner4-1757575575.png"
+      }
+     ]
+    },
+    "mobile": "<redacted>",
+    "tablet": {
+     "data": [
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/tablet-banner1-1790261810.png"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/tablet-banner2-1790321057.png"
+      },
+      {
+       "type": "lottie",
+       "value": "https://asset11.ckassets.com/resources/image/stores/tablet-banner4-1757582920.json"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/tablet-banner4-1757575576.png"
+      }
+     ]
+    },
+    "app": {
+     "data": [
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/app-banner1-1790261810.png"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/app-banner2-1790321058.png"
+      },
+      {
+       "type": "lottie",
+       "value": "https://asset11.ckassets.com/resources/image/stores/app-banner4-1768883212.json"
+      },
+      {
+       "type": "image",
+       "value": "https://asset11.ckassets.com/resources/image/stores/app-banner4-1757575577.png"
+      }
+     ]
+    }
+   },
+   "benefit_card_short_description": [],
+   "benefit_card_details": [],
+   "how_to_get_offer": [],
+   "tracking_info": {
+    "trackingtime_text": "Your Cashback will be added in 5 Minutes",
+    "confirmationtime_text": "After the return/exchange period ends, AJIO takes up to 60 Days to finalize its reports. Once we receive them, we update your Cashback Status",
+    "apporders_text": "Shop on the AJIO app or website after clicking out from CashKaro to earn Cashback"
+   },
+   "faq": [
+    {
+     "ques": "Why do I see multiple Cashback entries for a single order?",
+     "ans": "AJIO tracks each item individually, which is why there are separate entries for each item you purchased in your order"
+    },
+    {
+     "ques": "Why is my Cashback tracked at a lower amount than I expected?",
+     "ans": "Your Cashback is calculated on the order value, excluding payments made via wallets, gift cards, or vouchers. For example, if you place a Rs.1,000 order and pay Rs.500 via Credit/Debit Card and Rs.500 using a gift voucher, Cashback will be calculated only on Rs.500, as wallet/gift voucher payments are not eligible"
+    },
+    {
+     "ques": "What happens if I return or exchange an item?",
+     "ans": "If you return/exchange an item, the Cashback for that item will be cancelled. Always check the AJIO's Terms and Conditions before clicking out through CashKaro"
+    },
+    {
+     "ques": "Can I use coupon codes and still earn Cashback?",
+     "ans": "Yes, you can use Coupon Codes mentioned only on CashKaro or AJIO's website.  Using codes from other sources will result in Cashback cancellation"
+    },
+    {
+     "ques": "Is Cashback applicable on Cash on Delivery (COD) orders?",
+     "ans": "Yes, CashKaro Cashback applies to all payment modes, including Cash on Delivery (COD). Just ensure you visit the AJIO via CashKaro before making a purchase"
+    }
+   ],
+   "special_terms_conditions": [
+    "Cashback is not applicable on Fine Jewellery, Gold & Silver Coins",
+    "No Cashback on transactions made via AJIO's Business Account",
+    "Only use coupon codes mentioned on CashKaro and AJIO app/website"
+   ],
+   "popup_special_terms_conditions": "Cashback is not applicable on Fine Jewellery, Gold & Silver Coins",
+   "popup_steps_to_shop": [
+    "You will be redirected to AJIO",
+    "Shop as usual",
+    "Cashback tracks in 5 Minutes of placing order"
+   ],
+   "popup_icons_image_urls": [
+    "https://asset11.ckassets.com/resources/image/exit_popup_images/icon1.png",
+    "https://asset11.ckassets.com/resources/image/exit_popup_images/icon2.png",
+    "https://asset11.ckassets.com/resources/image/exit_popup_images/icon6.png"
+   ],
+   "no_cashback_store": 0,
+   "enable_cashback_calculator": 1,
+   "quiz_config": [
+    {
+     "question": "New to AJIO? Via CashKaro, what do you get on your first order?",
+     "options": [
+      {
+       "text": "Only the cashback",
+       "correct": false
+      },
+      {
+       "text": "30% off with NEW30 plus up to 7% cashback",
+       "correct": true
+      },
+      {
+       "text": "Free delivery only",
+       "correct": false
+      }
+     ],
+     "right_answer_message": "Correct! NEW30 takes 30% off your first order, then CashKaro adds 7% back. A Rs 1,500 order lands near Rs 975.",
+     "wrong_answer_message": "Not quite. Hint - Check the NEW30 code under Top AJIO Offers."
+    },
+    {
+     "question": "Which AJIO account earns CashKaro cashback?",
+     "options": [
+      {
+       "text": "Personal account",
+       "correct": true
+      },
+      {
+       "text": "AJIO Business account",
+       "correct": false
+      },
+      {
+       "text": "Both",
+       "correct": false
+      }
+     ],
+     "right_answer_message": "Correct! Personal only. Orders from an AJIO Business account don't earn cashback.",
+     "wrong_answer_message": "Not quite. Hint - Second line of Important Terms."
+    },
+    {
+     "question": "Where must an AJIO coupon code come from for cashback to stay valid?",
+     "options": [
+      {
+       "text": "Any coupon site",
+       "correct": false
+      },
+      {
+       "text": "CashKaro or AJIO's own site",
+       "correct": true
+      },
+      {
+       "text": "Instagram influencers",
+       "correct": false
+      }
+     ],
+     "right_answer_message": "Correct! Only codes from CashKaro or AJIO itself. Third-party codes can void your cashback.",
+     "wrong_answer_message": "Not quite. Hint - Third line of Important Terms."
+    }
+   ]
+  }
+ },
+ "included": [
+  {
+   "secondary_cashback": []
+  },
+  {
+   "coupons": []
+  },
+  {
+   "related_offers": {
+    "offers": [
+     {
+      "type": "offers",
+      "id": "26497",
+      "attributes": {
+       "name": "Shyaway",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Shyaway",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26497?id=",
+       "unique_identifier": "shyaway-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/shyaway-coupons-1735646185.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "20"
+       },
+       "cashback_ribbon_text": "Sale Live Now",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/shyaway-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "26808",
+      "attributes": {
+       "name": "Hummel",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Hummel",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26808?id=",
+       "unique_identifier": "hummel-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/hummel-coupons-1783685018.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "25"
+       },
+       "cashback_ribbon_text": "Upto 50% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/hummel-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24881",
+      "attributes": {
+       "name": "STRCH",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on STRCH",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24881?id=",
+       "unique_identifier": "strch-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/strch-coupons-1735648158.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "30"
+       },
+       "cashback_ribbon_text": "Upto 50% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/strch-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24567",
+      "attributes": {
+       "name": "House Of Koala",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on House Of Koala",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24567?id=",
+       "unique_identifier": "house-of-koala-offers",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/house-of-koala-offers-1745230983.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "30"
+       },
+       "cashback_ribbon_text": "Flat 15% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/house-of-koala-offers?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "22496",
+      "attributes": {
+       "name": "Uniqlo",
+       "cashback_type": "Cashback",
+       "network_id": 90,
+       "cashback_button_text": "Earn Cashback on Uniqlo",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/22496?id=",
+       "unique_identifier": "uniqlo-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/uniqlo-coupons-1735647469.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "1.20"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/uniqlo-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24607",
+      "attributes": {
+       "name": "XYXX Crew",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on XYXX Crew",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24607?id=",
+       "unique_identifier": "xyxx-discount-code",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/xyxx-discount-code-1735643105.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "7"
+       },
+       "cashback_ribbon_text": "Buy 5 at Rs.999",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/xyxx-discount-code?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "25786",
+      "attributes": {
+       "name": "Libas",
+       "cashback_type": "Cashback",
+       "network_id": 219,
+       "cashback_button_text": "Earn Cashback on Libas",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/25786?id=",
+       "unique_identifier": "libas-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/libas-coupons-1735642094.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "7"
+       },
+       "cashback_ribbon_text": "Upto 70% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/libas-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24924",
+      "attributes": {
+       "name": "Tata CLiQ",
+       "cashback_type": "Cashback",
+       "network_id": 51,
+       "cashback_button_text": "Earn Cashback on Tata CLiQ",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24924?id=",
+       "unique_identifier": "tatacliq-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/tatacliq-coupons-1789990881.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "3.50"
+       },
+       "cashback_ribbon_text": "Upto 85% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 2,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/tatacliq-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "26973",
+      "attributes": {
+       "name": "Lucira Jewelry",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Lucira Jewelry",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26973?id=",
+       "unique_identifier": "lucira-jewelry-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/lucira-jewelry-coupons-1786961616.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "10"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/lucira-jewelry-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24695",
+      "attributes": {
+       "name": "Tiaraa",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Tiaraa",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24695?id=",
+       "unique_identifier": "tiaraa-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/tiaraa-coupons-1735647566.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "15"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/tiaraa-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24854",
+      "attributes": {
+       "name": "Uppercase",
+       "cashback_type": "Cashback",
+       "network_id": 210,
+       "cashback_button_text": "Earn Cashback on Uppercase",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24854?id=",
+       "unique_identifier": "uppercase",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/uppercase-coupons-test-1697695220.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "20"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/uppercase?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "27044",
+      "attributes": {
+       "name": "Outzidr",
+       "cashback_type": "Cashback",
+       "network_id": 219,
+       "cashback_button_text": "Earn Cashback on Outzidr",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/27044?id=",
+       "unique_identifier": "outzidr-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/outzider-coupons-1788346621.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "currency",
+        "currency": "INR",
+        "amount": "250"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/outzidr-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "26740",
+      "attributes": {
+       "name": "Cahoot",
+       "cashback_type": "Cashback",
+       "network_id": 32,
+       "cashback_button_text": "Earn Cashback on Cahoot",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26740?id=",
+       "unique_identifier": "cahoot-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/cahoot-coupons-1781867640.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "8"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 1,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/cahoot-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "15001",
+      "attributes": {
+       "name": "The Luxury Closet",
+       "cashback_type": "Cashback",
+       "network_id": 90,
+       "cashback_button_text": "Earn Cashback on The Luxury Closet",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/15001?id=",
+       "unique_identifier": "the-luxury-closet-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/the-luxury-closet-coupons-1735641199.jpg",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "4"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/the-luxury-closet-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "19665",
+      "attributes": {
+       "name": "Decathlon",
+       "cashback_type": "Cashback",
+       "network_id": 219,
+       "cashback_button_text": "Earn Cashback on Decathlon",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/19665?id=",
+       "unique_identifier": "decathlon-coupon",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/decathalon-coupon-1763446029.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "2.50"
+       },
+       "cashback_ribbon_text": "Upto 40% Off",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 1,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/decathlon-coupon?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "16679",
+      "attributes": {
+       "name": "BeYoung",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on BeYoung",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/16679?id=",
+       "unique_identifier": "beyoung-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/beyoung-coupons-1765428764.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "10"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/beyoung-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "24018",
+      "attributes": {
+       "name": "Zouk",
+       "cashback_type": "Cashback",
+       "network_id": 210,
+       "cashback_button_text": "Earn Cashback on Zouk",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24018?id=",
+       "unique_identifier": "zouk-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/zouk-coupons-1667888577.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "8"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/zouk-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "16644",
+      "attributes": {
+       "name": "Kimti",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Kimti",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/16644?id=",
+       "unique_identifier": "kimti-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/kimti-coupons-1764244745.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "30"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/kimti-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "18702",
+      "attributes": {
+       "name": "The Hatke",
+       "cashback_type": "Cashback",
+       "network_id": 210,
+       "cashback_button_text": "Earn Cashback on The Hatke",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/18702?id=",
+       "unique_identifier": "the-hatke-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/the-hatke-coupons-1772024073.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "8"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/the-hatke-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "26561",
+      "attributes": {
+       "name": "Sanskruti Homes",
+       "cashback_type": "Cashback",
+       "network_id": 29,
+       "cashback_button_text": "Earn Cashback on Sanskruti Homes",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26561?id=",
+       "unique_identifier": "sanskruti-homes-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/sanskruti-homes-coupons-1780480450.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "10"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/sanskruti-homes-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "25269",
+      "attributes": {
+       "name": "Salty",
+       "cashback_type": "Cashback",
+       "network_id": 51,
+       "cashback_button_text": "Earn Cashback on Salty",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/25269?id=",
+       "unique_identifier": "salty-coupon-codes",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/salty-coupon-codes-1790328758.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "8"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/salty-coupon-codes?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "25901",
+      "attributes": {
+       "name": "Neemans",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on  Neemans",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/25901?id=",
+       "unique_identifier": "neemans-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/neemans-coupons-1759123090.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "10"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/neemans-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "16811",
+      "attributes": {
+       "name": "Jaypore",
+       "cashback_type": "Cashback",
+       "network_id": 32,
+       "cashback_button_text": "Earn Cashback on Jaypore",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/16811?id=",
+       "unique_identifier": "jaypore-coupons",
+       "offer_type": "Cashback + Coupons",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/jaypore-coupons.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "8"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/jaypore-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "9936",
+      "attributes": {
+       "name": "Rigo",
+       "cashback_type": "Cashback",
+       "network_id": 216,
+       "cashback_button_text": "Earn Cashback on Rigo",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/9936?id=",
+       "unique_identifier": "rigo-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/rigo-coupons-1767702988.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "32"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/rigo-coupons?device=App"
+      }
+     },
+     {
+      "type": "offers",
+      "id": "26566",
+      "attributes": {
+       "name": "Linen Club",
+       "cashback_type": "Cashback",
+       "network_id": 32,
+       "cashback_button_text": "Earn Cashback on Linen Club",
+       "has_final_terms_condition": true,
+       "short_description": "",
+       "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/26566?id=",
+       "unique_identifier": "linen-club-coupons",
+       "offer_type": "Cashback only",
+       "image_url": "https://asset11.ckassets.com/resources/image/stores/linen-club-coupons-1779878405.png",
+       "upsell_image_url": "https://asset11.ckassets.com/resources/image/stores/upsell/no-image.jpg",
+       "cashback": {
+        "payment_type": "percent",
+        "amount": "6"
+       },
+       "cashback_ribbon_text": "",
+       "calendar_cashback_rules_type": "Default",
+       "cashback_upsell_button_text": "",
+       "cashback_segment_id": [],
+       "secondary_cashback_count": 0,
+       "coupons_count": 0,
+       "coupons_with_code": 0
+      },
+      "links": {
+       "self": "https://ckapistaging.lmssecure.com/v1/offers/linen-club-coupons?device=App"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -16,6 +16,7 @@ import {
 } from '../api/cardMapper';
 import { buildCardRateIndex, resolveCkRate } from '../api/cardRates';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { fallbackTo } from '../api/http/report';
 import type { CardModel } from '../molecules';
 
 export const cardsQueryKey = ['bk', 'cards'] as const;
@@ -32,8 +33,8 @@ export function useCards() {
       // BankKaro commission — the card list still loads either way.
       const [cardsRes, initRes, rateStores] = await Promise.all([
         getCards(),
-        initBundle().catch(() => null),
-        getCardRateStores().catch(() => [] as any[]),
+        initBundle().catch(fallbackTo(null, 'bk init-bundle (bank directory)')),
+        getCardRateStores().catch(fallbackTo([] as any[], 'ck card-rate stores')),
       ]);
       const bankDir = buildBankDirectory(initRes);
       const rateIndex = buildCardRateIndex(rateStores);

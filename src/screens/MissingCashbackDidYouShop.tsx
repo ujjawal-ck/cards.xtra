@@ -234,6 +234,7 @@ export function MissingCashbackDidYouShop() {
                   timer={card.timer}
                   timerTarget={card.timerTarget}
                   ctaLabel={card.ctaLabel}
+                  reason={card.reason}
                   onCtaPress={() => onCtaPress(card)}
                 />
               </View>

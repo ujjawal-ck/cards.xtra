@@ -37,11 +37,9 @@ import {
   sendPaymentRequestOTP,
   verifyPaymentRequestOTP,
   verifyHasError,
-  submitUPIPayment,
-  submitAmazonPayment,
-  submitFlipkartPayment,
 } from '../../api/payments';
 import { ApiError } from '../../api/client';
+import { useWithdraw, PayoutInFlightError, PayoutUnknownError } from '../../query/mutations/withdraw';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
 
@@ -60,6 +58,7 @@ export function WithdrawVerifyOTP() {
   const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { draft, maskedMobile } = params;
+  const withdraw = useWithdraw();
 
   const [otp, setOtp] = useState('');
   const [otpGuid, setOtpGuid] = useState(params.otpGuid);
@@ -147,19 +146,14 @@ export function WithdrawVerifyOTP() {
 
     // 2) Submit the payment for the chosen method.
     try {
-      const { method, paymentType, paymentMethodId } = draft;
-      if (method === 'upi') {
-        await submitUPIPayment(accessToken, paymentType, draft.upiId ?? '', otpGuid, paymentMethodId);
-      } else if (method === 'amazon') {
-        await submitAmazonPayment(accessToken, paymentType, draft.mobile ?? '', otpGuid, paymentMethodId);
-      } else if (method === 'flipkart') {
-        await submitFlipkartPayment(accessToken, paymentType, draft.email ?? '', otpGuid, paymentMethodId);
-      }
+      const { method, paymentType } = draft;
+      const outcome = await withdraw.mutateAsync({ draft, otpGuid });
       // Payout request accepted — the withdraw conversion.
       analytics.track(Events.WITHDRAW_SUBMIT, {
         method,
         payment_type: paymentType,
         amount: draft.amount,
+        recheck: outcome.status === 'submitted_after_recheck',
       });
       inFlight.current = false;
       // Replace the whole withdraw stack with the success screen: Back from
@@ -170,9 +164,11 @@ export function WithdrawVerifyOTP() {
         routes: [{ name: 'WithdrawSuccess', params: { amount: draft.amount, method } }],
       });
     } catch (e: any) {
+      // Another submit is already running: leave the busy overlay up.
+      if (e instanceof PayoutInFlightError) return;
       done();
       play('error');
-      if (e instanceof ApiError && e.status === 0) {
+      if (e instanceof PayoutUnknownError || (e instanceof ApiError && e.status === 0)) {
         // Timed out / connection dropped AFTER the request was sent: the
         // outcome is unknown, so don't claim it failed or invite a blind retry.
         unconfirmedGuids.current.add(otpGuid);

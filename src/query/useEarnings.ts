@@ -1,34 +1,21 @@
 /**
  * useEarnings — the logged-in user's earnings summary (CashKaro).
- * Requires a user session; disabled (and returns nothing) when signed out.
- *
- * CashKaro access tokens expire in ~15 min, so a 401 triggers one
- * refresh-token exchange (via AuthContext) and a retry before failing.
+ * Disabled when signed out. Token refresh on 401 happens in the API layer
+ * (tokenManager), so this hook only fetches and maps.
  */
 import { useQuery } from '@tanstack/react-query';
 import { getEarnings } from '../api/cashkaro';
-import { ApiError } from '../api/client';
 import { mapEarnings, type EarningsValues } from '../api/earningsMapper';
 import { useAuth } from '../auth/AuthContext';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { qk } from './keys';
 
 export function useEarnings() {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   const query = useQuery<EarningsValues>({
-    queryKey: ['ck', 'earnings', accessToken],
+    queryKey: qk.user.earnings(),
     enabled: !!accessToken,
-    queryFn: async () => {
-      try {
-        return mapEarnings(await getEarnings(accessToken as string));
-      } catch (e) {
-        // Stale access token → refresh once and retry.
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return mapEarnings(await getEarnings(fresh));
-        }
-        throw e;
-      }
-    },
+    queryFn: async ({ signal }) => mapEarnings(await getEarnings(accessToken as string, signal)),
   });
   // Refresh the balances every time the Earnings tab regains focus.
   useRefetchOnFocus(query);

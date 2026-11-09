@@ -446,7 +446,12 @@ export function OnboardingScreen() {
       try {
         ({ otpGuid: guid } = await loginOtp(loginPhone));
       } catch (loginErr) {
-        if (loginErr instanceof ApiError && /not regist/i.test(loginErr.message)) {
+        // Code 2010 = "Mobile number not registered with us" (CK doc). The text
+        // check stays only as a fallback in case a gateway drops the code.
+        if (
+          loginErr instanceof ApiError &&
+          (loginErr.hasCode(2010) || /not regist/i.test(loginErr.message))
+        ) {
           ({ otpGuid: guid } = await signupOtp(loginPhone));
           signupMode = true;
         } else {
@@ -586,6 +591,10 @@ export function OnboardingScreen() {
         }
       }, 200);
     } catch (e) {
+      analytics.track(Events.OTP_FAILED, {
+        flow: isSignup ? 'signup' : 'login',
+        reason: e instanceof ApiError ? (e.status === 0 ? 'network' : `http_${e.status}`) : 'unknown',
+      });
       setError(
         e instanceof ApiError ? e.message : 'Could not verify OTP. Please try again.'
       );

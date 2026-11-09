@@ -1,0 +1,79 @@
+{
+ "meta": {
+  "total_records": 2,
+  "page_number": 1,
+  "page_size": "3"
+ },
+ "data": [
+  {
+   "type": "offers",
+   "id": "100000015",
+   "attributes": {
+    "name": "Dot & Key IDFC",
+    "network_id": 219,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback only",
+    "cashback_button_text": "Earn Cashback on Dot & Key",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "12",
+     "strike_out_value": 0
+    },
+    "short_description": "",
+    "cashback_ribbon_text": "Upto 20% Off",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "dotandkey-idfc",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/100000015?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/dotandkey-coupons-1716552540.png",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 1,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/dotandkey-idfc?device=App"
+   }
+  },
+  {
+   "type": "offers",
+   "id": "16919",
+   "attributes": {
+    "name": "Nykaa Fashion",
+    "network_id": 18,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback + Coupons",
+    "cashback_button_text": "Visit Nykaa Fashion",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "5",
+     "strike_out_value": 0
+    },
+    "short_description": "",
+    "cashback_expiry_date": "2027-12-30T10:30:00Z",
+    "cashback_ribbon_text": "",
+    "calendar_cashback_rules_type": "Upsell",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "nykaafashion-coupons",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/16919?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/nykaafashion-coupons-1735636886.jpg",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 1,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/nykaafashion-coupons?device=App"
+   }
+  }
+ ],
+ "links": {
+  "self": "https://ckapistaging.lmssecure.com/v1/offers/category/home-categories-exclusive?device=App&page[size]=3",
+  "first": "https://ckapistaging.lmssecure.com/v1/offers/category/home-categories-exclusive?page[number]=1&page[size]=3&device=App&sort=Popularity",
+  "last": "https://ckapistaging.lmssecure.com/v1/offers/category/home-categories-exclusive?page[number]=1&page[size]=3&device=App&sort=Popularity",
+  "prev": null,
+  "next": null
+ }
+}

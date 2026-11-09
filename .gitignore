@@ -56,3 +56,6 @@ modules/**/.gradle/
 google-services.json
 GoogleService-Info.plist
 expo-qr.png
+
+# local agent worktrees
+.claude/worktrees/

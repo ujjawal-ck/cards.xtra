@@ -19,6 +19,7 @@
  */
 import { CK } from '../config/env';
 import { ck } from './cashkaro';
+import * as Schemas from './schemas';
 
 // ── JSON:API shapes (confirmed against the web prototype's interfaces) ───────
 
@@ -123,7 +124,7 @@ export interface McTicketData {
 
 /** Stores the user can raise a missing-cashback claim against. */
 export async function getRetailers(userToken: string, page = 1, size = 100): Promise<{ data?: McRetailer[] }> {
-  return ck('/users/missingcashback/retailers', {
+  return ck('/users/missingcashback/retailers', { contract: ['mc/retailers', Schemas.McRetailersResponse],
     auth: { userToken },
     query: { device: CK.device, 'page[number]': page, 'page[size]': size },
   });
@@ -134,7 +135,7 @@ export async function getExitClickDates(
   userToken: string,
   storeId: string,
 ): Promise<{ data?: McExitClick[]; meta?: McExitMeta }> {
-  return ck(`/users/missingcashback/exitclickdates/${encodeURIComponent(storeId)}`, {
+  return ck(`/users/missingcashback/exitclickdates/${encodeURIComponent(storeId)}`, { contract: ['mc/exitclickdates', Schemas.McExitDatesResponse],
     auth: { userToken },
   });
 }
@@ -146,7 +147,7 @@ export async function getQueue(
   page = 1,
   size = 50,
 ): Promise<{ data?: McClaim[]; meta?: { pending?: number; resolved?: number; others?: number } }> {
-  return ck('/users/missingcashback/queue', {
+  return ck('/users/missingcashback/queue', { contract: ['mc/queue', Schemas.McQueueResponse],
     auth: { userToken },
     query: { 'filter[status]': status, 'page[number]': page, 'page[size]': size },
   });
@@ -160,15 +161,13 @@ export async function getQueue(
 export async function getQueueItem(userToken: string, queueId: string): Promise<McClaim | null> {
   const inList = (res: { data?: McClaim[] }) =>
     (res.data || []).find((c) => String(c.id) === String(queueId)) || null;
-  try {
-    const pending = await getQueue(userToken, 'Pending', 1, 50);
-    const found = inList(pending);
-    if (found) return found;
-    const resolved = await getQueue(userToken, 'Resolved', 1, 50);
-    return inList(resolved);
-  } catch {
-    return null;
-  }
+  // "Not in either list" returns null. A failed request throws, so the
+  // caller can show a retry instead of silently losing the claim.
+  const pending = await getQueue(userToken, 'Pending', 1, 50);
+  const found = inList(pending);
+  if (found) return found;
+  const resolved = await getQueue(userToken, 'Resolved', 1, 50);
+  return inList(resolved);
 }
 
 // ── Writes ───────────────────────────────────────────────────────────────

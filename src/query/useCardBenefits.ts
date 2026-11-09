@@ -7,9 +7,10 @@ import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { getCardDetail } from '../api/bankkaro';
 import { mapCardBenefits, type BenefitCategory } from '../api/cardBenefitsMapper';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { qk } from './keys';
 
 const benefitsQuery = (alias: string) => ({
-  queryKey: ['bk', 'card-benefits', alias] as const,
+  queryKey: qk.cards.benefits(alias),
   queryFn: async () => mapCardBenefits(await getCardDetail(alias)),
 });
 

@@ -12,6 +12,8 @@
  * client-side format gate (an invalid value surfaces as a submit error).
  */
 import { ck } from './cashkaro';
+import { reportHandled } from './http/report';
+import * as Schemas from './schemas';
 import { ApiError, otpValue } from './client';
 import { CK } from '../config/env';
 
@@ -46,9 +48,10 @@ export interface PaymentData {
  *  return data — it fails with HTTP 400 / error code 5002 ("a payment request
  *  from you is already pending"). Callers detect that via
  *  paymentInProcessAmountFromError() rather than a field on the success body. */
-export async function fetchPaymentInfo(token: string): Promise<any> {
-  return ck('/payment/payment', {
+export async function fetchPaymentInfo(token: string, signal?: AbortSignal): Promise<any> {
+  return ck('/payment/payment', { contract: ['payment/payment', Schemas.PaymentInfoResponse],
     auth: { userToken: token },
+    signal,
     query: { device: CK.device, paymentautomation: 'true', include: 'charities' },
   });
 }
@@ -69,6 +72,26 @@ export function paymentInProcessAmountFromError(e: unknown): number | null {
   const err = errors.find((x: any) => String(x?.code) === PAYMENT_IN_PROCESS_CODE);
   if (!err) return null;
   return parseFloat(err?.meta?.requested_earnings) || 0;
+}
+
+// Error code returned by /payment/payment when the user's confirmed balance is
+// below the cash-out minimum (verified on staging 2026-11-03:
+// {"code":"5003","title":"Payment threshold not reached.",
+//  "meta":{"cashout_limit":250,"pending_earnings":"0.00",...}}).
+const PAYMENT_BELOW_THRESHOLD_CODE = '5003';
+
+/**
+ * When /payment/payment fails because the balance is below the cash-out
+ * minimum (HTTP 400, code 5003), returns that minimum (₹). Returns null for
+ * any other error.
+ */
+export function paymentThresholdFromError(e: unknown): number | null {
+  if (!(e instanceof ApiError) || e.status !== 400) return null;
+  const errors = (e.payload as any)?.errors;
+  if (!Array.isArray(errors)) return null;
+  const err = errors.find((x: any) => String(x?.code) === PAYMENT_BELOW_THRESHOLD_CODE);
+  if (!err) return null;
+  return parseFloat(err?.meta?.cashout_limit) || 250;
 }
 
 export function extractPaymentData(info: any): PaymentData {
@@ -94,17 +117,20 @@ export function extractPaymentMethodIds(
 ): Record<PaymentMethodKey, number> {
   const ids: Record<PaymentMethodKey, number> = { ...DEFAULT_PAYMENT_METHOD_IDS };
 
-  const candidates: any[] =
-    info?.data?.relationships?.payment_methods?.data ||
-    info?.data?.relationships?.payment_methods ||
-    info?.relationships?.payment_methods?.data ||
-    info?.relationships?.payment_methods ||
-    info?.data?.attributes?.payment_methods ||
-    info?.data?.payment_methods ||
-    (Array.isArray(info?.included)
+  // Documented shape (CK doc, GET /payment/payment):
+  // relationships.payment_methods.data[] with { id, attributes.payment_name }.
+  // `included` is kept as a second source in case CK moves it there.
+  const documented = info?.relationships?.payment_methods?.data;
+  const candidates: any[] = Array.isArray(documented)
+    ? documented
+    : Array.isArray(info?.included)
       ? info.included.filter((i: any) => i?.type === 'payment_method')
-      : []) ||
-    [];
+      : [];
+  if (candidates.length === 0 && info) {
+    // Falling back to built-in ids could send a payout to the wrong method on
+    // a backend where ids differ, so make it visible.
+    reportHandled(new Error('payment_methods missing in /payment/payment'), 'payment method ids: using defaults');
+  }
 
   if (!Array.isArray(candidates) || candidates.length === 0) return ids;
 
@@ -138,7 +164,7 @@ export interface SendOtpResult {
 
 /** POST /users/sendotp — PAYMENT_REQUEST_OTP. Returns otp_guid + masked no. */
 export async function sendPaymentRequestOTP(token: string): Promise<SendOtpResult> {
-  const res: any = await ck('/users/sendotp', {
+  const res: any = await ck('/users/sendotp', { contract: ['users/sendotp', Schemas.SendOtpResponse],
     method: 'POST',
     auth: { userToken: token },
     query: { device: CK.device },
@@ -180,6 +206,9 @@ export function verifyHasError(res: any): boolean {
   return !!(res?.error || (res?.data?.errors && res.data.errors.length > 0));
 }
 
+/** Deadline for a payout request (the server can be slow to confirm). */
+export const PAYOUT_TIMEOUT_MS = 30_000;
+
 export async function submitUPIPayment(
   token: string,
   paymentType: PaymentTypeKey,
@@ -187,8 +216,10 @@ export async function submitUPIPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {
@@ -212,8 +243,10 @@ export async function submitAmazonPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {
@@ -238,8 +271,10 @@ export async function submitFlipkartPayment(
   otpGuid: string,
   paymentMethodId: number
 ): Promise<any> {
-  return ck('/payment/paymentV1', {
+  return ck('/payment/paymentV1', { contract: ['payment/paymentV1', Schemas.PaymentRequestResponse],
     method: 'POST',
+    // Payouts get a longer deadline and are never retried (POST, not idempotent).
+    timeoutMs: PAYOUT_TIMEOUT_MS,
     auth: { userToken: token },
     query: { device: CK.device },
     body: {
@@ -256,31 +291,4 @@ export async function submitFlipkartPayment(
   });
 }
 
-export async function submitBankPayment(
-  token: string,
-  paymentType: PaymentTypeKey,
-  ifscCode: string,
-  accountHolderName: string,
-  accountNumber: string,
-  otpGuid: string,
-  paymentMethodId: number
-): Promise<any> {
-  return ck('/payment/paymentV1', {
-    method: 'POST',
-    auth: { userToken: token },
-    query: { device: CK.device },
-    body: {
-      data: {
-        type: 'imps',
-        attributes: {
-          otp_guid: otpGuid,
-          payment_type: paymentType,
-          payment_method_id: String(paymentMethodId),
-          ifsc_code: ifscCode,
-          account_holder_name: accountHolderName,
-          account_number: accountNumber,
-        },
-      },
-    },
-  });
-}
+

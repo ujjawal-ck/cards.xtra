@@ -102,7 +102,9 @@ import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
+import { getEligibilityGateVariant } from '../experiments';
 import { analytics, Events } from '../analytics';
+import { classifyCardEligibility, type EligibilityBucket } from '../api/eligibility';
 import { haptics, play } from '../lib/haptics';
 import { Image as ExpoImage } from 'expo-image';
 import {
@@ -132,41 +134,8 @@ const NAV_REVEAL_THRESHOLD = 1;
 // ----------------------------------------------------------------------------
 // Eligibility grouping — frontend classification (Figma 5972:28691)
 // ----------------------------------------------------------------------------
-// The backend only returns eligible-or-not per card (no "Maybe" tier), so the
-// Eligible / Maybe / Ineligible split is derived on the client:
-//   • req(card)  — a notional required monthly income from the card's fee tier
-//                  (no per-card income ships in the catalog; fee is the proxy).
-//   • Eligible   — the API says so (alias is in the eligible set).
-//   • Ineligible — not eligible AND income ≥ req: the rejection must be a hard
-//                  gate (pincode / employment), so it is NOT a "Maybe".
-//   • Maybe      — not eligible AND income is within 20% below req
-//                  (0.8·req ≤ income < req): a soft, income-only near-miss.
-//   • Ineligible — not eligible AND income < 0.8·req: clearly short.
-type EligibilityBucket = 'eligible' | 'maybe' | 'ineligible';
-
-function requiredMonthlyIncome(card: CardModel): number {
-  const feeStr = card.detail?.fee.annual.amount ?? card.annualFee ?? '';
-  const fee = Number(String(feeStr).replace(/[^0-9]/g, '')) || 0;
-  if (fee >= 2500) return 100000; // premium
-  if (fee >= 500) return 50000; // mid
-  return 25000; // entry / lifetime-free
-}
-
-function classifyEligibility(
-  card: CardModel,
-  eligibleSet: Set<string>,
-  monthlyIncome: number
-): EligibilityBucket {
-  const alias = card.filterMeta?.cardAlias;
-  if (alias && eligibleSet.has(alias)) return 'eligible';
-  const req = requiredMonthlyIncome(card);
-  if (!Number.isFinite(monthlyIncome)) return 'ineligible';
-  // Rejected despite enough income → the block is pincode/employment (hard
-  // gate). No "Maybe" for those, per the agreed rule.
-  if (monthlyIncome >= req) return 'ineligible';
-  if (monthlyIncome >= 0.8 * req) return 'maybe';
-  return 'ineligible';
-}
+// Eligible / Maybe / Ineligible comes from the shared classifyCardEligibility
+// in api/eligibility.ts (the same verdict the card sheet and Apply flow use).
 
 // Section separator — a label with a hairline rule filling the row to the
 // right (Figma). Used for the eligibility group headers (Eligible / Maybe /
@@ -394,6 +363,9 @@ export function HomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [selectedCard, setSelectedCard] = useState<CardModel | null>(null);
+  // Latest selected card for callbacks that must not re-create on change.
+  const selectedCardRef = useRef<CardModel | null>(null);
+  selectedCardRef.current = selectedCard;
   // Screen Y of the last card tap → the Android card detail zooms from this
   // point (see CardDetailScreenAndroid). Undefined → mid-screen fallback.
   const [cardOriginY, setCardOriginY] = useState<number | undefined>(undefined);
@@ -463,6 +435,11 @@ export function HomeScreen() {
   const presentResultSheet = useCallback((outcome: EligibilityOutcome) => {
     // This path always celebrates a single card (card-detail Apply flow).
     setEligibleSheetMode('card');
+    analytics.track(Events.ELIGIBILITY_RESULT, {
+      item_id: selectedCardRef.current?.id,
+      outcome,
+      gate_variant: getEligibilityGateVariant(),
+    });
     // Outcome haptic — celebrate eligible, soft-warn maybe, error ineligible.
     if (outcome === 'eligible') {
       play('success');
@@ -1056,6 +1033,10 @@ export function HomeScreen() {
     // "Apply Now" tapped (from tile or detail sheet). The actual outbound to
     // the bank fires later in handleResultApply (redirect: true) — or directly
     // here on a repeat apply for a card whose result was already shown once.
+    // A/B: 'mandatory' (control) asks for eligibility before the first
+    // apply; 'skippable' (Figma) lets Apply go straight to the bank when no
+    // details exist. Frozen per session; see src/experiments.
+    const gateVariant = getEligibilityGateVariant();
     analytics.track(Events.CARD_APPLY, {
       item_id: card.id,
       item_name: card.name,
@@ -1064,17 +1045,21 @@ export function HomeScreen() {
       income_type: eligibilityDetails?.incomeType,
       income_band: eligibilityDetails ? incomeBand(eligibilityDetails.income) : undefined,
       pincode_prefix: eligibilityDetails ? pincodePrefix(eligibilityDetails.pincode) : undefined,
-      redirect: false,
+      gate_variant: gateVariant,
     });
     setSelectedCard(card);
     if (!eligibilityDetails) {
+      if (gateVariant === 'skippable') {
+        applyOutbound(card);
+        return;
+      }
       setApplyPendingCard(card);
       eligibilityCheckerRef.current?.present();
       return;
     }
     const income = Number(eligibilityDetails.income.replace(/[^0-9]/g, ''));
     const outcome = resolveCardOutcome(
-      card.filterMeta?.cardAlias,
+      card,
       eligibleAliases,
       income
     );
@@ -1322,7 +1307,6 @@ export function HomeScreen() {
     const monthlyIncome = Number(
       (eligibilityDetails?.income ?? '').replace(/[^0-9]/g, '')
     );
-    const set = new Set(eligibleAliases);
     // ALL filtered cards (NOT the eligibility-filtered visibleCards) — the
     // grouped view shows every card under its bucket, not just eligible ones.
     const filtered = applyFilters(cards, appliedFilters);
@@ -1332,7 +1316,7 @@ export function HomeScreen() {
       ineligible: [],
     };
     for (const c of filtered) {
-      buckets[classifyEligibility(c, set, monthlyIncome)].push(c);
+      buckets[classifyCardEligibility(c, eligibleAliases, monthlyIncome)].push(c);
     }
     const labels: Record<EligibilityBucket, string> = {
       eligible: 'Eligible Cards',
@@ -1451,6 +1435,7 @@ export function HomeScreen() {
         income_band: eligibilityDetails ? incomeBand(eligibilityDetails.income) : undefined,
         pincode_prefix: eligibilityDetails ? pincodePrefix(eligibilityDetails.pincode) : undefined,
         redirect: true,
+        gate_variant: getEligibilityGateVariant(),
       });
       openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
     },
@@ -2001,7 +1986,18 @@ export function HomeScreen() {
         // (and so Apply / Share / eligibility) in sync as they swipe.
         cards={pagerCards}
         initialCardId={selectedCard?.id}
-        onActiveCardChange={(card) => setSelectedCard(card)}
+        onActiveCardChange={(card) => {
+          // Swiping to another card in the sheet is a new card view.
+          if (card && card.id !== selectedCardRef.current?.id) {
+            analytics.track(Events.VIEW_ITEM, {
+              item_id: card.id,
+              item_name: card.name,
+              item_brand: card.filterMeta?.bankName,
+              source: 'swipe',
+            });
+          }
+          setSelectedCard(card);
+        }}
         // Recommend from the SAME list the pager swipes through, so tapping a
         // recommended card always resolves to a page in the pager (clean jump).
         recommended={pagerCards}
@@ -2010,7 +2006,15 @@ export function HomeScreen() {
         onEligibilityChecked={applyEligibility}
         onShowResultSheet={presentResultSheet}
         onApply={handleApply}
-        onRecommendedPress={(card) => setSelectedCard(card)}
+        onRecommendedPress={(card) => {
+          analytics.track(Events.VIEW_ITEM, {
+            item_id: card.id,
+            item_name: card.name,
+            item_brand: card.filterMeta?.bankName,
+            source: 'recommended',
+          });
+          setSelectedCard(card);
+        }}
         // "Learn how it works?" → slide the HowItWorksSheet up over the
         // (still-mounted) card detail. Hide the BottomNav for the duration
         // so it can't peek above the RN Modal scrim, mirroring the share flow.
@@ -2184,7 +2188,7 @@ export function HomeScreen() {
             const card = applyPendingCard;
             setApplyPendingCard(null);
             const outcome = resolveCardOutcome(
-              card.filterMeta?.cardAlias,
+              card,
               result.eligibleCardAliases,
               result.incomeValue
             );

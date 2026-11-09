@@ -1,0 +1,80 @@
+# Nightly API contract check against the live CashKaro Mini Apps gateway.
+#
+# Runs the read-only, no-login requests of docs/postman/ck-miniapp-apis
+# (app token, offers by category, merchant offer) on staging (app version 4.6)
+# and prod (4.9). A red run means the API drifted or a key/version stopped
+# working, before users notice.
+#
+# Secrets (repo Settings → Secrets and variables → Actions):
+#   CK_STAGING_API_KEY  staging x-api-key
+#   CK_MINI_API_KEY     prod (ckminapps.com) x-api-key
+# A stage whose secret is missing is skipped with a warning.
+name: API contract
+
+on:
+  schedule:
+    - cron: '7 21 * * *' # 02:37 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - stage: staging
+            base: https://ckapistaging.lmssecure.com/v1
+            app_version: '4.6'
+            category: miniapp
+            key_secret: CK_STAGING_API_KEY
+          - stage: prod
+            base: https://ckminapps.com/v1
+            app_version: '4.9'
+            category: ck-white-labels
+            key_secret: CK_MINI_API_KEY
+    name: contract (${{ matrix.stage }})
+    env:
+      API_KEY: ${{ secrets[matrix.key_secret] }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check secret
+        id: key
+        run: |
+          if [ -z "$API_KEY" ]; then
+            echo "::warning::${{ matrix.key_secret }} is not set; skipping ${{ matrix.stage }}"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run newman
+        if: steps.key.outputs.present == 'true'
+        run: |
+          npx --yes newman@6 run docs/postman/ck-miniapp-apis.postman_collection.json \
+            -e docs/postman/ck-miniapp.postman_environment.template.json \
+            --env-var "BASE=${{ matrix.base }}" \
+            --env-var "APP_VERSION=${{ matrix.app_version }}" \
+            --env-var "CATEGORY_SLUG=${{ matrix.category }}" \
+            --env-var "API_KEY=$API_KEY" \
+            --folder "Access Token (x-api-key only, per doc)" \
+            --folder "Offers By Category" \
+            --folder "Merchant Offers" \
+            --reporters cli,junit \
+            --reporter-junit-export "newman-${{ matrix.stage }}.xml"
+
+      - name: Upload report
+        if: always() && steps.key.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-${{ matrix.stage }}
+          path: newman-${{ matrix.stage }}.xml

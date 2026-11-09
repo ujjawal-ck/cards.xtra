@@ -9,6 +9,7 @@
  * short-lived and kept in memory by cashkaro.ts.
  */
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 
 const ACCESS_TOKEN = 'ck_access_token';
 const REFRESH_TOKEN = 'ck_refresh_token';
@@ -47,6 +48,7 @@ export async function clearSession(): Promise<void> {
     SecureStore.deleteItemAsync(REFRESH_TOKEN),
     SecureStore.deleteItemAsync(DISPLAY_NAME),
     SecureStore.deleteItemAsync(NAME_PENDING),
+    SecureStore.deleteItemAsync('ck_user_id'),
   ]);
 }
 
@@ -70,14 +72,9 @@ export async function loadNamePending(): Promise<boolean> {
   return (await SecureStore.getItemAsync(NAME_PENDING)) === '1';
 }
 
-/** Random 32-char id (not crypto-grade; just a stable per-install handle). */
+/** Cryptographically random UUID v4: a stable per-install handle. */
 function randomId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let out = '';
-  for (let i = 0; i < 32; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return out;
+  return Crypto.randomUUID();
 }
 
 /** Stable device id, generated + persisted on first use. */
@@ -102,4 +99,17 @@ export async function markOnboarded(): Promise<void> {
 
 export async function loadOnboarded(): Promise<boolean> {
   return (await SecureStore.getItemAsync(ONBOARDED)) === '1';
+}
+
+// ── CashKaro user id (for click-out attribution) ────────────────────────────
+
+const USER_ID = 'ck_user_id';
+
+/** Persist the CK account id so attribution works instantly on next launch. */
+export async function saveUserId(id: string): Promise<void> {
+  await SecureStore.setItemAsync(USER_ID, id);
+}
+
+export async function loadUserId(): Promise<string | null> {
+  return SecureStore.getItemAsync(USER_ID);
 }

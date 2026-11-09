@@ -60,11 +60,14 @@ export function mapEarnings(res: any): EarningsValues {
   const rewards = toAmount(a.total_rewards_earned) ?? toAmount(a.total_rewards);
   // Derived total only when there's something to derive it from — a bare 0
   // made an all-empty response look like real data.
+  const totalRaw = toAmount(a.total_earned);
   const total =
-    toAmount(a.total_earned) ??
+    totalRaw ??
     (confirmed !== null || pending !== null ? (confirmed ?? 0) + (pending ?? 0) : null);
 
-  const hasData = [confirmed, pending, cashback, rewards, total].some((x) => x !== null);
+  // Only values the API actually sent count; the computed fallback total
+  // must not make an empty response look like "₹0 earned".
+  const hasData = [confirmed, pending, cashback, rewards, totalRaw].some((x) => x !== null);
 
   return {
     totalEarnings: money(total ?? 0),

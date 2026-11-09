@@ -1,0 +1,171 @@
+{
+ "meta": {
+  "total_records": 9,
+  "page_number": 1,
+  "page_size": "5"
+ },
+ "data": [
+  {
+   "type": "offers",
+   "id": "27129",
+   "attributes": {
+    "name": "AJIO",
+    "network_id": 216,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback + Coupons",
+    "cashback_button_text": "Earn Cashback on AJIO",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "7",
+     "strike_out_value": 5
+    },
+    "short_description": "",
+    "cashback_ribbon_text": "Sale Live Now",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "ajio-coupons",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/27129?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/ajio-coupons-1735561339.jpg",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 0,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/ajio-coupons?device=App"
+   }
+  },
+  {
+   "type": "offers",
+   "id": "18861",
+   "attributes": {
+    "name": "Amazon Fashion & Clothing",
+    "network_id": 43,
+    "cashback_type": "Rewards",
+    "offer_type": "Cashback only",
+    "cashback_button_text": "Earn Rewards on Amazon",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "5",
+     "strike_out_value": 3
+    },
+    "short_description": "",
+    "cashback_ribbon_text": "Deals Live Now",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "amazon-clothing",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/18861?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/amazon-clothing-1758477313.png",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 0,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/amazon-clothing?device=App"
+   }
+  },
+  {
+   "type": "offers",
+   "id": "21912",
+   "attributes": {
+    "name": "Shopsy",
+    "network_id": 187,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback + Coupons",
+    "cashback_button_text": "Earn Cashback on Shopsy",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "7.50",
+     "strike_out_value": 0
+    },
+    "short_description": "[Y] 90% positive rating by 3.5K+ users\r\n[Y]  Rs.10 Lakh+ Cashback given in last month\r\n\r\nUp to 80% Off Across Categories\r\n\r\n+ Up to 8% CashKaro Cashback on Shopsy Orders\r\n(Max. Cashback: Rs.187)\r\n\r\n",
+    "cashback_ribbon_text": "Upto 90% Off",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "shopsy-coupons",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/21912?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/shopsy-coupons-test-1691651556.png",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 2,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/shopsy-coupons?device=App"
+   }
+  },
+  {
+   "type": "offers",
+   "id": "24924",
+   "attributes": {
+    "name": "Tata CLiQ",
+    "network_id": 51,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback + Coupons",
+    "cashback_button_text": "Earn Cashback on Tata CLiQ",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "3.50",
+     "strike_out_value": 3
+    },
+    "short_description": "",
+    "cashback_ribbon_text": "Upto 85% Off",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "tatacliq-coupons",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/24924?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/tatacliq-coupons-1789990881.png",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 1,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/tatacliq-coupons?device=App"
+   }
+  },
+  {
+   "type": "offers",
+   "id": "25094",
+   "attributes": {
+    "name": "Zop",
+    "network_id": 216,
+    "cashback_type": "Cashback",
+    "offer_type": "Cashback only",
+    "cashback_button_text": "Earn Cashback on Zop",
+    "cashback": {
+     "payment_type": "percent",
+     "amount": "8",
+     "strike_out_value": 0
+    },
+    "short_description": "",
+    "cashback_ribbon_text": "Upto 60% Off",
+    "calendar_cashback_rules_type": "Default",
+    "cashback_upsell_button_text": "",
+    "cashback_segment_id": [],
+    "unique_identifier": "zop-coupons",
+    "cashback_url": "https://cktrackingv2.lmssecure.com/visitretailer/app/25094?id=",
+    "image_url": "https://asset11.ckassets.com/resources/image/stores/zop-coupons-test-1749805371.png",
+    "has_final_terms_condition": true,
+    "secondary_cashback_count": 0,
+    "coupons_count": 0,
+    "coupons_with_code": 0
+   },
+   "links": {
+    "self": "https://ckapistaging.lmssecure.com/v1/offers/zop-coupons?device=App"
+   }
+  }
+ ],
+ "links": {
+  "self": "https://ckapistaging.lmssecure.com/v1/offers/category/fashion?device=App&page[size]=5",
+  "first": "https://ckapistaging.lmssecure.com/v1/offers/category/fashion?page[number]=1&page[size]=5&device=App&sort=Popularity",
+  "last": "https://ckapistaging.lmssecure.com/v1/offers/category/fashion?page[number]=2&page[size]=5&device=App&sort=Popularity",
+  "prev": null,
+  "next": "https://ckapistaging.lmssecure.com/v1/offers/category/fashion?page[number]=2&page[size]=5&device=App&sort=Popularity"
+ }
+}

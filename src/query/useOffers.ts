@@ -25,6 +25,7 @@ import {
   type OfferCategory,
 } from '../data/offerCategories';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { qk } from './keys';
 
 /**
  * The Offers strip, driven by the CashKaro "CK MINI APP" parent category. One
@@ -33,7 +34,7 @@ import { useRefetchOnFocus } from './useRefetchOnFocus';
  */
 export function useOfferCategories() {
   const query = useQuery<OfferCategory[]>({
-    queryKey: ['ck', 'offer-categories', MINIAPP_PARENT_PATH],
+    queryKey: qk.offers.categories(MINIAPP_PARENT_PATH),
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       try {
@@ -55,7 +56,7 @@ export function useOfferCategories() {
 
 export function useCategoryOffers(categorySlug: string | null) {
   const query = useQuery<OfferStoreSummary[]>({
-    queryKey: ['ck', 'category-offers', categorySlug],
+    queryKey: qk.offers.category(categorySlug ?? ''),
     enabled: !!categorySlug,
     queryFn: async () => mapCategoryOffers(await getCategoryOffers(categorySlug as string)),
   });
@@ -65,7 +66,7 @@ export function useCategoryOffers(categorySlug: string | null) {
 
 export function useOfferStore(storeSlug: string | null) {
   const query = useQuery<OfferStoreDetail | null>({
-    queryKey: ['ck', 'offer-store', storeSlug],
+    queryKey: qk.offers.store(storeSlug ?? ''),
     enabled: !!storeSlug,
     queryFn: async () => mapOfferStore(await getOfferStore(storeSlug as string)),
   });
@@ -91,7 +92,7 @@ export function useAllOfferStores(
 } {
   const results = useQueries({
     queries: paths.map((path) => ({
-      queryKey: ['ck', 'category-offers', path],
+      queryKey: qk.offers.category(path),
       enabled,
       staleTime: 5 * 60 * 1000,
       queryFn: async () => mapCategoryOffers(await getCategoryOffers(path)),

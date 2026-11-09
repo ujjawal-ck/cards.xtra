@@ -1,0 +1,15 @@
+{
+ "data": [
+  {
+   "type": "user",
+   "id": 23717052,
+   "attributes": {
+    "fullname": "<redacted>",
+    "email": "<redacted>",
+    "mobile_number": "<redacted>",
+    "enabled_newsletter": "yes",
+    "enabled_referral_earnings_notification": "yes"
+   }
+  }
+ ]
+}

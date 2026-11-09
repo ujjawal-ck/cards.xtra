@@ -1,0 +1,29 @@
+{
+ "data": [
+  {
+   "type": "user",
+   "id": 23717052,
+   "attributes": {
+    "firstname": "<redacted>",
+    "email": "<redacted>",
+    "total_earned": "0.00",
+    "total_cashback_earned": "0.00",
+    "total_cashback_earned_v1": "0.00",
+    "confirmed_cashback": "0.00",
+    "pending_cashback": "0.00",
+    "paid_cashback": "0.00",
+    "total_rewards_earned": "0.00",
+    "confirmed_rewards": "0.00",
+    "pending_rewards": "0.00",
+    "paid_rewards": "0.00",
+    "total_referral_earned": "0.00",
+    "pending_referrals": "0.00",
+    "confirmed_referrals": "0.00",
+    "paid_referrals": "0.00",
+    "has_expired_earnings": false,
+    "currency": "INR",
+    "payment_threshold": "250.00"
+   }
+  }
+ ]
+}

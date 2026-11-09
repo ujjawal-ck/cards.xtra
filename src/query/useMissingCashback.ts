@@ -1,7 +1,7 @@
 /**
  * useMissingCashback — data + actions for the Missing Cashback claim flow.
  *
- * Reads (useQuery, refresh-on-401 like useOrders):
+ * Reads (useQuery; token refresh is handled by the API layer):
  *   useRetailers()            — stores to claim against
  *   useExitClickDates(store)  — visit dates + order-id meta for a store
  *   useClaims(tab)            — claims list for a status tab (+ counts)
@@ -9,12 +9,13 @@
  * Actions (imperative — the submit flow needs sequential awaits + branching):
  *   useMissingCashbackActions() → { validate, submit, update, raiseTicket,
  *                                   getQueueItem } all bound to the current
- *                                   session, each retrying once on a 401/403.
+ *                                   session.
  */
 import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { qk } from './keys';
 import {
   getRetailers,
   getExitClickDates,
@@ -47,26 +48,16 @@ export type ClaimTab = 'In Review' | 'Closed' | 'Others';
 // ── Reads ────────────────────────────────────────────────────────────────
 
 export function useRetailers() {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   return useQuery<RetailerRow[]>({
-    queryKey: ['ck', 'mc', 'retailers', accessToken],
+    queryKey: qk.user.mc.retailers(),
     enabled: !!accessToken,
     // The retailer list grows as the user does click-outs — keep it fresh so
     // newly-visited stores appear when they reopen the screen (the global
     // 5-min staleTime would otherwise serve a stale list).
     staleTime: 0,
     refetchOnMount: 'always',
-    queryFn: async () => {
-      try {
-        return mapRetailers(await getRetailers(accessToken as string));
-      } catch (e) {
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return mapRetailers(await getRetailers(fresh));
-        }
-        throw e;
-      }
-    },
+    queryFn: async () => mapRetailers(await getRetailers(accessToken as string)),
   });
 }
 
@@ -76,9 +67,9 @@ export interface ExitDatesResult {
 }
 
 export function useExitClickDates(storeId?: string) {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   return useQuery<ExitDatesResult>({
-    queryKey: ['ck', 'mc', 'exitdates', storeId, accessToken],
+    queryKey: qk.user.mc.exitDates(storeId),
     enabled: !!accessToken && !!storeId,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -88,15 +79,7 @@ export function useExitClickDates(storeId?: string) {
         const res = await getExitClickDates(token, id);
         return { months: mapExitClicks(res), meta: res.meta || {} };
       };
-      try {
-        return await run(accessToken as string);
-      } catch (e) {
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return run(fresh);
-        }
-        throw e;
-      }
+      return run(accessToken as string);
     },
   });
 }
@@ -109,9 +92,9 @@ export interface ClaimsResult {
 }
 
 export function useClaims(tab: ClaimTab) {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   return useQuery<ClaimsResult>({
-    queryKey: ['ck', 'mc', 'claims', tab, accessToken],
+    queryKey: qk.user.mc.claims(tab),
     enabled: !!accessToken,
     // Claims change as the user submits/updates — always refetch on open.
     staleTime: 0,
@@ -120,14 +103,14 @@ export function useClaims(tab: ClaimTab) {
       const apiStatus = STATUS_TAB_TO_API[tab];
 
       // "Others" lists raised tickets (those with a Ticket ID) as flat rows.
-      // A ticket can come back under any status filter, and the Rejected filter
-      // sometimes errors on staging — so we gather across all three and keep
-      // whatever succeeds (only failing if EVERY fetch fails → outer catch).
+      // A ticket can come back under either status filter, so gather both and
+      // keep whatever succeeds (only failing if EVERY fetch fails → outer
+      // catch). The API accepts only Pending | Resolved; "Rejected" always
+      // returns 422 (verified on staging 2026-11-03), so it isn't requested.
       const runOthers = async (token: string): Promise<ClaimsResult> => {
         const settled = await Promise.allSettled([
           getQueue(token, 'Pending'),
           getQueue(token, 'Resolved'),
-          getQueue(token, 'Rejected'),
         ]);
         const fulfilled = settled.filter(
           (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof getQueue>>> => r.status === 'fulfilled',
@@ -157,6 +140,10 @@ export function useClaims(tab: ClaimTab) {
       const run = async (token: string): Promise<ClaimsResult> => {
         if (tab === 'Others') return runOthers(token);
         const res = await getQueue(token, apiStatus);
+        // Note: the queue API only accepts filter[status] Pending | Resolved
+        // (Rejected returns 422 on staging, verified 2026-11-03), so closed-
+        // without-cashback claims arrive in Resolved and are labelled
+        // 'not-tracked' by mapClaimToCard.
         // Stamp `now` once per fetch (timers tick live via timerTarget; this is
         // only the static fallback / "is the countdown still future" check).
         const now = Date.now();
@@ -178,13 +165,9 @@ export function useClaims(tab: ClaimTab) {
       try {
         return await run(accessToken as string);
       } catch (e) {
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return run(fresh);
-        }
-        // The list endpoint 404s / "no data" on an empty tab — treat as empty.
-        const msg = (e as Error)?.message?.toLowerCase() || '';
-        if (msg.includes('not found') || msg.includes('no data') || msg.includes('empty')) {
+        // An empty tab can come back as 404 — treat that as empty. Every
+        // other failure is a real error and shows the retry state.
+        if (e instanceof ApiError && e.kind === 'http' && e.status === 404) {
           return { cards: [], othersCards: [], counts: { pending: 0, resolved: 0, others: 0 } };
         }
         throw e;
@@ -193,27 +176,28 @@ export function useClaims(tab: ClaimTab) {
   });
 }
 
-// ── Actions (imperative, token-bound, refresh-on-401) ───────────────────────
+// ── Actions (imperative; writes refresh the claims list on success) ─────────
 
 export function useMissingCashbackActions() {
-  const { accessToken, refreshSession } = useAuth();
+  const { accessToken } = useAuth();
   const queryClient = useQueryClient();
 
-  /** Run `fn` with the access token; on 401/403 refresh once and retry. */
+  /** Run `fn` with the session token (401 refresh happens in the API layer). */
   const withAuth = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
       if (!accessToken) throw new ApiError('Please log in to continue.', 401);
-      try {
-        return await fn(accessToken);
-      } catch (e) {
-        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-          const fresh = await refreshSession();
-          if (fresh) return fn(fresh);
-        }
-        throw e;
-      }
+      return fn(accessToken);
     },
-    [accessToken, refreshSession],
+    [accessToken],
+  );
+
+  /** Pass a write's result through after marking the claims list stale. */
+  const afterWrite = useCallback(
+    <T,>(res: T): T => {
+      void queryClient.invalidateQueries({ queryKey: qk.user.mc.all });
+      return res;
+    },
+    [queryClient],
   );
 
   const validate = useCallback(
@@ -224,14 +208,14 @@ export function useMissingCashbackActions() {
 
   const submit = useCallback(
     (storeId: string, exitDate: string, orderId: string, orderAmount: string): Promise<McQueueResponse> =>
-      withAuth((t) => submitQueue(t, storeId, exitDate, orderId, orderAmount)),
-    [withAuth],
+      withAuth((t) => submitQueue(t, storeId, exitDate, orderId, orderAmount)).then(afterWrite),
+    [withAuth, afterWrite],
   );
 
   const update = useCallback(
     (queueId: string, details: { user_type?: string; category?: string }): Promise<McQueueResponse> =>
-      withAuth((t) => updateQueue(t, queueId, details)),
-    [withAuth],
+      withAuth((t) => updateQueue(t, queueId, details)).then(afterWrite),
+    [withAuth, afterWrite],
   );
 
   const getItem = useCallback(
@@ -241,13 +225,13 @@ export function useMissingCashbackActions() {
 
   const ticket = useCallback(
     (exitDate: string, storeId: string, exitId: string, data: McTicketData, files: McTicketFile[]) =>
-      withAuth((t) => raiseTicket(t, exitDate, storeId, exitId, data, files)),
-    [withAuth],
+      withAuth((t) => raiseTicket(t, exitDate, storeId, exitId, data, files)).then(afterWrite),
+    [withAuth, afterWrite],
   );
 
   /** Refetch the claims list (after a submit / detail update). */
   const refreshClaims = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['ck', 'mc', 'claims'] });
+    queryClient.invalidateQueries({ queryKey: qk.user.mc.all });
   }, [queryClient]);
 
   return { validate, submit, update, getItem, raiseTicket: ticket, refreshClaims };

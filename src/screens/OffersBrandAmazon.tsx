@@ -156,8 +156,18 @@ export function OffersBrandAmazon() {
     const message = url
       ? `Earn cashback on ${brandName} via CashKaro — ${url}`
       : `Earn cashback on ${brandName} via CashKaro.`;
-    Share.share({ message }).catch(() => undefined);
-  }, [store?.cashbackUrl, brandName]);
+    Share.share({ message })
+      .then((res) => {
+        if (res.action === Share.sharedAction) {
+          analytics.track(Events.SHARE, {
+            method: res.activityType ?? 'os_share_sheet',
+            content_type: 'store',
+            item_id: slug ?? undefined,
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, [store?.cashbackUrl, brandName, slug]);
 
   // ONE shared offer-detail sheet (the reusable BottomSheet organism).
   // The floor hyperlinks swap its title + body template, then present it.

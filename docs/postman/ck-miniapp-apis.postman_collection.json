@@ -1,0 +1,1689 @@
+{
+ "info": {
+  "name": "ck-miniapp-apis",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+  "description": "CK Mini Apps / Pouring Pounds APIs, built 1:1 from the official doc (31 endpoints). Switch BASE between staging (ckapistaging.lmssecure.com/v1) and the mini-app gateway (ckminapps.com/v1). Run order: 1 \u2192 2 (paste OTP) \u2192 4 \u2192 5 \u2192 7 \u2192 9 last. Folders 3, 6, 8 write real data: test account only."
+ },
+ "item": [
+  {
+   "name": "1. Helper: token + login",
+   "item": [
+    {
+     "name": "Access Token (x-api-key only, per doc)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       }
+      ],
+      "url": "{{BASE}}/token",
+      "description": "Doc: GET /token with x-api-key. App token (HS256 JWT), valid 30 min, used as Bearer on public + auth endpoints."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('token: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('token: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('token ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const t = j.data && j.data.attributes && j.data.attributes.token;",
+         "pm.test('token: JWT returned', () => pm.expect(t).to.be.a('string'));",
+         "if (t) pm.environment.set('APP_TOKEN', t);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Access Token (with Basic auth, as the app does today)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       }
+      ],
+      "url": "{{BASE}}/token",
+      "description": "The KT app sends HTTP Basic too. Kept to compare. Not in the doc.",
+      "auth": {
+       "type": "basic",
+       "basic": [
+        {
+         "key": "username",
+         "value": "{{BASIC_USER}}"
+        },
+        {
+         "key": "password",
+         "value": "{{BASIC_PASS}}"
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('token-basic: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('token-basic: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('token-basic ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const t = j.data && j.data.attributes && j.data.attributes.token;",
+         "if (t) pm.environment.set('APP_TOKEN', t);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Dynamic Page",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/dynamicpage/{{DYNAMIC_PAGE}}?device=App",
+      "description": "Staging slug that works: homepage (doc example coupons-cashback-offers returns 9001). 400 code 9001 = invalid page url."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('dynamicpage: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('dynamicpage: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('dynamicpage ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const els = (j.data && j.data[0] && j.data[0].attributes && j.data[0].attributes.page_elements) || [];",
+         "console.log('page elements:', els.map(e => e.id).join(','));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "2. Login (needs OTP)",
+   "item": [
+    {
+     "name": "Login OTP (SMS)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/loginotp?device=App",
+      "description": "Doc header text says user access_token; in practice the app token works (pre-login). Get the OTP from the staging getcode page and set env OTP. 422 code 2010 = number not registered.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"mobile_number\": {{TEST_MOBILE}}\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('loginotp: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('loginotp: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('loginotp ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const g = j.data && j.data.id;",
+         "pm.test('loginotp: otp guid in data.id', () => pm.expect(g).to.be.a('string'));",
+         "if (g) pm.environment.set('OTP_GUID', g);",
+         "console.log('otp_expire_sec:', j.data && j.data.attributes && j.data.attributes.otp_expire_sec);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login OTP (Email channel)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/loginotp?device=App&channel=email",
+      "description": "channel = sms | email | whatsapp.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"email\": \"{{TEST_EMAIL}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('loginotp-email: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('loginotp-email: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('loginotp-email ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const g = j.data && j.data.id; if (g) pm.environment.set('OTP_GUID_EMAIL', g);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Login (App, OTP)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/login?device=App",
+      "description": "device_info is mandatory when device=App (422 code 2006 otherwise). OTP must be 6 digits. 400 code 7002 = invalid OTP.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"auth\",\n  \"attributes\": {\n   \"mobile_number\": {{TEST_MOBILE}},\n   \"otp_guid\": \"{{OTP_GUID}}\",\n   \"otp\": {{OTP}},\n   \"device_info\": {\n    \"fcm_id\": \"{{DEVICE_ID}}\",\n    \"device_unique_id\": \"{{DEVICE_ID}}\",\n    \"imei_number\": \"000000000000000\",\n    \"device_client\": \"Android\"\n   }\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('login: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('login: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('login ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const a = (j.data && j.data.attributes) || {};",
+         "pm.test('login: access_token', () => pm.expect(a.access_token).to.be.a('string'));",
+         "pm.test('login: refresh_token', () => pm.expect(a.refresh_token).to.be.a('string'));",
+         "if (a.access_token) pm.environment.set('ACCESS_TOKEN', a.access_token);",
+         "if (a.refresh_token) pm.environment.set('REFRESH_TOKEN', a.refresh_token);",
+         "if (j.data && j.data.id) pm.environment.set('USER_ID', String(j.data.id));",
+         "console.log('login attr keys:', Object.keys(a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Refresh token",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/refreshtoken?device=App",
+      "description": "User access token lives 15 min; refresh token is long-lived (60 days per schema). 400 code 2004 = invalid refresh token.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"auth\",\n  \"attributes\": {\n   \"refresh_token\": \"{{REFRESH_TOKEN}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('refresh: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('refresh: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('refresh ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const a = (j.data && j.data.attributes) || {};",
+         "pm.test('refresh: new access_token', () => pm.expect(a.access_token).to.be.a('string'));",
+         "if (a.access_token) pm.environment.set('ACCESS_TOKEN', a.access_token);"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "3. Signup (WRITE, new number only)",
+   "item": [
+    {
+     "name": "Signup OTP (new number only)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/signupotp?device=App",
+      "description": "Sends an OTP to NEW_MOBILE. 422 code 2007 if number already registered.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"mobile_number\": \"{{NEW_MOBILE}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('signupotp: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('signupotp: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('signupotp ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const g = j.data && j.data.id; if (g) pm.environment.set('SIGNUP_OTP_GUID', g);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "SignupV1 With OTP (creates a user)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/signupV1?device=App",
+      "description": "WRITE: creates a real account. Returns 201 with tokens. Run only with a throwaway number.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"auth\",\n  \"attributes\": {\n   \"fullname\": \"Cards Xtra Test\",\n   \"email\": \"{{NEW_EMAIL}}\",\n   \"mobile_number\": \"{{NEW_MOBILE}}\",\n   \"otp_guid\": \"{{SIGNUP_OTP_GUID}}\",\n   \"otp\": \"{{SIGNUP_OTP}}\",\n   \"ip_address\": \"10.0.0.1\",\n   \"enable_newsletter\": \"no\",\n   \"device_info\": {\n    \"fcm_id\": \"{{DEVICE_ID}}\",\n    \"device_unique_id\": \"{{DEVICE_ID}}\",\n    \"imei_number\": \"000000000000000\",\n    \"device_client\": \"Android\"\n   }\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('signup: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('signup: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('signup ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const a = (j.data && j.data.attributes) || {};",
+         "if (a.access_token) pm.environment.set('ACCESS_TOKEN', a.access_token);"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "4. Offers (app token)",
+   "item": [
+    {
+     "name": "Offers By Category",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/offers/category/{{CATEGORY_SLUG}}?device=App&include=categories,featured_offers,recommended_offers&sort=Popularity&page[number]=1&page[size]=10",
+      "description": "sort: Popularity | A-Z | Amount | Newest | Percent. 400 code 10003 = invalid category."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('category: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('category: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('category ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || [];",
+         "pm.test('category: offers returned', () => pm.expect(d.length).to.be.above(0));",
+         "pm.test('category: meta.total_records', () => pm.expect(j.meta && j.meta.total_records).to.be.a('number'));",
+         "const s = (d[0] && d[0].attributes) || {};",
+         "pm.test('category: cashback_url on first offer', () => pm.expect(s.cashback_url).to.be.a('string'));",
+         "if (s.unique_identifier) pm.environment.set('STORE_SLUG', s.unique_identifier);",
+         "console.log('total', j.meta && j.meta.total_records, '| first', s.unique_identifier, '| cashback_url', s.cashback_url, '| included', (j.included || []).map(i => Object.keys(i)[0]).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Merchant Offers",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{APP_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/offers/{{STORE_SLUG}}?device=App&include=coupons,secondary_cashback,related_offers&ignoreHtmlTags=true",
+      "description": "cashback_url needs the CK user id appended (?id=) for attribution. 400 code 10001 = invalid offer, 11004 = invalid include."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('merchant: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('merchant: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('merchant ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const a = (j.data && j.data.attributes) || {};",
+         "pm.test('merchant: cashback_url', () => pm.expect(a.cashback_url).to.be.a('string'));",
+         "pm.test('merchant: cashback object', () => pm.expect(a.cashback).to.be.an('object'));",
+         "console.log('merchant', a.name, '| cashback_url', a.cashback_url, '| tracking_speed', a.tracking_speed, '| accept_ticket', a.accept_ticket);"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "5. Users read",
+   "item": [
+    {
+     "name": "My Earnings",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/earnings?include=cashbacks,rewards,referrals",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('earnings: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('earnings: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('earnings ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "pm.test('earnings: has total_earned', () => pm.expect((j.data && j.data[0] && j.data[0].attributes || {}).total_earned).to.not.be.undefined);",
+         "pm.test('earnings: has payment_threshold', () => pm.expect((j.data && j.data[0] && j.data[0].attributes || {}).payment_threshold).to.not.be.undefined);",
+         "const _a = (j.data && (j.data.attributes || (j.data[0] && j.data[0].attributes))) || {};",
+         "console.log('earnings keys:', Object.keys(_a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Get Profile",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/profile?include=partnerinfo",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('profile: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('profile: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('profile ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const row = Array.isArray(j.data) ? j.data[0] : j.data;",
+         "pm.test('profile: user id (attribution)', () => pm.expect(row && row.id).to.be.ok);",
+         "if (row && row.id) pm.environment.set('USER_ID', String(row.id));",
+         "const _a = (Array.isArray(j.data) ? j.data[0] : j.data || {}).attributes || {};",
+         "console.log('profile keys:', Object.keys(_a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Orders",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/orders?device=App&page[number]=1&page[size]=20",
+      "description": "filter[status] pending|confirmed|requested|paid|cancelled; filter[cashbacktype] cashback|rewards; from/to date range max 3 months (422)."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('orders: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('orders: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('orders ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || [];",
+         "pm.test('orders: data array', () => pm.expect(d).to.be.an('array'));",
+         "if (d[0]) pm.environment.set('CASHBACK_ID', String(d[0].id));",
+         "console.log('orders:', d.length, '| meta', JSON.stringify(j.meta || {}));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Order Details",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/orders/{{CASHBACK_ID}}",
+      "description": "Skipped meaningfully if Orders is empty. 400 code 3006 = invalid order."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('order-detail: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('order-detail: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('order-detail ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const _a = (j.data && (j.data.attributes || (j.data[0] && j.data[0].attributes))) || {};",
+         "console.log('order detail keys:', Object.keys(_a).join(','));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Get Retailer Listing",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/retailers?device=App&page[number]=1&page[size]=10",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-retailers: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-retailers: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-retailers ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || [];",
+         "if (d[0]) pm.environment.set('MC_STORE_ID', String(d[0].id));",
+         "console.log('retailers (last 30d exits):', d.length, JSON.stringify(d[0] || {}).slice(0, 200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Get Exit Click Dates",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/exitclickdates/{{MC_STORE_ID}}",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-dates: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-dates: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-dates ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || [];",
+         "const dt = d[0] && d[0].attributes && d[0].attributes.exitclick_date; if (dt) pm.environment.set('MC_EXIT_DATE', dt);",
+         "console.log('dates:', d.length, '| meta:', JSON.stringify(j.meta || {}).slice(0, 200));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Get Missing Cashback Queue Listing (Pending)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/queue?filter[status]=Pending",
+      "description": "Doc: filter[status] is Pending or Resolved only."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-pending: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-queue-pending: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-pending ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('pending meta:', JSON.stringify(j.meta || {}));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Get Missing Cashback Queue Listing (Resolved)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/queue?filter[status]=Resolved",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-resolved: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-queue-resolved: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-resolved ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('resolved meta:', JSON.stringify(j.meta || {}));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Validate Exit Click & Order ID",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/validate",
+      "description": "Read-like (no claim created). 422 codes: 25000 already tracked, 25001 ticket exists, 25002 queue exists, 25003 bad order id format, 25004/25006 order id used.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"missingcashback\",\n  \"attributes\": {\n   \"storeid\": \"{{MC_STORE_ID}}\",\n   \"exitclick_date\": \"{{MC_EXIT_DATE}}\",\n   \"order_id\": \"{{MC_ORDER_ID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-validate: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-validate: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-validate ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('validate:', JSON.stringify(j).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "6. Users writes (claims, tickets, share link)",
+   "item": [
+    {
+     "name": "Add Missing Cashback To Queue (creates claim)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/queue",
+      "description": "",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"missingcashback\",\n  \"attributes\": {\n   \"storeid\": \"{{MC_STORE_ID}}\",\n   \"exitclick_date\": \"{{MC_EXIT_DATE}}\",\n   \"order_id\": \"{{MC_ORDER_ID}}\",\n   \"order_amount\": \"999.00\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-add: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-queue-add: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-add ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const q = j.data && j.data.id; if (q) pm.environment.set('MC_QUEUE_ID', String(q));",
+         "console.log('queue add:', JSON.stringify(j.meta || j.errors || {}).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Add Additional Details To Queue",
+     "request": {
+      "method": "PUT",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/missingcashback/queue/{{MC_QUEUE_ID}}",
+      "description": "user_type required for group B1 stores; Category for group C1. Doc example body has type 'string'.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"missingcashback\",\n  \"attributes\": {\n   \"user_type\": \"New\",\n   \"Category\": \"Other Category\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('mc-queue-put: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('mc-queue-put: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('mc-queue-put ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('queue put:', JSON.stringify(j).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Raise Ticket (multipart)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/tickets/{{MC_EXIT_DATE}}/{{MC_STORE_ID}}/{{MC_EXIT_ID}}",
+      "description": "Doc path names the 3rd param exit-id, its param table calls it exitclick-id. Claims only within 10 days of click (400 code 1003).",
+      "body": {
+       "mode": "formdata",
+       "formdata": [
+        {
+         "key": "transaction_id",
+         "value": "{{MC_ORDER_ID}}",
+         "type": "text"
+        },
+        {
+         "key": "total_amount_paid",
+         "value": "999",
+         "type": "text"
+        },
+        {
+         "key": "transaction_details",
+         "value": "Test ticket from Cards Xtra QA",
+         "type": "text"
+        },
+        {
+         "key": "missing_txn_queue_id",
+         "value": "{{MC_QUEUE_ID}}",
+         "type": "text"
+        },
+        {
+         "key": "ticket_attachment[]",
+         "type": "file",
+         "src": []
+        }
+       ]
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('ticket: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('ticket: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('ticket ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('ticket:', JSON.stringify(j).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Create Share Link - CK",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/createshortlink?device=App",
+      "description": "",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"sharelink\",\n  \"attributes\": {\n   \"userid\": \"{{USER_ID}}\",\n   \"link\": \"https://www.flipkart.com/home-furnishing/bed-linen-blankets\",\n   \"ip_address\": \"10.0.0.1\",\n   \"source\": \"app\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('sharelink: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('sharelink: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('sharelink ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const s = j.data && j.data[0] && j.data[0].attributes && j.data[0].attributes.shorturl;",
+         "console.log('shorturl:', s);"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "7. Payments read",
+   "item": [
+    {
+     "name": "Payment (withdraw info)",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/payment?device=App&paymentautomation=true",
+      "description": "400 code 5003 = below threshold (meta.cashout_limit), 5002 = request already pending / 30-min cooldown / 3-day lock after email or mobile change, 11006 = mobile missing/unverified."
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('payment: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('payment: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('payment ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const meta = (j.errors && j.errors[0] && j.errors[0].meta) || {};",
+         "console.log('payment:', j.data ? JSON.stringify(j.data.attributes) : ('error ' + JSON.stringify(j.errors || {}).slice(0, 300)));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment History",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/history",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-history: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-history: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-history ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || []; if (d[0]) { pm.environment.set('PAY_MONTH', d[0].attributes.month); pm.environment.set('PAY_YEAR', String(d[0].attributes.year)); }",
+         "console.log('months with payouts:', d.length);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment History Month Year",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/history/{{PAY_MONTH}}/{{PAY_YEAR}}",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-month: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-month: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-month ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const d = j.data || []; if (d[0]) pm.environment.set('CASHOUT_ID', String(d[0].id));",
+         "console.log('payouts:', d.length);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment History Details",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/history/{{CASHOUT_ID}}",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-detail: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-detail: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-detail ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('txns:', (j.data || []).length, JSON.stringify(j.meta || {}));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment History Download Excel",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/history/{{CASHOUT_ID}}/download/excel",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-excel: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-excel: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-excel ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('content-type:', pm.response.headers.get('Content-Type'));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment History Download PDF",
+     "request": {
+      "method": "GET",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/history/{{CASHOUT_ID}}/download/pdf",
+      "description": ""
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-pdf: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-pdf: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-pdf ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('content-type:', pm.response.headers.get('Content-Type'));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "8. Payments writes (MOVES MONEY)",
+   "item": [
+    {
+     "name": "Payment Request - Send Payment OTP",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/sendotp?device=App",
+      "description": "Response uses data.attribute (singular). notification_name also accepts DELETE_REQUEST_OTP per the schema; no delete endpoint is documented.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"notification_name\": \"PAYMENT_REQUEST_OTP\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-sendotp: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-sendotp: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-sendotp ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "const a = (j.data && (j.data.attribute || j.data.attributes)) || {};",
+         "pm.test('sendotp: otp_guid', () => pm.expect(a.otp_guid).to.be.a('string'));",
+         "if (a.otp_guid) pm.environment.set('PAY_OTP_GUID', a.otp_guid);"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment Request - Verify Payment OTP",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/verify",
+      "description": "400 code 7000 = no OTP to verify, 7002 = invalid OTP.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user_otp\",\n  \"attributes\": {\n   \"otp_guid\": \"{{PAY_OTP_GUID}}\",\n   \"otp\": \"{{PAY_OTP}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-verify: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-verify: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-verify ERROR', pm.response.code, pm.response.text().slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment Request V1 (UPI)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/paymentV1?device=App&msg_override=1",
+      "description": "MOVES MONEY. Other types: amazongiftcard (id 12, mobile+email), flipkartgiftcard (id 13, email), imps (id 18, bank fields). Take method ids from GET /payment/payment.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"upi\",\n  \"attributes\": {\n   \"payment_type\": \"cashback\",\n   \"payment_method_id\": 20,\n   \"upi_id\": \"{{UPI_ID}}\",\n   \"otp_guid\": \"{{PAY_OTP_GUID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-upi: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-upi: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-upi ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "console.log('payout:', JSON.stringify(j.meta || j.errors || {}).slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "name": "Payment Request V1 (Amazon GC)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/payment/paymentV1?device=App&msg_override=1",
+      "description": "",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"amazongiftcard\",\n  \"attributes\": {\n   \"payment_type\": \"rewards\",\n   \"payment_method_id\": 12,\n   \"mobile\": {{TEST_MOBILE}},\n   \"otp_guid\": \"{{PAY_OTP_GUID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('pay-amazon: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('pay-amazon: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('pay-amazon ERROR', pm.response.code, pm.response.text().slice(0, 300));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "9. Session end",
+   "item": [
+    {
+     "name": "Logout (App)",
+     "request": {
+      "method": "POST",
+      "header": [
+       {
+        "key": "Accept",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "x-api-key",
+        "value": "{{API_KEY}}"
+       },
+       {
+        "key": "X-Chkr-App-Version",
+        "value": "{{APP_VERSION}}"
+       },
+       {
+        "key": "Content-Type",
+        "value": "application/vnd.api+json"
+       },
+       {
+        "key": "Authorization",
+        "value": "Bearer {{ACCESS_TOKEN}}"
+       }
+      ],
+      "url": "{{BASE}}/users/logout?device=App",
+      "description": "Run last. fcm_id must be non-empty (empty gives 422 'fcm id field is required'). Revokes the refresh token.",
+      "body": {
+       "mode": "raw",
+       "raw": "{\n \"data\": {\n  \"type\": \"user\",\n  \"attributes\": {\n   \"fcm_id\": \"{{DEVICE_ID}}\",\n   \"device_unique_id\": \"{{DEVICE_ID}}\"\n  }\n }\n}"
+      }
+     },
+     "event": [
+      {
+       "listen": "test",
+       "script": {
+        "type": "text/javascript",
+        "exec": [
+         "pm.test('logout: 2xx (got ' + pm.response.code + ')', () => pm.expect(pm.response.code).to.be.within(200,299));",
+         "pm.test('logout: under 5s', () => pm.expect(pm.response.responseTime).to.be.below(5000));",
+         "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+         "if (pm.response.code >= 300) console.log('logout ERROR', pm.response.code, pm.response.text().slice(0, 300));",
+         "pm.test('logout: message', () => pm.expect(j.meta && j.meta.message).to.be.a('string'));"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

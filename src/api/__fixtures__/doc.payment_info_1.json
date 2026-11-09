@@ -1,0 +1,15 @@
+{
+ "errors": [
+  {
+   "code": "5003",
+   "title": "Payment threshold not reached.",
+   "detail": "Payment threshold not reached.",
+   "meta": {
+    "cashout_limit": 100,
+    "consecutive_cashout_limit": 100,
+    "pending_earnings": "15.00",
+    "paid_earnings": "2600.00"
+   }
+  }
+ ]
+}

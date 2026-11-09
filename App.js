@@ -17,6 +17,8 @@ import {
 } from '@react-navigation/native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider, focusManager } from '@tanstack/react-query';
+import { connectOnlineManager } from './src/lib/network';
+import { OfflineBanner } from './src/molecules/OfflineBanner';
 import { StatusBar } from 'expo-status-bar';
 import {
   useFonts,
@@ -35,7 +37,10 @@ import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { SheetBackHandler } from './src/navigation/SheetBackHandler';
 import { analytics, Events } from './src/analytics';
-import { STAGE, PLATFORM } from './src/config/env';
+import { STAGE, PLATFORM, configProblems } from './src/config/env';
+import { initExperiments } from './src/experiments';
+import { setHttpObserver } from './src/api/http/client';
+import { createHttpMonitor } from './src/api/http/monitor';
 
 // Super-props ride on EVERY event — set once, before anything is tracked.
 analytics.setSuperProps({ platform: PLATFORM, stage: STAGE });
@@ -52,7 +57,65 @@ if (Constants.executionEnvironment !== 'storeClient') {
     // Missing config / not yet built — fall back to console sink, never crash.
     console.warn('GA4 sink not registered:', e?.message ?? e);
   }
+  try {
+    // Crash reports + analytics breadcrumbs (Firebase Crashlytics).
+    const crash = require('./src/analytics/crashlyticsSink');
+    crash.registerCrashlyticsSink();
+    // A response that stops matching its contract becomes a non-fatal,
+    // tagged with the endpoint and failing fields (never the payload).
+    require('./src/api/schemas/validate').setContractReporter((v) =>
+      crash.recordError(new Error(`API contract drift: ${v.endpoint}`), v.issues.join(' | ')),
+    );
+    // Failures we recover from (fallback data) still get counted.
+    require('./src/api/http/report').setHandledErrorReporter((err, context) =>
+      crash.recordError(err, `handled: ${context}`),
+    );
+  } catch (e) {
+    console.warn('Crashlytics not registered:', e?.message ?? e);
+  }
 }
+
+// Catch a misconfigured build (empty API host/key for this stage) at launch,
+// not when a user first hits a broken screen.
+const problems = configProblems();
+if (problems.length) {
+  console.warn(`[config] ${problems.join('; ')}`);
+  if (Constants.executionEnvironment !== 'storeClient') {
+    try {
+      require('./src/analytics/crashlyticsSink').recordError(new Error(`Config: ${problems.join('; ')}`), 'startup config');
+    } catch {
+      // crash reporting unavailable: the console warning above is enough
+    }
+  }
+}
+
+// Network monitor: one log line per API attempt in dev; in builds a
+// Crashlytics breadcrumb per call, plus a GA4 `api_error` and (for server or
+// network failures) a Crashlytics non-fatal when a call fails for good.
+// Endpoints are route templates and text is redacted: no tokens, OTPs or
+// mobile numbers leave the device.
+{
+  let crash = null;
+  if (Constants.executionEnvironment !== 'storeClient') {
+    try {
+      crash = require('./src/analytics/crashlyticsSink');
+    } catch {
+      crash = null;
+    }
+  }
+  setHttpObserver(
+    createHttpMonitor({
+      log: __DEV__ ? (line) => console.log(line) : undefined,
+      breadcrumb: crash ? crash.breadcrumb : undefined,
+      recordError: crash ? crash.recordError : undefined,
+      trackApiError: (params) => analytics.track(Events.API_ERROR, params),
+    }),
+  );
+}
+
+// A/B flags (Firebase Remote Config). Non-blocking: defaults apply until the
+// fetch lands, and Expo Go just uses defaults.
+initExperiments();
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -68,6 +131,11 @@ export default function App() {
   // (refetchOnWindowFocus). Without this, RN has no "window focus" signal and
   // data would only refresh on a full restart. Per-screen re-entry is handled
   // separately by useRefetchOnFocus.
+  // Pause queries while offline and refetch on reconnect (NetInfo → React Query).
+  React.useEffect(() => {
+    connectOnlineManager();
+  }, []);
+
   React.useEffect(() => {
     const sub = AppState.addEventListener('change', (status) => {
       focusManager.setFocused(status === 'active');
@@ -128,6 +196,7 @@ export default function App() {
                 {/* Android Back closes an open bottom sheet first. */}
                 <SheetBackHandler />
               </NavigationContainer>
+              <OfflineBanner />
             </BottomSheetModalProvider>
           </SafeAreaProvider>
         </AuthProvider>

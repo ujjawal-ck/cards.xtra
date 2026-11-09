@@ -1,0 +1,36 @@
+{
+ "meta": {
+  "total_records": 4,
+  "page_number": "1",
+  "page_size": "2"
+ },
+ "links": {
+  "self": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/missingcashback/retailers?device=App&page[number]=1&page[size]=2",
+  "first": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/missingcashback/retailers?page[number]=1&page[size]=2&device=App",
+  "last": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/missingcashback/retailers?page[number]=2&page[size]=2&device=App",
+  "prev": null,
+  "next": "https://vfeubfinza.execute-api.ap-southeast-1.amazonaws.com/prod/v1/users/missingcashback/retailers?page[number]=2&page[size]=2&device=App"
+ },
+ "data": [
+  {
+   "type": "retailers",
+   "id": 10065834,
+   "attributes": {
+    "report_merchant_name": "Flipkart",
+    "group": "C2",
+    "tracking_speed": "36h",
+    "image_url": "https://asset9.ckassets.com/resources/image/stores/flipkart.png"
+   }
+  },
+  {
+   "type": "retailers",
+   "id": 10065455,
+   "attributes": {
+    "report_merchant_name": "Amazon",
+    "group": "",
+    "tracking_speed": "1h 12m",
+    "image_url": "https://asset9.ckassets.com/resources/image/stores/urlkey2025.11.11.11.11.04853-1762839173.png"
+   }
+  }
+ ]
+}

@@ -138,7 +138,7 @@ export function GreetingScreen() {
       { skewX: '-10deg' },
       { scale: 1 + 0.1 * pulse.value },
       { rotate: `${-2 * pulse.value}deg` },
-    ],
+    ] as const,
   }));
   const welcomeStyle = useAnimatedStyle(() => ({
     opacity: welcome.value,
@@ -149,7 +149,7 @@ export function GreetingScreen() {
     transform: [
       { scale: interpolate(logo.value, [0, 1], [0.6, 1.0]) },
       { translateY: interpolate(logo.value, [0, 1], [14, 0]) },
-    ],
+    ] as const,
   }));
 
   return (

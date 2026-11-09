@@ -1,0 +1,96 @@
+{
+ "data": {
+  "type": "payment",
+  "id": 1527913,
+  "attributes": {
+   "mobile": "<redacted>",
+   "total_earnings": "1828.00",
+   "cashback_earnings": "739.00",
+   "rewards_earnings": "1089.00",
+   "currency_code": "INR",
+   "payment_threshold": "100.00"
+  }
+ },
+ "relationships": {
+  "payment_methods": {
+   "data": [
+    {
+     "type": "payment_method",
+     "id": 12,
+     "attributes": {
+      "payment_name": "Amazon Gift Card",
+      "payment_automation_max_limit": "10000.00",
+      "is_payment_automation_enabled": "yes",
+      "payment_type": "All",
+      "payment_user_info": {
+       "email": "<redacted>",
+       "mobile": "<redacted>"
+      }
+     }
+    },
+    {
+     "type": "payment_method",
+     "id": 13,
+     "attributes": {
+      "payment_name": "Flipkart Gift Card",
+      "payment_automation_max_limit": "10000.00",
+      "is_payment_automation_enabled": "yes",
+      "payment_type": "All",
+      "payment_user_info": {
+       "email": "<redacted>"
+      }
+     }
+    },
+    {
+     "type": "payment_method",
+     "id": 18,
+     "attributes": {
+      "payment_name": "IMPS",
+      "payment_automation_max_limit": "500000.00",
+      "is_payment_automation_enabled": "yes",
+      "payment_type": "All",
+      "payment_user_info": {
+       "account_holder_name": "<redacted>",
+       "bank_name": null,
+       "branch": null,
+       "account_number": "<redacted>",
+       "ifsc_code": "<redacted>"
+      }
+     }
+    },
+    {
+     "type": "payment_method",
+     "id": 20,
+     "attributes": {
+      "payment_name": "UPI",
+      "payment_automation_max_limit": "100000.00",
+      "is_payment_automation_enabled": "yes",
+      "payment_type": "All",
+      "payment_user_info": {
+       "upi_id": "<redacted>"
+      }
+     }
+    }
+   ]
+  },
+  "user_default_rewards_payment_method_details": {
+   "data": {
+    "type": "payment_method",
+    "id": 18,
+    "attributes": {
+     "payment_name": "IMPS",
+     "payment_automation_max_limit": "500000.00",
+     "is_payment_automation_enabled": "yes",
+     "default_rewards_payment_method": true,
+     "user_default_payment_method_details": {
+      "account_holder_name": "<redacted>",
+      "bank_name": null,
+      "branch": null,
+      "account_number": "<redacted>",
+      "ifsc_code": "<redacted>"
+     }
+    }
+   }
+  }
+ }
+}

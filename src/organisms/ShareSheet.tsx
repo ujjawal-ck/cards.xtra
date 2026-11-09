@@ -63,6 +63,7 @@ import {
   ViewStyle,
   ImageSourcePropType,
 } from 'react-native';
+import { analytics, Events } from '../analytics';
 import Animated, {
   Easing,
   Extrapolation,
@@ -214,7 +215,17 @@ function ShareSheetBody({
     if (onShare) return onShare();
     Share.share({
       message: `Found ${cardName} on Cards.xtra by CashKaro — earn ${cashbackValue} on activation.`,
-    }).catch(() => undefined);
+    })
+      .then((res) => {
+        if (res.action === Share.sharedAction) {
+          analytics.track(Events.SHARE, {
+            method: res.activityType ?? 'os_share_sheet',
+            content_type: 'card',
+            item_name: cardName,
+          });
+        }
+      })
+      .catch(() => undefined);
   }, [onShare, cardName, cashbackValue]);
 
   return (

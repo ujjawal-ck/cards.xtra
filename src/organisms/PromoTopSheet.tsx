@@ -186,7 +186,7 @@ export function PromoTopSheet({
           [-(bandW + screenW * 0.3), screenW + bandW]
         ),
       },
-    ],
+    ] as const,
   }));
   const backdropAnim = useAnimatedStyle(() => ({
     backgroundColor: colors.surface.dark,

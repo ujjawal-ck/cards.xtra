@@ -13,45 +13,55 @@
  * writes add the vnd.api+json Content-Type. Responses are unwrapped from the
  * `{ data: { attributes } }` envelope before returning.
  */
-import { Platform, Dimensions, PixelRatio } from 'react-native';
+import { Platform } from 'react-native';
 import { CK } from '../config/env';
-import { httpRequest, basicAuthHeader, ApiError, otpValue } from './client';
+import { httpRequest, basicAuthHeader } from './http/client';
+import { otpValue } from './client';
+import { ApiError } from './http/errors';
+import { createCachedToken, withCachedToken, withUserToken } from './http/tokenManager';
+import type { ZodTypeAny } from 'zod';
+import { checkContract } from './schemas/validate';
+import * as Schemas from './schemas';
 import type { LoginOtpResult, AuthSession, UserProfile } from './types';
 
-type Auth = 'aws' | { userToken: string } | undefined;
+type Auth = 'aws' | 'user' | { userToken: string } | undefined;
 
 interface CkOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   query?: Record<string, string | number | undefined>;
   auth?: Auth;
+  /** React Query's cancellation signal. */
+  signal?: AbortSignal;
+  /** Per-call deadline; payments use a longer one. */
+  timeoutMs?: number;
+  /** Mark a write safe to retry on transient failures. */
+  idempotent?: boolean;
+  /** Response contract: [endpoint name, zod schema]. Mismatches are reported, never thrown. */
+  contract?: [string, ZodTypeAny];
 }
 
-// aws-token cache. Expiry is not documented; refresh defensively every 30 min
-// (and on demand if a pre-login call 401s — callers can clear via resetAwsToken).
-let awsToken: { value: string; fetchedAt: number } | null = null;
-const AWS_TOKEN_TTL = 30 * 60 * 1000;
-
-async function getAwsToken(): Promise<string> {
-  if (awsToken && Date.now() - awsToken.fetchedAt < AWS_TOKEN_TTL) {
-    return awsToken.value;
-  }
+// App token (GET /token). Cached until shortly before its JWT exp, minted
+// single-flight, re-minted once on a 401/403 (see tokenManager.ts).
+const APP_TOKEN_FALLBACK_TTL = 25 * 60 * 1000;
+const appToken = createCachedToken(async () => {
   const res = await httpRequest<any>(CK.baseUrl, '/token', {
     method: 'GET',
     headers: {
       ...CK.headers(),
-      Authorization: basicAuthHeader(CK.basicAuthUser, CK.basicAuthPass),
+      // Basic auth is only needed where CashKaro issued it (staging);
+      // ckminapps.com /token works with x-api-key alone.
+      ...(CK.basicAuthUser ? { Authorization: basicAuthHeader(CK.basicAuthUser, CK.basicAuthPass) } : {}),
     },
   });
   const value = res?.data?.attributes?.token;
   if (!value) throw new ApiError('Could not obtain access token from CashKaro.', 0, res);
-  awsToken = { value, fetchedAt: Date.now() };
-  return value;
-}
+  return value as string;
+}, APP_TOKEN_FALLBACK_TTL);
 
 /** Force the next pre-login call to re-mint an aws-token. */
 export function resetAwsToken(): void {
-  awsToken = null;
+  appToken.invalidate();
 }
 
 // Public IP — /signupV1 validates a required `ip_address` (login does not).
@@ -77,54 +87,55 @@ async function getPublicIp(): Promise<string> {
 }
 
 export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, auth } = opts;
+  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent, contract } = opts;
   const headers: Record<string, string> = { ...CK.headers() };
   // JSON:API content-type for write bodies — EXCEPT multipart (FormData file
   // uploads), where the runtime must set the boundary content-type itself.
   const isMultipart = typeof FormData !== 'undefined' && body instanceof FormData;
   if (body !== undefined && !isMultipart) headers['Content-Type'] = 'application/vnd.api+json';
-  if (auth === 'aws') {
-    headers.Authorization = `Bearer ${await getAwsToken()}`;
-  } else if (auth && 'userToken' in auth) {
-    headers.Authorization = `Bearer ${auth.userToken}`;
-  }
-  return httpRequest<T>(CK.baseUrl, path, { method, body, query, headers });
+  const send = (bearer?: string) =>
+    httpRequest<T>(CK.baseUrl, path, {
+      method,
+      body,
+      query,
+      signal,
+      timeoutMs,
+      idempotent,
+      headers: bearer ? { ...headers, Authorization: `Bearer ${bearer}` } : headers,
+    });
+  const res =
+    auth === 'aws'
+      ? await withCachedToken(appToken, send)
+      : auth === 'user'
+        ? await withUserToken(send)
+        : auth && 'userToken' in auth
+          ? await withUserToken(send, auth.userToken)
+          : await send();
+  if (contract) checkContract(contract[0], contract[1], res);
+  return res;
 }
 
 /**
- * device_info block the login/signup endpoints expect.
- *
- * The backend validates this object and rejects EMPTY fields ("the device
- * info must be a valid data"), so every key must carry a non-empty value.
- * Identifiers the mini-app can't read on a managed Expo runtime (fcm_id,
- * imei, advertising id) fall back to the stable per-install deviceId rather
- * than ''. Screen metrics come from RN's Dimensions/PixelRatio.
+ * device_info block the login/signup endpoints expect (CK doc, "Login from
+ * App"). Only the documented fields are sent, with real values:
+ *   - device_unique_id: stable per-install UUID (tokenStore)
+ *   - fcm_id: must be non-empty and match what /users/logout sends. There is
+ *     no FCM registration yet, so it is the device id; swap in the FCM token
+ *     when push is added.
+ *   - imei_number: Android no longer exposes IMEI to apps; the doc's
+ *     placeholder of zeros is what CK expects.
+ *   - device_client: the real OS ("Android" / "iOS").
+ * We no longer send invented values (lat/long 0, network "wifi", a fake
+ * advertising id). Verified: staging /login accepts this block (200).
  */
 function buildDeviceInfo(deviceId: string): Record<string, string> {
-  const { width, height } = Dimensions.get('window');
-  const scale = PixelRatio.get();
-  const pxW = Math.round(width * scale);
-  const pxH = Math.round(height * scale);
   return {
     fcm_id: deviceId,
     device_unique_id: deviceId,
-    imei_number: deviceId,
-    advertising_id: deviceId,
-    device_brand: Platform.OS,
-    device_model: Platform.OS,
-    device_client: 'cards-xtra-mini-app',
+    imei_number: '000000000000000',
+    device_client: Platform.OS === 'ios' ? 'iOS' : 'Android',
     app_version: CK.appVersion,
-    app_version_code: CK.appVersion,
-    os_name: Platform.OS,
     os_version: String(Platform.Version),
-    device_country: 'IN',
-    latitude: '0.0',
-    longitude: '0.0',
-    language: 'en',
-    network_type: 'wifi',
-    screen_resolution: `${pxW}x${pxH}`,
-    screen_density: String(scale),
-    screen_height: String(pxH),
   };
 }
 
@@ -132,7 +143,7 @@ function buildDeviceInfo(deviceId: string): Record<string, string> {
 
 /** Request a login OTP; returns the otp_guid needed to verify. */
 export async function loginOtp(mobileNumber: string): Promise<LoginOtpResult> {
-  const res = await ck<any>('/loginotp', {
+  const res = await ck<any>('/loginotp', { contract: ['loginotp', Schemas.OtpRequestResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -150,7 +161,7 @@ export async function login(params: {
   otp: string;
   deviceId: string;
 }): Promise<AuthSession> {
-  const res = await ck<any>('/login', {
+  const res = await ck<any>('/login', { contract: ['login', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -175,7 +186,7 @@ export async function login(params: {
 
 /** Request a signup OTP; returns the otp_guid needed to complete signup. */
 export async function signupOtp(mobileNumber: string): Promise<LoginOtpResult> {
-  const res = await ck<any>('/signupotp', {
+  const res = await ck<any>('/signupotp', { contract: ['signupotp', Schemas.OtpRequestResponse],
     method: 'POST',
     auth: 'aws',
     body: { data: { type: 'user_otp', attributes: { mobile_number: Number(mobileNumber) } } },
@@ -197,7 +208,7 @@ export async function signup(params: {
   referralUser?: string | null;
 }): Promise<AuthSession> {
   const ip = await getPublicIp();
-  const res = await ck<any>('/signupV1', {
+  const res = await ck<any>('/signupV1', { contract: ['signupV1', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
@@ -228,22 +239,28 @@ export async function signup(params: {
 
 // ── Session maintenance ──────────────────────────────────────────────────
 
-/** Exchange a refresh token for a fresh access token. */
-export async function refreshAccessToken(refreshToken: string): Promise<string> {
+/**
+ * Exchange a refresh token for a fresh access token. Returns the rotated
+ * refresh token too when CashKaro issues one (keep it, or the next refresh fails).
+ */
+export async function refreshTokens(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken?: string }> {
   const res = await ck<any>('/refreshtoken', {
     method: 'POST',
     auth: 'aws',
     query: { device: CK.device },
     body: { data: { type: 'auth', attributes: { refresh_token: refreshToken } } },
   });
-  const accessToken = res?.data?.attributes?.access_token;
-  if (!accessToken) throw new ApiError('Session expired. Please log in again.', 0, res);
-  return accessToken;
+  const attrs = res?.data?.attributes;
+  if (!attrs?.access_token) throw new ApiError('Session expired. Please log in again.', 401, res);
+  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token || undefined };
 }
 
+
 /** Fetch the logged-in user's earnings summary (confirmed/pending/cashback/rewards). */
-export async function getEarnings(userToken: string): Promise<any> {
-  return ck('/users/earnings', { auth: { userToken }, query: { device: CK.device } });
+export async function getEarnings(userToken: string, signal?: AbortSignal): Promise<any> {
+  return ck('/users/earnings', { contract: ['users/earnings', Schemas.EarningsResponse], auth: { userToken }, query: { device: CK.device }, signal });
 }
 
 /** Server-side order-list filters (CashKaro `/users/orders` `filter[*]` params).
@@ -265,31 +282,36 @@ export interface OrdersApiFilters {
 export async function getOrders(
   userToken: string,
   filters: OrdersApiFilters = {},
-  pageSize = 20
+  paging: { page?: number; size?: number } | number = {},
+  signal?: AbortSignal,
 ): Promise<any> {
+  const { page = 1, size = 20 } = typeof paging === 'number' ? { size: paging } : paging;
   const query: Record<string, string | number> = {
     device: CK.device,
-    'page[size]': pageSize,
+    'page[number]': page,
+    'page[size]': size,
   };
   if (filters.status) query['filter[status]'] = filters.status;
   if (filters.cashbacktype) query['filter[cashbacktype]'] = filters.cashbacktype;
   if (filters.fromdate) query['filter[fromdate]'] = filters.fromdate;
   if (filters.todate) query['filter[todate]'] = filters.todate;
-  return ck('/users/orders', { auth: { userToken }, query });
+  return ck('/users/orders', { contract: ['users/orders', Schemas.OrdersResponse], auth: { userToken }, query, signal });
 }
 
 /** Fetch a single order's detail (amount, dates, status, timeline). */
-export async function getOrderDetail(userToken: string, orderId: string): Promise<any> {
-  return ck(`/users/orders/${encodeURIComponent(orderId)}`, {
+export async function getOrderDetail(userToken: string, orderId: string, signal?: AbortSignal): Promise<any> {
+  return ck(`/users/orders/${encodeURIComponent(orderId)}`, { contract: ['users/orders/:id', Schemas.OrderDetailResponse],
     auth: { userToken },
+    signal,
     query: { device: CK.device },
   });
 }
 
 /** Fetch the logged-in user's profile. */
-export async function getProfile(userToken: string): Promise<UserProfile> {
-  const res = await ck<any>('/users/profile', {
+export async function getProfile(userToken: string, signal?: AbortSignal): Promise<UserProfile> {
+  const res = await ck<any>('/users/profile', { contract: ['users/profile', Schemas.ProfileResponse],
     auth: { userToken },
+    signal,
     query: { device: CK.device },
   });
   // `data` is an array of one `user` row (same shape as /users/earnings).
@@ -308,7 +330,8 @@ export async function getProfile(userToken: string): Promise<UserProfile> {
 // All use the aws-token (pre-login). JSON:API envelopes returned raw; the
 // offers mapper unwraps data/attributes.
 
-/** All offer categories (33; filter to real top-level ones in the mapper). */
+/** All offer categories (33; filter to real top-level ones in the mapper).
+ *  Fallback for the Offers strip when the miniapp category tree is empty. */
 export async function getOfferCategories(): Promise<any> {
   return ck('/offers/categories', { auth: 'aws', query: { device: CK.device } });
 }
@@ -321,7 +344,7 @@ export async function getOfferCategories(): Promise<any> {
  */
 export async function getCategoryOffers(categoryPath: string): Promise<any> {
   const path = categoryPath.split('/').map(encodeURIComponent).join('/');
-  return ck(`/offers/category/${path}`, {
+  return ck(`/offers/category/${path}`, { contract: ['offers/category', Schemas.OffersByCategoryResponse],
     auth: 'aws',
     // Default page size is 10 — request a large page so the grid shows the
     // full category (e.g. fashion has 39 stores, not 10).
@@ -345,7 +368,7 @@ export async function getOfferCategoryTree(parentSlug: string): Promise<any> {
 
 /** Full store/brand page for an offer (e.g. "flipkart"). */
 export async function getOfferStore(storeSlug: string): Promise<any> {
-  return ck(`/offers/${encodeURIComponent(storeSlug)}`, {
+  return ck(`/offers/${encodeURIComponent(storeSlug)}`, { contract: ['offers/:slug', Schemas.MerchantOfferResponse],
     auth: 'aws',
     query: { device: CK.device, include: 'coupons,secondary_cashback,related_offers' },
   });
@@ -368,7 +391,7 @@ const CARD_RATE_CATEGORY = 'home-categories-exclusive';
 export async function getCardRateStores(): Promise<any[]> {
   const all: any[] = [];
   for (let page = 1; page <= 20; page++) {
-    const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, {
+    const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, { contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
       auth: 'aws',
       query: { device: CK.device, 'page[size]': 100, 'page[number]': page },
     });
@@ -400,7 +423,10 @@ export async function logout(params: { userToken: string; deviceId: string }): P
     auth: { userToken: params.userToken },
     query: { device: CK.device },
     body: {
-      data: { type: 'user', attributes: { fcm_id: '', device_unique_id: params.deviceId } },
+      // fcm_id must be non-empty: staging rejects '' with 422 "The fcm id field
+      // is required" (verified 2026-11-03), which silently skipped logout. Same
+      // fallback as buildDeviceInfo: the per-install deviceId.
+      data: { type: 'user', attributes: { fcm_id: params.deviceId, device_unique_id: params.deviceId } },
     },
   });
 }

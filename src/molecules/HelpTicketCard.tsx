@@ -53,7 +53,9 @@ import {
   letterSpacing,
 } from '../tokens';
 
-export type HelpTicketStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review';
+// 'not-tracked' = the claim closed without cashback (rejected, or resolved
+// with no credit). Shows a NOT TRACKED tag and the reason; no CTA.
+export type HelpTicketStatus = 'in-review' | 'need-details' | 'tracked' | 'under-review' | 'not-tracked';
 
 export interface HelpTicketCardProps {
   status: HelpTicketStatus;
@@ -83,6 +85,8 @@ export interface HelpTicketCardProps {
   ctaLabel?: string;
   /** Tapped on the link CTA (need-details / tracked). */
   onCtaPress?: () => void;
+  /** Why the claim was not tracked (not-tracked). Shown under the title. */
+  reason?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -166,11 +170,13 @@ export function HelpTicketCard({
   timerLabel,
   ctaLabel = 'Add Details',
   onCtaPress,
+  reason,
   style,
 }: HelpTicketCardProps) {
   const isNeedDetails = status === 'need-details';
   const isInReview = status === 'in-review';
   const isUnderReview = status === 'under-review';
+  const isNotTracked = status === 'not-tracked';
   // The link CTA (label + forward arrow) shows on both action states — never
   // on under-review tickets (they're informational, no action to take).
   const hasCta = isNeedDetails || status === 'tracked';
@@ -216,6 +222,26 @@ export function HelpTicketCard({
             borderColor={colors.feedback.error.default}
           />
         </View>
+      ) : isNotTracked ? (
+        /* Top row — logo + NOT TRACKED tag */
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: spacing[12],
+            alignItems: 'center',
+          }}
+        >
+          <BrandLogoTile source={brandLogo} size="32" />
+          <Tag
+            label="NOT TRACKED"
+            size="xs"
+            pill={false}
+            tone="error"
+            bgColor={colors.surface.default}
+            labelColor={colors.feedback.error.default}
+            borderColor={colors.feedback.error.default}
+          />
+        </View>
       ) : (
         <BrandLogoTile source={brandLogo} size="32" />
       )}
@@ -239,6 +265,13 @@ export function HelpTicketCard({
         >
           {title}
         </Text>
+
+        {/* Reason — not-tracked only */}
+        {isNotTracked && reason ? (
+          <Text variant="body12Regular" color={colors.text.secondary} style={{ width: '100%' }}>
+            {reason}
+          </Text>
+        ) : null}
 
         {/* Timer row — in-review (countdown) and under-review (fixed date) */}
         {isInReview || isUnderReview ? (
