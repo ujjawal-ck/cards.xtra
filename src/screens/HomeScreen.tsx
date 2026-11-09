@@ -1682,7 +1682,7 @@ export function HomeScreen() {
                 backgroundColor: colors.surface.default,
               }}
             >
-              <View pointerEvents="none">
+              <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
                 <Switch value={eligibilityOn} size="sm" />
               </View>
               <Text variant="body12Regular" color={colors.text.primary}>

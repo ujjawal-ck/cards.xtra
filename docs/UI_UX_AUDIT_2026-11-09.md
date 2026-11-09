@@ -107,6 +107,8 @@ Type-checked; static change, no layout impact.
 - **One support email everywhere:** the app showed four addresses — `contact@cardsxtra.com` (Missing Cashback “Oops” screen and its info sheet), `contact@cashkaro.com` (store list, delete account, withdraw terms) and a misspelled `support@cardxtra.com` in the Privacy Policy (twice), which would bounce. All now read `SUPPORT_EMAIL` from `src/config/support.ts`, set to `contact@cashkaro.com` (decided 9 Nov 2026).
 - **Checked, no issue:** no hardcoded font sizes or font families outside tokens in shipping screens; the remaining hex values are category accent data and shadow colours; brand name is written “Cards.xtra” in all UI copy.
 
+- **Screen-reader labels:** the Never Miss Cashback switch had no name (TalkBack read only “switch, off”); it is now “Cashback reminders”. `Switch` and `Radio` accept an `accessibilityLabel`. The small switches inside Home’s labelled Eligibility chips and the radio/checkbox inside `Choice` rows are hidden from screen readers so each control is announced once, by its row.
+
 ## Still open
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.

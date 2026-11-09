@@ -108,7 +108,7 @@ export function Choice({
           (Choice doesn't pass them an onChange). The result was that
           tapping the checkbox square did nothing; only the label
           area worked. */}
-      <View pointerEvents="none">
+      <View pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         {type === 'checkbox' ? (
           <Checkbox checked={checked} disabled={disabled} />
         ) : (

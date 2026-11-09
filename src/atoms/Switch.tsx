@@ -34,6 +34,9 @@ export interface SwitchProps {
   size?: SwitchSize;
   disabled?: boolean;
   onValueChange?: (next: boolean) => void;
+  /** What the switch controls, read by TalkBack / VoiceOver. Required when
+   *  the switch stands alone (no labelled parent row). */
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -56,6 +59,7 @@ export function Switch({
   size = 'md',
   disabled = false,
   onValueChange,
+  accessibilityLabel,
   style,
 }: SwitchProps) {
   const spec = SIZE_SPEC[size];
@@ -89,6 +93,7 @@ export function Switch({
       }}
       disabled={disabled}
       accessibilityRole="switch"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled, checked: value }}
       hitSlop={spacing[12]}
       style={({ pressed }) => [

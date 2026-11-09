@@ -169,7 +169,7 @@ export function CashbackGuardScreen() {
                     : 'Off'}
                 </Text>
               </View>
-              <Switch value={enabled} onValueChange={toggle} />
+              <Switch value={enabled} onValueChange={toggle} accessibilityLabel="Cashback reminders" />
             </View>
 
             {/* Prominent disclosure — shown BEFORE any permission request. */}

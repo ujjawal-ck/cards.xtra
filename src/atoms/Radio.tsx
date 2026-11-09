@@ -26,6 +26,8 @@ export interface RadioProps {
   size?: RadioSize;
   disabled?: boolean;
   onChange?: (next: boolean) => void;
+  /** Option name for screen readers when used without a labelled row. */
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -42,6 +44,7 @@ export function Radio({
   size = 'md',
   disabled = false,
   onChange,
+  accessibilityLabel,
   style,
 }: RadioProps) {
   const box = SIZE_PX[size];
@@ -69,6 +72,7 @@ export function Radio({
       }}
       disabled={disabled}
       accessibilityRole="radio"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled, selected }}
       hitSlop={spacing[12]}
       style={({ pressed }) => [
