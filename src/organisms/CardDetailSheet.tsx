@@ -113,7 +113,6 @@ import { Accordion, ListRow, TabsSecondary, InlineMessage } from '../molecules';
 import type { CardModel } from '../molecules';
 import type { IconName } from '../atoms';
 import { icons } from '../assets/icons';
-import { SAMPLE_CARDS } from '../data/cards';
 import {
   parseIncome,
   formatIndianIncome,
@@ -276,12 +275,10 @@ export interface FeeSectionProps {
 }
 
 const FEE_DEFAULTS: { annual: FeeStatData; joining: FeeStatData; bullets: string[] } = {
-  annual:  { label: 'Annual Fees',  amount: '₹1,179', sub: '(₹999 + GST)' },
-  joining: { label: 'Joining Fees', amount: '₹1,179', sub: '(₹999 + GST)' },
-  bullets: [
-    '₹0 annual fee next year on spends above ₹4,000.',
-    '₹1,500 cashback on CashKaro on successful card activation.',
-  ],
+  // Neutral: shown only if a caller passes nothing (never sample prices).
+  annual:  { label: 'Annual Fees',  amount: '—', sub: '' },
+  joining: { label: 'Joining Fees', amount: '—', sub: '' },
+  bullets: [],
 };
 
 export function FeeSection({
@@ -889,7 +886,7 @@ export function FaqSection() {
 
 export function RecommendedCards({
   currentCardId,
-  cards = SAMPLE_CARDS,
+  cards = [],
   onCardPress,
 }: {
   currentCardId: string;
@@ -909,6 +906,8 @@ export function RecommendedCards({
       cashback: c.cashbackValue ? `${c.cashbackValue} Rewards` : c.cashback,
       prefix: 'Flat',
     }));
+  // No other real cards → no section (it used to fall back to sample cards).
+  if (items.length === 0) return null;
 
   return (
     <View style={{ width: '100%', gap: spacing[12] }}>

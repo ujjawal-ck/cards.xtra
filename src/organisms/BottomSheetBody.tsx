@@ -99,26 +99,10 @@ const ILLUSTRATION_SIZE = 156;
 // ----------------------------------------------------------------------------
 // Default sample data — used when the caller doesn't override
 // ----------------------------------------------------------------------------
+// No sample rows: callers pass real sections (an empty list renders nothing).
 const DEFAULT_CASHBACK_SECTIONS: NonNullable<
   BottomSheetBodyProps['sections']
-> = [
-  {
-    title: 'Confirmed',
-    items: [
-      { value: '₹1,240', biline: 'Cashback on Amazon order #A1284', status: 'confirmed' },
-      { value: '₹680', biline: 'Cashback on Flipkart order #F9921', status: 'confirmed' },
-      { value: '₹450', biline: 'Cashback on Myntra order #M5532', status: 'confirmed' },
-    ],
-  },
-  {
-    title: 'Pending',
-    items: [
-      { value: '₹920', biline: 'Cashback on Tata Cliq order #T4421', status: 'pending' },
-      { value: '₹560', biline: 'Cashback on Foxtale order #X8810', status: 'pending' },
-      { value: '₹340', biline: 'Cashback on Reliance Digital #R7755', status: 'pending' },
-    ],
-  },
-];
+> = [];
 
 const DEFAULT_MONTHS = ['This month', 'Last month', 'Last 3 months', 'Last 6 months'];
 
@@ -146,7 +130,7 @@ export function BottomSheetBody({
   body = 'Body copy for the bottom sheet.',
   note = 'Note: smaller supporting text.',
   text = 'Text content placeholder.',
-  amount = '₹920',
+  amount = '₹0',
   description = 'Cashback on Reliance Digital order #R7755',
   status = 'pending',
   sections = DEFAULT_CASHBACK_SECTIONS,

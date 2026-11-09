@@ -270,9 +270,11 @@ function ProfileAvatar({
 // Profile variant
 // ----------------------------------------------------------------------------
 function ProfileMasthead({
-  name = 'Manikandan',
-  contact = 'maan@gmail.com · 8324',
-  avatarInitial = 'M',
+  // Neutral defaults: these render while the profile loads, so they must
+  // never be a made-up person (was 'Manikandan' / 'maan@gmail.com').
+  name = '',
+  contact = '',
+  avatarInitial = '',
   avatarImage,
   onEditProfile,
   style,
@@ -493,9 +495,9 @@ function EarningsStatCard({
 }
 
 function EarningsMasthead({
-  totalEarnings = '₹1,500',
+  totalEarnings = '₹0',
   subtitle = 'Your All Time Earnings',
-  cashbackValue = '₹1500.0',
+  cashbackValue = '₹0',
   rewardsValue = '₹0',
   loading = false,
   rollToken,
@@ -684,7 +686,7 @@ function EarningsMasthead({
 const PAY_CARD_H = 120;
 
 function PaymentMasthead({
-  amount = '₹1,500',
+  amount = '₹0',
   subtitle = 'Cashback Available For Payment',
   onInfoPress,
   style,
@@ -839,10 +841,10 @@ const CASHBACK_STATUS_BG: Record<StatusBadgeStatus, string> = {
 };
 
 function CashbackStatusMasthead({
-  amount = '₹1900.9',
+  amount = '₹0',
   brandLogo = images.stores.amazon2,
   statusLabel,
-  expectedText = 'Expected by October 15, 2025',
+  expectedText = '',
   tone = 'pending',
   style,
 }: MastheadProps) {

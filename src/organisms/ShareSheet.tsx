@@ -207,7 +207,7 @@ function ShareSheetBody({
   cardImage,
   cardName = 'AXIS Bank Neo Credit Card',
   cardSubtitle = 'Great for Shopping & Dining',
-  cashbackValue = '₹1200 Cashback',
+  cashbackValue = '',
   onShare,
 }: ShareSheetProps) {
   const handleShare = useCallback(() => {

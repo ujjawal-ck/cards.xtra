@@ -53,8 +53,6 @@ export type StoreTermsView = 'Card View' | 'List View';
 // Icon substituted for the missing megaphone PNG (see header note).
 const SUBSTITUTE_ICON: IconName = 'feat-celebration-outline';
 
-const SAMPLE_CARD_TEXT =
-  'Add Products to your cart / wishlist / Save for later only after clicking out from CashKaro';
 
 export interface StoreTermsCard {
   text: string;
@@ -63,17 +61,10 @@ export interface StoreTermsCard {
 
 const DEFAULT_TITLE = 'Important Terms & Conditions';
 
-const DEFAULT_CARDS: StoreTermsCard[] = [
-  { text: SAMPLE_CARD_TEXT, icon: SUBSTITUTE_ICON },
-  { text: SAMPLE_CARD_TEXT, icon: SUBSTITUTE_ICON },
-  { text: SAMPLE_CARD_TEXT, icon: SUBSTITUTE_ICON },
-];
+// No sample terms: a store without terms shows none (the section hides).
+const DEFAULT_CARDS: StoreTermsCard[] = [];
 
-const DEFAULT_ITEMS: string[] = [
-  'No Cashback on Gold/Silver Coins, Bars, Jewellery and Idols',
-  'Your Cashback might track at a different rate but will be corrected at the time of confirmation',
-  'Cashback is calculated on order amount excluding what is paid via wallet, credits or gift vouchers',
-];
+const DEFAULT_ITEMS: string[] = [];
 
 export interface StoreTermsConditionsProps {
   /** "Card View" (carousel) or "List View" (bullets). Default "Card View". */
@@ -115,6 +106,8 @@ export function StoreTermsConditions({
   style,
 }: StoreTermsConditionsProps) {
   const isCardView = property1 === 'Card View';
+  // Nothing real to show → no section (sample terms were shown before).
+  if ((isCardView ? cards : items).length === 0) return null;
 
   return (
     <View

@@ -58,6 +58,7 @@ import {
   StoreBestCards,
   StoreFaq,
   BottomSheet,
+  ScreenState,
 } from '../organisms';
 import type { BottomSheetTemplate, BottomSheetBodyProps } from '../organisms';
 import { images } from '../assets/images';
@@ -100,7 +101,7 @@ export function OffersBrandAmazon() {
   // Live store from the CK offers API (by slug). Floors fall back to the
   // existing Amazon static content while loading / if no slug was passed.
   const slug = route.params?.slug ?? null;
-  const { data: store, isLoading } = useOfferStore(slug);
+  const { data: store, isLoading, refetch } = useOfferStore(slug);
   // Logged-in user id — injected into the cashback click-out so CashKaro
   // attributes the exit click (and the store shows up in Missing Cashback).
   // Shop & Earn click-out: login-to-earn for guests, user id on the link,
@@ -110,6 +111,9 @@ export function OffersBrandAmazon() {
   // First load of a real store: show a spinner rather than flashing the
   // Amazon placeholder content until the store's data arrives.
   const storeLoading = !!slug && isLoading && !store;
+  // Loaded but no store (failed, or opened without a slug): show an error
+  // instead of the Amazon sample content the floors fall back to.
+  const storeMissing = !storeLoading && !store;
 
   // Per-store timeline values — ONE source shared by the on-page tiles and
   // the tap-through info sheets, so a sheet quotes the store's real tracking
@@ -345,6 +349,14 @@ export function OffersBrandAmazon() {
           >
             <ActivityIndicator color={colors.action.primary.default} />
           </View>
+        ) : storeMissing ? (
+          <ScreenState
+            title="Couldn’t load this store"
+            body="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={() => refetch()}
+            style={{ paddingTop: insets.top + spacing[80] }}
+          />
         ) : (
         /* Full-width content column; floors fill the width and separate
             by spacing[24]. Banner is full-bleed; every other floor keeps
@@ -503,7 +515,9 @@ export function OffersBrandAmazon() {
       </View>
 
       {/* Pinned Footer — single saffron CTA with top shadow, flush to the
-          bottom edge (FooterButtons supplies its own padding). */}
+          bottom edge (FooterButtons supplies its own padding). Only with a
+          real store to shop at. */}
+      {store ? (
       <View
         style={{
           position: 'absolute',
@@ -532,6 +546,7 @@ export function OffersBrandAmazon() {
           }}
         />
       </View>
+      ) : null}
 
       {/* Guest "Log in to earn cashback" sheet for Shop & Earn. */}
       {clickOutSheets}

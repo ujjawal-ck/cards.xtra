@@ -236,13 +236,10 @@ export function ProfileScreen() {
                 title="Call Us"
                 onPress={onMenu('call_us', () => Linking.openURL(SUPPORT_PHONE_URL))}
               />
-              <Divider style="solid" />
-              <ListRow
-                type="menu-option"
-                icon="star-outline"
-                title="Review Us"
-                onPress={onMenu('review_us', () => navigation.navigate('ReviewUs'))}
-              />
+              {/* "Review Us" hidden: its screen shows made-up reviews and a
+                  made-up "7,338 and counting" counter, and Write Review
+                  discards the text (no feedback API). Restore it with a
+                  store-listing link or a real feedback endpoint. */}
             </View>
           </View>
 

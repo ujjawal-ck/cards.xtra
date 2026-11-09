@@ -89,6 +89,17 @@ Type-checked and unit-checked; **not yet verified on the device** (phone disconn
   - Every click logs `click_out` (kind, item, click id, attributed, link type).
   - After logging in from "Log in to earn", the user returns to the card or store they were on.
 
+## Flow review and fake-data removal (same day)
+
+Type-checked; not yet verified on the device.
+
+- **Withdraw:** OTP no longer "expires" when the 30 s resend timer ends; UPI stays available alongside a rewards balance; the gate loads the balance before deciding (was treating "not loaded" as ₹0); "Edit details" label.
+- **Missing cashback:** double-tap guard; `replace` after submit so Back can't re-post; no iOS swipe-back on result screens; failed store-visit lookup shows a retry (was "you haven't shopped"); order IDs trimmed; amounts accept "1,299"; neutral logo (was Myntra's); "Learn More" explains instead of restarting the claim.
+- **Login:** pasted OTPs keep all digits; Resend can't fire twice; Back on the name step goes into the app.
+- **Fake data removed from everything users can reach:** profile defaults ("Manikandan", sample email), earnings defaults (₹1,500), order detail fallbacks (sample amount, order ID, 2023 date), card-detail sample fees and sample "recommended" cards, sample store terms, the Amazon sample brand page (now an error state with retry), sample cashback lists and eligibility income defaults. "Review Us" is hidden: its screen has made-up reviews and a made-up user count, and Write Review discards text.
+- **Still sent to the backend at signup:** a placeholder email (`cardsxtra.<phone>@cashkaro-demo.app`) and a random display name. Needs a decision: ask for a real email at signup, or confirm the API accepts none.
+- **Unreachable screens that still contain sample data** (only openable from the dev `FoundationCheck` screen): missing-cashback ticket lists and status review, Payment History, Review Us / Write Review.
+
 ## Still open
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.

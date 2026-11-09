@@ -183,14 +183,15 @@ export function OrdersDetail() {
   const cfg = STATUS_CONFIG[status];
 
   // Resolved view values — live data wins, demo cfg is the fallback.
-  const amount = data?.amount ?? '₹1900.9';
+  // '—' while loading / if missing; never sample values.
+  const amount = data?.amount ?? '—';
   const brandLogo = data?.brandLogoUri ? { uri: data.brandLogoUri } : images.stores.tatamg;
   const tone = data?.tone ?? cfg.mastheadTone;
   const statusLabel = data?.statusLabel ?? cfg.statusLabel;
   const expectedText = data?.expectedText ?? cfg.expectedText;
-  const orderAmount = data?.orderAmount ?? '₹569.5';
-  const shownOrderId = data?.orderId ?? 'MYN-9876543210';
-  const transactionDate = data?.transactionDate ?? '20-12-2023';
+  const orderAmount = data?.orderAmount ?? '—';
+  const shownOrderId = data?.orderId ?? '—';
+  const transactionDate = data?.transactionDate ?? '—';
   const steps = data?.steps ?? cfg.steps;
 
   // First load (have an id, nothing cached yet).

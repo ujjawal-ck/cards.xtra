@@ -66,7 +66,7 @@ export interface PaymentProcessingSheetProps {
 export const PaymentProcessingSheet = forwardRef<
   BottomSheetModalRef,
   PaymentProcessingSheetProps
->(function PaymentProcessingSheet({ amount = '₹100', onBrowseDeals }, ref) {
+>(function PaymentProcessingSheet({ amount = '₹0', onBrowseDeals }, ref) {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef);
