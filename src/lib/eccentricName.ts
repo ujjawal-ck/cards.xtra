@@ -33,12 +33,6 @@ export function eccentricName(): string {
   return `${pick(ADJECTIVES)} ${pick(NOUNS)}`;
 }
 
-/** Deterministic throwaway email for signup (never shown to the user). */
-export function dummyEmail(mobileNumber: string): string {
-  const digits = (mobileNumber || '').replace(/\D/g, '') || 'user';
-  return `cardsxtra.${digits}@cashkaro-demo.app`;
-}
-
 /** Throwaway password for signup (OTP-only app — never typed by the user). */
 export function randomPassword(): string {
   const chars =

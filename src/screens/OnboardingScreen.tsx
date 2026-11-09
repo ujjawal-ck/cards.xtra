@@ -75,7 +75,8 @@ import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
 import { markOnboarded } from '../auth/tokenStore';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
-import { eccentricName, dummyEmail, randomPassword } from '../lib/eccentricName';
+import { eccentricName, randomPassword } from '../lib/eccentricName';
+import { isValidContact } from './editContact';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
@@ -360,6 +361,13 @@ export function OnboardingScreen() {
   // Decided in goToOtp: we try login first, and fall back to signup when the
   // backend says the number isn't registered. Drives which verify call runs.
   const [isSignup, setIsSignup] = useState(false);
+  // New numbers create a CashKaro account, which needs an email. It used to
+  // be a generated placeholder (cardsxtra.<phone>@cashkaro-demo.app); now the
+  // person types their own on the OTP step.
+  const [signupEmail, setSignupEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
+  const signupEmailValid = isValidContact('email', signupEmail);
+  const showEmailError = emailTouched && signupEmail.trim().length > 0 && !signupEmailValid;
   // Surfaced API failure (send / resend / verify), shown under the input.
   const [error, setError] = useState<string | null>(null);
   const OTP_LENGTH = 6;
@@ -512,16 +520,22 @@ export function OnboardingScreen() {
       setError('Something went wrong. Please request a new OTP.');
       return;
     }
+    if (isSignup && !signupEmailValid) {
+      setEmailTouched(true);
+      setError('Enter your email to create your account.');
+      return;
+    }
     setVerifying(true);
     setError(null);
     try {
-      // New number → create the account; the user only gave us a phone, so we
-      // fill the required fullname/email/password behind the scenes (Home then
-      // asks "what should we call you?"). Existing number → plain login.
+      // New number → create the account with the email they typed. The
+      // required fullname/password are still filled behind the scenes (the
+      // name step after signup asks "what should we call you?").
+      // Existing number → plain login.
       const session = isSignup
         ? await signup({
             fullname: eccentricName(),
-            email: dummyEmail(loginPhone),
+            email: signupEmail.trim(),
             password: randomPassword(),
             mobileNumber: loginPhone,
             otpGuid,
@@ -567,7 +581,7 @@ export function OnboardingScreen() {
       );
       setVerifying(false);
     }
-  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly]);
+  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly, signupEmail, signupEmailValid]);
 
   // Login is optional. "Get Started" enters the app as a guest (Home, card
   // discovery and Offers need no account); the phone + OTP sheet is one tap
@@ -623,6 +637,8 @@ export function OnboardingScreen() {
     setOtp('');
     setOtpGuid(undefined);
     setIsSignup(false);
+    setSignupEmail('');
+    setEmailTouched(false);
     setLoginPhone('');
     setError(null);
     setSecondsLeft(RESEND_SECONDS);
@@ -1110,14 +1126,41 @@ export function OnboardingScreen() {
                   </Text>
                 ) : null}
 
+                {isSignup ? (
+                  <View style={{ width: '100%', gap: spacing[8] }}>
+                    <Text variant="body12Regular" color={colors.text.secondary}>
+                      New to CashKaro? Add your email to create your account.
+                    </Text>
+                    <Input
+                      label="Email"
+                      placeholder="you@example.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      value={signupEmail}
+                      onChangeText={(t) => {
+                        setSignupEmail(t);
+                        if (error) setError(null);
+                      }}
+                      onBlur={() => setEmailTouched(true)}
+                      state={showEmailError ? 'error' : undefined}
+                      hint={showEmailError ? 'Enter a valid email' : undefined}
+                    />
+                  </View>
+                ) : null}
+
                 <Button
-                  label="Verify OTP"
+                  label={isSignup ? 'Verify & create account' : 'Verify OTP'}
                   variant="solid"
                   tone="second"
                   size={52}
                   fullWidth
                   loading={verifying}
-                  disabled={otp.length !== OTP_LENGTH || verifying}
+                  disabled={
+                    otp.length !== OTP_LENGTH || verifying || (isSignup && !signupEmailValid)
+                  }
                   onPress={handleVerifyOtp}
                 />
               </View>
