@@ -6,7 +6,7 @@
  * that subset and the transforms the raw data needs:
  *
  *   - cashback badge ← `commission` (NOT a user-cashback field; product chose
- *     it). Rendered as "Flat ₹<commission> Rewards" — see INTEGRATION.md.
+ *     it). Rendered as "Flat ₹<commission> Rewards" — see docs/archive/INTEGRATION.md.
  *   - fees ← joining_fee_text / annual_fee_text (raw numbers like "3500"/"0").
  *   - feeType is derived (no API field): both fees 0 → lifetime-free,
  *     status:false → discontinued, else with-fees.

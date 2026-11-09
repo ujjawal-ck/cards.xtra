@@ -380,7 +380,7 @@ export async function getOfferStore(storeSlug: string): Promise<any> {
 // CashKaro exposes the card stores inside the `home-categories-exclusive`
 // category (the offers API has no by-store-id lookup); we page it once and
 // index it by store id (+ name fallback) in cardRates.ts. Keyed by `ck_store_id`
-// from each BankKaro card — see INTEGRATION.md "CashKaro rate + tracking".
+// from each BankKaro card — see docs/archive/INTEGRATION.md "CashKaro rate + tracking".
 const CARD_RATE_CATEGORY = 'home-categories-exclusive';
 
 /**

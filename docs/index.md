@@ -13,6 +13,9 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 | [api-reference.md](api-reference.md) | Look up any endpoint: request body, response fields read, error handling, screens that use it. |
 | [auth-and-secrets.md](auth-and-secrets.md) | Follow login/signup/OTP end to end, the tokens the app holds, where secrets live, analytics identity and the signup IP field. |
 | [production-readiness.md](production-readiness.md) | What the CK mini-app team and BankKaro must configure (stores, categories, tracking host, SMS, keys) so the live setup needs no remapping; home-screen ideas grounded in the APIs. |
+| [device-test-plan.md](device-test-plan.md) | Step-by-step Android phone test of the network layer: offline, retries, token expiry, payouts. |
+| [PLAY_RELEASE_CHECKLIST.md](PLAY_RELEASE_CHECKLIST.md) | What a Play Store build needs that an over-the-air update can't deliver. |
+| [postman/](postman/) | Postman collections for the CashKaro and CK Mini Apps APIs (environment template has no secrets). |
 
 ## Audits and history
 
@@ -21,9 +24,8 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 | [UI_UX_AUDIT_2026-11-09.md](UI_UX_AUDIT_2026-11-09.md) | Device audit on production: every fix by pass, what's open. |
 | [GAP_AUDIT.md](GAP_AUDIT.md) | Figma vs code gap audit and phased roadmap (3 Nov 2026). |
 | [android-card-interaction-issues.md](android-card-interaction-issues.md) | Android card-detail interaction issues and revamp plan. |
-| [../INTEGRATION.md](../INTEGRATION.md) | Running log of backend integration work. |
-| [../PROJECT_STATE.md](../PROJECT_STATE.md), [../HANDOFF.md](../HANDOFF.md), [../CHENNAI-HANDOFF.md](../CHENNAI-HANDOFF.md) | Earlier project snapshots and team handoffs (may be outdated; the docs above are current as of 9 Nov 2026). |
-| [../CLAUDE.md](../CLAUDE.md), [../COMPONENT_SPECS.md](../COMPONENT_SPECS.md) | Code rules (tokens, naming, structure) and component specs from Figma. |
+| [../CLAUDE.md](../CLAUDE.md) | Code rules: tokens, naming, folder structure. |
+| [archive/](archive/) | Earlier snapshots, handoffs and logs: `INTEGRATION.md` (backend integration log), `PROJECT_STATE.md`, `HANDOFF.md`, `CHENNAI-HANDOFF.md`, `COMPONENT_SPECS.md`, `FIGMA_RECONCILE.md`, `IDEOLOGY-AUDIT-AND-FIXES.md`, `NEW-APP-DESIGN-BRIEF.md`, `MINI-APP-HANDOFF-v2.docx`. Kept for history; may be outdated. The docs above are current. |
 
 ## Shareable pages
 
@@ -36,4 +38,6 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 - Package / bundle id: `com.cardsextra.miniapp`.
 - Login is optional; the phone + OTP sheet lives in `src/screens/OnboardingScreen.tsx`.
 - Every card/store click-out goes through `src/lib/useClickOut.tsx`.
+- Every network call goes through `src/api/http/client.ts` (timeouts, retries, single-flight tokens, response contracts).
 - Design tokens in `src/tokens` are mandatory for colours, spacing and type.
+- `npm run typecheck` and `npm test` run on every push (GitHub Actions, `.github/workflows/ci.yml`).

@@ -51,7 +51,7 @@ Login on production needs a real OTP. While the mini app's SMS sender is pending
 
 ## Checks before committing
 
-- Type check: `npx tsc --noEmit -p .` (known, harmless: errors in `stories/` because Storybook isn't installed, and two Animated transform typings in `PromoTopSheet` / `GreetingScreen`).
+- Type check and tests: `npm run typecheck` and `npm test`. Both must pass with no errors; GitHub Actions runs them on every push (`.github/workflows/ci.yml`).
 - Test on a real Android phone at 360 dp width and 130 % font size; check light status bar on blue/saffron headers and dark on white screens.
 - No hardcoded colours, sizes or fonts in components (tokens only). No sample data in anything reachable (see `decision.md` D14).
 
