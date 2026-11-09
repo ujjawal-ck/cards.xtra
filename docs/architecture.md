@@ -105,7 +105,7 @@ From the merged manifest of the built APK (target SDK 36).
 | **ACTIVITY_RECOGNITION** | `expo-sensors` | No (only the accelerometer, which needs no permission) | **No: remove** |
 | **AD_ID, ACCESS_ADSERVICES_AD_ID, ACCESS_ADSERVICES_ATTRIBUTION** | Firebase Analytics | No (no ads) | **No: remove** (else Play requires an advertising-ID declaration) |
 
-How to remove them: `android.blockedPermissions` in `app.json`, `expo-image-picker` plugin options `cameraPermission: false` / `microphonePermission: false`, then prebuild, rebuild and test invoice upload and the reminder. The privacy policy text (`privacyContent.ts`) and the cashback-guard README still mention the overlay permission and need updating.
+**Removed (9 Nov 2026):** all permissions in bold above are blocked via `android.blockedPermissions` in `app.json` and `expo-image-picker` options `cameraPermission: false` / `microphonePermission: false`. The merged release manifest now contains only INTERNET, ACCESS_NETWORK_STATE, WAKE_LOCK, VIBRATE, READ_EXTERNAL_STORAGE (max SDK 32), PACKAGE_USAGE_STATS, FOREGROUND_SERVICE(+SPECIAL_USE), POST_NOTIFICATIONS, USE_BIOMETRIC/FINGERPRINT, the install-referrer binding and AndroidX's internal receiver permission, and no required hardware features. The privacy policy and the cashback-guard README no longer mention the overlay permission. Still to test on a phone: invoice upload (gallery) and the reminder.
 
 **iOS** (no `ios/` folder yet): plugins would add photo-library, camera, microphone and motion usage strings by default; only photo library is needed.
 

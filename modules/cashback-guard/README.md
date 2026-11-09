@@ -33,9 +33,9 @@ post-action cooldown).
 
 | File | Role |
 |------|------|
-| `android/.../CashbackGuardService.kt` | The brain. Foreground service: screen-gated UsageStats polling, draws + manages the overlay bubble, fires the tracked URL. Runs even when the RN app is closed. |
+| `android/.../CashbackGuardService.kt` | The brain. Foreground service: screen-gated UsageStats polling, posts the reminder notification, fires the tracked URL. Runs even when the RN app is closed. |
 | `android/.../CashbackGuardModule.kt` | JS bridge: report permission status, open the two settings screens, start/stop the service, push tracking URLs. |
-| `android/src/main/AndroidManifest.xml` | Declares the foreground service + `PACKAGE_USAGE_STATS`, `SYSTEM_ALERT_WINDOW`, `FOREGROUND_SERVICE*`. Merged into the app manifest at build. |
+| `android/src/main/AndroidManifest.xml` | Declares the foreground service + `PACKAGE_USAGE_STATS`, `FOREGROUND_SERVICE*`, `POST_NOTIFICATIONS` (no overlay permission; the app blocks `SYSTEM_ALERT_WINDOW` in `app.json`). Merged into the app manifest at build. |
 | `index.ts` | JS API consumed by `src/screens/CashbackGuardScreen.tsx`. |
 
 ## Partner packages (already wired)
@@ -82,7 +82,7 @@ The OS will not let the app grant these silently. The in-app
 `CashbackGuardScreen` deep-links the user to both:
 
 1. **Settings → Usage access → Cards.xtra → Allow**
-2. **Settings → Display over other apps → Cards.xtra → Allow**
+2. **Settings → Notifications → Cards.xtra → Allow** (the reminder is a notification)
 
 After both are granted the screen calls `startGuard()`. Open Amazon/Flipkart/
 AJIO and the bubble appears (15-min cooldown per app after activate/dismiss;

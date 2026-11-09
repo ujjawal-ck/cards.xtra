@@ -4,8 +4,9 @@
  * Verbatim from Figma "legal/privacy-policy" (3685:197516), with ONE added
  * section — "Device Permissions & Usage Access" — required for the Google
  * Play listing because the (optional) Cashback Reminder feature requests the
- * sensitive PACKAGE_USAGE_STATS ("Usage access") and SYSTEM_ALERT_WINDOW
- * ("Display over other apps") permissions. The disclosure language mirrors
+ * sensitive PACKAGE_USAGE_STATS ("Usage access") permission and notifications
+ * (the reminder is a notification; the app no longer uses SYSTEM_ALERT_WINDOW).
+ * The disclosure language mirrors
  * modules/cashback-guard/README.md: the app detects only WHICH partner app is
  * in the foreground, never screen content.
  *
@@ -35,7 +36,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
   {
     // Added for Play Store compliance — see file header.
     heading: 'Device Permissions & Usage Access',
-    body: 'To power the optional Cashback Reminder feature on Android, Cards.xtra requests Usage Access (the "PACKAGE_USAGE_STATS" permission) and the "Display over other apps" permission. When you enable this feature, the app detects only which shopping app (for example Amazon, Flipkart, or AJIO) is currently in the foreground, so it can show a one-tap reminder to activate your cashback. We never read screen content, keystrokes, or any data inside other apps, and this detection runs only while your screen is on and unlocked. This feature is entirely optional — the app works without it, and you can grant or revoke these permissions at any time from your device Settings.',
+    body: 'To power the optional Cashback Reminder feature on Android, Cards.xtra requests Usage Access (the "PACKAGE_USAGE_STATS" permission) and permission to show notifications. When you enable this feature, the app detects only which shopping app (for example Amazon, Flipkart, or AJIO) is currently in the foreground, so it can send a one-tap reminder notification to activate your cashback. We never read screen content, keystrokes, or any data inside other apps, and this detection runs only while your screen is on and unlocked. This feature is entirely optional — the app works without it, and you can grant or revoke these permissions at any time from your device Settings.',
   },
   {
     heading: 'How We Use Your Information',
