@@ -217,6 +217,20 @@ const isNA = (raw?: unknown) =>
   raw === undefined ||
   (typeof raw === 'string' && (raw.trim() === '' || raw.trim().toUpperCase() === 'N/A'));
 
+/**
+ * Fee notes (annual_fee_waiver / joining_fee_comment) worth showing as a
+ * bullet. Production data fills ~100 cards with "Not Applicable" (any case
+ * or spacing) and a few with bare numbers ("720", "0"); shown alone those
+ * read as noise under the fee block, so they are dropped.
+ */
+function isFeeNote(raw?: unknown): boolean {
+  if (isNA(raw) || typeof raw !== 'string') return false;
+  const t = raw.trim().replace(/\s+/g, ' ');
+  if (/^not applicable$/i.test(t)) return false;
+  if (/^[\d.,]+$/.test(t)) return false;
+  return true;
+}
+
 /** "21-65" → "21-65Y" (age criteria), "N/A" → "—". */
 function ageValue(raw?: string): string {
   return isNA(raw) ? DASH : `${String(raw).trim()}Y`;
@@ -306,8 +320,8 @@ function feeStat(label: string, raw?: unknown): { label: string; amount: string;
 
 function buildDetail(bk: BkCard): CardDetail {
   const bullets = [bk.annual_fee_waiver, bk.joining_fee_comment]
-    .filter((b): b is string => !isNA(b))
-    .map((b) => String(b).trim());
+    .filter((b): b is string => isFeeNote(b))
+    .map((b) => String(b).trim().replace(/\s+/g, ' '));
   return {
     fee: {
       annual: feeStat('Annual Fees', bk.annual_fee_text),

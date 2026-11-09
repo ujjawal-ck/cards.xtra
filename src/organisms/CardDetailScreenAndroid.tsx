@@ -406,9 +406,11 @@ function CardPageAndroid({
       />
       <View style={{ marginTop: spacing[32] }}>
         <FeeSection
-          annual={card.detail?.fee.annual}
-          joining={card.detail?.fee.joining}
-          bulletPoints={card.detail?.fee.bullets}
+          // Fall back to the card's own fees and no notes, never to the
+          // FeeSection sample values (₹1,179 / "₹1,500 cashback…").
+          annual={card.detail?.fee.annual ?? { label: 'Annual Fees', amount: card.annualFee, sub: '' }}
+          joining={card.detail?.fee.joining ?? { label: 'Joining Fees', amount: card.joiningFee, sub: '' }}
+          bulletPoints={card.detail?.fee.bullets ?? []}
         />
       </View>
       <View style={{ marginTop: spacing[32] }}>

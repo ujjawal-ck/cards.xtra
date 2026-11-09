@@ -971,13 +971,13 @@ export function HomeScreen() {
 
   // Frosted scrolled HomeHeader — opacity + translateY interpolated
   // off scrollY. Slides down + fades in once scroll passes the
-  // masthead. Caps at 0.90 (was 0.85, originally 1) so the bar reads
-  // as near-opaque at full reveal with just a hint of translucency.
+  // masthead. Fully opaque at full reveal (Figma 1929:32667): the 0.90 cap
+  // let card text ghost through behind the status-bar icons and the chips.
   const frostedAnimStyle = useAnimatedStyle(() => {
     const op = interpolate(
       scrollY.value,
       [FROSTED_HEADER_FADE_IN, FROSTED_HEADER_FADE_FULL],
-      [0, opacity[90]],
+      [0, opacity[100]],
       Extrapolation.CLAMP
     );
     const ty = interpolate(
@@ -1938,10 +1938,10 @@ export function HomeScreen() {
       {/* Frosted scrolled HomeHeader — pinned to the very top of the
           screen, the wrapper's bg extends INTO the status-bar area.
           Two tweaks per spec:
-            • paddingTop reduced from `insets.top` by ~50 px so the
-              HomeHeader content sits much closer to the top edge
-              (clamped at 0 so it never overlaps the status bar on a
-              flat-bottom device with insets.top < 50).
+            • paddingTop is the full `insets.top`, and the header's own
+              top padding is trimmed to 8 to keep the bar compact. It was
+              `insets.top - 48` (clamped at 0), which put the logo under
+              the status-bar icons on Android, where insets.top is ~37.
             • wrapper bg switched from `colors.surface.default` (white)
               to `colors.background.lavender` (cobalt-50 #ebf0ff) so
               the status-bar buffer reads continuous with the frosted
@@ -1954,7 +1954,7 @@ export function HomeScreen() {
             top: 0,
             left: 0,
             right: 0,
-            paddingTop: Math.max(insets.top - spacing[48], 0),
+            paddingTop: insets.top,
             backgroundColor: colors.background.lavender,
           },
           elevation.light.xs,
@@ -1963,6 +1963,7 @@ export function HomeScreen() {
       >
         <HomeHeader
           scrolled
+          style={{ paddingTop: spacing[8] }}
           // No unread badge: there's no notifications feed yet (it was a
           // hard-coded "1" that never cleared).
           notificationCount={0}

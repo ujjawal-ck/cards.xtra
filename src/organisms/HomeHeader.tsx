@@ -289,7 +289,9 @@ export function HomeHeader({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0 }}
+        // Bleeds to the screen edges (negative margin, padding moved into
+        // the content) so a scrolled chip isn't cut 16 dp short of the edge.
+        style={{ flexGrow: 0, marginHorizontal: -spacing[16] }}
         // Scrolls instead of clipping when large OS text makes the chips
         // wider than the screen (Eligibility ran off the right edge).
         // flexGrow keeps Eligibility pinned right (marginLeft:'auto')
@@ -299,6 +301,7 @@ export function HomeHeader({
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing[8],
+          paddingHorizontal: spacing[16],
         }}
       >
         <Chip

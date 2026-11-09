@@ -54,11 +54,12 @@ import {
 // Component-spec dims — Figma fixed.
 const CHIP_W = 160;
 const CHIP_H = 48;
-// The Figma component reads `paddingRight: 39`. There's no 39 entry
-// on the spacing scale and the nearest steps (32, 40) drift visibly,
-// so the raw 39 stays inline with this note.
-// Figma raw: 39, no token.
-const CHIP_PAD_RIGHT = 39;
+// Figma reads `paddingRight: 39`, which is only the leftover space in its
+// fixed 160-wide chip. Kept as 39 that squeezed the title to ~68 dp in a
+// flex chip and Android split "Self-employed" mid-word ("Self-emp / loyed")
+// at large OS font sizes. Symmetric 12 keeps the Figma look at 1× and gives
+// the title room.
+const CHIP_PAD_RIGHT = spacing[12];
 
 export interface SelectorProps {
   title: string;
@@ -140,7 +141,10 @@ export function Selector({
         numberOfLines={2}
         style={{ flexShrink: 1 }}
       >
-        {title}
+        {/* Zero-width space after each hyphen: Android's line breaker did
+            not treat the hyphen as a break point and split "Self-employed"
+            as "Self-employ / ed". Invisible when the title fits one line. */}
+        {title.replace(/-/g, '-\u200B')}
       </Text>
     </>
   );

@@ -16,6 +16,7 @@
  */
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
+import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import Animated, {
   Easing,
   interpolate,
@@ -70,6 +71,10 @@ export function HomeSkeleton() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface.default }}>
+      {/* Dark status-bar icons while the pale skeleton shows. Home sets light
+          icons for its blue hero, which were invisible (white on near-white)
+          during loading. Unmounting hands control back to Home. */}
+      <StatusBar style="dark" />
       {/* Hero / masthead block — full-bleed coloured rectangle */}
       <Animated.View
         style={[

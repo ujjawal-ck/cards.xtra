@@ -190,16 +190,19 @@ export function OffersScreen() {
   // While it's up the floating BottomNav is hidden (so it doesn't show
   // through the dim backdrop) and restored on dismiss.
   const [promoVisible, setPromoVisible] = useState(false);
+  // Only once stores have loaded: the banner promises cashback "on the stores
+  // you love", and it used to slide in over an empty / failed Offers page.
+  const hasStores = stores.length > 0;
   useFocusEffect(
     useCallback(() => {
-      if (promoSeenThisSession) return;
+      if (promoSeenThisSession || !hasStores) return;
       const timer = setTimeout(() => {
         promoSeenThisSession = true;
         setHidden(true);
         setPromoVisible(true);
       }, PROMO_DELAY_MS);
       return () => clearTimeout(timer);
-    }, [setHidden])
+    }, [setHidden, hasStores])
   );
 
   const dismissPromo = useCallback(() => {

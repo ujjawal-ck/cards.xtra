@@ -67,15 +67,16 @@ export interface CardFeeStripProps {
 /** One fee column — label + GST-inclusive total amount. No tooltip; the
  *  value is the full price (Figma 1929:31123: Caption/10 label, Body/14
  *  SemiBold value). */
-// Columns may shrink (minWidth 0) and keep each line to one row, so on a
-// 360dp phone the fees fit beside the Apply Now button instead of running
-// underneath it (the annual fee was hidden behind the button).
+// Columns keep their natural width (no shrinking): shrinking them beside
+// the Apply Now button cut "₹2,950" to "₹2,9…" at large OS font sizes on a
+// 360-dp phone. When fees + button don't fit, the button wraps below
+// instead (see WithFees).
 function FeeColumn({ label, amount }: { label: string; amount: string }) {
   return (
-    <View style={{ flexShrink: 1, minWidth: 0 }}>
+    <View>
       {/* No adjustsFontSizeToFit: Android shrank the label to unreadable
-          type at large OS font sizes. The label may wrap to a 2nd line. */}
-      <Text variant="caption10Regular" color={colors.text.tertiary} numberOfLines={2}>
+          type at large OS font sizes. */}
+      <Text variant="caption10Regular" color={colors.text.tertiary} numberOfLines={1}>
         {label}
       </Text>
       <Text variant="body14SemiBold" color={colors.text.primary} numberOfLines={1}>
@@ -197,6 +198,10 @@ function WithFees({
       style={[
         {
           flexDirection: 'row',
+          // Wraps the button onto its own line only when the fees and the
+          // button can't share one (large OS font sizes); at 1× it's the
+          // Figma single row.
+          flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: spacing[8],
@@ -213,8 +218,7 @@ function WithFees({
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing[8],
-          flex: 1,
-          minWidth: 0,
+          flexGrow: 1,
         }}
       >
         <FeeColumn label="Joining Fees" amount={joiningFee} />
@@ -235,6 +239,8 @@ function WithFees({
         icon="trailing"
         iconName="chevron-right"
         onPress={onPress}
+        // Stays right-aligned when it wraps under the fees.
+        style={{ marginLeft: 'auto' }}
       />
     </View>
   );

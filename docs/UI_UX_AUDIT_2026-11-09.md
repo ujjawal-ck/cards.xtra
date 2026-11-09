@@ -51,6 +51,21 @@ All verified on the device unless noted.
 - **Earnings tooltip:** it is 247 wide (Figma 5820:27081). It now closes on tap and after 4 s; before, only re-tapping the 18-dp icon closed it.
 - **Orders empty state:** the filter chips are hidden when there is nothing to filter. The "Never miss cashback" pip stays docked as the side notch, so it no longer covers the "No orders yet" copy, and expands only once orders exist.
 
+## Third pass (same day)
+
+Verified on the device unless noted.
+
+- **Scrolled Home header:** the logo sat under the status-bar icons on Android (`paddingTop` was `insets.top − 48`, i.e. 0 on a 37-dp inset). It now uses the full inset and is fully opaque (Figma 1929:32667); at 90 % card text ghosted behind the time and battery. The chip row scrolls edge to edge instead of cutting the last chip 16 dp short.
+- **Card tile fees:** at large OS font sizes "₹2,950" was cut to "₹2,9…" beside Apply Now. Fees now keep their full width and the button drops to its own line only when both can't fit.
+- **Card detail fees:** ~100 production cards showed a bare "Not Applicable" bullet (and a few bare numbers like "720"); these are filtered out. An empty notes box no longer renders. Missing detail falls back to the card's own fees, never to the component's sample values (₹1,179 / "₹1,500 cashback…").
+- **Eligibility sheet:** "Self-employed" split mid-word ("Self-emp / loyed"). The selector's 39-dp right padding (a Figma fixed-width leftover) is now 12, and titles break at the hyphen.
+- **Copy:** card detail now says "Self-employed", matching the Home eligibility sheet (Figma 3914:64045 says "Self Employed").
+- **Filters:** category tile labels wrap ("Food Ordering" was "Food Orde…").
+- **Offers:** the "Shop as usual, earn cashback on the stores you love" promo no longer slides in over an empty or failed Offers page.
+- **Home loading skeleton:** status-bar icons were white on the pale skeleton (time and battery invisible); the skeleton now sets dark icons. Not caught on the device: Home loaded from cache too fast.
+
+**Checked, no issue:** Earnings Cashback / Rewards / Pending / Paid sheets (Figma copy), Back from card detail (tile and search entry), search result tap with keyboard up, search status bar.
+
 ## Still open
 
 **Needs Figma asset export** ("No Cashback Yet" and document-check illustrations). Pattern to follow: `download_assets` on the single-row node, centre the path in a 24 box with stroke #262626 so svgr makes it tintable — see `src/assets/icons/lock-outline.svg`.
@@ -68,5 +83,6 @@ All verified on the device unless noted.
 - Coupon codes on brand pages; rejected-claim reasons.
 - Write Review: the comment only goes to analytics and is discarded, yet the toast says it was submitted. Needs a feedback endpoint (or the toast copy changed).
 - Notifications feed API (screen is an empty state until then).
+- BankKaro data: Scapia Credit Card has fees "1" / "1" while its note says "no joining fee, it is lifetime free"; the app shows ₹1. Fix the record.
 
 **Not tested on device:** login/OTP UI after these changes (would require logging out of the production test account), withdraw forms (₹0 account is gated before them), claim submission.

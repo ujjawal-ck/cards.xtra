@@ -797,11 +797,13 @@ function FilterTile({
           accessibilityIgnoresInvertColors
         />
       </View>
+      {/* 2 lines: "Food Ordering" was cut to "Food Orde…" at large OS
+          font sizes on a 360-dp phone. */}
       <Text
         variant="body12Medium"
         color={labelColor}
         align="center"
-        numberOfLines={1}
+        numberOfLines={2}
       >
         {item.label}
       </Text>

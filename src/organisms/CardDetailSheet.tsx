@@ -321,8 +321,10 @@ export function FeeSection({
         <FeeStat {...annual} />
       </View>
 
-      {/* 2. Price/benefits card */}
-      <View style={{ width: '100%', paddingHorizontal: spacing[16] }}>
+      {/* 2. Price/benefits card — omitted when the card has no fee notes
+          (an empty bordered box rendered otherwise). */}
+      {bulletPoints.length > 0 ? (
+        <View style={{ width: '100%', paddingHorizontal: spacing[16] }}>
         <View
           style={{
             backgroundColor: colors.surface.default,
@@ -347,7 +349,8 @@ export function FeeSection({
             </React.Fragment>
           ))}
         </View>
-      </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -422,7 +425,7 @@ export function EligibilitySection({
       <TabsSecondary
         segments={[
           { label: 'Salaried' },
-          { label: 'Self Employed' },
+          { label: 'Self-employed' },
         ]}
         activeIndex={activeTab}
         onChange={setActiveTab}
@@ -750,7 +753,7 @@ export function EligibilityChecker({
               style={{ flex: 1 }}
             />
             <Selector
-              title="Self Employed"
+              title="Self-employed"
               source={icons['feat-self-employed']}
               selected={incomeType === 'self-employed'}
               onPress={() => setIncomeType('self-employed')}
@@ -1513,9 +1516,11 @@ function CardPage({
           BestForSpending carousel. */}
       <View style={{ marginTop: spacing[32] }}>
         <FeeSection
-          annual={card.detail?.fee.annual}
-          joining={card.detail?.fee.joining}
-          bulletPoints={card.detail?.fee.bullets}
+          // Fall back to the card's own fees and no notes, never to the
+          // FeeSection sample values (₹1,179 / "₹1,500 cashback…").
+          annual={card.detail?.fee.annual ?? { label: 'Annual Fees', amount: card.annualFee, sub: '' }}
+          joining={card.detail?.fee.joining ?? { label: 'Joining Fees', amount: card.joiningFee, sub: '' }}
+          bulletPoints={card.detail?.fee.bullets ?? []}
         />
       </View>
 
