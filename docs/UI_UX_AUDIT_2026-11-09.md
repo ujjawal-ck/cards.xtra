@@ -97,8 +97,15 @@ Type-checked; not yet verified on the device.
 - **Missing cashback:** double-tap guard; `replace` after submit so Back can't re-post; no iOS swipe-back on result screens; failed store-visit lookup shows a retry (was "you haven't shopped"); order IDs trimmed; amounts accept "1,299"; neutral logo (was Myntra's); "Learn More" explains instead of restarting the claim.
 - **Login:** pasted OTPs keep all digits; Resend can't fire twice; Back on the name step goes into the app.
 - **Fake data removed from everything users can reach:** profile defaults ("Manikandan", sample email), earnings defaults (₹1,500), order detail fallbacks (sample amount, order ID, 2023 date), card-detail sample fees and sample "recommended" cards, sample store terms, the Amazon sample brand page (now an error state with retry), sample cashback lists and eligibility income defaults. "Review Us" is hidden: its screen has made-up reviews and a made-up user count, and Write Review discards text.
-- **Still sent to the backend at signup:** a placeholder email (`cardsxtra.<phone>@cashkaro-demo.app`) and a random display name. Needs a decision: ask for a real email at signup, or confirm the API accepts none.
+- **Signup now sends real details:** new numbers enter their full name and email on the OTP step (validated before Verify); the placeholder email and random name are gone.
 - **Unreachable screens that still contain sample data** (only openable from the dev `FoundationCheck` screen): missing-cashback ticket lists and status review, Payment History, Review Us / Write Review.
+
+## Copy consistency sweep (same day)
+
+Type-checked; static change, no layout impact.
+
+- **One support email everywhere:** the app showed four addresses — `contact@cardsxtra.com` (Missing Cashback “Oops” screen and its info sheet), `contact@cashkaro.com` (store list, delete account, withdraw terms) and a misspelled `support@cardxtra.com` in the Privacy Policy (twice), which would bounce. All now read `SUPPORT_EMAIL` from `src/config/support.ts`, set to `contact@cashkaro.com` (decided 9 Nov 2026).
+- **Checked, no issue:** no hardcoded font sizes or font families outside tokens in shipping screens; the remaining hex values are category accent data and shadow colours; brand name is written “Cards.xtra” in all UI copy.
 
 ## Still open
 
@@ -109,7 +116,7 @@ Type-checked; not yet verified on the device.
 2. Android card detail opens full screen; CLAUDE.md's non-negotiable is a ~55–60 % sheet that expands on scroll.
 3. OTP length (app 6, Figma 4) — backend to confirm.
 4. Home masthead is ~40 dp taller than Figma (status-bar height counted twice), pushing the first card's Apply below the fold. Fixing it reframes the hero video; needs design sign-off.
-5. Static content: Review Us reviews (2023), sign-up auto-generated name + dummy email. (Notifications now show an empty state.)
+5. Static content: Review Us reviews (2023) — the row is hidden. (Notifications now show an empty state.)
 
 **Needs backend**
 - Offers on production (probed read-only against ckminapps.com with the Postman "ck-miniapp-apis" requests): the API is up and authenticates; `/offers/categories` returns 15 top-level categories. But no stores are mapped to the mini-app key: all 95 valid category paths return `total_records: 0`, the `miniapp` parent the app was built on returns 400 code 10003 "Invalid Category", and every store page (amazon, flipkart, myntra, ajio, nykaa) returns 400 code 10001 "Invalid Offer". CashKaro needs to map stores to this key (ideally under a `miniapp` parent). The staging host (ckapistaging.lmssecure.com) no longer resolves, so it can't stand in.

@@ -20,10 +20,10 @@ import { Text, Button } from '../atoms';
 import { MissingCashbackMasthead, WhatWentWrongInfoSheet } from '../organisms';
 import { colors, spacing } from '../tokens';
 import type { RootStackParamList } from '../navigation/types';
+import { SUPPORT_EMAIL } from '../config/support';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackOops'>;
 
-const SUPPORT_EMAIL = 'contact@cardsxtra.com';
 
 export function MissingCashbackOops() {
   const navigation = useNavigation<Nav>();

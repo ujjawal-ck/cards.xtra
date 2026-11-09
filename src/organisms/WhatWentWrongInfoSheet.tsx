@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, Button } from '../atoms';
 import { BottomSheetHeader } from './BottomSheetHeader';
 import { colors, spacing, radius } from '../tokens';
+import { SUPPORT_EMAIL } from '../config/support';
 
 export interface WhatWentWrongInfoSheetProps {
   /** Support email surfaced in the body copy. */
@@ -41,7 +42,7 @@ export const WhatWentWrongInfoSheet = forwardRef<
   BottomSheetModalRef,
   WhatWentWrongInfoSheetProps
 >(function WhatWentWrongInfoSheet(
-  { supportEmail = 'contact@cardsxtra.com' },
+  { supportEmail = SUPPORT_EMAIL },
   ref
 ) {
   const insets = useSafeAreaInsets();

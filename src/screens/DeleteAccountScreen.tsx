@@ -44,6 +44,7 @@ import { TermsAndConditions } from '../molecules';
 import { colors, spacing, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
+import { SUPPORT_EMAIL } from '../config/support';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'DeleteAccount'>;
 
@@ -64,7 +65,7 @@ const TNC_PARAGRAPHS = [
   'Furthermore, any outstanding queries you may have regarding cashback, rewards, missing cashback, or any other matters will be closed, and unfortunately, we will not be able to provide resolutions for them.',
   'You might continue to receive offers and communication from us for a period of 60 days. Post that, we will not send you any promotional communication.',
   'If you have any referral user under your account, post account deletion you would not receive any referral cashback.',
-  'Reach out to us at contact@cashkaro.com in case you have any more queries.',
+  `Reach out to us at ${SUPPORT_EMAIL} in case you have any more queries.`,
 ];
 
 export function DeleteAccountScreen() {

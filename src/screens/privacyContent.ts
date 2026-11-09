@@ -14,6 +14,7 @@
  * prepends "<n>. "), so inserting the usage-access section renumbers the rest
  * without hand-editing every title.
  */
+import { SUPPORT_EMAIL } from '../config/support';
 
 export const PRIVACY_LAST_UPDATED = 'Last updated: 1 January 2026';
 
@@ -52,7 +53,7 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
   },
   {
     heading: 'Your Rights',
-    body: 'You have the right to: access your data, correct inaccuracies, delete your account, opt out of marketing communications, and request a copy of your data. To exercise these rights, contact support@cardxtra.com.',
+    body: `You have the right to: access your data, correct inaccuracies, delete your account, opt out of marketing communications, and request a copy of your data. To exercise these rights, contact ${SUPPORT_EMAIL}.`,
   },
   {
     heading: 'Security',
@@ -76,6 +77,6 @@ export const PRIVACY_SECTIONS: PrivacySection[] = [
   },
   {
     heading: 'Contact Us',
-    body: 'For questions about this Privacy Policy or your data, contact us at:\nEmail: support@cardxtra.com\nAddress: Pouring Pounds, Gurgaon, India',
+    body: `For questions about this Privacy Policy or your data, contact us at:\nEmail: ${SUPPORT_EMAIL}\nAddress: Pouring Pounds, Gurgaon, India`,
   },
 ];

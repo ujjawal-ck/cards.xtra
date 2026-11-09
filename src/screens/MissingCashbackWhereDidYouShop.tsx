@@ -26,12 +26,12 @@ import { colors, spacing, radius } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RetailerRow } from '../api/missingCashbackMapper';
 import type { RootStackParamList, McClaimDraft } from '../navigation/types';
+import { SUPPORT_EMAIL } from '../config/support';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackWhereDidYouShop'>;
 
 const CONTENT_GAP = 36; // no Spacing/36 token (scale jumps 32 → 40)
 
-const SUPPORT_EMAIL = 'contact@cashkaro.com';
 
 /** "Oops! no visits in 30 days" empty state — Figma 4129:23753. */
 function NoVisitsEmpty() {

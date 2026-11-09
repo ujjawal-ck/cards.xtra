@@ -31,7 +31,7 @@ export interface TermsContent {
   blocks: TermsBlock[];
 }
 
-export const SUPPORT_EMAIL = 'contact@cashkaro.com';
+export { SUPPORT_EMAIL } from '../../config/support';
 
 // "Gift Card Usage" / "Refunds and Cancellations" / "Contact Support" repeat
 // verbatim across the Amazon + Flipkart designs — shared here.
