@@ -25,6 +25,7 @@ A thin server between the app and the partner APIs. The app holds no partner key
 `npm test` (Node built-in test runner, no dependencies).
 
 ## Deploy (Vercel)
+- Prototype: https://cards-xtra-bff.vercel.app (personal Hobby account, project `cards-xtra-bff`). Move to a company team before launch.
 - Root Directory: `bff`. Region: `bom1` (`vercel.json`). Max duration: 60 s.
 - Set the variables from `.env.example` as sensitive environment variables.
 - Point the app at the deployment URL with `EXPO_PUBLIC_API_BASE_URL`.
