@@ -1,5 +1,10 @@
 {
   "compilerOptions": {},
   "extends": "expo/tsconfig.base",
-  "exclude": ["node_modules", "stories", ".storybook"]
+  "exclude": [
+    "node_modules",
+    "stories",
+    ".storybook",
+    "bff"
+  ]
 }

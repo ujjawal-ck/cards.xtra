@@ -1,24 +1,24 @@
 /**
  * cashkaro.ts — CashKaro auth/user API (JSON:API).
  *
- * Two-tier token model:
- *   1. aws-token — short-lived bootstrap token from GET /token (HTTP Basic
- *      auth). Required as Bearer on the pre-login calls (loginotp, login,
- *      signupotp, signupV1, refreshtoken). Cached in memory here.
+ * All calls go through the cards.xtra BFF (`EXPO_PUBLIC_API_BASE_URL/ck`). The
+ * app holds no CashKaro key. Two kinds of call:
+ *   1. guest ('aws') — sent with no Authorization; the BFF adds its own site
+ *      token (GET /token with the mini apps key) and the x-api-key.
  *   2. user session — access_token + refresh_token returned by /login or
- *      /signupV1. Persisted via tokenStore; passed in by callers for
- *      authenticated user endpoints.
+ *      /signupV1. Persisted via tokenStore; sent as Bearer and passed through
+ *      by the BFF unchanged.
  *
- * Every request carries the shared CK headers (Accept/x-api-key/app-version);
+ * Every request carries the shared CK headers (Accept/app-version);
  * writes add the vnd.api+json Content-Type. Responses are unwrapped from the
  * `{ data: { attributes } }` envelope before returning.
  */
 import { Platform } from 'react-native';
 import { CK } from '../config/env';
-import { httpRequest, basicAuthHeader } from './http/client';
+import { httpRequest } from './http/client';
 import { otpValue } from './client';
 import { ApiError } from './http/errors';
-import { createCachedToken, withCachedToken, withUserToken } from './http/tokenManager';
+import { withUserToken } from './http/tokenManager';
 import type { ZodTypeAny } from 'zod';
 import { checkContract } from './schemas/validate';
 import * as Schemas from './schemas';
@@ -41,51 +41,6 @@ interface CkOptions {
   contract?: [string, ZodTypeAny];
 }
 
-// App token (GET /token). Cached until shortly before its JWT exp, minted
-// single-flight, re-minted once on a 401/403 (see tokenManager.ts).
-const APP_TOKEN_FALLBACK_TTL = 25 * 60 * 1000;
-const appToken = createCachedToken(async () => {
-  const res = await httpRequest<any>(CK.baseUrl, '/token', {
-    method: 'GET',
-    headers: {
-      ...CK.headers(),
-      // Basic auth is only needed where CashKaro issued it (staging);
-      // ckminapps.com /token works with x-api-key alone.
-      ...(CK.basicAuthUser ? { Authorization: basicAuthHeader(CK.basicAuthUser, CK.basicAuthPass) } : {}),
-    },
-  });
-  const value = res?.data?.attributes?.token;
-  if (!value) throw new ApiError('Could not obtain access token from CashKaro.', 0, res);
-  return value as string;
-}, APP_TOKEN_FALLBACK_TTL);
-
-/** Force the next pre-login call to re-mint an aws-token. */
-export function resetAwsToken(): void {
-  appToken.invalidate();
-}
-
-// Public IP — /signupV1 validates a required `ip_address` (login does not).
-// A managed Expo runtime can't read the LAN IP, so resolve the public one
-// once (cached) via ipify; fall back to a format-valid placeholder if the
-// lookup fails so signup never blocks on it.
-let publicIp: string | null = null;
-async function getPublicIp(): Promise<string> {
-  if (publicIp) return publicIp;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch('https://api.ipify.org?format=json', {
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    const json = await res.json();
-    if (json?.ip) publicIp = String(json.ip);
-  } catch {
-    // ignore — fall through to the placeholder
-  }
-  return publicIp ?? '0.0.0.0';
-}
-
 export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T> {
   const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent, contract } = opts;
   const headers: Record<string, string> = { ...CK.headers() };
@@ -103,9 +58,10 @@ export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T
       idempotent,
       headers: bearer ? { ...headers, Authorization: `Bearer ${bearer}` } : headers,
     });
+  // 'aws' (guest) calls go out without Authorization: the BFF adds its token.
   const res =
     auth === 'aws'
-      ? await withCachedToken(appToken, send)
+      ? await send()
       : auth === 'user'
         ? await withUserToken(send)
         : auth && 'userToken' in auth
@@ -212,7 +168,6 @@ export async function signup(params: {
   deviceId: string;
   referralUser?: string | null;
 }): Promise<AuthSession> {
-  const ip = await getPublicIp();
   const res = await ck<any>('/signupV1', { contract: ['signupV1', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
@@ -228,10 +183,8 @@ export async function signup(params: {
           otp_guid: params.otpGuid,
           otp: otpValue(params.otp),
           referral_user: params.referralUser ?? null,
-          // Required by /signupV1 (login doesn't need it). Top-level only —
-          // device_info has a strict schema that rejects unknown keys ("the
-          // device info must be a valid data").
-          ip_address: ip,
+          // ip_address (required by /signupV1) is set by the BFF from the
+          // caller's real IP; the app cannot know its public IP.
           device_info: buildDeviceInfo(params.deviceId),
         },
       },

@@ -1,0 +1,10 @@
+{
+  "name": "cards-xtra-bff",
+  "private": true,
+  "type": "module",
+  "description": "Server that holds the partner keys for the cards.xtra app",
+  "scripts": {
+    "dev": "node dev.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}

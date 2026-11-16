@@ -1,56 +1,28 @@
 /**
  * bankkaro.ts — BankKaro "CardGenius" catalog API (Phase 2 / Home).
  *
- * Independent of CashKaro: its own host and its own auth. A partner JWT is
- * minted once via POST /partner/token (using the partner api-key) and then
- * sent as the `partner-token` header on every cardgenius call. The JWT is
- * cached in memory here.
+ * Calls go through the cards.xtra BFF (`EXPO_PUBLIC_API_BASE_URL/bk`). The BFF
+ * holds the partner key, mints the partner JWT and adds the `partner-token`
+ * header. The app sends no BankKaro credential.
  *
  * Endpoints map onto the Home UI:
  *   initBundle      → banks / networks / tags / filter metadata (bootstrap)
  *   getCards        → full card list
  *   getCardDetail   → CardDetailSheet
  *   checkEligibility→ eligibility toggle
- *
- * NOTE: response shapes aren't fully typed yet — they'll be pinned down in
- * Phase 2 against live responses, then the `any` returns get real types.
  */
 import { BK } from '../config/env';
 import { httpRequest } from './http/client';
-import { ApiError } from './http/errors';
-import { createCachedToken, withCachedToken } from './http/tokenManager';
 import type { EligibilityPayload } from './types';
-
-// Partner JWT (POST /token). Cached until shortly before its exp, minted
-// single-flight, re-minted once when a call returns 401/403. Previously it was
-// cached forever, so every card call failed after the JWT expired.
-const PARTNER_TOKEN_FALLBACK_TTL = 50 * 60 * 1000;
-const partnerToken = createCachedToken(async () => {
-  const res = await httpRequest<any>(BK.baseUrl, '/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: { 'x-api-key': BK.partnerApiKey },
-  });
-  const value = res?.data?.jwttoken;
-  if (!value) throw new ApiError('Could not authenticate with BankKaro.', 0, res);
-  return value as string;
-}, PARTNER_TOKEN_FALLBACK_TTL);
-
-/** Force the next call to re-mint the partner JWT. */
-export function resetPartnerToken(): void {
-  partnerToken.invalidate();
-}
 
 async function bk<T = any>(
   path: string,
   opts: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal; idempotent?: boolean } = {},
 ): Promise<T> {
   const { method = 'GET', body, signal, idempotent } = opts;
-  return withCachedToken(partnerToken, (token) => {
-    const headers: Record<string, string> = { 'partner-token': token };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
-    return httpRequest<T>(BK.baseUrl, path, { method, body, headers, signal, idempotent });
-  });
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  return httpRequest<T>(BK.baseUrl, path, { method, body, headers, signal, idempotent });
 }
 
 /** Bootstrap data: banks, networks, tags, filter options. */

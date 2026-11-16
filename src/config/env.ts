@@ -1,23 +1,18 @@
 /**
- * env.ts — environment configuration for the two backends.
+ * env.ts — environment configuration.
  *
- * The app talks to TWO independent APIs, each with its own host + auth:
- *   - CashKaro (CK)  → auth, user, offers, payments  (JSON:API format)
- *   - BankKaro (BK)  → CardGenius catalog (cards, details, eligibility, filters)
+ * The app talks to ONE host: the cards.xtra BFF (EXPO_PUBLIC_API_BASE_URL).
+ * The BFF forwards to the two partner APIs and holds their keys:
+ *   - `/ck/*` → CashKaro mini apps (auth, user, offers, payments; JSON:API)
+ *   - `/bk/*` → BankKaro CardGenius (cards, details, eligibility, filters)
  *
- * STAGE switches the whole config between environments. Only `staging` is
- * filled today (the values shipped in the Postman environments); add
- * `local` / `prod` hosts when they exist and flip STAGE.
+ * No partner key, token or Basic auth lives in the app (decision 2026-11-17).
+ * EXPO_PUBLIC_* values are compiled into the bundle, so never add a secret
+ * here. Partner keys go in the BFF's Vercel env (see bff/.env.example).
  *
- * SECURITY NOTE: the api keys / basic-auth below are bundled into the app —
- * there is no way to keep a client-side secret without a server proxy. These
- * are STAGING credentials and acceptable for the demo. Before production,
- * front these calls with a proxy (or accept that staging keys ship in the
- * binary). Do NOT paste production secrets here without that conversation.
- *
- * Secret values are read from `.env` (gitignored; copy `.env.example`).
- * EXPO_PUBLIC_* values are still inlined into the JS bundle at build time:
- * this keeps them out of git, it does NOT make them secret on device.
+ * STAGE still selects the non-secret per-stage values below (x-chkr-app-version
+ * and the click-out tracking host). Which partner host is used is the BFF's
+ * choice.
  */
 import { Platform } from 'react-native';
 
@@ -36,17 +31,14 @@ export const STAGE: Stage = envStage && STAGES.includes(envStage) ? envStage : '
 const APP_VERSION_OVERRIDE = process.env.EXPO_PUBLIC_CK_APP_VERSION;
 const DEVICE = 'App'; // ?device=App on most CK calls
 
+// The BFF. Local dev: http://127.0.0.1:8787 (`npm run dev` in bff/).
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/+$/, '');
+
 const CONFIG = {
   staging: {
     ck: {
-      // helper_url root; sub-resources are paths under it
-      // (e.g. /users/profile, /offers/...). See docs/api collections.
-      baseUrl: 'https://ckapistaging.lmssecure.com/v1',
       // x-chkr-app-version (from the CK staging env).
       appVersion: '4.6',
-      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
-      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
-      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
       // CashKaro click-out / tracking host. The card "Apply Now" link is built
       // as `https://<trackingHost>/visitretailer/app/<ck_store_id>?id=<userId>`
       // (same redirect the offers `cashback_url` uses) so the click is
@@ -54,46 +46,21 @@ const CONFIG = {
       // staging host resolves the production ck_store_id from BankKaro.
       trackingHost: 'cktracking.lmssecure.com',
     },
-    bk: {
-      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL || 'https://platform.bankkaro.com/partner',
-      // partner-token used to mint the per-session jwttoken
-      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
-    },
   },
   local: {
-    // Point at a local/dev backend via .env. Secrets come from the same keys.
     ck: {
-      baseUrl: process.env.EXPO_PUBLIC_CK_BASE_URL ?? '',
       appVersion: '4.6',
-      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
-      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
-      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
       trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST ?? '',
-    },
-    bk: {
-      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL ?? '',
-      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
     },
   },
   prod: {
     ck: {
-      // CK Mini Apps production host (Postman "ck-miniapp-apis" collection).
-      baseUrl: process.env.EXPO_PUBLIC_CK_BASE_URL || 'https://ckminapps.com/v1',
       // ckminapps rejects every other app version with 401 (verified: 4.6 → 401).
       appVersion: '4.9',
-      apiKey: process.env.EXPO_PUBLIC_CK_API_KEY ?? '',
-      // Prod /token needs only x-api-key; Basic auth is optional (empty is fine).
-      basicAuthUser: process.env.EXPO_PUBLIC_CK_BASIC_USER ?? '',
-      basicAuthPass: process.env.EXPO_PUBLIC_CK_BASIC_PASS ?? '',
       // Production click-out host: set EXPO_PUBLIC_CK_TRACKING_HOST once the
       // CashKaro team confirms it. Empty = card "Apply" falls back to
       // BankKaro's network_url instead of a CashKaro-attributed link.
       trackingHost: process.env.EXPO_PUBLIC_CK_TRACKING_HOST ?? '',
-    },
-    bk: {
-      // BankKaro PROD host (Great.Cards Partner Guide).
-      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL || 'https://platform.bankkaro.com/partner',
-      partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
     },
   },
 };
@@ -106,20 +73,20 @@ const active = {
 /** CashKaro config + the headers every CK call shares. */
 export const CK = {
   ...active.ck,
+  baseUrl: `${API_BASE_URL}/ck`,
   device: DEVICE,
   /** Base headers present on every CashKaro request. */
   headers(): Record<string, string> {
     return {
       Accept: 'application/vnd.api+json',
       'x-chkr-app-version': active.ck.appVersion,
-      'x-api-key': active.ck.apiKey,
     };
   },
 };
 
 /** BankKaro (CardGenius) config. */
 export const BK = {
-  ...active.bk,
+  baseUrl: `${API_BASE_URL}/bk`,
 };
 
 /** Coarse platform string used in device_info payloads. */
@@ -132,10 +99,7 @@ export const PLATFORM = Platform.OS;
  */
 export function configProblems(): string[] {
   const problems: string[] = [];
-  if (!CK.baseUrl) problems.push(`CK base URL is empty for stage "${STAGE}"`);
-  if (!CK.apiKey) problems.push(`CK API key is empty for stage "${STAGE}"`);
+  if (!API_BASE_URL) problems.push('EXPO_PUBLIC_API_BASE_URL (the BFF) is empty');
   if (!CK.trackingHost) problems.push(`CK tracking host is empty for stage "${STAGE}"`);
-  if (!BK.baseUrl) problems.push(`BK base URL is empty for stage "${STAGE}"`);
-  if (!BK.partnerApiKey) problems.push(`BK partner key is empty for stage "${STAGE}"`);
   return problems;
 }
