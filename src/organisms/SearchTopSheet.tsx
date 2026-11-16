@@ -35,6 +35,7 @@
  */
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -48,6 +49,7 @@ import {
   ScrollView,
   Keyboard,
   Dimensions,
+  ImageSourcePropType,
   StyleProp,
   ViewStyle,
 } from 'react-native';
@@ -76,6 +78,8 @@ export type SearchTopSheetVariant = 'suggestions' | 'history';
 export interface SearchTopSheetRecent {
   label: string;
   leadingIcon?: IconName;
+  /** Bank logo or card art, shown in place of `leadingIcon`. */
+  image?: ImageSourcePropType;
   /** Trailing icon for dismissing the recent (e.g. close X). Optional. */
   trailingIcon?: IconName;
 }
@@ -87,6 +91,11 @@ export interface SearchTopSheetProps {
   sections?: SearchResultSection[];
   /** Used when variant='history'. */
   recentSearches?: SearchTopSheetRecent[];
+  /** The user's own past picks, newest first. Shown above the popular
+   *  chips while the query is empty. */
+  historySearches?: SearchTopSheetRecent[];
+  onHistoryPress?: (item: SearchTopSheetRecent, index: number) => void;
+  onClearHistory?: () => void;
   value?: string;
   placeholder?: string;
   /** Hint under "No results for …". Defaults to Home's card/bank wording;
@@ -106,6 +115,8 @@ export interface SearchTopSheetProps {
 
 // Animation timing — kept local to this sheet.
 const SLIDE_DURATION_MS = 250;
+// Pause after the last keystroke before the query reaches the parent.
+const SEARCH_DEBOUNCE_MS = 150;
 
 // ----------------------------------------------------------------------------
 // Component
@@ -115,6 +126,9 @@ export function SearchTopSheet({
   variant = 'suggestions',
   sections = [],
   recentSearches = [],
+  historySearches = [],
+  onHistoryPress,
+  onClearHistory,
   value,
   noResultsHint = 'Try a bank name like HDFC or SBI, or a card name.',
   placeholder,
@@ -134,6 +148,47 @@ export function SearchTopSheet({
   // tucks under the iOS notch. The sheet's white bg extends UP into
   // this padding so the status bar reads as part of the sheet.
   const insets = useSafeAreaInsets();
+
+  // The bar owns what the user types; the parent gets it SEARCH_DEBOUNCE_MS
+  // after the last keystroke. Home filters ~100 cards and re-renders its whole
+  // screen on each query change, and with the input controlled by that state
+  // the native field fell behind the JS thread: letters were dropped and the
+  // cursor jumped. A parent-driven change (clear, close, chip tap) still wins.
+  const [text, setText] = useState(value ?? '');
+  const lastSentRef = useRef(value ?? '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const v = value ?? '';
+    if (v !== lastSentRef.current) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      lastSentRef.current = v;
+      setText(v);
+    }
+  }, [value]);
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    []
+  );
+  const handleChangeText = useCallback(
+    (t: string) => {
+      setText(t);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        lastSentRef.current = t;
+        onChangeText?.(t);
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [onChangeText]
+  );
+  const handleClear = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setText('');
+    lastSentRef.current = '';
+    if (onClear) onClear();
+    else onChangeText?.('');
+  }, [onClear, onChangeText]);
 
   // Zero-result searches — logged once the user pauses typing (800 ms), so
   // each keystroke isn't an event. Only the query LENGTH is sent, never the
@@ -324,11 +379,11 @@ export function SearchTopSheet({
               {/* Bar stays pinned (no `sections` → bar only). */}
               <SearchBar
                 state="filled"
-                value={value ?? ''}
+                value={text}
                 placeholder={placeholder}
                 onBack={onClose}
-                onChangeText={onChangeText}
-                onClear={onClear}
+                onChangeText={handleChangeText}
+                onClear={handleClear}
               />
               {value?.trim() && sections.length > 0 ? (
                 // Results scroll within the space above the keyboard.
@@ -360,15 +415,47 @@ export function SearchTopSheet({
                   </View>
                   <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
                 </View>
-              ) : recentSearches.length > 0 ? (
-                /* Empty query → quick suggestions (top banks + a card),
-                   Figma 1985:36934. Once the user types, the results
-                   above take over and these hide. */
-                <View style={{ gap: spacing[8] }}>
-                  <Text variant="body12Medium" color={colors.text.tertiary}>
-                    Popular searches
-                  </Text>
-                  <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+              ) : historySearches.length > 0 || recentSearches.length > 0 ? (
+                /* Empty query → the user's own recent picks, then quick
+                   suggestions (top banks + a card), Figma 1985:36934. Once
+                   the user types, the results above take over. */
+                <View style={{ gap: spacing[16] }}>
+                  {historySearches.length > 0 ? (
+                    <View style={{ gap: spacing[8] }}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text variant="body12Medium" color={colors.text.tertiary}>
+                          Recent searches
+                        </Text>
+                        {onClearHistory ? (
+                          <Pressable
+                            onPress={onClearHistory}
+                            hitSlop={spacing[8]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Clear recent searches"
+                          >
+                            <Text variant="body12Medium" color={colors.text.link}>
+                              Clear
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                      <RecentSearchTags items={historySearches} onPress={onHistoryPress} />
+                    </View>
+                  ) : null}
+                  {recentSearches.length > 0 ? (
+                    <View style={{ gap: spacing[8] }}>
+                      <Text variant="body12Medium" color={colors.text.tertiary}>
+                        Popular searches
+                      </Text>
+                      <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
             </>
@@ -438,6 +525,7 @@ function RecentSearchTags({
           type="default"
           size={32}
           leadingIcon={it.leadingIcon}
+          leadingImage={it.image}
           trailingIcon={it.trailingIcon}
           onPress={onPress ? () => onPress(it, i) : undefined}
         />

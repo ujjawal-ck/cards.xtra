@@ -44,6 +44,8 @@
  */
 import React from 'react';
 import {
+  Image,
+  ImageSourcePropType,
   Pressable,
   View,
   StyleProp,
@@ -66,6 +68,9 @@ export interface ChipProps {
   /** Only applies to type='default' (and 'toggle' which reuses default sizing). */
   size?: ChipSize;
   leadingIcon?: IconName;
+  /** Bitmap shown before the label (a bank logo or card art) on the
+   *  'default' variant. Takes precedence over `leadingIcon`. */
+  leadingImage?: ImageSourcePropType;
   trailingIcon?: IconName;
   /** Small accent (cobalt) dot before the label — e.g. an "active filters"
    *  indicator. Only rendered on the 'default' variant. */
@@ -154,6 +159,7 @@ export function Chip({
   state = 'default',
   size = 32,
   leadingIcon,
+  leadingImage,
   trailingIcon,
   dot,
   count,
@@ -400,10 +406,29 @@ export function Chip({
           }}
         />
       ) : null}
-      {leadingIcon ? (
+      {leadingImage ? (
+        // Logos are wider than tall (bank wordmarks, card art), so the box
+        // is 2× the icon size wide (32 × 16 on a 32 chip) and the image is
+        // contained in it. At 1.5× the bank wordmarks were unreadable.
+        <Image
+          source={leadingImage}
+          style={{
+            width: config.iconPx * 2,
+            height: config.iconPx,
+            borderRadius: radius.xs,
+          }}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+      ) : leadingIcon ? (
         <Icon name={leadingIcon} size={config.iconPx} color={fg} />
       ) : null}
-      <Text variant={config.labelVariant} color={fg}>
+      <Text
+        variant={config.labelVariant}
+        color={fg}
+        numberOfLines={1}
+        style={{ flexShrink: 1 }}
+      >
         {label}
       </Text>
       {/* Count badge sits immediately beside the label — same treatment as

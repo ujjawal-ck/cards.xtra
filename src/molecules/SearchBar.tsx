@@ -481,6 +481,12 @@ export function SearchBar({
             placeholder={placeholder}
             placeholderTextColor={colors.text.placeholder}
             returnKeyType="search"
+            // Bank and card names: no auto-capital first letter and no
+            // autocorrect suggestions (the bar opened in caps lock and
+            // suggested unrelated words).
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
             style={[
               typography.body14Regular,
               {

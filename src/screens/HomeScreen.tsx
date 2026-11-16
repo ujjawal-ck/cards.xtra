@@ -102,6 +102,7 @@ import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
+import { useRecentSearches } from '../lib/recentSearches';
 import { getEligibilityGateVariant } from '../experiments';
 import { analytics, Events } from '../analytics';
 import { classifyCardEligibility, type EligibilityBucket } from '../api/eligibility';
@@ -1189,19 +1190,47 @@ export function HomeScreen() {
   // the top-ranked card, in Home rank order. Bank chips re-search that bank;
   // the card chip opens that card.
   const searchQuickChips = useMemo<SearchTopSheetRecent[]>(() => {
+    // Each chip carries its bank logo / card art; the glyph is the fallback
+    // when an image is missing.
     const bankChips = rankedBanks
       .slice(0, 3)
       .map((b): SearchTopSheetRecent => ({
         label: b.name,
         leadingIcon: 'feat-bank-outline',
+        image: b.image,
       }));
     const topCard = cards[0];
     // wallet-outline stands in for a card glyph — the only literal card icon
     // (nav-cards-outline) is baked white and wouldn't show on the chip.
     return topCard
-      ? [...bankChips, { label: topCard.name, leadingIcon: 'wallet-outline' }]
+      ? [
+          ...bankChips,
+          { label: topCard.name, leadingIcon: 'wallet-outline', image: topCard.cardImage },
+        ]
       : bankChips;
   }, [rankedBanks, cards]);
+
+  // The user's recent picks, stored on the device (lib/recentSearches),
+  // resolved against the live catalog for their logo / card art.
+  const recentSearchStore = useRecentSearches();
+  const rememberSearch = recentSearchStore.remember;
+  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(
+    () =>
+      recentSearchStore.recent.map((r): SearchTopSheetRecent => {
+        if (r.kind === 'card') {
+          const card = cards.find((c) => c.name === r.label);
+          return { label: r.label, leadingIcon: 'wallet-outline', image: card?.cardImage };
+        }
+        const bank = rankedBanks.find((b) => b.name === r.label);
+        return { label: r.label, leadingIcon: 'feat-bank-outline', image: bank?.image };
+      }),
+    [recentSearchStore.recent, cards, rankedBanks]
+  );
+  // Popular chips minus anything already shown under Recent searches.
+  const searchPopularChips = useMemo(() => {
+    const seen = new Set(searchHistoryChips.map((c) => c.label.toLowerCase()));
+    return searchQuickChips.filter((c) => !seen.has(c.label.toLowerCase()));
+  }, [searchQuickChips, searchHistoryChips]);
 
   // Search — matches the loaded catalog by card name (Cards section) and by
   // bank name (Banks section). Both feed the SearchTopSheet, bifurcated per
@@ -1253,13 +1282,14 @@ export function HomeScreen() {
       setSearchOpen(false);
       setSearchQuery('');
       const card = cards.find((c) => c.name === chip.label);
+      rememberSearch({ label: chip.label, kind: card ? 'card' : 'bank' });
       if (card) {
         setTimeout(() => handleCardPress(card), 220);
       } else {
         handleBankFilter(chip.label);
       }
     },
-    [cards, handleBankFilter]
+    [cards, handleBankFilter, rememberSearch]
   );
 
   // Result-row tap: resolve by the tapped section's header (Banks may be
@@ -1274,6 +1304,7 @@ export function HomeScreen() {
         if (!bank) return;
         // GA4 search — the chosen result's label is a brand/product name (not PII).
         analytics.track(Events.SEARCH, { search_term: bank.name, result_type: 'bank' });
+        rememberSearch({ label: bank.name, kind: 'bank' });
         setSearchOpen(false);
         setSearchQuery('');
         handleBankFilter(bank.name);
@@ -1282,12 +1313,13 @@ export function HomeScreen() {
       const card = searchResults[rowIndex];
       if (!card) return;
       analytics.track(Events.SEARCH, { search_term: card.name, result_type: 'card' });
+      rememberSearch({ label: card.name, kind: 'card' });
       setSearchOpen(false);
       setSearchQuery('');
       // Let the search modal animate out before presenting the sheet.
       setTimeout(() => handleCardPress(card), 220);
     },
-    [searchSections, searchBanks, searchResults, handleBankFilter]
+    [searchSections, searchBanks, searchResults, handleBankFilter, rememberSearch]
   );
 
   // Visible list = loaded catalog run through the applied filters, then
@@ -2147,10 +2179,13 @@ export function HomeScreen() {
           setSearchOpen(false);
           setSearchQuery('');
         }}
-        placeholder="Search by card name"
+        placeholder="Search by bank or card name"
         sections={searchSections}
-        recentSearches={searchQuickChips}
+        recentSearches={searchPopularChips}
         onRecentPress={handleSearchChipPress}
+        historySearches={searchHistoryChips}
+        onHistoryPress={handleSearchChipPress}
+        onClearHistory={recentSearchStore.clear}
         onResultPress={handleSearchResultPress}
       />
 
