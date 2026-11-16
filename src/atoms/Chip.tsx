@@ -382,6 +382,9 @@ export function Chip({
       style={[
         {
           alignSelf: 'flex-start',
+          // Never wider than its row, so a long label truncates (below)
+          // instead of running off the screen.
+          maxWidth: '100%',
           flexDirection: 'row',
           alignItems: 'center',
           gap: config.gap,

@@ -165,6 +165,16 @@ export function SearchTopSheet({
       setText(v);
     }
   }, [value]);
+  // Closing the sheet drops a keystroke still waiting to be sent, and the
+  // field's text with it: otherwise "typed then closed within 150 ms" sent the
+  // stale query after the parent had cleared it, and the next open showed it.
+  useEffect(() => {
+    if (visible) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    setText(value ?? '');
+    lastSentRef.current = value ?? '';
+  }, [visible, value]);
   useEffect(
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

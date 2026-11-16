@@ -1211,21 +1211,24 @@ export function HomeScreen() {
   }, [rankedBanks, cards]);
 
   // The user's recent picks, stored on the device (lib/recentSearches),
-  // resolved against the live catalog for their logo / card art.
+  // resolved against the live catalog for their logo / card art. A pick the
+  // catalog no longer has is hidden: tapping it would treat a dropped card's
+  // name as a bank and filter Home down to nothing.
   const recentSearchStore = useRecentSearches();
   const rememberSearch = recentSearchStore.remember;
-  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(
-    () =>
-      recentSearchStore.recent.map((r): SearchTopSheetRecent => {
-        if (r.kind === 'card') {
-          const card = cards.find((c) => c.name === r.label);
-          return { label: r.label, leadingIcon: 'wallet-outline', image: card?.cardImage };
-        }
+  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(() => {
+    const out: SearchTopSheetRecent[] = [];
+    for (const r of recentSearchStore.recent) {
+      if (r.kind === 'card') {
+        const card = cards.find((c) => c.name === r.label);
+        if (card) out.push({ label: r.label, leadingIcon: 'wallet-outline', image: card.cardImage });
+      } else if (r.kind === 'bank') {
         const bank = rankedBanks.find((b) => b.name === r.label);
-        return { label: r.label, leadingIcon: 'feat-bank-outline', image: bank?.image };
-      }),
-    [recentSearchStore.recent, cards, rankedBanks]
-  );
+        if (bank) out.push({ label: r.label, leadingIcon: 'feat-bank-outline', image: bank.image });
+      }
+    }
+    return out;
+  }, [recentSearchStore.recent, cards, rankedBanks]);
   // Popular chips minus anything already shown under Recent searches.
   const searchPopularChips = useMemo(() => {
     const seen = new Set(searchHistoryChips.map((c) => c.label.toLowerCase()));

@@ -55,7 +55,7 @@ const CONFIG = {
       trackingHost: 'cktracking.lmssecure.com',
     },
     bk: {
-      baseUrl: 'https://platform.bankkaro.com/partner',
+      baseUrl: process.env.EXPO_PUBLIC_BK_BASE_URL || 'https://platform.bankkaro.com/partner',
       // partner-token used to mint the per-session jwttoken
       partnerApiKey: process.env.EXPO_PUBLIC_BK_PARTNER_KEY ?? '',
     },

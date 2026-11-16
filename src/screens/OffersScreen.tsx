@@ -289,16 +289,19 @@ export function OffersScreen() {
   // the all-stores index only loads while search is open.
   const recentSearchStore = useRecentSearches('offers');
   const rememberSearch = recentSearchStore.remember;
-  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(
-    () =>
-      recentSearchStore.recent.map((r): SearchTopSheetRecent => {
-        if (r.kind === 'store') {
-          return { label: r.label, image: r.image ? { uri: r.image } : undefined };
-        }
+  // A category the strip no longer has is hidden (tapping it did nothing).
+  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(() => {
+    const out: SearchTopSheetRecent[] = [];
+    for (const r of recentSearchStore.recent) {
+      if (r.kind === 'store') {
+        out.push({ label: r.label, image: r.image ? { uri: r.image } : undefined });
+      } else if (r.kind === 'category') {
         const cat = categories.find((c) => c.label === r.label);
-        return { label: r.label, image: cat?.image };
-      }),
-    [recentSearchStore.recent, categories]
+        if (cat) out.push({ label: r.label, image: cat.image });
+      }
+    }
+    return out;
+  }, [recentSearchStore.recent, categories]
   );
   // Popular chips minus anything already shown under Recent searches.
   const searchPopularChips = useMemo(() => {
@@ -371,8 +374,9 @@ export function OffersScreen() {
   // Recent-chip tap — a category jumps to its tab; a store reopens its brand
   // page from the saved slug.
   const handleSearchHistoryPress = useCallback(
-    (_chip: SearchTopSheetRecent, i: number) => {
-      const item = recentSearchStore.recent[i];
+    (chip: SearchTopSheetRecent) => {
+      // By label, not index: hidden (stale) picks shift the chip positions.
+      const item = recentSearchStore.recent.find((r) => r.label === chip.label);
       if (!item) return;
       if (item.kind === 'store' && item.id) {
         const live = allStores.find((s) => s.slug === item.id);
