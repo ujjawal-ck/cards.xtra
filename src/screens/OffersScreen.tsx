@@ -58,6 +58,7 @@ import {
 } from '../organisms';
 import type { SearchTopSheetRecent } from '../organisms';
 import { images } from '../assets/images';
+import { useRecentSearches } from '../lib/recentSearches';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 import { colors, spacing, radius } from '../tokens';
@@ -279,9 +280,31 @@ export function OffersScreen() {
   // Empty-state quick chips — the top categories, so an empty search still
   // offers a one-tap jump to a category tab (analogous to Home's quick chips).
   const searchQuickChips = useMemo<SearchTopSheetRecent[]>(
-    () => categories.slice(0, 6).map((c) => ({ label: c.label })),
+    () => categories.slice(0, 6).map((c) => ({ label: c.label, image: c.image })),
     [categories]
   );
+
+  // The user's recent picks on Offers (categories and stores), kept on the
+  // device separately from Home's. Stores carry their slug + logo URL, since
+  // the all-stores index only loads while search is open.
+  const recentSearchStore = useRecentSearches('offers');
+  const rememberSearch = recentSearchStore.remember;
+  const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(
+    () =>
+      recentSearchStore.recent.map((r): SearchTopSheetRecent => {
+        if (r.kind === 'store') {
+          return { label: r.label, image: r.image ? { uri: r.image } : undefined };
+        }
+        const cat = categories.find((c) => c.label === r.label);
+        return { label: r.label, image: cat?.image };
+      }),
+    [recentSearchStore.recent, categories]
+  );
+  // Popular chips minus anything already shown under Recent searches.
+  const searchPopularChips = useMemo(() => {
+    const seen = new Set(searchHistoryChips.map((c) => c.label.toLowerCase()));
+    return searchQuickChips.filter((c) => !seen.has(c.label.toLowerCase()));
+  }, [searchQuickChips, searchHistoryChips]);
 
   // Result-row tap — resolve by the tapped section's header (Categories may be
   // absent, so a fixed index isn't safe). Category → jump to that tab; Store →
@@ -293,6 +316,7 @@ export function OffersScreen() {
       if (section.header === 'Categories') {
         const cat = searchCategories[rowIndex];
         if (!cat) return;
+        rememberSearch({ label: cat.label, kind: 'category' });
         setSearchOpen(false);
         setSearchQuery('');
         selectCategory(cat.label, cat.index);
@@ -305,6 +329,12 @@ export function OffersScreen() {
         item_id: store.slug,
         source: 'search',
       });
+      rememberSearch({
+        label: store.name,
+        kind: 'store',
+        id: store.slug,
+        image: store.image ?? undefined,
+      });
       setSearchOpen(false);
       setSearchQuery('');
       navigation.navigate('OffersBrandAmazon', {
@@ -313,7 +343,15 @@ export function OffersScreen() {
         category: categoryLabel,
       });
     },
-    [searchSections, searchCategories, searchStores, navigation, categoryLabel, selectCategory]
+    [
+      searchSections,
+      searchCategories,
+      searchStores,
+      navigation,
+      categoryLabel,
+      selectCategory,
+      rememberSearch,
+    ]
   );
 
   // Quick-chip tap — every chip is a category → jump to that tab.
@@ -322,9 +360,42 @@ export function OffersScreen() {
       const index = categories.findIndex((c) => c.label === chip.label);
       setSearchOpen(false);
       setSearchQuery('');
-      if (index >= 0) selectCategory(categories[index].label, index);
+      if (index >= 0) {
+        rememberSearch({ label: categories[index].label, kind: 'category' });
+        selectCategory(categories[index].label, index);
+      }
     },
-    [categories, selectCategory]
+    [categories, selectCategory, rememberSearch]
+  );
+
+  // Recent-chip tap — a category jumps to its tab; a store reopens its brand
+  // page from the saved slug.
+  const handleSearchHistoryPress = useCallback(
+    (_chip: SearchTopSheetRecent, i: number) => {
+      const item = recentSearchStore.recent[i];
+      if (!item) return;
+      if (item.kind === 'store' && item.id) {
+        const live = allStores.find((s) => s.slug === item.id);
+        rememberSearch(item);
+        setSearchOpen(false);
+        setSearchQuery('');
+        navigation.navigate('OffersBrandAmazon', {
+          slug: item.id,
+          hasCoupons: (live?.couponsCount ?? 0) > 0,
+          category: categoryLabel,
+        });
+        return;
+      }
+      handleSearchChipPress({ label: item.label });
+    },
+    [
+      recentSearchStore.recent,
+      allStores,
+      rememberSearch,
+      navigation,
+      categoryLabel,
+      handleSearchChipPress,
+    ]
   );
 
   // Map stores → Grid 'brand-1x2' items; tap opens the brand page.
@@ -504,8 +575,11 @@ export function OffersScreen() {
             : 'Try a category like Fashion or Travel.'
         }
         sections={searchSections}
-        recentSearches={searchQuickChips}
+        recentSearches={searchPopularChips}
         onRecentPress={handleSearchChipPress}
+        historySearches={searchHistoryChips}
+        onHistoryPress={handleSearchHistoryPress}
+        onClearHistory={recentSearchStore.clear}
         onResultPress={handleSearchResultPress}
       />
 

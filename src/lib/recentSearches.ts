@@ -11,14 +11,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-export type RecentSearchKind = 'bank' | 'card';
+/** Home stores banks and cards; Offers stores categories and stores. */
+export type RecentSearchKind = 'bank' | 'card' | 'category' | 'store';
+const KINDS: readonly RecentSearchKind[] = ['bank', 'card', 'category', 'store'];
 
 export interface RecentSearch {
   label: string;
   kind: RecentSearchKind;
+  /** Catalog id needed to reopen the item (an Offers store slug). */
+  id?: string;
+  /** Remote logo URL, for items whose catalog is not loaded up front. */
+  image?: string;
 }
 
-const STORAGE_KEY = 'cardsxtra.recentSearches.v1';
+/** One history per screen: Home (banks/cards) and Offers (categories/stores). */
+export type RecentSearchScope = 'home' | 'offers';
+const storageKey = (scope: RecentSearchScope) =>
+  scope === 'home' ? 'cardsxtra.recentSearches.v1' : `cardsxtra.recentSearches.${scope}.v1`;
 export const MAX_RECENT_SEARCHES = 5;
 
 const canPersist = Platform.OS !== 'web';
@@ -33,7 +42,9 @@ function parse(raw: string | null): RecentSearch[] {
         (d): d is RecentSearch =>
           !!d &&
           typeof d.label === 'string' &&
-          (d.kind === 'bank' || d.kind === 'card')
+          KINDS.includes(d.kind) &&
+          (d.id === undefined || typeof d.id === 'string') &&
+          (d.image === undefined || typeof d.image === 'string')
       )
       .slice(0, MAX_RECENT_SEARCHES);
   } catch {
@@ -46,28 +57,29 @@ export function addRecent(list: RecentSearch[], item: RecentSearch): RecentSearc
   const key = item.label.trim().toLowerCase();
   if (!key) return list;
   return [
-    { label: item.label.trim(), kind: item.kind },
+    { ...item, label: item.label.trim() },
     ...list.filter((r) => r.label.trim().toLowerCase() !== key),
   ].slice(0, MAX_RECENT_SEARCHES);
 }
 
-async function save(list: RecentSearch[]) {
+async function save(key: string, list: RecentSearch[]) {
   if (!canPersist) return;
   try {
-    if (list.length === 0) await SecureStore.deleteItemAsync(STORAGE_KEY);
-    else await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(list));
+    if (list.length === 0) await SecureStore.deleteItemAsync(key);
+    else await SecureStore.setItemAsync(key, JSON.stringify(list));
   } catch {
     // Storage failure only loses history; search itself keeps working.
   }
 }
 
-export function useRecentSearches() {
+export function useRecentSearches(scope: RecentSearchScope = 'home') {
+  const key = storageKey(scope);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
 
   useEffect(() => {
     if (!canPersist) return;
     let cancelled = false;
-    SecureStore.getItemAsync(STORAGE_KEY)
+    SecureStore.getItemAsync(key)
       .then((raw) => {
         if (!cancelled) setRecent(parse(raw));
       })
@@ -75,20 +87,23 @@ export function useRecentSearches() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [key]);
 
-  const remember = useCallback((item: RecentSearch) => {
-    setRecent((prev) => {
-      const next = addRecent(prev, item);
-      save(next);
-      return next;
-    });
-  }, []);
+  const remember = useCallback(
+    (item: RecentSearch) => {
+      setRecent((prev) => {
+        const next = addRecent(prev, item);
+        save(key, next);
+        return next;
+      });
+    },
+    [key]
+  );
 
   const clear = useCallback(() => {
     setRecent([]);
-    save([]);
-  }, []);
+    save(key, []);
+  }, [key]);
 
   return { recent, remember, clear };
 }
