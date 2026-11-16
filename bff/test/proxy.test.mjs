@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/proxy.js';
-import { matchRoute, CK_ROUTES } from '../src/routes.js';
+import { matchRoute, canonicalPath, CK_ROUTES } from '../src/routes.js';
+import { createCachedToken } from '../src/tokens.js';
 
 const CONFIG = {
   ckBaseUrl: 'https://ck.test/v1',
@@ -63,11 +64,13 @@ test('user token is forwarded unchanged and never swapped for the site token', a
   assert.equal(calls[0].init.headers.authorization, 'Bearer user-1');
 });
 
-test('site token is re-minted once on 401', async () => {
+test('site token is re-minted once on a token 401', async () => {
   let mints = 0;
   const { handle, calls } = app((url, init, n) => {
     if (url.endsWith('/v1/token')) return { body: { data: { attributes: { token: `site-${++mints}` } } } };
-    return init.headers.authorization === 'Bearer site-1' ? { status: 401 } : { status: 200 };
+    return init.headers.authorization === 'Bearer site-1'
+      ? { status: 401, body: { message: 'jwt expired' } }
+      : { status: 200 };
   });
   const res = await handle(req('/ck/offers/flipkart'));
   assert.equal(res.status, 200);
@@ -172,4 +175,70 @@ test('route table covers every app call', () => {
     ['POST', '/users/tickets/2026-11-01/42/abc'],
   ];
   for (const [m, p] of appCalls) assert.ok(matchRoute(CK_ROUTES, m, p), `${m} ${p}`);
+});
+
+test('a business 401 on an OTP POST is not retried (no second SMS)', async () => {
+  let mints = 0;
+  const { handle, calls } = app((url) => {
+    if (url.endsWith('/v1/token')) return { body: { data: { attributes: { token: `site-${++mints}` } } } };
+    return { status: 401, body: { errors: [{ code: '2010', detail: 'User not registered' }] } };
+  });
+  const res = await handle(
+    req('/ck/loginotp', { method: 'POST', body: JSON.stringify({ data: { attributes: { mobile_number: 9876543210 } } }) }),
+  );
+  assert.equal(res.status, 401);
+  assert.equal(calls.filter((c) => c.url.includes('/loginotp')).length, 1);
+  assert.equal((await res.json()).errors[0].code, '2010');
+});
+
+test('x-chkr-app-version is always the server value, whatever the app sends', async () => {
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 200 });
+  await handle(req('/ck/offers/categories', { headers: { 'x-chkr-app-version': '4.6' } }));
+  await handle(req('/ck/users/profile', { headers: { 'x-chkr-app-version': '1.0', authorization: 'Bearer u' } }));
+  for (const c of calls.filter((c) => !c.url.endsWith('/token'))) assert.equal(c.init.headers['x-chkr-app-version'], '4.9');
+});
+
+test('per-mobile OTP limit cannot be dodged by reformatting the number', async () => {
+  const { handle } = app((url) => tokenReply(url) ?? { status: 201 });
+  const forms = ['9876543210', '+919876543210', '09876543210', ' 98765 43210 ', 9876543210];
+  for (const f of forms)
+    assert.equal(
+      (await handle(req('/ck/signupotp', { method: 'POST', body: JSON.stringify({ data: { attributes: { mobile_number: f } } }) }))).status,
+      201,
+    );
+  const sixth = await handle(
+    req('/ck/signupotp', { method: 'POST', body: JSON.stringify({ data: { attributes: { mobile_number: '919876543210' } } }) }),
+  );
+  assert.equal(sixth.status, 429);
+  assert.equal(sixth.headers.get('retry-after'), '600');
+});
+
+test('encoded segments are canonicalised; double-encoded and smuggled characters are refused', async () => {
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 200 });
+  assert.equal(canonicalPath('/users/tickets/2026-11-01 10:00:00/42/abc'), '/users/tickets/2026-11-01%2010%3A00%3A00/42/abc');
+  const ok = await handle(
+    req('/ck/users/tickets/2026-11-01%2010%3A00%3A00/42/abc', { method: 'POST', headers: { authorization: 'Bearer u' }, body: '{}' }),
+  );
+  assert.equal(ok.status, 200);
+  assert.equal(calls.at(-1).url, 'https://ck.test/v1/users/tickets/2026-11-01%2010%3A00%3A00/42/abc');
+  // req() puts the path in ?__path= raw; URLSearchParams decodes it once, as on Vercel.
+  const n = calls.length;
+  for (const p of ['/ck/offers/%252e%252e/token', '/ck/offers/a%252Fb', '/ck/offers/%25E0%25A4%25A', '/ck/users/%252e%252e/token', '/ck/offers/%252E%252E%252Ftoken', '/ck/offers/a%255Cb']) {
+    assert.equal((await handle(req(p))).status, 404, p);
+  }
+  assert.equal(calls.length, n);
+  // A smuggled ?/# stays inside the segment, escaped, never a real query upstream.
+  await handle(req('/ck/offers/a%253Fx%253D1%2523f'));
+  assert.equal(calls.at(-1).url, 'https://ck.test/v1/offers/a%3Fx%3D1%23f');
+});
+
+test('a stale token cannot evict a newer one', async () => {
+  let n = 0;
+  const t = createCachedToken(async () => `t${++n}`, 30 * 60_000);
+  const first = await t.get();
+  t.invalidate(first);
+  const second = await t.get();
+  t.invalidate(first); // late failure with the old token
+  assert.equal(await t.get(), second);
+  assert.equal(n, 2);
 });

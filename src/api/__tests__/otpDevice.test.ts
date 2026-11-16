@@ -4,7 +4,10 @@
  * issued for another device type than /signupV1 (?device=App) verifies, and
  * the right code failed with 7002 "Wrong OTP".
  */
-import { loginOtp, signupOtp } from '../cashkaro';
+// Set before the module loads: env.ts reads the BFF URL at import time.
+process.env.EXPO_PUBLIC_API_BASE_URL = 'https://bff.test';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { loginOtp, signupOtp } = require('../cashkaro');
 
 const calls: string[] = [];
 

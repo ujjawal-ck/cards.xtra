@@ -15,19 +15,24 @@
  * Never log request or response bodies: they hold OTPs, tokens, UPI ids and
  * eligibility details.
  */
-import { BK_ROUTES, CK_ROUTES, OTP_ROUTES, matchRoute } from './routes.js';
+import { BK_ROUTES, CK_ROUTES, OTP_ROUTES, canonicalPath, matchRoute } from './routes.js';
 import { UpstreamAuthError, bkPartnerToken, ckSiteToken } from './tokens.js';
 import { createRateLimiter } from './ratelimit.js';
 
 const MAX_BODY_BYTES = 4_400_000; // Vercel rejects bodies over 4.5 MB.
-const UPSTREAM_TIMEOUT_MS = 55_000; // The app waits up to 30 s for payouts.
+// maxDuration is 60 s. A user call is one attempt (payouts can take ~30 s).
+// A guest call may run twice (re-mint + retry), so each attempt gets less.
+const USER_TIMEOUT_MS = 55_000;
+const GUEST_TIMEOUT_MS = 25_000;
 
-/** Headers the app may send that are passed to CashKaro. */
+/**
+ * Headers the app may send that are passed to CashKaro. x-chkr-app-version is
+ * NOT forwarded: ckminapps.com accepts one version only, so the server sets it.
+ */
 const CK_FORWARD = [
   'accept',
   'content-type',
   'authorization',
-  'x-chkr-app-version',
   'x-chkr-app-platform',
   'x-chkr-app',
   'x-user-agent',
@@ -73,6 +78,23 @@ function pickHeaders(request, names) {
   return out;
 }
 
+/** Digits only, last 10: one key per Indian mobile number however it is written. */
+export function normaliseMobile(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : null;
+}
+
+/**
+ * True when a CashKaro 401 is about the bearer token (expired or malformed),
+ * not a business error such as a wrong OTP. Only then is a guest call retried,
+ * so an OTP or login POST is never sent twice for another reason.
+ */
+async function isTokenFailure(res) {
+  if (res.status !== 401) return false;
+  const text = await res.text().catch(() => '');
+  return /jwt|token|unauthori[sz]ed/i.test(text);
+}
+
 function parseJson(buf) {
   try {
     return JSON.parse(Buffer.from(buf).toString('utf8'));
@@ -84,18 +106,20 @@ function parseJson(buf) {
 export function createApp({ config = readConfig(), fetchImpl = fetch, log = console.log, now } = {}) {
   const siteToken = ckSiteToken(config, fetchImpl);
   const partnerToken = bkPartnerToken(config, fetchImpl);
-  const otpPerIp = createRateLimiter({ limit: 10, windowMs: 10 * 60 * 1000, now });
+  // Per IP is loose (many users can share one carrier NAT address); per
+  // mobile number is the real guard against SMS flooding.
+  const otpPerIp = createRateLimiter({ limit: 30, windowMs: 10 * 60 * 1000, now });
   const otpPerMobile = createRateLimiter({ limit: 5, windowMs: 10 * 60 * 1000, now });
 
-  async function callUpstream(url, init) {
-    return fetchImpl(url, { ...init, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+  async function callUpstream(url, init, timeoutMs) {
+    return fetchImpl(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   }
 
   /** Forward to CashKaro with the auth rule above. */
   async function forwardCk(request, path, search, route, body, ip) {
     const headers = pickHeaders(request, CK_FORWARD);
     headers['x-api-key'] = config.ckApiKey;
-    if (!headers['x-chkr-app-version']) headers['x-chkr-app-version'] = config.ckAppVersion;
+    headers['x-chkr-app-version'] = config.ckAppVersion;
     if (!headers.accept) headers.accept = 'application/vnd.api+json';
 
     let payload = body;
@@ -110,20 +134,26 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
 
     const url = `${config.ckBaseUrl}${path}${search}`;
     const userAuth = Boolean(headers.authorization);
-    const send = async (bearer) =>
-      callUpstream(url, {
-        method: request.method,
-        headers: bearer ? { ...headers, authorization: `Bearer ${bearer}` } : headers,
-        body: payload,
-      });
+    const send = async (bearer, timeoutMs) =>
+      callUpstream(
+        url,
+        {
+          method: request.method,
+          headers: bearer ? { ...headers, authorization: `Bearer ${bearer}` } : headers,
+          body: payload,
+        },
+        timeoutMs,
+      );
 
-    if (userAuth) return send(null);
-    let res = await send(await siteToken.get());
-    if (res.status === 401 || res.status === 403) {
-      siteToken.invalidate();
-      res = await send(await siteToken.get());
-    }
-    return res;
+    if (userAuth) return send(null, USER_TIMEOUT_MS);
+    const token = await siteToken.get();
+    const res = await send(token, GUEST_TIMEOUT_MS);
+    if (res.status !== 401) return res;
+    // Clone: isTokenFailure reads the body, and the original may be returned.
+    if (!(await isTokenFailure(res.clone()))) return res;
+    await res.body?.cancel();
+    siteToken.invalidate(token);
+    return send(await siteToken.get(), GUEST_TIMEOUT_MS);
   }
 
   /** Forward to BankKaro with the partner JWT. */
@@ -131,17 +161,18 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
     const headers = pickHeaders(request, BK_FORWARD);
     const url = `${config.bkBaseUrl}${path}${search}`;
     const send = async (token) =>
-      callUpstream(url, {
-        method: request.method,
-        headers: { ...headers, 'partner-token': token },
-        body,
-      });
-    let res = await send(await partnerToken.get());
-    if (res.status === 401 || res.status === 403) {
-      partnerToken.invalidate();
-      res = await send(await partnerToken.get());
-    }
-    return res;
+      callUpstream(
+        url,
+        { method: request.method, headers: { ...headers, 'partner-token': token }, body },
+        GUEST_TIMEOUT_MS,
+      );
+    const token = await partnerToken.get();
+    const res = await send(token);
+    if (res.status !== 401 && res.status !== 403) return res;
+    // BankKaro calls are catalog reads and the eligibility check: safe to repeat.
+    await res.body?.cancel();
+    partnerToken.invalidate(token);
+    return send(await partnerToken.get());
   }
 
   return async function handle(request, { fallbackIp = '' } = {}) {
@@ -172,7 +203,11 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
         return apiError(404, 'NOT_FOUND', 'Not found.');
       }
       upstream = m[1];
-      const path = m[2];
+      const path = canonicalPath(m[2]);
+      if (path === null) {
+        status = 404;
+        return apiError(404, 'NOT_FOUND', 'Not found.');
+      }
       route = matchRoute(upstream === 'ck' ? CK_ROUTES : BK_ROUTES, method, path) ?? '-';
       if (route === '-') {
         status = 404;
@@ -204,12 +239,14 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
 
       const ip = clientIpOf(request, fallbackIp);
       if (upstream === 'ck' && OTP_ROUTES.has(route)) {
-        const mobile = body ? parseJson(body)?.data?.attributes?.mobile_number : undefined;
+        const mobile = body ? normaliseMobile(parseJson(body)?.data?.attributes?.mobile_number) : null;
         const ipOk = otpPerIp(`ip:${ip || 'unknown'}`);
         const mobileOk = mobile ? otpPerMobile(`m:${mobile}`) : true;
         if (!ipOk || !mobileOk) {
           status = 429;
-          return apiError(429, 'RATE_LIMITED', 'Too many OTP requests. Please try again in a few minutes.');
+          const res = apiError(429, 'RATE_LIMITED', 'Too many OTP requests. Please try again in a few minutes.');
+          res.headers.set('retry-after', '600');
+          return res;
         }
       }
 
@@ -221,13 +258,14 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
       // Node fetch already decoded the body, so only the content type is kept.
       // Streamed: Vercel's 4.5 MB response cap does not apply to streams, and
       // the BankKaro card list is already ~3.3 MB.
-      return new Response(res.body, {
-        status: res.status,
-        headers: {
-          'content-type': res.headers.get('content-type') || 'application/json',
-          'cache-control': 'no-store',
-        },
-      });
+      const outHeaders = {
+        'content-type': res.headers.get('content-type') || 'application/json',
+        'cache-control': 'no-store',
+      };
+      // The app's retry backoff honours Retry-After on 429/503.
+      const retryAfter = res.headers.get('retry-after');
+      if (retryAfter) outHeaders['retry-after'] = retryAfter;
+      return new Response(res.body, { status: res.status, headers: outHeaders });
     } catch (e) {
       if (e instanceof UpstreamAuthError) {
         status = 502;

@@ -4,6 +4,7 @@
  * before its JWT `exp` (or a fallback TTL when the token is not a JWT).
  */
 const SKEW_MS = 2 * 60 * 1000;
+const MINT_TIMEOUT_MS = 10_000;
 
 function jwtExpiryMs(token) {
   const part = String(token).split('.')[1];
@@ -37,7 +38,9 @@ export function createCachedToken(mint, fallbackTtlMs, now = () => Date.now()) {
       }
       return inFlight;
     },
-    invalidate() {
+    /** Drop `token` (or the current one). A stale token never evicts a newer one. */
+    invalidate(token) {
+      if (token !== undefined && token !== value) return;
       value = null;
       expiresAt = 0;
     },
@@ -63,7 +66,11 @@ export function ckSiteToken(config, fetchImpl) {
       const raw = `${config.ckBasicUser}:${config.ckBasicPass}`;
       headers.Authorization = `Basic ${Buffer.from(raw).toString('base64')}`;
     }
-    const res = await fetchImpl(`${config.ckBaseUrl}/token`, { method: 'GET', headers });
+    const res = await fetchImpl(`${config.ckBaseUrl}/token`, {
+      method: 'GET',
+      headers,
+      signal: AbortSignal.timeout(MINT_TIMEOUT_MS),
+    });
     const body = await res.json().catch(() => null);
     const token = body?.data?.attributes?.token;
     if (!res.ok || !token) throw new UpstreamAuthError('CashKaro token mint failed', res.status);
@@ -78,6 +85,7 @@ export function bkPartnerToken(config, fetchImpl) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 'x-api-key': config.bkPartnerKey }),
+      signal: AbortSignal.timeout(MINT_TIMEOUT_MS),
     });
     const body = await res.json().catch(() => null);
     const token = body?.data?.jwttoken;

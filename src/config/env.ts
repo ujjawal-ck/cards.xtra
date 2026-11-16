@@ -73,7 +73,9 @@ const active = {
 /** CashKaro config + the headers every CK call shares. */
 export const CK = {
   ...active.ck,
-  baseUrl: `${API_BASE_URL}/ck`,
+  // Empty when the BFF URL is unset, so http/client's empty-base guard fires
+  // ("not configured") instead of a misleading network error.
+  baseUrl: API_BASE_URL ? `${API_BASE_URL}/ck` : '',
   device: DEVICE,
   /** Base headers present on every CashKaro request. */
   headers(): Record<string, string> {
@@ -86,7 +88,7 @@ export const CK = {
 
 /** BankKaro (CardGenius) config. */
 export const BK = {
-  baseUrl: `${API_BASE_URL}/bk`,
+  baseUrl: API_BASE_URL ? `${API_BASE_URL}/bk` : '',
 };
 
 /** Coarse platform string used in device_info payloads. */

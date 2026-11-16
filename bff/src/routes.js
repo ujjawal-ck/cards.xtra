@@ -3,7 +3,9 @@
  * Paths are relative to the upstream base (CK `.../v1`, BK `.../partner`).
  * Each entry: [method, regex, name]. `name` is the route template for logs.
  */
-const SEG = '[^/]+';
+// One canonical path segment (see canonicalPath): encodeURIComponent output,
+// so only unreserved characters and %XX escapes. Never `?`, `#`, `/` or `\`.
+const SEG = "(?:[A-Za-z0-9._~!'()*-]|%[0-9A-F]{2})+";
 
 /** CashKaro mini apps API (ckminapps.com/v1). `/token` is never exposed. */
 export const CK_ROUTES = [
@@ -51,17 +53,34 @@ export const BK_ROUTES = [
 export const OTP_ROUTES = new Set(['loginotp', 'signupotp', 'users/sendotp']);
 
 /**
- * Find the allowlisted route for a method + path, or null. Rejects dot
- * segments (raw or percent-encoded) so a path can never climb out of the base.
+ * Canonical form of an incoming path: each segment decoded once and
+ * re-encoded with encodeURIComponent. Returns null for a dot segment (raw or
+ * encoded) or a malformed escape, so a path can never climb out of the base
+ * or smuggle a query, fragment or extra segment upstream.
  */
-export function matchRoute(routes, method, path) {
-  let decoded;
-  try {
-    decoded = decodeURIComponent(path);
-  } catch {
-    return null;
+export function canonicalPath(path) {
+  const out = [];
+  for (const seg of path.split('/')) {
+    let d;
+    try {
+      d = decodeURIComponent(seg);
+    } catch {
+      return null;
+    }
+    if (d === '.' || d === '..') return null;
+    // A slash inside one segment (from %2F / %252F) could become a separator
+    // upstream and, with a dot segment, climb out of the base. No real id,
+    // slug or date (YYYY-MM-DD) contains one.
+    if (/[\/\\]/.test(d)) return null;
+    out.push(encodeURIComponent(d));
   }
-  if (decoded.split('/').some((s) => s === '.' || s === '..')) return null;
+  return out.join('/');
+}
+
+/** Find the allowlisted route for a method + canonical path, or null. */
+export function matchRoute(routes, method, path) {
+  const canon = canonicalPath(path);
+  if (canon === null || canon !== path) return null;
   for (const [m, re, name] of routes) {
     if (m === method && re.test(path)) return name;
   }
