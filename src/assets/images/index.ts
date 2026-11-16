@@ -50,13 +50,13 @@ export const images = {
     departmental: require('./categories/cat-departmental.png'),
     education: require('./categories/cat-education.png'),
     electronics: require('./categories/cat-electronics.png'),
-    fashion: require('./categories/cat-fashion.png'),
+    fashion: require('./categories/cat-fashion.webp'),
     flightsAndTravel: require('./categories/cat-flights-and-travel.png'),
-    foodAndGrocery: require('./categories/cat-food-and-grocery.png'),
+    foodAndGrocery: require('./categories/cat-food-and-grocery.webp'),
     healthAndWellness: require('./categories/cat-health-and-wellness.png'),
     homeAndKitchen: require('./categories/cat-home-and-kitchen.png'),
     hosting: require('./categories/cat-hosting.png'),
-    loans: require('./categories/cat-loans.png'),
+    loans: require('./categories/cat-loans.webp'),
     mobile: require('./categories/cat-mobile.png'),
     newOnCashkaro: require('./categories/cat-new-on-cashkaro.png'),
     pharmacy: require('./categories/cat-pharmacy.png'),
@@ -98,23 +98,23 @@ export const images = {
   },
   backgrounds: {
     blue: require('./backgrounds/bg-blue.png'),
-    darkblue: require('./backgrounds/bg-darkblue.png'),
-    home: require('./backgrounds/bg-home.png'),
-    large: require('./backgrounds/bg-large.png'),
+    darkblue: require('./backgrounds/bg-darkblue.webp'),
+    home: require('./backgrounds/bg-home.webp'),
+    large: require('./backgrounds/bg-large.webp'),
     medium: require('./backgrounds/bg-medium.png'),
-    onboarding: require('./backgrounds/bg-onboarding.png'),
+    onboarding: require('./backgrounds/bg-onboarding.webp'),
     small: require('./backgrounds/bg-small.png'),
   },
   help: {
     // Cobalt hero for the "We're here to help!" page — gradient + headset
     // illustration + baked heading, exported from Figma (node 6308:31058).
-    masthead: require('./help/help-masthead.png'),
+    masthead: require('./help/help-masthead.webp'),
     // Cards.xtra app-logo tile for the "How Cards.xtra Works?" help topic
     // (Figma 3632:194976).
     appLogo: require('./help/help-app-logo.png'),
     // Cobalt "Missing Cashback?" hero — gradient + phone-checklist illustration
     // + baked heading, exported from Figma (Masthead/Main, node 3437:72827).
-    missingCashbackMasthead: require('./help/missing-cashback-masthead.png'),
+    missingCashbackMasthead: require('./help/missing-cashback-masthead.webp'),
   },
   filters: {
     bills: require('./filters/filter-bills.png'),
@@ -132,28 +132,28 @@ export const images = {
     lightSmall: require('./logos/logo-light-small.png'),
   },
   storepage: {
-    amazon: require('./storepage/storepage-amazon.png'),
-    myntra: require('./storepage/storepage-myntra.png'),
-    nocashback: require('./storepage/storepage-nocashback.png'),
+    amazon: require('./storepage/storepage-amazon.webp'),
+    myntra: require('./storepage/storepage-myntra.webp'),
+    nocashback: require('./storepage/storepage-nocashback.webp'),
   },
   // ScreenState illustrations (Figma "Image/ScreenState", 156×156 raster
   // renders) — used by the store-page timeline info bottom sheets.
   screenstate: {
-    appOrders: require('./screenstate/screenstate-app-orders.png'),
-    tracking: require('./screenstate/screenstate-tracking.png'),
-    confirmation: require('./screenstate/screenstate-confirmation.png'),
+    appOrders: require('./screenstate/screenstate-app-orders.webp'),
+    tracking: require('./screenstate/screenstate-tracking.webp'),
+    confirmation: require('./screenstate/screenstate-confirmation.webp'),
   },
   onboarding: {
-    slide1: require('./onboarding/onboarding-1.png'),
-    slide2: require('./onboarding/onboarding-2.png'),
-    slide3: require('./onboarding/onboarding-3.png'),
+    slide1: require('./onboarding/onboarding-1.webp'),
+    slide2: require('./onboarding/onboarding-2.webp'),
+    slide3: require('./onboarding/onboarding-3.webp'),
   },
   // Promotional full-bleed banners shown in sheets/overlays. `shopAsUsual`
   // is the "Shop as Usual, Earn Cashback" Offers welcome banner — the
   // portrait artwork is ~720×900 (4:5); PROMO_ASPECT in PromoTopSheet
   // assumes that ratio, so keep new banners here close to it.
   promos: {
-    shopAsUsual: require('./promos/promo-shop-as-usual.png'),
+    shopAsUsual: require('./promos/promo-shop-as-usual.webp'),
   },
 } as const;
 

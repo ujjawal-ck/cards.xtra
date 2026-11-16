@@ -15,11 +15,11 @@ Use via `<Image source={require('../assets/images/<folder>/<name>')} />` or an i
 
 ## backgrounds/ (7)
 - backgrounds/bg-blue.png
-- backgrounds/bg-darkblue.png
-- backgrounds/bg-home.png
-- backgrounds/bg-large.png
+- backgrounds/bg-darkblue.webp
+- backgrounds/bg-home.webp
+- backgrounds/bg-large.webp
 - backgrounds/bg-medium.png
-- backgrounds/bg-onboarding.png
+- backgrounds/bg-onboarding.webp
 - backgrounds/bg-small.png
 
 ## brands/ (12)
@@ -72,13 +72,13 @@ Use via `<Image source={require('../assets/images/<folder>/<name>')} />` or an i
 - categories/cat-departmental.png
 - categories/cat-education.png
 - categories/cat-electronics.png
-- categories/cat-fashion.png
+- categories/cat-fashion.webp
 - categories/cat-flights-and-travel.png
-- categories/cat-food-and-grocery.png
+- categories/cat-food-and-grocery.webp
 - categories/cat-health-and-wellness.png
 - categories/cat-home-and-kitchen.png
 - categories/cat-hosting.png
-- categories/cat-loans.png
+- categories/cat-loans.webp
 - categories/cat-mobile.png
 - categories/cat-new-on-cashkaro.png
 - categories/cat-pharmacy.png
@@ -99,9 +99,9 @@ Use via `<Image source={require('../assets/images/<folder>/<name>')} />` or an i
 - logos/logo-light-small.png
 
 ## storepage/ (3)
-- storepage/storepage-amazon.png
-- storepage/storepage-myntra.png
-- storepage/storepage-nocashback.png
+- storepage/storepage-amazon.webp
+- storepage/storepage-myntra.webp
+- storepage/storepage-nocashback.webp
 
 ## stores/ (19)
 - stores/store-amazon-2.png

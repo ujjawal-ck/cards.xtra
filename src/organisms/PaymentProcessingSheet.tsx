@@ -10,7 +10,7 @@
  *
  * Content (vertical, centred — gap 24):
  *   - BottomSheetHeader (drag handle only — no title, no stroke)        ← REUSED
- *   - Wallet+refresh illustration (illus-payment-processing.svg, 158×132)
+ *   - Wallet+refresh illustration (raster/illus-payment-processing.png, 158×132)
  *     with the "5 Min to 72 Hrs" ETA pill overlapping its base.
  *   - Title "Payment Is Processing" (heading20SemiBold)
  *     + body "We've already got your payment request of <amount>, which will
@@ -30,7 +30,7 @@ import React, {
   useImperativeHandle,
   useRef,
 } from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -50,8 +50,9 @@ import { colors, spacing, radius, borderWidth } from '../tokens';
 
 // Wallet + refresh-arc illustration (Figma imagevck, 220×184 source). Rendered
 // at the sheet's 158×132 size. Imported directly (not via the square Icon atom)
-// to preserve its aspect ratio.
-const PaymentProcessingArt = require('../assets/icons/illus-payment-processing.svg').default;
+// to preserve its aspect ratio. A PNG at 3× size: the Figma export was a photo
+// wrapped in SVG, which put 673 KB of base64 into the JS bundle.
+const PAYMENT_PROCESSING_ART = require('../assets/icons/raster/illus-payment-processing.png');
 
 const ART_W = 158;
 const ART_H = 132;
@@ -118,7 +119,11 @@ export const PaymentProcessingSheet = forwardRef<
               base, so the wrapper is sized to the art and the pill is absolutely
               positioned, nudged below the bottom edge. */}
           <View style={{ width: ART_W, height: ART_H, alignItems: 'center' }}>
-            <PaymentProcessingArt width={ART_W} height={ART_H} />
+            <Image
+              source={PAYMENT_PROCESSING_ART}
+              style={{ width: ART_W, height: ART_H }}
+              resizeMode="contain"
+            />
             <LinearGradient
               colors={[
                 colors.paymentProcessingPill.gradientStart,

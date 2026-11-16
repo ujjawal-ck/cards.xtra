@@ -16,7 +16,7 @@
  * Falls back to the card's placeholder colour behind the art so it reads
  * fine even before/while the card image loads.
  *
- * Backdrop: `images.backgrounds.large` (bg-large.png) — the project's
+ * Backdrop: `images.backgrounds.large` (bg-large.webp) — the project's
  * shared large-format hero backdrop. Replaced the prior saffron-fade
  * gradient.
  *

@@ -74,6 +74,7 @@ import {
   iconSize,
   typography,
 } from '../tokens';
+import { useScreenFocused } from '../lib/useScreenFocused';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -219,8 +220,11 @@ function AnimatedPlaceholder({ items }: { items: string[] }) {
     [items.length]
   );
 
+  // Paused while the screen is hidden (another tab is showing).
+  const focused = useScreenFocused();
+
   useEffect(() => {
-    if (items.length < 2) return;
+    if (items.length < 2 || !focused) return;
     const timer = setInterval(() => {
       // Exit: slide up + fade out. On completion, swap the text + snap
       // BELOW (phase = +1, still invisible), then animate back to 0
@@ -240,7 +244,7 @@ function AnimatedPlaceholder({ items }: { items: string[] }) {
       );
     }, PLACEHOLDER_DWELL_MS);
     return () => clearInterval(timer);
-  }, [items.length, advance, phase]);
+  }, [items.length, advance, phase, focused]);
 
   const animStyle = useAnimatedStyle(() => {
     // |phase|: 0 at neutral, 1 at either pole → opacity inverse.
