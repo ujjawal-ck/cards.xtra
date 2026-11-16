@@ -46,6 +46,7 @@ import { Text } from '../atoms';
 import { haptics } from '../lib/haptics';
 import * as CashbackGuard from '../../modules/cashback-guard';
 import { colors, spacing, radius, iconSize, sizing, borderWidth, gradients, elevation } from '../tokens';
+import { useScreenFocused } from '../lib/useScreenFocused';
 
 // Expanded pip (9:16 portrait) + collapsed notch geometry. Component-spec;
 // not on the spacing scale.
@@ -142,7 +143,10 @@ export function CashbackPip({ onPress, autoExpand = true }: CashbackPipProps) {
   const sc0 = useSharedValue(1);
   const sc1 = useSharedValue(0.9);
 
+  // The copy loop pauses while Orders is hidden behind another screen.
+  const focused = useScreenFocused();
   useEffect(() => {
+    if (!focused) return;
     const IN = { duration: 460, easing: Easing.out(Easing.cubic) };
     const OUT = { duration: 320, easing: Easing.in(Easing.cubic) };
     let showingFirst = true;
@@ -167,7 +171,7 @@ export function CashbackPip({ onPress, autoExpand = true }: CashbackPipProps) {
     };
     const id = setInterval(swap, LINE_HOLD_MS);
     return () => clearInterval(id);
-  }, [op0, op1, ty0, ty1, sc0, sc1]);
+  }, [op0, op1, ty0, ty1, sc0, sc1, focused]);
 
   // Drag — only while expanded. On release, snap to the nearer side edge.
   const pan = useMemo(

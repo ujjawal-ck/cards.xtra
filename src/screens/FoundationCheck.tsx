@@ -3282,7 +3282,7 @@ export function FoundationCheck() {
               </View>
 
               <View style={{ gap: spacing[8] }}>
-                <ButtonLabel text="earnings (360×202) — backdrop: bg-darkblue.png" />
+                <ButtonLabel text="earnings (360×202) — backdrop: bg-darkblue.webp" />
                 <Masthead
                   variant="earnings"
                   onInfoPress={() => undefined}
@@ -3310,7 +3310,7 @@ export function FoundationCheck() {
               </View>
 
               <View style={{ gap: spacing[8] }}>
-                <ButtonLabel text="home (360×408) — composes HomeHeader + SearchBar over bg-home.png; tap bar to open SearchTopSheet" />
+                <ButtonLabel text="home (360×408) — composes HomeHeader + SearchBar over bg-home.webp; tap bar to open SearchTopSheet" />
                 <Masthead
                   variant="home"
                   notificationCount={9}

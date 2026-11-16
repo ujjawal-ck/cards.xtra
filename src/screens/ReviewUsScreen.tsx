@@ -200,7 +200,7 @@ export function ReviewUsScreen() {
             imageStyle={{ borderRadius: radius.xl }}
             style={{
               // alignSelf:'stretch' (not width:'100%') so the ImageBackground
-              // fills the wrapper's content box regardless of bg-large.png's
+              // fills the wrapper's content box regardless of bg-large.webp's
               // intrinsic width — otherwise it falls back to the image's
               // natural width and left-aligns, leaving a gap on the right.
               alignSelf: 'stretch',

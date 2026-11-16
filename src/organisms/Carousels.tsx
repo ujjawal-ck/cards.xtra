@@ -50,6 +50,7 @@ import {
   iconSize,
   elevation,
 } from '../tokens';
+import { useScreenFocused } from '../lib/useScreenFocused';
 
 // ----------------------------------------------------------------------------
 // Component-spec dimensions (not in the shared spacing scale)
@@ -552,8 +553,10 @@ export function PromoBanner({
     }, autoScrollResumeDelayMs);
   }, [autoScrollResumeDelayMs]);
 
+  // Auto-advance only while the screen is showing (tabs stay mounted).
+  const focused = useScreenFocused();
   useEffect(() => {
-    if (!isCarousel || !autoScroll || viewportW <= 0) return;
+    if (!isCarousel || !autoScroll || viewportW <= 0 || !focused) return;
     const id = setInterval(() => {
       if (pausedRef.current) return;
       const next = (activeIndexRef.current + 1) % slides.length;
@@ -563,7 +566,7 @@ export function PromoBanner({
       clearInterval(id);
       if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     };
-  }, [isCarousel, autoScroll, viewportW, slides.length, autoScrollIntervalMs]);
+  }, [isCarousel, autoScroll, viewportW, slides.length, autoScrollIntervalMs, focused]);
 
   return (
     <View

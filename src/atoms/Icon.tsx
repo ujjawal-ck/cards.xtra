@@ -18,15 +18,30 @@
  * Use the project's tokens for `color` and `size`; never inline hex.
  */
 import React from 'react';
+import { Image } from 'react-native';
 import { colors, iconSize } from '../tokens';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { ImageStyle, StyleProp, ViewStyle } from 'react-native';
+
+// ----------------------------------------------------------------------------
+// Raster icons — brand logos that were Figma exports of photos wrapped in SVG
+// (each embedded a 2500–3840 px PNG, 270–850 KB, compiled into the JS bundle
+// as base64 and decoded on every draw). They ship as small PNG files instead,
+// rendered at 3× the largest size the app uses. `color` does not apply: their
+// colours were always baked in.
+// ----------------------------------------------------------------------------
+const RASTER_ICON_REGISTRY = {
+  'amazon': require('../assets/icons/raster/amazon.png'),
+  'flipkart': require('../assets/icons/raster/flipkart.png'),
+  'pay-amazon': require('../assets/icons/raster/pay-amazon.png'),
+  'pay-combined': require('../assets/icons/raster/pay-combined.png'),
+  'pay-flipkart': require('../assets/icons/raster/pay-flipkart.png'),
+} as const;
 
 // ----------------------------------------------------------------------------
 // Registry — generated from src/assets/icons/. Keep alphabetical so the union
 // of IconName matches the directory listing.
 // ----------------------------------------------------------------------------
 const ICON_REGISTRY = {
-  'amazon': require('../assets/icons/amazon.svg').default,
   'bank-pillars-outline': require('../assets/icons/bank-pillars-outline.svg').default,
   'bell-filled': require('../assets/icons/bell-filled.svg').default,
   'bell-outline': require('../assets/icons/bell-outline.svg').default,
@@ -94,7 +109,6 @@ const ICON_REGISTRY = {
   'filter-filled': require('../assets/icons/filter-filled.svg').default,
   'filter-outline': require('../assets/icons/filter-outline.svg').default,
   'filter-sliders': require('../assets/icons/filter-sliders.svg').default,
-  'flipkart': require('../assets/icons/flipkart.svg').default,
   'headset-filled': require('../assets/icons/headset-filled.svg').default,
   'headset-outline': require('../assets/icons/headset-outline.svg').default,
   'message-filled': require('../assets/icons/message-filled.svg').default,
@@ -119,10 +133,7 @@ const ICON_REGISTRY = {
   'nav-offers-outline': require('../assets/icons/nav-offers-outline.svg').default,
   'nav-profile-filled': require('../assets/icons/nav-profile-filled.svg').default,
   'nav-profile-outline': require('../assets/icons/nav-profile-outline.svg').default,
-  'pay-amazon': require('../assets/icons/pay-amazon.svg').default,
   'pay-bank-transfer': require('../assets/icons/pay-bank-transfer.svg').default,
-  'pay-combined': require('../assets/icons/pay-combined.svg').default,
-  'pay-flipkart': require('../assets/icons/pay-flipkart.svg').default,
   'pay-UPI': require('../assets/icons/pay-UPI.svg').default,
   'phone-off-filled': require('../assets/icons/phone-off-filled.svg').default,
   'phone-off-outline': require('../assets/icons/phone-off-outline.svg').default,
@@ -141,10 +152,15 @@ const ICON_REGISTRY = {
   'wallet-outline': require('../assets/icons/wallet-outline.svg').default,
 } as const;
 
-export type IconName = keyof typeof ICON_REGISTRY;
+export type IconName =
+  | keyof typeof ICON_REGISTRY
+  | keyof typeof RASTER_ICON_REGISTRY;
 
-/** Every available icon name, alphabetical (mirrors the registry). */
-export const ICON_NAMES = Object.keys(ICON_REGISTRY) as IconName[];
+/** Every available icon name, alphabetical (mirrors both registries). */
+export const ICON_NAMES = [
+  ...Object.keys(ICON_REGISTRY),
+  ...Object.keys(RASTER_ICON_REGISTRY),
+].sort() as IconName[];
 
 export interface IconProps {
   name: IconName;
@@ -163,7 +179,16 @@ export function Icon({
   color = colors.text.primary,
   style,
 }: IconProps) {
-  const Svg = ICON_REGISTRY[name];
+  if (name in RASTER_ICON_REGISTRY) {
+    return (
+      <Image
+        source={RASTER_ICON_REGISTRY[name as keyof typeof RASTER_ICON_REGISTRY]}
+        style={[{ width: size, height: size }, style as StyleProp<ImageStyle>]}
+        resizeMode="contain"
+      />
+    );
+  }
+  const Svg = ICON_REGISTRY[name as keyof typeof ICON_REGISTRY];
   if (!Svg) {
     if (__DEV__) {
       // eslint-disable-next-line no-console

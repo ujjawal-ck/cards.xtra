@@ -259,6 +259,63 @@ const CATEGORY_SKELETON_ROWS = Array.from({ length: 4 }, (_, i) => ({
   id: `__cat-sk-${i}`,
 }));
 
+// One Home card tile (Top picks and More to explore). Memoised: HomeScreen
+// re-renders on every search keystroke, filter change and carousel tick, and
+// without memo each re-render redrew every mounted tile. Props are the card
+// object (stable per query result), the applied category ids (stable until
+// filters change) and two stable callbacks. Fees show the GST-inclusive amount
+// with a tap-to-reveal "(base + GST)" breakdown, matching the card detail sheet.
+type HomeCardTileProps = {
+  card: CardModel;
+  categoryTagIds: AppliedFilters['categoryTagIds'];
+  onPress: (card: CardModel, e?: { nativeEvent: { pageY: number } }) => void;
+  onApply: (card: CardModel) => void;
+};
+
+const HomeCardTile = React.memo(function HomeCardTile({
+  card,
+  categoryTagIds,
+  onPress,
+  onApply,
+}: HomeCardTileProps) {
+  // Category-aware: when categories are applied, the tile's 2 headline
+  // points become the ones matching the selected category(ies) — one per
+  // category, round-robin — instead of the card's default top 2.
+  const benefits = useMemo(
+    () => selectTileBenefits(card.tileBenefits, categoryTagIds),
+    [card.tileBenefits, categoryTagIds]
+  );
+  const feeProps = useMemo(
+    () => ({
+      joiningFee: card.detail?.fee.joining.amount ?? card.joiningFee,
+      annualFee: card.detail?.fee.annual.amount ?? card.annualFee,
+      joiningSub: card.detail?.fee.joining.sub || undefined,
+      annualSub: card.detail?.fee.annual.sub || undefined,
+    }),
+    [card]
+  );
+  return (
+    <Pressable
+      onPress={(e) => onPress(card, e)}
+      accessibilityRole="button"
+      accessibilityLabel={`${card.name}, view details`}
+    >
+      <CardTile
+        type="full"
+        cardImage={card.cardImage}
+        cardName={card.name}
+        cashbackText={card.cashbackValue}
+        inviteOnly={card.inviteOnly}
+        tags={card.tags}
+        benefits={benefits}
+        feeType={card.feeType}
+        feeProps={feeProps}
+        onApply={() => onApply(card)}
+      />
+    </Pressable>
+  );
+});
+
 export function HomeScreen() {
   // Scroll padding that clears the floating tab bar (+ Android nav bar).
   const navClearance = useFloatingNavClearance();
@@ -1080,37 +1137,28 @@ export function HomeScreen() {
     presentResultSheet(outcome);
   };
 
-  // One card tile (used in both Top picks and More to explore). Fees show
-  // the GST-inclusive amount with a tap-to-reveal "(base + GST)" breakdown,
-  // matching the card detail sheet.
+  // Stable tile callbacks for the memoised HomeCardTile. The handlers close
+  // over fresh state each render, so the tiles call through a ref to the
+  // latest ones instead of receiving new functions (which would defeat memo).
+  const tileHandlersRef = useRef({ handleCardPress, handleApply });
+  tileHandlersRef.current = { handleCardPress, handleApply };
+  const onTilePress = useCallback<HomeCardTileProps['onPress']>(
+    (card, e) => tileHandlersRef.current.handleCardPress(card, e),
+    []
+  );
+  const onTileApply = useCallback<HomeCardTileProps['onApply']>(
+    (card) => tileHandlersRef.current.handleApply(card),
+    []
+  );
+
   const renderTile = (card: CardModel) => (
-    <Pressable
+    <HomeCardTile
       key={card.id}
-      onPress={(e) => handleCardPress(card, e)}
-      accessibilityRole="button"
-      accessibilityLabel={`${card.name}, view details`}
-    >
-      <CardTile
-        type="full"
-        cardImage={card.cardImage}
-        cardName={card.name}
-        cashbackText={card.cashbackValue}
-        inviteOnly={card.inviteOnly}
-        tags={card.tags}
-        // Category-aware: when categories are applied, the tile's 2 headline
-        // points become the ones matching the selected category(ies) — one per
-        // category, round-robin — instead of the card's default top 2.
-        benefits={selectTileBenefits(card.tileBenefits, appliedFilters.categoryTagIds)}
-        feeType={card.feeType}
-        feeProps={{
-          joiningFee: card.detail?.fee.joining.amount ?? card.joiningFee,
-          annualFee: card.detail?.fee.annual.amount ?? card.annualFee,
-          joiningSub: card.detail?.fee.joining.sub || undefined,
-          annualSub: card.detail?.fee.annual.sub || undefined,
-        }}
-        onApply={() => handleApply(card)}
-      />
-    </Pressable>
+      card={card}
+      categoryTagIds={appliedFilters.categoryTagIds}
+      onPress={onTilePress}
+      onApply={onTileApply}
+    />
   );
 
   // Banks in catalog rank order (the order cards load on Home), de-duped.
