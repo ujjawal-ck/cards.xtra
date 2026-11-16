@@ -189,6 +189,11 @@ export async function signupOtp(mobileNumber: string): Promise<LoginOtpResult> {
   const res = await ck<any>('/signupotp', { contract: ['signupotp', Schemas.OtpRequestResponse],
     method: 'POST',
     auth: 'aws',
+    // ?device=App, as the API doc specifies and /loginotp, /login and
+    // /signupV1 already send. Without it the OTP was issued for another device
+    // type than /signupV1 verifies against, and signup failed with 7002
+    // ("Wrong OTP") even for the right code.
+    query: { device: CK.device },
     body: { data: { type: 'user_otp', attributes: { mobile_number: Number(mobileNumber) } } },
   });
   const otpGuid = res?.data?.id;
