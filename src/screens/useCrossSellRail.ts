@@ -8,8 +8,8 @@
  * tile whose id equals `rail.anchorId`. The ranking lives in src/lib/crossSell.ts.
  *
  * Rules (one app session = one mount of Home):
- *   - A card expands once, at most MAX_RAIL_EXPANSIONS rails per session, one rail
- *     open at a time (a new one closes the old one: 'replaced').
+ *   - A card expands once, with no limit on rails per session, one rail open at a
+ *     time (a new one closes the old one: 'replaced').
  *   - Never for a card the user applied to, and never when they applied to ANY
  *     card during that detail visit.
  *   - The rail anchors under, and is computed for, the card that was TAPPED. Every
@@ -26,6 +26,7 @@ import { LayoutAnimation } from 'react-native';
 import type { CardModel } from '../molecules';
 import {
   getCrossSellV2,
+  mayExpandRail,
   type CrossSellCard,
   type CrossSellCtx,
   type CrossSellLens,
@@ -34,8 +35,6 @@ import {
 } from '../lib/crossSell';
 import { getCrossSellRailVariant } from '../experiments';
 import { analytics, Events } from '../analytics';
-
-export const MAX_RAIL_EXPANSIONS = 3;
 
 export type CrossSellCollapseReason = 'hide' | 'replaced' | 'scrolled_past' | 'no_picks';
 
@@ -82,7 +81,6 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
 
   const session = useRef({
     expanded: new Set<string>(),
-    count: 0,
     applied: new Set<string>(),
     viewedAliases: [] as string[],
     viewedIds: new Set<string>(),
@@ -151,16 +149,24 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
       const src = anchor.crossSell;
       if (!src) return;
       const { catalogue: cat, listedCards: listed } = latest.current;
-      if (!listed.some((c) => c.id === anchor.id)) return;
-      if (s.applied.has(src.alias) || s.expanded.has(anchor.id) || s.count >= MAX_RAIL_EXPANSIONS) return;
       const result = getCrossSellV2(src, cat, buildCtx());
-      if (!result.show) return;
+      const listedNow = listed.some((c) => c.id === anchor.id);
+      if (
+        !mayExpandRail({
+          applied: s.applied,
+          expanded: s.expanded,
+          anchorId: anchor.id,
+          anchorAlias: src.alias,
+          listed: listedNow,
+          show: result.show,
+        })
+      )
+        return;
       // Read the experiment arm only for a user who would otherwise see a rail.
       const arm = getCrossSellRailVariant();
       if (arm !== 'rail') return;
       closeRail('replaced');
       s.expanded.add(anchor.id);
-      s.count += 1;
       markShown(result.lenses[0]);
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       commit({ anchorId: anchor.id, result, lensKey: 'top', viewedIds: Array.from(s.viewedIds) });

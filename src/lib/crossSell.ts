@@ -432,3 +432,20 @@ export function getCrossSellV2(
     lenses,
   };
 }
+
+/**
+ * May a rail open under this tile now? Pure rule used by useCrossSellRail.tryExpand.
+ * There is no cap on rails per session: each card expands once, never after an apply
+ * (`applied` holds aliases, `expanded` holds card ids incl. rejection-suppressed ones),
+ * only when its tile is on screen and the engine found 2+ picks.
+ */
+export function mayExpandRail(a: {
+  applied: ReadonlySet<string>;
+  expanded: ReadonlySet<string>;
+  anchorId: string;
+  anchorAlias: string;
+  listed: boolean;
+  show: boolean;
+}): boolean {
+  return a.listed && a.show && !a.applied.has(a.anchorAlias) && !a.expanded.has(a.anchorId);
+}

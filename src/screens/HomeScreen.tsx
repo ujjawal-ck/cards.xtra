@@ -2203,7 +2203,7 @@ export function HomeScreen() {
         }}
         // Recommend from the SAME list the pager swipes through, so tapping a
         // recommended card always resolves to a page in the pager (clean jump).
-        recommended={pagerCards}
+        recommended={crossSell.detailCards(pagerCards)}
         eligibilityDefaults={eligibilityDetails ?? undefined}
         eligibleAliases={eligibleAliases}
         onEligibilityChecked={applyEligibility}
