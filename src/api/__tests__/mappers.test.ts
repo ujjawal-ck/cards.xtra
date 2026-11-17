@@ -20,7 +20,58 @@ describe('earnings', () => {
     expect(e.confirmed).toBe('₹500');
     expect(e.totalEarnings).toBe('₹14,58,689.92');
     // Exact, not rounded: ₹99.60 must never become a withdrawable ₹100.
-    expect(e.combinedNum).toBeCloseTo(500 + 123495.88, 2);
+    // combined = confirmed cashback + CONFIRMED rewards (not total rewards).
+    expect(e.combinedNum).toBeCloseTo(500 + 500, 2);
+    expect(e.rewardsNum).toBe(500);
+  });
+
+  it('splits cashback and rewards into confirmed / pending / paid', () => {
+    const e = mapEarnings({
+      data: [
+        {
+          attributes: {
+            total_cashback_earned: '1000.00',
+            confirmed_cashback: '300.50',
+            pending_cashback: '200.25',
+            paid_cashback: '499.25',
+            total_rewards_earned: '90.00',
+            confirmed_rewards: '40.10',
+            pending_rewards: '30.20',
+            paid_rewards: '19.70',
+          },
+        },
+      ],
+    });
+    expect(e.confirmedCashback).toBe('₹300.50');
+    expect(e.pendingCashback).toBe('₹200.25');
+    expect(e.paidCashback).toBe('₹499.25');
+    expect(e.totalCashback).toBe('₹1,000');
+    expect(e.confirmedRewards).toBe('₹40.10');
+    expect(e.pendingRewards).toBe('₹30.20');
+    expect(e.paidRewards).toBe('₹19.70');
+    expect(e.totalRewards).toBe('₹90');
+    // rewardsNum is withdrawable (confirmed) rewards, not the total.
+    expect(e.rewardsNum).toBe(40.1);
+    expect(e.confirmedNum).toBe(300.5);
+    expect(e.combinedNum).toBeCloseTo(340.6, 2);
+    expect(e.combined).toBe('₹340.60');
+  });
+
+  it('maps missing reward fields to 0 and keeps hasData from cashback', () => {
+    const e = mapEarnings({
+      data: [{ attributes: { confirmed_cashback: '120.00', pending_cashback: '5.00' } }],
+    });
+    expect(e.hasData).toBe(true);
+    expect(e.confirmedRewards).toBe('₹0');
+    expect(e.pendingRewards).toBe('₹0');
+    expect(e.paidRewards).toBe('₹0');
+    expect(e.rewardsNum).toBe(0);
+    expect(e.combinedNum).toBe(120);
+  });
+
+  it('keeps a negative reversal signed in the per-type fields', () => {
+    const e = mapEarnings({ data: [{ attributes: { confirmed_cashback: '10', pending_rewards: '-50.00' } }] });
+    expect(e.pendingRewards).toBe('-₹50');
   });
 
   it('maps a real staging account (zero balances) without blanks', () => {

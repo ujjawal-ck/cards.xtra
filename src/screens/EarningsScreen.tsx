@@ -9,11 +9,9 @@
  * Layout (vertical column, screen bg colors.background.muted). This is a
  * TAB section, so there is NO Header / back arrow — the masthead leads:
  *   1. <Masthead variant='earnings' />                         — organism
- *   2. Rows group:
- *       - <AmountActionRow caption='Confirmed' value='₹1500.0'
- *                          buttonLabel='Withdraw' buttonVariant='solid' />
- *       - <AmountActionRow caption='Pending'   value='₹0'
- *                          buttonLabel='Know Why?' buttonVariant='outline' />
+ *   2. Two sections, "Cashback" then "Rewards", each a title over
+ *      Confirmed (Withdraw) / Pending (Know Why?) / Paid (View)
+ *      <AmountActionRow>s for that type only.
  *   3. List card (white, radius.xl, elevation.light.xs):
  *       Three <ListRow type='menu-option' …> stacked with <Divider />
  *       between, each with a 24-px leading icon + body14Medium title +
@@ -56,6 +54,24 @@ import { useEarnings } from '../query/useEarnings';
 import { useWithdrawGate } from './withdraw/useWithdrawGate';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
+
+// Section config: which mapper field feeds each row of a type's section.
+const EARNING_SECTIONS = [
+  {
+    type: 'cashback',
+    title: 'Cashback',
+    confirmed: 'confirmedCashback',
+    pending: 'pendingCashback',
+    paid: 'paidCashback',
+  },
+  {
+    type: 'rewards',
+    title: 'Rewards',
+    confirmed: 'confirmedRewards',
+    pending: 'pendingRewards',
+    paid: 'paidRewards',
+  },
+] as const;
 
 // Composite nav — Earnings sits inside the bottom-tab navigator,
 // which itself is a screen of the root stack. To navigate to Withdraw
@@ -100,18 +116,20 @@ export function EarningsScreen() {
   const cashbackSheetRef = useRef<EarningsBreakupSheetRef>(null);
   const rewardsSheetRef = useRef<EarningsBreakupSheetRef>(null);
 
-  // Pending-state sheet (Figma 2898:166477): Pending row "Know Why?" →
-  // "Earning Status". The Withdraw-side sheets (₹0 "Cashback Not Confirmed",
-  // payment-in-process) live in useWithdrawGate, shared with Profile.
-  const earningStatusRef = useRef<EarningStatusSheetRef>(null);
-  // Paid row's "View" opens the same Earning-Status sheet in its 'paid'
-  // variant (Cashback Paid), rather than navigating to payment history.
-  const paidStatusRef = useRef<EarningStatusSheetRef>(null);
+  // Earning-Status sheets: Pending ("Know Why?") and Paid ("View") for each
+  // type. The Withdraw-side sheets (₹0 "Cashback Not Confirmed", payment-in-
+  // process) live in useWithdrawGate, shared with Profile.
+  const cashbackPendingRef = useRef<EarningStatusSheetRef>(null);
+  const cashbackPaidRef = useRef<EarningStatusSheetRef>(null);
+  const rewardsPendingRef = useRef<EarningStatusSheetRef>(null);
+  const rewardsPaidRef = useRef<EarningStatusSheetRef>(null);
+  const pendingRefs = { cashback: cashbackPendingRef, rewards: rewardsPendingRef };
+  const paidRefs = { cashback: cashbackPaidRef, rewards: rewardsPaidRef };
 
   // Shared withdraw entry check (₹0 / payout already settling) — same gate
   // as Profile's "Withdraw Cashback" row.
   const { startWithdraw: handleWithdraw, gateSheets } = useWithdrawGate({
-    onProceed: () => navigation.navigate('WithdrawStack'),
+    onProceed: (bucket) => navigation.navigate('WithdrawStack', { bucket }),
     onBrowseDeals: () => navigation.navigate('Offers'),
   });
 
@@ -253,58 +271,54 @@ export function EarningsScreen() {
             onRewardsPress={() => rewardsSheetRef.current?.present()}
           />
 
-          {/* 2. Rows group */}
-          <View
-            style={{
-              paddingHorizontal: spacing[16],
-              gap: spacing[12],
-            }}
-          >
-            <AmountActionRow
-              iconName="desc-withdrawcash"
-              caption="Confirmed"
-              loading={loading}
-              // Withdrawable total = confirmed cashback + rewards (combined),
-              // matching what the Withdraw flow actually pays out. Showing
-              // `confirmed` (cashback only) hid a positive rewards balance and
-              // made the ₹0 block disagree with the working Withdraw button.
-              value={earnings?.combined ?? '₹0'}
-              buttonLabel="Withdraw"
-              buttonVariant="solid"
-              buttonTone="main"
-              // With a confirmed balance, opens the withdraw flow; with ₹0
-              // confirmed, opens the "Cashback Not Confirmed" sheet instead.
-              onButtonPress={handleWithdraw}
-            />
-            <AmountActionRow
-              iconName="desc-pendingcash"
-              caption="Pending"
-              loading={loading}
-              value={earnings?.pending ?? '₹0'}
-              buttonLabel="Know Why?"
-              buttonVariant="outline"
-              buttonTone="main"
-              // Text matches the outline stroke (saffron-400) rather than
-              // the darker saffron-700 default — a single-tone CTA.
-              // Explains why the pending amount can't be withdrawn yet.
-              onButtonPress={() => earningStatusRef.current?.present()}
-            />
-            <AmountActionRow
-              iconName="desc-paid"
-              caption="Paid"
-              loading={loading}
-              // Already paid out to the user — live from the earnings API
-              // (paid_cashback, mapped in earningsMapper).
-              value={earnings?.paid ?? '₹0'}
-              buttonLabel="View"
-              buttonVariant="outline"
-              buttonTone="main"
-              // Text matches the outline stroke (saffron-400) rather than
-              // the darker saffron-700 default — a single-tone CTA.
-              // Explains the paid amount in a sheet (Cashback Paid).
-              onButtonPress={() => paidStatusRef.current?.present()}
-            />
-          </View>
+          {/* 2. Two sections — Cashback, then Rewards (always shown, even at
+              ₹0, so users learn rewards exist). Each: title + Confirmed /
+              Pending / Paid rows for that type only. */}
+          {EARNING_SECTIONS.map((sec) => (
+            <View
+              key={sec.type}
+              style={{
+                paddingHorizontal: spacing[16],
+                gap: spacing[12],
+              }}
+            >
+              <Text variant="heading18SemiBold" color={colors.text.primary}>
+                {sec.title}
+              </Text>
+              <AmountActionRow
+                iconName="desc-withdrawcash"
+                caption="Confirmed"
+                loading={loading}
+                value={earnings?.[sec.confirmed] ?? '₹0'}
+                buttonLabel="Withdraw"
+                buttonVariant="solid"
+                buttonTone="main"
+                // Gate checks this type's confirmed amount (₹0 → "Not
+                // Confirmed" sheet); otherwise opens withdraw on its bucket.
+                onButtonPress={() => handleWithdraw(sec.type)}
+              />
+              <AmountActionRow
+                iconName="desc-pendingcash"
+                caption="Pending"
+                loading={loading}
+                value={earnings?.[sec.pending] ?? '₹0'}
+                buttonLabel="Know Why?"
+                buttonVariant="outline"
+                buttonTone="main"
+                onButtonPress={() => pendingRefs[sec.type].current?.present()}
+              />
+              <AmountActionRow
+                iconName="desc-paid"
+                caption="Paid"
+                loading={loading}
+                value={earnings?.[sec.paid] ?? '₹0'}
+                buttonLabel="View"
+                buttonVariant="outline"
+                buttonTone="main"
+                onButtonPress={() => paidRefs[sec.type].current?.present()}
+              />
+            </View>
+          ))}
 
           {/* 3. List card — composed from <ListRow type='menu-option' />
               with <Divider /> between rows. */}
@@ -357,32 +371,39 @@ export function EarningsScreen() {
       <EarningsBreakupSheet
         ref={cashbackSheetRef}
         variant="cashback"
-        confirmed={earnings?.confirmed ?? '₹0'}
-        pending={earnings?.pending ?? '₹0'}
-        paid={earnings?.paid ?? '₹0'}
+        confirmed={earnings?.confirmedCashback ?? '₹0'}
+        pending={earnings?.pendingCashback ?? '₹0'}
+        paid={earnings?.paidCashback ?? '₹0'}
       />
       <EarningsBreakupSheet
         ref={rewardsSheetRef}
         variant="rewards"
-        confirmed={earnings?.rewardsValue ?? '₹0'}
-        pending="₹0"
-        paid="₹0"
+        confirmed={earnings?.confirmedRewards ?? '₹0'}
+        pending={earnings?.pendingRewards ?? '₹0'}
+        paid={earnings?.paidRewards ?? '₹0'}
       />
 
       {/* Withdraw gate sheets (₹0 / payout settling) — from useWithdrawGate. */}
       {gateSheets}
 
-      {/* Pending-state sheet — opened from the Know Why? CTA. */}
+      {/* Pending ("Know Why?") and Paid ("View") sheets, one pair per type. */}
       <EarningStatusSheet
-        ref={earningStatusRef}
-        amount={earnings?.pending ?? '₹0'}
+        ref={cashbackPendingRef}
+        amount={earnings?.pendingCashback ?? '₹0'}
       />
-
-      {/* Paid breakdown — opened from the Paid row's "View" CTA. */}
       <EarningStatusSheet
-        ref={paidStatusRef}
+        ref={cashbackPaidRef}
         variant="paid"
-        amount={earnings?.paid ?? '₹0'}
+        amount={earnings?.paidCashback ?? '₹0'}
+      />
+      <EarningStatusSheet
+        ref={rewardsPendingRef}
+        amount={earnings?.pendingRewards ?? '₹0'}
+      />
+      <EarningStatusSheet
+        ref={rewardsPaidRef}
+        variant="paid"
+        amount={earnings?.paidRewards ?? '₹0'}
       />
     </View>
   );

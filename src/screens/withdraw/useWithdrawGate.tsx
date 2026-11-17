@@ -28,12 +28,13 @@ import { analytics, Events } from '../../analytics';
 import { useEarnings } from '../../query/useEarnings';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
 import { formatINR } from '../../lib/money';
+import type { WithdrawEntryBucket } from '../../navigation/types';
 
 export function useWithdrawGate({
   onProceed,
   onBrowseDeals,
 }: {
-  onProceed: () => void;
+  onProceed: (bucket?: WithdrawEntryBucket) => void;
   onBrowseDeals: () => void;
 }) {
   const earningsQ = useEarnings();
@@ -44,7 +45,11 @@ export function useWithdrawGate({
   const processingRef = useRef<PaymentProcessingSheetRef>(null);
   const [belowMinimum, setBelowMinimum] = useState<{ balance: string; minimum: string } | null>(null);
 
-  const startWithdraw = async () => {
+  // `bucket` = the type the user tapped (Earnings page). No bucket (Profile)
+  // checks the combined balance. Anything else (e.g. a press event) = none.
+  const startWithdraw = async (arg?: unknown) => {
+    const bucket: WithdrawEntryBucket | undefined =
+      arg === 'cashback' || arg === 'rewards' ? arg : undefined;
     // Not loaded yet (tapped right after opening) or failed to load: fetch
     // first. Treating "unknown" as ₹0 told people with a real balance that
     // their cashback wasn't confirmed.
@@ -69,18 +74,21 @@ export function useWithdrawGate({
       );
       return;
     }
-    // Withdrawable balance = confirmed cashback + rewards (combined). Rewards
-    // have no pending split and are withdrawable as gift cards, so a user
-    // with ₹0 confirmed cashback but a positive rewards balance can still
-    // withdraw.
-    const balance = e.combinedNum ?? 0;
+    // Withdrawable balance of the tapped type; with no type, confirmed
+    // cashback + confirmed rewards (combined).
+    const balance =
+      bucket === 'cashback'
+        ? e.confirmedNum ?? 0
+        : bucket === 'rewards'
+        ? e.rewardsNum ?? 0
+        : e.combinedNum ?? 0;
     const hasBalance = balance > 0;
     // The payout API rejects requests under the threshold (Postman: 400 code
     // 5003 "below ₹250"); stop here instead of failing after UPI + OTP.
     const minimum = p?.paymentThreshold ?? 250;
     analytics.track(Events.WITHDRAW_START, {
       has_balance: hasBalance,
-      confirmed_balance: e.combinedNum ?? 0,
+      confirmed_balance: balance,
       payment_in_process: !!p?.paymentInProcess,
     });
     if (p?.paymentInProcess) {
@@ -93,7 +101,7 @@ export function useWithdrawGate({
       setBelowMinimum({ balance: formatINR(balance), minimum: formatINR(minimum) });
       notConfirmedRef.current?.present();
     } else {
-      onProceed();
+      onProceed(bucket);
     }
   };
 

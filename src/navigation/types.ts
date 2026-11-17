@@ -55,9 +55,10 @@ export type RootStackParamList = {
   /** Android-only Cashback Reminder setup (accessibility + overlay permissions). */
   CashbackGuard: undefined;
   /** Withdraw flow (nested native stack) — entry from Earnings. The stack
-   *  starts at the method-select screen, which reads live earnings; no
-   *  param needed. */
-  WithdrawStack: undefined;
+   *  starts at the method-select screen, which reads live earnings.
+   *  `bucket` pre-sets the type (Earnings page); omitted = all buckets
+   *  (Profile entry). */
+  WithdrawStack: { bucket?: WithdrawEntryBucket } | undefined;
   /** Brand/store page reached from the Offers tab. `slug` is the CashKaro
    *  offer unique_identifier (e.g. "flipkart"); omitted falls back to demo.
    *  `category` is the Offers category label the store was opened from (e.g.
@@ -168,6 +169,8 @@ export type TabParamList = {
  * source of truth; `maskedMobile` is the OTP target on the verify screen;
  * `variant` selects the gift-card screen's masthead copy + bucket.
  */
+/** Bucket an entry point pre-sets on the method-select screen. */
+export type WithdrawEntryBucket = 'cashback' | 'rewards';
 export type WithdrawGiftCardVariant = 'cashback' | 'rewards' | 'combined';
 export type WithdrawMethod = 'upi' | 'amazon' | 'flipkart' | 'bank';
 export type WithdrawPaymentType = 'cashback' | 'rewards' | 'cashback_and_rewards';
@@ -189,7 +192,7 @@ export interface WithdrawDraft {
 }
 
 export type WithdrawStackParamList = {
-  WithdrawMethodSelect: undefined;
+  WithdrawMethodSelect: { bucket?: WithdrawEntryBucket } | undefined;
   // Detail screens — receive the bucket amount + paymentType; the
   // payment_method_id is read from usePaymentInfo inside the screen.
   WithdrawEnterUPI: { amount: number; paymentType: WithdrawPaymentType };
