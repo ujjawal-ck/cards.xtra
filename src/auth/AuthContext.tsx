@@ -45,6 +45,9 @@ type Status = 'loading' | 'authenticated' | 'unauthenticated';
 
 interface AuthContextValue {
   status: Status;
+  /** Time the session was ended because the refresh token was rejected (not
+   *  a manual logout). The login sheet opens itself when this changes. */
+  sessionExpiredAt: number | null;
   session: Session | null;
   accessToken: string | null;
   /** Stable per-install device id (ready after bootstrap). */
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [displayName, setDisplayNameState] = useState<string | null>(null);
+  const [sessionExpiredAt, setSessionExpiredAt] = useState<number | null>(null);
 
   // Bootstrap: load device id + any persisted session on launch.
   useEffect(() => {
@@ -161,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   const signIn = useCallback(async (next: Session) => {
+    setSessionExpiredAt(null);
     await saveSession(next);
     // A new login never inherits the previous user's cache.
     queryClient.clear();
@@ -185,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // rejected. Clears every cached query so the next user never sees this
   // user's data.
   const expireSession = useCallback(async () => {
+    setSessionExpiredAt(Date.now());
     await clearSession();
     sessionRef.current = null;
     setSession(null);
@@ -258,6 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session?.accessToken]);
 
   const signOut = useCallback(async () => {
+    setSessionExpiredAt(null);
     analytics.track(Events.LOGOUT);
     const token = session?.accessToken;
     // Best-effort server logout; never block local sign-out on it.
@@ -283,6 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
+      sessionExpiredAt,
       session,
       accessToken: session?.accessToken ?? null,
       deviceId,
@@ -294,6 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       status,
+      sessionExpiredAt,
       session,
       deviceId,
       displayName,

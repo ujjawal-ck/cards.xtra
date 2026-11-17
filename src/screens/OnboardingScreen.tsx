@@ -1,89 +1,50 @@
 /**
  * OnboardingScreen — Figma onboarding/landing (4817:47529).
  *
- * Sequence: Splash → Onboarding → (Get Started → Login bottom sheet
- * over the still-mounted onboarding) → Otp.
+ * Shown on FIRST launch only (Splash routes here until the user has
+ * onboarded). Login never opens this screen again: every "Log in" in the
+ * app uses the app-wide sheet from auth/LoginSheetProvider.
  *
- * Composition (existing components only — no new molecules):
+ * Composition:
  *   - <ImageBackground> — blue onboarding backdrop.
- *   - <FlatList horizontal pagingEnabled> — hero carousel, slides
- *     data-driven (1 placeholder + 2 pads today; append to add more).
- *   - <Text> atom — headline.
- *   - <Button> atom — "Get Started" → presents the login bottom sheet.
- *
- * Login sheet — INLINED to match the EligibleSheet / MaybeSheet
- * pattern used in FoundationCheck (a custom forwardRef wrapper's ref
- * was not propagating reliably to gorhom's BottomSheetModal, so the
- * modal never registered with BottomSheetModalProvider). Mounting the
- * `<GorhomBottomSheetModal>` directly here makes `ref.present()` work
- * the same way the existing eligibility sheets do.
- *
- * The dim scrim uses gorhom's stock `BottomSheetBackdrop` wrapped in
- * a View so the white Cards.xtra wordmark can sit absolutely on top
- * (pointerEvents='none' so tap-outside-to-dismiss still works).
+ *   - <FlatList horizontal pagingEnabled> — full-screen Lottie carousel.
+ *   - <Text> atom — headline (crossfades as slides settle).
+ *   - <Button> "Get Started" → enter the app as a guest.
+ *   - "Already on CashKaro? Log in" → the app-wide login sheet.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   ImageBackground,
   FlatList,
   Dimensions,
-  Keyboard,
-  Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
   Pressable,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
 import type { LottieViewProps } from 'lottie-react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetScrollView,
-} from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import Animated, {
   Easing,
-  Extrapolation,
-  interpolate,
   runOnJS,
-  useAnimatedKeyboard,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 
-import { Text, Button, Input, OtpInput, Indicator } from '../atoms';
-import type { OtpInputHandle } from '../atoms';
-import { BottomSheetHeader } from '../organisms';
-import {
-  colors,
-  spacing,
-  radius,
-  opacity,
-} from '../tokens';
+import { Text, Button, Indicator } from '../atoms';
+import { colors, spacing } from '../tokens';
 import { images } from '../assets/images';
-import { logos } from '../assets/logos';
 import type { RootStackParamList } from '../navigation/types';
-import { useAuth } from '../auth/AuthContext';
-import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
 import { markOnboarded } from '../auth/tokenStore';
+import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
-import { ApiError } from '../api/client';
-import { randomPassword } from '../lib/eccentricName';
-import { isValidContact } from './editContact';
-import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
-
-// Logo on the login scrim — Figma fixed 124.972 × 98.503; clean round.
-const LOGO_W = 125;
-const LOGO_H = 98;
 
 // Auto-advance cadence — matched to the Lottie slide length (~321
 // frames @ 60fps ≈ 5.35s) so each animation plays through almost
@@ -156,12 +117,6 @@ const LOOP_SLIDES: OnboardingSlide[] = [
 
 export function OnboardingScreen() {
   const navigation = useNavigation<Nav>();
-  // `login: true` → opened from a signed-out Earnings / Profile prompt: show
-  // the login sheet straight away, and go back if it's dismissed.
-  const { params } = useRoute<RouteProp<RootStackParamList, 'Onboarding'>>();
-  const loginOnly = !!params?.login;
-  const insets = useSafeAreaInsets();
-  const { signIn, deviceId, setDisplayName } = useAuth();
   const screenW = Dimensions.get('window').width;
   // One carousel page = the full screen width — the Lottie slides play
   // full-bleed (the chrome floats on top). Used for both scrollToIndex
@@ -274,333 +229,21 @@ export function OnboardingScreen() {
 
   const handleScrollBeginDrag = useCallback(() => setPaused(true), []);
 
-  // Login sheet — gorhom modal mounted directly here (matches the
-  // working EligibleSheet pattern from FoundationCheck).
-  const loginSheetRef = useRef<BottomSheetModal>(null);
-  // Sheet height is a single tall snap point (see loginSnapPoints below).
-  // We used to lean on `enableDynamicSizing` + gorhom's `keyboardBehavior`,
-  // but under Android edge-to-edge gorhom reads the keyboard height as ~0
-  // and never lifted the sheet. The interim fix (a compact+tall pair we
-  // re-snapped between on keyboard events) blurred the focused field on
-  // every snap, so we now just open tall and never move the sheet.
-  const [loginPhone, setLoginPhone] = useState('');
-  const loginPhoneValid = loginPhone.replace(/\D/g, '').length === 10;
-
-  // ONE fixed tall snap point — deliberately NOT a compact+tall pair we
-  // re-snap between on keyboard events. On Android edge-to-edge, calling
-  // snapToIndex() while a field is focused BLURS that field (moving the
-  // sheet tears down the focused input's connection), which produced two
-  // bugs: (1) autoFocus fired keyboardDidShow during present(), so the
-  // snap-to-tall raced the open animation and the sheet stuck at the
-  // compact height; (2) every keystroke kicked off focus→snap→blur→
-  // keyboard-hide→snap-back, so only one digit landed per tap. Opening
-  // tall once and never re-snapping kills both: the form clears the keypad
-  // from the start, and the useAnimatedKeyboard spacer below handles any
-  // scroll the keyboard would otherwise cover. [[gorhom-keyboard-edge-to-edge]]
-  const loginSnapPoints = useMemo(() => ['90%'], []);
-
-  // Live keyboard height (UI thread). useAnimatedKeyboard measures the IME
-  // inset correctly under edge-to-edge when given the translucent flags — RN's
-  // Keyboard events report ~0 here. Drives a scroll spacer at the bottom of the
-  // sheet so the CTA + T&C can always be scrolled clear of the keypad, the same
-  // way the (working) EligibilityCheckerSheet does it. [[gorhom-keyboard-edge-to-edge]]
-  const keyboard = useAnimatedKeyboard({
-    isStatusBarTranslucentAndroid: true,
-    isNavigationBarTranslucentAndroid: true,
-  });
-  const keyboardSpacerStyle = useAnimatedStyle(() => ({
-    height: keyboard.height.value,
-  }));
-
-  // Live y-coordinate of the sheet's top edge (in screen pixels).
-  // Drives the floating Cards.xtra logo's `top` so the logo stays
-  // pinned 5 px above whatever height the sheet ends up at — whether
-  // that's its resting content height or its keyboard-lifted position.
-  // Starts at screen-height (sheet closed, off-bottom).
-  const loginSheetPosition = useSharedValue(
-    Dimensions.get('window').height
-  );
-  // 5 px is a raw value — the spacing scale has 4 / 6 either side,
-  // neither is the spec gap; left as a literal with this comment.
-  const LOGO_GAP_ABOVE_SHEET = 5;
-
-  // Track keyboard visibility so the inner content's paddingBottom
-  // can flip between "20 px above home indicator" (keyboard down) and
-  // "20 px above keyboard top" (keyboard up). Without dropping the
-  // safe-area inset when the keyboard is up, the T&C would sit ~54 px
-  // above the keyboard instead of the spec'd 20 px.
-  const [keyboardShown, setKeyboardShown] = useState(false);
-  useEffect(() => {
-    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    // We only TRACK keyboard visibility here (to flip the body's bottom
-    // padding) — we deliberately do NOT snapToIndex on these events any
-    // more. Snapping the sheet while the phone field is focused blurred it
-    // on Android edge-to-edge, which is what made typing drop after one
-    // digit. The sheet opens tall (single snap point above) and the
-    // useAnimatedKeyboard spacer keeps the CTA scrollable clear of the
-    // keypad, so no movement is needed.
-    const showSub = Keyboard.addListener(showEvt, () => setKeyboardShown(true));
-    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardShown(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  // ----- Two-stage sheet state machine -----------------------------
-  // The sheet body holds two panels side-by-side ('phone' and 'otp')
-  // inside a horizontally-translated slider. 'Get OTP' slides the
-  // slider left to expose the OTP panel; 'Change' slides it back.
-  type Stage = 'phone' | 'otp';
-  const [stage, setStage] = useState<Stage>('phone');
-  const [otp, setOtp] = useState('');
-  // otp_guid returned by loginOtp/signupOtp — required to verify the code.
-  const [otpGuid, setOtpGuid] = useState<string | undefined>(undefined);
-  // Whether THIS OTP round is a signup (new number) vs a login (existing).
-  // Decided in goToOtp: we try login first, and fall back to signup when the
-  // backend says the number isn't registered. Drives which verify call runs.
-  const [isSignup, setIsSignup] = useState(false);
-  // New numbers create a CashKaro account, which needs an email. It used to
-  // be a generated placeholder (cardsxtra.<phone>@cashkaro-demo.app); now the
-  // person types their own on the OTP step.
-  const [signupEmail, setSignupEmail] = useState('');
-  const [emailTouched, setEmailTouched] = useState(false);
-  const signupEmailValid = isValidContact('email', signupEmail);
-  // Real name for the new account (was a random "Velvet Tiger"-style handle
-  // sent to CashKaro). Also becomes the display name, so the separate
-  // "What should we call you?" step is skipped for these signups.
-  const [signupName, setSignupName] = useState('');
-  // At least two characters including a letter (Latin or Devanagari);
-  // avoids regex Unicode property escapes for Hermes.
-  const signupNameValid =
-    /[A-Za-z\u00C0-\u024F\u0900-\u097F]/.test(signupName) && signupName.trim().length >= 2;
-  const signupDetailsValid = signupNameValid && signupEmailValid;
-  const showEmailError = emailTouched && signupEmail.trim().length > 0 && !signupEmailValid;
-  // Surfaced API failure (send / resend / verify), shown under the input.
-  const [error, setError] = useState<string | null>(null);
-  const OTP_LENGTH = 6;
-  const RESEND_SECONDS = 30;
-  const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
-  // Countdown tick — runs while > 0; resets when the user resends.
-  useEffect(() => {
-    if (stage !== 'otp' || secondsLeft <= 0) return;
-    const id = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [stage, secondsLeft]);
-
-  // Slider geometry. Each panel is exactly one sheet width, and the sheet is
-  // full-screen-width, so the panel width is simply screenW. We deliberately
-  // DON'T measure it via onLayout any more: that re-fired on every
-  // keyboard-show / snap relayout, and the re-render churn was dropping the
-  // phone field's focus mid-type (only one digit landed before the keypad
-  // fell) AND leaving the sheet stuck at its compact snap instead of riding up.
-  // A constant width removes that churn. (App is portrait-locked, so screenW
-  // never changes at runtime.)
-  // Slider progress: 0 = phone panel visible, 1 = otp panel visible.
-  const stageProgress = useSharedValue(0);
-
-  const sliderStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: -stageProgress.value * screenW },
-    ] as unknown as { translateX: number }[],
-  }));
-
-  // Ref to the OtpInput so we can hand keyboard focus over AFTER the
-  // slide completes (when the OTP slot row — and thus its hidden
-  // TextInput — is actually on-screen). Focusing while still off-screen
-  // is what was causing iOS to drop the keyboard previously.
-  const otpRef = useRef<OtpInputHandle>(null);
-
-  // Get-OTP loading state — small spinner on the CTA while the slide
-  // runs. Also locks re-entry into goToOtp.
-  const [requesting, setRequesting] = useState(false);
-
-  // Runs on the JS thread once the slide-to-OTP animation finishes —
-  // pulled out so the worklet callback can `runOnJS` it.
-  const handleSlideToOtpDone = useCallback(() => {
-    setStage('otp');
-    setSecondsLeft(RESEND_SECONDS);
-    setRequesting(false);
-    // OTP slot row is now on-screen, so focusing its hidden input is
-    // a real focus transfer — iOS keeps the keyboard up because we're
-    // moving from one BottomSheetTextInput to another in the same
-    // session (phone Input was focused throughout the slide).
-    otpRef.current?.focus();
-  }, []);
-
-  const goToOtp = useCallback(async () => {
-    if (requesting || !loginPhoneValid) return;
-    // Request the real OTP first; only slide to the OTP panel once
-    // CashKaro has accepted the number and returned an otp_guid. Keep
-    // the phone TextInput focused so the keyboard stays up across the
-    // (usually fast) request and the slide that follows.
-    setRequesting(true);
-    setError(null);
-    try {
-      // Try login first. A new number isn't registered, so /loginotp rejects
-      // it ("mobile number not registered with us") — fall back to the signup
-      // OTP so first-timers can create an account in the same flow.
-      let guid: string;
-      let signupMode = false;
-      try {
-        ({ otpGuid: guid } = await loginOtp(loginPhone));
-      } catch (loginErr) {
-        // Code 2010 = "Mobile number not registered with us" (CK doc). The text
-        // check stays only as a fallback in case a gateway drops the code.
-        if (
-          loginErr instanceof ApiError &&
-          (loginErr.hasCode(2010) || /not regist/i.test(loginErr.message))
-        ) {
-          ({ otpGuid: guid } = await signupOtp(loginPhone));
-          signupMode = true;
+  // Login: the app-wide login sheet opens over this screen. After a login
+  // the user enters the app; a new account gets the greeting first.
+  const { open: openLogin } = useLoginSheet();
+  const openLoginSheet = useCallback(() => {
+    openLogin({
+      source: 'onboarding',
+      onSuccess: ({ isSignup, name }) => {
+        if (isSignup && name) {
+          navigation.navigate('Greeting', { name });
         } else {
-          throw loginErr;
+          navigation.reset({ index: 0, routes: [{ name: 'MainTabs' as never }] });
         }
-      }
-      setIsSignup(signupMode);
-      analytics.track(Events.OTP_REQUESTED, {
-        method: 'phone',
-        flow: signupMode ? 'signup' : 'login',
-      });
-      setOtpGuid(guid);
-      // handleSlideToOtpDone clears `requesting` and focuses the OTP input.
-      stageProgress.value = withTiming(
-        1,
-        { duration: 320, easing: Easing.out(Easing.cubic) },
-        (finished) => {
-          if (finished) runOnJS(handleSlideToOtpDone)();
-        }
-      );
-    } catch (e) {
-      setError(
-        e instanceof ApiError ? e.message : 'Could not send OTP. Please try again.'
-      );
-      setRequesting(false);
-    }
-  }, [requesting, loginPhoneValid, loginPhone, stageProgress, handleSlideToOtpDone]);
-
-  const goToPhone = useCallback(() => {
-    setStage('phone');
-    setOtp('');
-    setError(null);
-    // Re-deciding the number means re-deciding login-vs-signup on next Get OTP.
-    setIsSignup(false);
-    stageProgress.value = withTiming(0, {
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
+      },
     });
-  }, [stageProgress]);
-
-  // Verify OTP — fake-async loading state on the CTA, then dismiss
-  // the sheet and reset the navigation stack to the main tabs.
-  const [verifying, setVerifying] = useState(false);
-
-  const loginPhoneFormatted = useMemo(() => {
-    const d = loginPhone.replace(/\D/g, '');
-    if (d.length !== 10) return loginPhone;
-    return `${d.slice(0, 5)}-${d.slice(5)}`;
-  }, [loginPhone]);
-
-  // One resend at a time: a double tap sent two SMS and the otp_guid could
-  // end up from the other one, so the code typed failed as "invalid".
-  const resendingRef = useRef(false);
-  const handleResend = useCallback(async () => {
-    if (resendingRef.current) return;
-    resendingRef.current = true;
-    setOtp('');
-    setError(null);
-    try {
-      // Resend the same KIND of OTP we sent (signup vs login), so the new
-      // otp_guid matches the verify call that follows.
-      const { otpGuid: guid } = isSignup
-        ? await signupOtp(loginPhone)
-        : await loginOtp(loginPhone);
-      analytics.track(Events.OTP_RESEND, { flow: isSignup ? 'signup' : 'login' });
-      setOtpGuid(guid);
-      setSecondsLeft(RESEND_SECONDS);
-    } catch (e) {
-      setError(
-        e instanceof ApiError ? e.message : 'Could not resend OTP. Please try again.'
-      );
-    } finally {
-      resendingRef.current = false;
-    }
-  }, [loginPhone, isSignup]);
-
-  const handleVerifyOtp = useCallback(async () => {
-    if (verifying) return;
-    if (!otpGuid || !deviceId) {
-      setError('Something went wrong. Please request a new OTP.');
-      return;
-    }
-    if (isSignup && !signupDetailsValid) {
-      setEmailTouched(true);
-      setError('Enter your name and email to create your account.');
-      return;
-    }
-    setVerifying(true);
-    setError(null);
-    try {
-      // New number → create the account with the name and email they typed
-      // (the password is generated: login is OTP-only, nobody types it).
-      // Existing number → plain login.
-      const session = isSignup
-        ? await signup({
-            fullname: signupName.trim(),
-            email: signupEmail.trim(),
-            password: randomPassword(),
-            mobileNumber: loginPhone,
-            otpGuid,
-            otp,
-            deviceId,
-          })
-        : await login({
-            mobileNumber: loginPhone,
-            otpGuid,
-            otp,
-            deviceId,
-          });
-      analytics.track(Events.OTP_SUBMITTED, {
-        flow: isSignup ? 'signup' : 'login',
-        success: true,
-      });
-      await signIn(session);
-      if (isSignup) await setDisplayName(signupName.trim()).catch(() => undefined);
-      analytics.track(isSignup ? Events.SIGN_UP : Events.LOGIN, { method: 'otp' });
-      markOnboarded().catch(() => undefined);
-      signedInRef.current = true;
-      loginSheetRef.current?.dismiss();
-      // Fresh signups go through the post-OTP name-capture + greeting handoff
-      // (NameInput → Greeting → MainTabs); returning logins drop straight into
-      // the app. The short delay lets the login sheet begin dismissing before
-      // the cross-fade, so the handoff reads as one continuous moment.
-      setTimeout(() => {
-        if (isSignup) {
-          // Name already collected with the email → straight to the greeting.
-          navigation.navigate('Greeting', { name: signupName.trim() });
-        } else if (loginOnly && navigation.canGoBack()) {
-          // Opened from "Log in to earn" / a signed-out tab: return to the
-          // card, store or tab they came from, now signed in.
-          navigation.goBack();
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'MainTabs' as never }],
-          });
-        }
-      }, 200);
-    } catch (e) {
-      analytics.track(Events.OTP_FAILED, {
-        flow: isSignup ? 'signup' : 'login',
-        reason: e instanceof ApiError ? (e.status === 0 ? 'network' : `http_${e.status}`) : 'unknown',
-      });
-      setError(
-        e instanceof ApiError ? e.message : 'Could not verify OTP. Please try again.'
-      );
-      setVerifying(false);
-    }
-  }, [verifying, otpGuid, deviceId, loginPhone, otp, isSignup, signIn, navigation, loginOnly, signupEmail, signupName, signupDetailsValid, setDisplayName]);
+  }, [openLogin, navigation]);
 
   // Login is optional. "Get Started" enters the app as a guest (Home, card
   // discovery and Offers need no account); the phone + OTP sheet is one tap
@@ -610,113 +253,6 @@ export function OnboardingScreen() {
     analytics.track(Events.ONBOARDING_GUEST_START);
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' as never }] });
   }, [navigation]);
-
-  // Set just before a successful sign-in dismisses the sheet, so the dismiss
-  // handler doesn't also navigate back.
-  const signedInRef = useRef(false);
-
-  // "Privacy Policy" in the sheet: close the sheet (a modal would cover the
-  // policy screen), open the in-app policy, and reopen the sheet with the
-  // typed number intact on return. The flag stops the dismiss handler from
-  // resetting the form or navigating back meanwhile.
-  const legalDetourRef = useRef(false);
-  const openPrivacyPolicy = useCallback(() => {
-    legalDetourRef.current = true;
-    Keyboard.dismiss();
-    loginSheetRef.current?.dismiss();
-    setTimeout(() => navigation.navigate('PrivacyPolicy' as never), 150);
-  }, [navigation]);
-  useFocusEffect(
-    useCallback(() => {
-      if (!legalDetourRef.current) return;
-      const t = setTimeout(() => {
-        legalDetourRef.current = false;
-        loginSheetRef.current?.present();
-      }, 300);
-      return () => clearTimeout(t);
-    }, [])
-  );
-
-  useEffect(() => {
-    if (!loginOnly) return;
-    // Let the screen transition settle before the sheet slides up.
-    const t = setTimeout(() => loginSheetRef.current?.present(), 350);
-    return () => clearTimeout(t);
-  }, [loginOnly]);
-
-  // Reset to the phone stage whenever the sheet closes, so the next
-  // present() starts clean.
-  const handleSheetDismiss = useCallback(() => {
-    // Closed only to show the privacy policy: keep the form, stay here.
-    if (legalDetourRef.current) return;
-    if (loginOnly && !signedInRef.current && navigation.canGoBack()) {
-      navigation.goBack();
-    }
-    setStage('phone');
-    setOtp('');
-    setOtpGuid(undefined);
-    setIsSignup(false);
-    setSignupEmail('');
-    setSignupName('');
-    setEmailTouched(false);
-    setLoginPhone('');
-    setError(null);
-    setSecondsLeft(RESEND_SECONDS);
-    setVerifying(false);
-    setRequesting(false);
-    stageProgress.value = 0;
-  }, [stageProgress, loginOnly, navigation]);
-
-  const renderLoginBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => {
-      const LogoLight = logos.lightBig;
-      // Logo tracks the sheet's TOP EDGE live (via animatedPosition)
-      // and fades in/out via opacity (via animatedIndex). The sheet's
-      // height is now dynamic — content-sized at rest, lifted further
-      // when the keyboard rises — so the logo can't sit at a fixed
-      // `top`. Combining both into one animated style keeps the hook
-      // surface small.
-      const logoStyle = useAnimatedStyle(() => ({
-        top: loginSheetPosition.value - LOGO_GAP_ABOVE_SHEET - LOGO_H,
-        opacity: interpolate(
-          props.animatedIndex.value,
-          [-1, 0],
-          [0, 1],
-          Extrapolation.CLAMP
-        ),
-      }));
-      return (
-        <View style={props.style} pointerEvents="box-none">
-          <BottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={-1}
-            appearsOnIndex={0}
-            // 90% (was 80%): the carousel headline behind still showed
-            // through and collided with the Cards.xtra logo above the sheet.
-            opacity={opacity[90]}
-            pressBehavior="close"
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                height: LOGO_H,
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              logoStyle,
-            ]}
-          >
-            <LogoLight width={LOGO_W} height={LOGO_H} />
-          </Animated.View>
-        </View>
-      );
-    },
-    [loginSheetPosition]
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.surface.default }}>
@@ -862,7 +398,7 @@ export function OnboardingScreen() {
                 onPress={enterAsGuest}
               />
               <Pressable
-                onPress={() => loginSheetRef.current?.present()}
+                onPress={openLoginSheet}
                 accessibilityRole="button"
                 accessibilityLabel="Log in with your CashKaro account"
                 hitSlop={spacing[8]}
@@ -885,327 +421,6 @@ export function OnboardingScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Login sheet — gorhom modal mounted directly (mirrors the
-          EligibleSheet pattern from FoundationCheck). */}
-      <BottomSheetModal
-        ref={loginSheetRef}
-        // Single tall snap (see loginSnapPoints). We do NOT re-snap on
-        // keyboard events and do NOT use gorhom's `keyboardBehavior` —
-        // both move the sheet, and moving it while the phone field is
-        // focused blurs the field on Android edge-to-edge (the "one digit
-        // then it deselects" bug). Opening tall + the keyboard spacer
-        // below avoids any sheet movement while typing.
-        snapPoints={loginSnapPoints}
-        animatedPosition={loginSheetPosition}
-        enablePanDownToClose
-        onDismiss={handleSheetDismiss}
-        backdropComponent={renderLoginBackdrop}
-        handleComponent={() => null}
-        // Android only: match the app manifest's resize mode while the sheet
-        // is open. No `keyboardBehavior`/`keyboardBlurBehavior` — those act
-        // solely on focused <BottomSheetTextInput> nodes, and this sheet now
-        // uses plain inputs + the manual snap above for keyboard avoidance.
-        android_keyboardInputMode="adjustResize"
-        backgroundStyle={{
-          backgroundColor: colors.surface.default,
-          borderTopLeftRadius: radius['2xl'],
-          borderTopRightRadius: radius['2xl'],
-        }}
-      >
-        <BottomSheetScrollView
-          showsVerticalScrollIndicator={false}
-          // CRITICAL: without this, tapping the Get OTP / Verify OTP
-          // button (or any Pressable inside the sheet) triggers iOS's
-          // "tap-outside-input dismisses keyboard" — the phone Input
-          // blurs BEFORE onPress runs, gorhom sees no focused BSTI,
-          // and the sheet drops. `'handled'` keeps the keyboard up
-          // whenever a descendant captures the tap (every Button /
-          // Pressable here does).
-          keyboardShouldPersistTaps="handled"
-        >
-          <BottomSheetHeader showStroke={false} />
-          {/* Stage container — clips both panels (each one screenW wide).
-              The slider inside is horizontally laid out (row of two panels)
-              and translates by -screenW to swap between phone <-> otp. */}
-          <View
-            style={{
-              width: '100%',
-              overflow: 'hidden',
-              backgroundColor: colors.surface.default,
-            }}
-          >
-            <Animated.View
-              style={[
-                {
-                  flexDirection: 'row',
-                  // Definite px width so each child panel can take screenW and
-                  // the row sums to 2× width.
-                  width: screenW * 2,
-                },
-                sliderStyle,
-              ]}
-            >
-              {/* -------- Panel 1: phone / "Log in or Sign up" -- */}
-              <View
-                style={{
-                  width: screenW,
-                  paddingTop: spacing[24],
-                  paddingBottom: keyboardShown
-                    ? spacing[20]
-                    : insets.bottom + spacing[20],
-                  paddingHorizontal: spacing[20],
-                  gap: spacing[24],
-                  alignItems: 'flex-start',
-                }}
-              >
-                <View
-                  style={{
-                    width: '100%',
-                    alignItems: 'center',
-                    gap: spacing[4],
-                  }}
-                >
-                  <Text
-                    variant="heading24SemiBold"
-                    color={colors.text.primary}
-                    align="center"
-                  >
-                    Log in or Sign up
-                  </Text>
-                  <Text
-                    variant="body14Regular"
-                    color={colors.text.secondary}
-                    align="center"
-                  >
-                    We will send an OTP to verify
-                  </Text>
-                </View>
-
-                <View style={{ width: '100%' }}>
-                  {/* Plain <TextInput> (no useBottomSheetInput): gorhom's
-                      BottomSheetTextInput re-applies its keyboard-tracking on
-                      every controlled-value change, which on the new
-                      architecture dropped focus after each digit. The sheet's
-                      keyboard avoidance is handled by the single tall snap +
-                      keyboard spacer, so we don't need gorhom to track this
-                      input. */}
-                  <Input
-                    label="Mobile Number"
-                    // number-pad: a 10-digit mobile needs no + * # keys, and it
-                    // matches the OTP / Eligibility fields. (The "typing stops
-                    // after one digit" focus drop was an Android-only re-measure
-                    // bug fixed in the Input atom, independent of keyboardType.)
-                    keyboardType="number-pad"
-                    // autoFocus pops the keyboard the instant the sheet opens
-                    // so it lands in the keyboard-up state the user expects
-                    // (no extra tap). Safe now that the sheet never re-snaps
-                    // on keyboard events — autoFocus used to race the
-                    // snap-to-tall during present() and leave the sheet stuck
-                    // at the compact height.
-                    autoFocus
-                    value={loginPhone}
-                    onChangeText={(t) => {
-                      setLoginPhone(normalizeIndianMobile(t));
-                      if (error) setError(null);
-                    }}
-                    maxLength={PHONE_INPUT_MAX_LENGTH}
-                  />
-                </View>
-
-                <Button
-                  label="Get OTP"
-                  variant="solid"
-                  tone="second"
-                  size={52}
-                  fullWidth
-                  loading={requesting}
-                  disabled={!loginPhoneValid || requesting}
-                  onPress={goToOtp}
-                />
-
-                {error && stage === 'phone' ? (
-                  <Text
-                    variant="body12Regular"
-                    color={colors.feedback.error.text}
-                    align="center"
-                    style={{ width: '100%' }}
-                  >
-                    {error}
-                  </Text>
-                ) : null}
-
-                {/* T&C — inline Text per spec. */}
-                <Text
-                  variant="body12Medium"
-                  color={colors.text.secondary}
-                  align="center"
-                  style={{ width: '100%' }}
-                >
-                  {/* Privacy Policy opens the in-app Cards.xtra policy. There
-                      is no Terms document in the app yet, so Terms is plain
-                      text rather than a link that does nothing (both were
-                      link-styled and inert, and said "Cashkaro's"). */}
-                  By continuing, you agree to the Terms & Conditions and{' '}
-                  <Text
-                    variant="body12Medium"
-                    color={colors.text.link}
-                    onPress={openPrivacyPolicy}
-                    accessibilityRole="link"
-                    suppressHighlighting
-                  >
-                    Privacy Policy
-                  </Text>
-                </Text>
-              </View>
-
-              {/* -------- Panel 2: otp / "Enter OTP" ------------ */}
-              <View
-                style={{
-                  width: screenW,
-                  paddingTop: spacing[24],
-                  paddingBottom: keyboardShown
-                    ? spacing[20]
-                    : insets.bottom + spacing[20],
-                  paddingHorizontal: spacing[20],
-                  gap: spacing[24],
-                  alignItems: 'flex-start',
-                }}
-              >
-                <View
-                  style={{
-                    width: '100%',
-                    alignItems: 'center',
-                    gap: spacing[4],
-                  }}
-                >
-                  <Text
-                    variant="heading24SemiBold"
-                    color={colors.text.primary}
-                    align="center"
-                  >
-                    Enter OTP
-                  </Text>
-                  <Text
-                    variant="body14Regular"
-                    color={colors.text.secondary}
-                    align="center"
-                  >
-                    OTP sent on +91 {loginPhoneFormatted}{'  '}
-                    <Text
-                      variant="body14SemiBold"
-                      color={colors.text.link}
-                      onPress={goToPhone}
-                    >
-                      Change
-                    </Text>
-                  </Text>
-                </View>
-
-                {/* OtpInput stays mounted at all times — the parent
-                    transfers keyboard focus to it imperatively (via
-                    `otpRef.current?.focus()`) once the slide finishes, so
-                    the keyboard never drops between the phone input and the
-                    OTP input. Like the phone field it uses a plain input
-                    (no useBottomSheetInput) — the sheet's manual snap keeps
-                    it clear of the keypad. `alignItems: 'center'` centres
-                    the slot row, the hint row, and the resend row. */}
-                <OtpInput
-                  ref={otpRef}
-                  length={OTP_LENGTH}
-                  value={otp}
-                  onChangeText={(v) => {
-                    setOtp(v);
-                    if (error) setError(null);
-                  }}
-                  state={error && stage === 'otp' ? 'error' : undefined}
-                  resend={secondsLeft > 0 ? 'timer' : 'ready'}
-                  seconds={secondsLeft}
-                  onResend={handleResend}
-                  // width:'100%' is required — the parent panel uses
-                  // alignItems:'flex-start' which would otherwise
-                  // shrink OtpInput to its intrinsic content width,
-                  // leaving alignItems:'center' nothing to centre
-                  // against. Forcing full width gives the centre
-                  // alignment horizontal slack so the slot row, hint
-                  // row, and resend row all sit centred.
-                  style={{
-                    width: '100%',
-                    paddingHorizontal: 0,
-                    alignItems: 'center',
-                  }}
-                />
-
-                {error && stage === 'otp' ? (
-                  <Text
-                    variant="body12Regular"
-                    color={colors.feedback.error.text}
-                    align="center"
-                    style={{ width: '100%' }}
-                  >
-                    {error}
-                  </Text>
-                ) : null}
-
-                {isSignup ? (
-                  <View style={{ width: '100%', gap: spacing[8] }}>
-                    <Text variant="body12Regular" color={colors.text.secondary}>
-                      New to CashKaro? Add your name and email to create your account.
-                    </Text>
-                    <Input
-                      label="Full name"
-                      placeholder="Your name"
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      autoComplete="name"
-                      textContentType="name"
-                      value={signupName}
-                      onChangeText={(t) => {
-                        setSignupName(t);
-                        if (error) setError(null);
-                      }}
-                    />
-                    <Input
-                      label="Email"
-                      placeholder="you@example.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                      textContentType="emailAddress"
-                      value={signupEmail}
-                      onChangeText={(t) => {
-                        setSignupEmail(t);
-                        if (error) setError(null);
-                      }}
-                      onBlur={() => setEmailTouched(true)}
-                      state={showEmailError ? 'error' : undefined}
-                      hint={showEmailError ? 'Enter a valid email' : undefined}
-                    />
-                  </View>
-                ) : null}
-
-                <Button
-                  label={isSignup ? 'Verify & create account' : 'Verify OTP'}
-                  variant="solid"
-                  tone="second"
-                  size={52}
-                  fullWidth
-                  loading={verifying}
-                  disabled={
-                    otp.length !== OTP_LENGTH || verifying || (isSignup && !signupDetailsValid)
-                  }
-                  onPress={handleVerifyOtp}
-                />
-              </View>
-            </Animated.View>
-          </View>
-
-          {/* Keyboard spacer — grows to the live keyboard height so the CTA +
-              T&C can always be scrolled clear of the keypad, even on shorter
-              screens or when the window doesn't resize under edge-to-edge. */}
-          <Animated.View style={keyboardSpacerStyle} />
-        </BottomSheetScrollView>
-      </BottomSheetModal>
     </View>
   );
 }

@@ -37,6 +37,7 @@ import {
 } from '../tokens';
 import { useProfile } from '../query/useProfile';
 import { useAuth } from '../auth/AuthContext';
+import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
 import { nameInitials } from '../lib/nameInitials';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
@@ -62,6 +63,8 @@ export function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { data: profile } = useProfile();
   const { signOut, displayName, status } = useAuth();
+  // Signing in re-renders this screen as the signed-in profile; no navigation.
+  const { open: openLogin } = useLoginSheet();
   // Login is optional: signed out, the account card and account-only rows
   // (earnings, withdraw, missing cashback, logout) give way to a login prompt;
   // help, call, review and privacy still work.
@@ -134,7 +137,7 @@ export function ProfileScreen() {
                 body="Log in to see your earnings, withdraw cashback and raise missing-cashback claims."
                 onLogin={() => {
                   analytics.track(Events.LOGIN_PROMPT_TAP, { source: 'profile' });
-                  navigation.navigate('Onboarding', { login: true });
+                  openLogin({ source: 'profile' });
                 }}
               />
             </View>

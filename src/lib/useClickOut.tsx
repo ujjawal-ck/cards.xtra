@@ -2,8 +2,10 @@
  * useClickOut — the single way the app opens a card "Apply Now" or a store
  * "Shop & Earn" link, so every click can be traced to the CashKaro user.
  *
- *   • Signed out → EarnLoginSheet: "Log in to earn cashback", or continue
- *     without cashback (the link opens unattributed; never a dead end).
+ *   • Signed out → EarnLoginSheet: "Log in to earn cashback" (the app-wide
+ *     login sheet opens over this screen, and the link opens attributed as
+ *     soon as the user is in), or continue without cashback (the link opens
+ *     unattributed; never a dead end).
  *   • Signed in → resolve the CashKaro user id from the profile (refetching it
  *     if it hasn't loaded yet) and refuse to open an unattributed link if it
  *     still can't be resolved.
@@ -15,15 +17,15 @@
  */
 import React, { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { EarnLoginSheet } from '../organisms/EarnLoginSheet';
 import type { EarnLoginKind, EarnLoginSheetRef } from '../organisms/EarnLoginSheet';
 import { useAuth } from '../auth/AuthContext';
-import { useProfile } from '../query/useProfile';
+import { useLoginSheet } from '../auth/LoginSheetProvider';
+import { fetchProfile, useProfile } from '../query/useProfile';
+import { queryClient } from '../query/queryClient';
+import { qk } from '../query/keys';
 import { analytics, Events } from '../analytics';
-import type { RootStackParamList } from '../navigation/types';
 import { openUrl } from './openUrl';
 import { buildClickOutUrl, newClickId } from './clickOut';
 
@@ -36,8 +38,8 @@ export interface ClickOutTarget {
 }
 
 export function useClickOut() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { status } = useAuth();
+  const { open: openLogin } = useLoginSheet();
   const profileQ = useProfile();
   const sheetRef = useRef<EarnLoginSheetRef>(null);
   const pending = useRef<ClickOutTarget | null>(null);
@@ -91,13 +93,45 @@ export function useClickOut() {
     [status, profileQ, launch]
   );
 
+  // After "Log in to earn": resolve the new user's CashKaro id with the fresh
+  // token and open the link attributed, so the apply continues by itself.
+  const launchAfterLogin = useCallback(
+    async (target: ClickOutTarget, accessToken: string) => {
+      let userId: string | number | undefined;
+      try {
+        const profile = await queryClient.fetchQuery({
+          queryKey: qk.user.profile(),
+          queryFn: ({ signal }) => fetchProfile(accessToken, signal),
+        });
+        userId = profile?.id;
+      } catch {
+        userId = undefined;
+      }
+      if (userId == null) {
+        Alert.alert(
+          'Couldn’t open this right now',
+          'We couldn’t confirm your account, so the cashback wouldn’t be tracked. Check your connection and try again.'
+        );
+        return;
+      }
+      launch(target, String(userId));
+    },
+    [launch]
+  );
+
   const clickOutSheets = (
     <EarnLoginSheet
       ref={sheetRef}
       kind={sheetKind}
       onLogin={() => {
+        const target = pending.current;
         pending.current = null;
-        navigation.navigate('Onboarding', { login: true });
+        openLogin({
+          source: target?.kind === 'store' ? 'shop' : 'apply',
+          onSuccess: ({ accessToken }) => {
+            if (target) void launchAfterLogin(target, accessToken);
+          },
+        });
       }}
       onContinue={() => {
         const target = pending.current;

@@ -47,6 +47,7 @@ import {
 import { images } from '../assets/images';
 import { haptics } from '../lib/haptics';
 import { useAuth } from '../auth/AuthContext';
+import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 import { HowItWorksSheet } from '../organisms';
@@ -94,6 +95,7 @@ export function GetHelpScreen() {
   // nav-* icons bake multi-colour art that ignores the tint). Every tile now
   // leads somewhere: four of five used to do nothing on tap.
   const { status } = useAuth();
+  const { open: openLogin } = useLoginSheet();
   const callSupport = () => Linking.openURL(SUPPORT_PHONE_URL).catch(() => undefined);
   const topics: HelpTopic[] = [
     {
@@ -117,7 +119,11 @@ export function GetHelpScreen() {
       // "no visits found", so they log in first.
       onPress: () =>
         status === 'unauthenticated'
-          ? navigation.navigate('Onboarding', { login: true })
+          ? openLogin({
+              source: 'get_help',
+              // Continue into the claim once signed in.
+              onSuccess: () => navigation.navigate('MissingCashbackHelp'),
+            })
           : navigation.navigate('MissingCashbackHelp'),
     },
     // No self-serve content for these yet — connect to support directly.

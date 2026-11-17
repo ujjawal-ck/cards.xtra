@@ -33,6 +33,7 @@ export const Events = {
   LOGOUT: 'logout',
   ONBOARDING_GUEST_START: 'onboarding_guest_start', // "Get Started" without logging in
   LOGIN_PROMPT_TAP: 'login_prompt_tap', // param: source (earnings | profile | …)
+  LOGIN_SHEET_OPEN: 'login_sheet_open', // param: source (profile | earnings | apply | get_help | onboarding | session_expired)
 
   // ── cards (Home) ───────────────────────────────────────────
   SELECT_ITEM: 'select_item', // GA4 — card tile tapped
@@ -65,6 +66,17 @@ export const Events = {
   ELIGIBILITY_RESULT: 'eligibility_result',
   // The CardGenius eligibility call failed. Params: surface.
   ELIGIBILITY_ERROR: 'eligibility_error',
+
+  // ── cross-sell rail (Home, under a tile after the user closes its detail) ──
+  // Rail opened. Params: source_card (card id), state ('unknown' | 'eligible' |
+  // 'ineligible'), lens ('top'), lenses (comma list), cards_viewed, picks, arm.
+  CROSSSELL_IMPRESSION: 'crosssell_impression',
+  // Lens chip changed. Params: source_card, lens.
+  CROSSSELL_LENS: 'crosssell_lens',
+  // A pick was tapped. Params: source_card, item_id, lens, slot (1-based), delta.
+  CROSSSELL_TAP: 'crosssell_tap',
+  // Rail closed. Params: source_card, why ('hide' | 'replaced' | 'scrolled_past' | 'no_picks').
+  CROSSSELL_COLLAPSE: 'crosssell_collapse',
 
   // ── offers ─────────────────────────────────────────────────
   SELECT_CONTENT: 'select_content', // GA4 — partner card tapped

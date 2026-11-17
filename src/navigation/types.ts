@@ -36,11 +36,9 @@ export type RootStackParamList = {
   Splash: undefined;
   // Design-token verification screen. Registered in dev builds only.
   FoundationCheck: undefined;
-  /** `login: true` opens the phone + OTP sheet straight away (used by the
-   *  signed-out Earnings / Profile prompts). Dismissing it goes back. */
-  Onboarding: { login?: boolean } | undefined;
-  Login: undefined;
-  Otp: { phone?: string; otpGuid?: string } | undefined;
+  /** First-launch onboarding only. Login elsewhere uses the app-wide sheet
+   *  (auth/LoginSheetProvider). */
+  Onboarding: undefined;
   /** Post-OTP name capture for a fresh signup ("what should we call you?").
    *  No params — the entered name is stored via AuthContext and passed forward
    *  to Greeting. Cross-fades in from the OTP step; cross-fades to Greeting. */

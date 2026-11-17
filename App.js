@@ -35,6 +35,7 @@ import { colors } from './src/tokens';
 import { queryClient } from './src/query/queryClient';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { LoginSheetProvider } from './src/auth/LoginSheetProvider';
 import { SheetBackHandler } from './src/navigation/SheetBackHandler';
 import { analytics, Events } from './src/analytics';
 import { STAGE, PLATFORM, configProblems } from './src/config/env';
@@ -192,7 +193,11 @@ export default function App() {
                 onStateChange={handleStateChange}
               >
                 <StatusBar style="dark" />
-                <RootNavigator />
+                {/* One login sheet for the whole app: opens over the current
+                    screen and resumes the action after login. */}
+                <LoginSheetProvider navigationRef={navRef}>
+                  <RootNavigator />
+                </LoginSheetProvider>
                 {/* Android Back closes an open bottom sheet first. */}
                 <SheetBackHandler />
               </NavigationContainer>

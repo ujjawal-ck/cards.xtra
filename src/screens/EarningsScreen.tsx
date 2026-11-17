@@ -36,6 +36,7 @@ import type { CompositeNavigationProp } from '@react-navigation/native';
 
 import { Divider, Text } from '../atoms';
 import { useAuth } from '../auth/AuthContext';
+import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
 import { ListRow, AmountActionRow } from '../molecules';
 import {
@@ -117,6 +118,8 @@ export function EarningsScreen() {
   // Login is optional. Signed out, the money figures have no account behind
   // them, so the tab explains what logging in unlocks instead of showing ₹0s.
   const { status } = useAuth();
+  // Signing in re-renders this tab with the user's earnings; no navigation.
+  const { open: openLogin } = useLoginSheet();
   if (status === 'unauthenticated') {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
@@ -140,7 +143,7 @@ export function EarningsScreen() {
               body="Log in to track cashback from card applications and shopping, and withdraw it to UPI or a gift card."
               onLogin={() => {
                 analytics.track(Events.LOGIN_PROMPT_TAP, { source: 'earnings' });
-                navigation.navigate('Onboarding', { login: true });
+                openLogin({ source: 'earnings' });
               }}
             />
             <View

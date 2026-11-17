@@ -1,6 +1,7 @@
 /**
  * RootNavigator — top-level native stack.
- *   Splash -> Onboarding (login/OTP bottom sheet) -> MainTabs
+ *   Splash -> Onboarding (first launch only) -> MainTabs. Login is an app-wide
+ *   sheet (auth/LoginSheetProvider) that opens over any screen.
  *
  * FoundationCheck (design-token verification screen) is registered in
  * development builds only, so it can never ship to users.
