@@ -11,8 +11,8 @@
  * Paytm "My Cashback" structure (spec docs/specs/earnings-split.md v2):
  *   1. <Masthead variant='earnings' />  — all-time total + Cashback / Rewards
  *      stat cards (each opens its EarningsBreakupSheet). The only split.
- *   2. Balance card — Confirmed (combined) + Withdraw | Pending (combined) +
- *      Know Why?
+ *   2. Two stacked <AmountActionRow>s — Confirmed (combined) + Withdraw,
+ *      Pending (combined) + Know Why?
  *   3. "Don't see your order here?" row → Missing Cashback flow.
  *   4. Transactions — status <Chip>s, first 10 <OrderRow>s under month
  *      headings, "View all orders".
@@ -33,11 +33,11 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
-import { Text, Button, Chip, Icon, DividerVertical, AmountSkeleton, Skeleton } from '../atoms';
+import { Text, Button, Chip, Skeleton } from '../atoms';
 import { useAuth } from '../auth/AuthContext';
 import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
-import { ListRow } from '../molecules';
+import { ListRow, AmountActionRow } from '../molecules';
 import {
   Masthead,
   EarningsBreakupSheet,
@@ -52,7 +52,7 @@ import type {
   EarningsBreakupSheetRef,
   EarningStatusSheetRef,
 } from '../organisms';
-import { colors, spacing, radius, elevation, iconSize } from '../tokens';
+import { colors, spacing, radius, elevation } from '../tokens';
 import { useEarnings } from '../query/useEarnings';
 import { useOrders } from '../query/useOrders';
 import type { OrdersApiFilters } from '../api/cashkaro';
@@ -277,72 +277,32 @@ export function EarningsScreen() {
             onRewardsPress={() => rewardsSheetRef.current?.present()}
           />
 
-          {/* 2. Balance card — Paytm-style: Confirmed + Withdraw on the left,
-              Pending + Know Why? on the right. Combined cashback + rewards;
-              the per-type split lives in the masthead breakup sheets. */}
-          <View style={{ paddingHorizontal: spacing[16] }}>
-            <View
-              style={[
-                {
-                  flexDirection: 'row',
-                  backgroundColor: colors.surface.default,
-                  borderRadius: radius.xl,
-                  padding: spacing[16],
-                  gap: spacing[16],
-                },
-                elevation.light.xs,
-              ]}
-            >
-              <View style={{ flex: 1, gap: spacing[8] }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
-                  <Icon name="desc-withdrawcash" size={iconSize[24]} />
-                  <Text variant="body12Regular" color={colors.text.primary}>
-                    Confirmed
-                  </Text>
-                </View>
-                {loading ? (
-                  <AmountSkeleton height={spacing[24]} />
-                ) : (
-                  <Text variant="body16Bold" color={colors.text.primary}>
-                    {earnings?.combined ?? '₹0'}
-                  </Text>
-                )}
-                <Button
-                  label="Withdraw"
-                  variant="solid"
-                  tone="main"
-                  size={36}
-                  fullWidth
-                  // No type → the gate checks confirmed cashback + rewards
-                  // combined; WithdrawScreen lets the user pick the bucket.
-                  onPress={() => handleWithdraw()}
-                />
-              </View>
-              <DividerVertical style="solid" height={spacing[96]} />
-              <View style={{ flex: 1, gap: spacing[8] }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
-                  <Icon name="desc-pendingcash" size={iconSize[24]} />
-                  <Text variant="body12Regular" color={colors.text.primary}>
-                    Pending
-                  </Text>
-                </View>
-                {loading ? (
-                  <AmountSkeleton height={spacing[24]} />
-                ) : (
-                  <Text variant="body16Bold" color={colors.text.primary}>
-                    {earnings?.pendingCombined ?? '₹0'}
-                  </Text>
-                )}
-                <Button
-                  label="Know Why?"
-                  variant="outline"
-                  tone="main"
-                  size={36}
-                  fullWidth
-                  onPress={() => pendingRef.current?.present()}
-                />
-              </View>
-            </View>
+          {/* 2. Rows group — DS <AmountActionRow>s stacked, as on the
+              original Earnings page. Combined cashback + rewards; the
+              per-type split lives in the masthead breakup sheets. */}
+          <View style={{ paddingHorizontal: spacing[16], gap: spacing[12] }}>
+            <AmountActionRow
+              iconName="desc-withdrawcash"
+              caption="Confirmed"
+              loading={loading}
+              value={earnings?.combined ?? '₹0'}
+              buttonLabel="Withdraw"
+              buttonVariant="solid"
+              buttonTone="main"
+              // No type → the gate checks confirmed cashback + rewards
+              // combined; WithdrawScreen lets the user pick the bucket.
+              onButtonPress={() => handleWithdraw()}
+            />
+            <AmountActionRow
+              iconName="desc-pendingcash"
+              caption="Pending"
+              loading={loading}
+              value={earnings?.pendingCombined ?? '₹0'}
+              buttonLabel="Know Why?"
+              buttonVariant="outline"
+              buttonTone="main"
+              onButtonPress={() => pendingRef.current?.present()}
+            />
           </View>
 
           {/* 3. Missing-cashback prompt — one tappable row. */}
@@ -354,18 +314,14 @@ export function EarningsScreen() {
                   borderRadius: radius.xl,
                   paddingVertical: spacing[12],
                   paddingHorizontal: spacing[16],
-                  gap: spacing[8],
                 },
                 elevation.light.xs,
               ]}
             >
-              <Text variant="body14SemiBold" color={colors.text.primary}>
-                Don’t see your order here?
-              </Text>
               <ListRow
                 type="menu-option"
                 icon="clipboard-search-outline"
-                title="Tell us where you shopped & we’ll add your Cashback"
+                title="Don’t see your order here?"
                 onPress={() =>
                   navigation.navigate('MissingCashbackDidYouShop', { backTo: 'back' })
                 }
