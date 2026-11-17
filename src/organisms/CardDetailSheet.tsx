@@ -2365,6 +2365,13 @@ const CardDetailSheetIOS = forwardRef<
     [scrollX, initialIdx, closing]
   );
 
+  // gorhom calls onDismiss only after the close animation ends and the modal
+  // unmounts, so it is the safe place to drop the rail even if onChange(-1) was skipped.
+  const handleDismiss = useCallback(() => {
+    setSheetOpen(false);
+    onDismiss?.();
+  }, [onDismiss]);
+
   // Navigation must be read HERE (the wrapper renders inside HomeScreen, i.e.
   // inside the NavigationContainer) — NOT inside SheetBody, which gorhom
   // mounts in a portal outside the nav tree (would throw "Couldn't find a
@@ -2476,7 +2483,7 @@ const CardDetailSheetIOS = forwardRef<
       snapPoints={snapPoints}
       onChange={handleSheetChange}
       onAnimate={handleAnimate}
-      onDismiss={onDismiss}
+      onDismiss={handleDismiss}
       animationConfigs={sheetAnimationConfigs}
       animatedIndex={animatedIndex}
       animatedPosition={animatedPosition}
