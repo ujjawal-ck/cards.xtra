@@ -398,10 +398,12 @@ export function EarningsScreen() {
       />
       <EarningStatusSheet
         ref={rewardsPendingRef}
+        earningType="rewards"
         amount={earnings?.pendingRewards ?? '₹0'}
       />
       <EarningStatusSheet
         ref={rewardsPaidRef}
+        earningType="rewards"
         variant="paid"
         amount={earnings?.paidRewards ?? '₹0'}
       />

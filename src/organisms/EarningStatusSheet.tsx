@@ -49,31 +49,51 @@ export interface EarningStatusSheetProps {
   amount?: string;
   /** Which lifecycle state to explain. Default 'pending'. */
   variant?: EarningStatusVariant;
+  /** Which earning type the sheet explains. Default 'cashback'. */
+  earningType?: EarningType;
 }
 
 // Per-variant badge + body copy. 'pending' = amber "Cashback Pending"
 // (Know Why?); 'paid' = cobalt "Cashback Paid" (Paid row's View).
+type EarningType = 'cashback' | 'rewards';
 const VARIANT_CONTENT: Record<
-  EarningStatusVariant,
-  { status: 'pending' | 'paid'; label: string; body: string }
+  EarningType,
+  Record<EarningStatusVariant, { status: 'pending' | 'paid'; label: string; body: string }>
 > = {
-  pending: {
-    status: 'pending',
-    label: 'Cashback Pending',
-    body: 'Cashback stays pending until the product return/cancellation period ends',
+  cashback: {
+    pending: {
+      status: 'pending',
+      label: 'Cashback Pending',
+      body: 'Cashback stays pending until the product return/cancellation period ends',
+    },
+    paid: {
+      status: 'paid',
+      label: 'Cashback Paid',
+      body: 'These are the earnings that have already been paid',
+    },
   },
-  paid: {
-    status: 'paid',
-    label: 'Cashback Paid',
-    body: 'These are the earnings that have already been paid',
+  rewards: {
+    pending: {
+      status: 'pending',
+      label: 'Rewards Pending',
+      body: 'Rewards stay pending until they are confirmed',
+    },
+    paid: {
+      status: 'paid',
+      label: 'Rewards Paid',
+      body: 'These are the rewards that have already been paid',
+    },
   },
 };
 
 export const EarningStatusSheet = forwardRef<
   BottomSheetModalRef,
   EarningStatusSheetProps
->(function EarningStatusSheet({ amount = '₹0', variant = 'pending' }, ref) {
-  const content = VARIANT_CONTENT[variant];
+>(function EarningStatusSheet(
+  { amount = '₹0', variant = 'pending', earningType = 'cashback' },
+  ref,
+) {
+  const content = VARIANT_CONTENT[earningType][variant];
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef);

@@ -44,6 +44,7 @@ export function useWithdrawGate({
   const notConfirmedRef = useRef<CashbackNotConfirmedSheetRef>(null);
   const processingRef = useRef<PaymentProcessingSheetRef>(null);
   const [belowMinimum, setBelowMinimum] = useState<{ balance: string; minimum: string } | null>(null);
+  const [tappedType, setTappedType] = useState<WithdrawEntryBucket>('cashback');
 
   // `bucket` = the type the user tapped (Earnings page). No bucket (Profile)
   // checks the combined balance. Anything else (e.g. a press event) = none.
@@ -85,9 +86,14 @@ export function useWithdrawGate({
     const hasBalance = balance > 0;
     // The payout API rejects requests under the threshold (Postman: 400 code
     // 5003 "below ₹250"); stop here instead of failing after UPI + OTP.
+    // Per the CK doc (04_payment.md, payment_threshold) the threshold applies
+    // to cashback + rewards COMBINED, not to each type on its own.
     const minimum = p?.paymentThreshold ?? 250;
+    const combined = e.combinedNum ?? 0;
+    setTappedType(bucket ?? 'cashback');
     analytics.track(Events.WITHDRAW_START, {
       has_balance: hasBalance,
+      earning_type: bucket ?? 'combined',
       confirmed_balance: balance,
       payment_in_process: !!p?.paymentInProcess,
     });
@@ -97,8 +103,8 @@ export function useWithdrawGate({
     } else if (!hasBalance) {
       setBelowMinimum(null);
       notConfirmedRef.current?.present();
-    } else if (balance < minimum) {
-      setBelowMinimum({ balance: formatINR(balance), minimum: formatINR(minimum) });
+    } else if (combined < minimum) {
+      setBelowMinimum({ balance: formatINR(combined), minimum: formatINR(minimum) });
       notConfirmedRef.current?.present();
     } else {
       onProceed(bucket);
@@ -109,8 +115,13 @@ export function useWithdrawGate({
     <>
       <CashbackNotConfirmedSheet
         ref={notConfirmedRef}
-        pendingAmount={earnings?.pending ?? '₹0'}
+        pendingAmount={
+          (tappedType === 'rewards' ? earnings?.pendingRewards : earnings?.pendingCashback) ??
+          earnings?.pending ??
+          '₹0'
+        }
         belowMinimum={belowMinimum ?? undefined}
+        earningType={tappedType}
       />
       <PaymentProcessingSheet
         ref={processingRef}
