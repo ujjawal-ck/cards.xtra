@@ -14,7 +14,7 @@
  * Alternatives reuse the cross-sell engine's gate, similarity and fee bands
  * (src/lib/crossSell.ts); the engine itself is not changed in behaviour.
  */
-import { CONFIG, bandIdx, idf, isLtf, passesEarningGate, profile, sim, topShared } from './crossSell';
+import { CONFIG, bandIdx, cost, idf, isLtf, passesEarningGate, profile, sim, topShared } from './crossSell';
 import type { CrossSellCard } from './crossSell';
 import { shortCardName } from './crossSellPresent';
 
@@ -143,14 +143,25 @@ export function getRejectionPicks(
 
   const srcBand = bandIdx(src);
   const bucket = (c: CrossSellCard) => Math.round(S(c) * 10);
-  const byClosest = [...pool].sort(
+  // Softer guard: "closest" never sits more than one fee band above the rejected card,
+  // unless no card in the pool is inside that range.
+  const nearBand = pool.filter((c) => bandIdx(c) <= srcBand + 1);
+  const closestPool = nearBand.length > 0 ? nearBand : pool;
+  const byClosest = [...closestPool].sort(
     (a, b) =>
       bucket(b) - bucket(a) ||
       Math.abs(bandIdx(a) - srcBand) - Math.abs(bandIdx(b) - srcBand) ||
       b.reward - a.reward ||
       a.priority - b.priority,
   );
-  const byReward = [...pool].sort((a, b) => b.reward - a.reward || S(b) - S(a) || a.priority - b.priority);
+  const rewardSort = (a: CrossSellCard, b: CrossSellCard) =>
+    b.reward - a.reward || S(b) - S(a) || a.priority - b.priority;
+  // A one-time reward must not sell a card that costs far more every year: same fee or lower
+  // (the engine's "More rewards" rule). Lifetime free source: cost 0, so only lifetime free cards.
+  const feeCap = cost(src) * CONFIG.feeTolerance;
+  const byReward = pool.filter((c) => cost(c) <= feeCap).sort(rewardSort);
+  // Nothing under the cap: relax once, to at most one fee band above the rejected card.
+  const byRewardRelaxed = pool.filter((c) => bandIdx(c) <= srcBand + 1).sort(rewardSort);
   const lifetimeFree = byClosest.filter(isLtf);
 
   const usedIds = new Set<string>();
@@ -171,7 +182,10 @@ export function getRejectionPicks(
   };
 
   add(take(byClosest), 'closest', closestTag, 'info');
-  add(take(byReward), 'topRewards', 'Highest Rewards', 'brand');
+  const top = take(byReward) ?? take(byRewardRelaxed);
+  // Still none: the next closest card takes the slot, as a "closest" pick.
+  if (top) add(top, 'topRewards', 'Highest Rewards', 'brand');
+  else add(take(byClosest), 'closest', closestTag, 'info');
   const free = take(lifetimeFree);
   if (free) add(free, 'lifetimeFree', 'Lifetime free', 'success');
   // No lifetime free card left: the next closest card takes the third place.

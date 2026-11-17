@@ -178,6 +178,61 @@ describe('getRejectionPicks', () => {
     expect(r.picks[0].card.alias).toBe('near');
   });
 
+  describe('Highest Rewards fee cap', () => {
+    const cheap = mk({ alias: 'cheap', bank: 'A', joiningFee: 590, annualFee: 590, reward: 500 }); // the 590 card
+    const near = mk({ alias: 'near', bank: 'B', joiningFee: 500, annualFee: 500, reward: 800 });
+    const premier = mk({ alias: 'premier', bank: 'H', joiningFee: 23600, annualFee: 23600, reward: 90000, earn: 200000 });
+
+    it('a far costlier card is not picked even with the highest reward', () => {
+      const r = getRejectionPicks(cheap, [cheap, near, premier], new Set(['near', 'premier']));
+      expect(r.picks.map((p) => p.card.alias)).not.toContain('premier');
+      expect(r.picks.find((p) => p.slot === 'topRewards')).toBeUndefined();
+    });
+
+    it('a card at the same fee still qualifies', () => {
+      const same = mk({ alias: 'same', bank: 'C', tags: ['Fuel', 'Travel'], joiningFee: 590, annualFee: 590, reward: 2000 }); // less similar: closest takes 'near'
+      const r = getRejectionPicks(cheap, [cheap, near, same, premier], new Set(['near', 'same', 'premier']));
+      expect(r.picks.find((p) => p.slot === 'topRewards')!.card.alias).toBe('same');
+    });
+
+    it('lifetime free rejected card: only lifetime free cards qualify', () => {
+      const ltfSrc = mk({ alias: 'ltfsrc', bank: 'A', joiningFee: 0, annualFee: 0, reward: 100 });
+      const paid = mk({ alias: 'paid', bank: 'B', joiningFee: 500, annualFee: 500, reward: 9000 });
+      const ltf = mk({ alias: 'ltf', bank: 'C', joiningFee: 0, annualFee: 0, reward: 200 });
+      const ltf2 = mk({ alias: 'ltf2', bank: 'D', tags: ['Fuel', 'Travel'], joiningFee: 0, annualFee: 0, reward: 100 });
+      const r = getRejectionPicks(ltfSrc, [ltfSrc, paid, ltf, ltf2], new Set(['paid', 'ltf', 'ltf2']));
+      expect(r.picks.find((p) => p.slot === 'topRewards')!.card.alias).toBe('ltf2');
+    });
+
+    it('relaxes once to one fee band above when nothing is under the cap', () => {
+      const mid = mk({ alias: 'mid', bank: 'B', joiningFee: 2000, annualFee: 2000, reward: 3000 }); // entry -> mid
+      const mid2 = mk({ alias: 'mid2', bank: 'E', tags: ['Fuel', 'Travel'], joiningFee: 2500, annualFee: 2500, reward: 2000 });
+      const r = getRejectionPicks(cheap, [cheap, mid, mid2, premier], new Set(['mid', 'mid2', 'premier']));
+      const top = r.picks.find((p) => p.slot === 'topRewards')!;
+      expect(top.card.alias).toBe('mid2'); // closest took 'mid'
+      expect(r.picks.map((p) => p.card.alias)).not.toContain('premier');
+    });
+
+    it('nothing under the cap or one band above: the next closest card takes the slot', () => {
+      // Both cards are far above the cap and above one band: no Highest Rewards pick, closest fills in.
+      const premier2 = mk({ alias: 'premier2', bank: 'I', joiningFee: 12000, annualFee: 12000, reward: 5000, earn: 50000 });
+      const r = getRejectionPicks(cheap, [cheap, premier, premier2], new Set(['premier', 'premier2']));
+      expect(r.picks).toHaveLength(2);
+      expect(r.picks.every((p) => p.slot === 'closest' && p.tag === 'Closest to cheap')).toBe(true);
+    });
+  });
+
+  it('closest is never more than one fee band above, when a card in range exists', () => {
+    const cheapSrc = mk({ alias: 'cs', bank: 'A', joiningFee: 590, annualFee: 590 });
+    const sim = mk({ alias: 'sim', bank: 'H', joiningFee: 23600, annualFee: 23600, reward: 9000, earn: 50000 }); // most similar, super band
+    const ok = mk({ alias: 'ok', bank: 'B', joiningFee: 500, annualFee: 500, tags: ['Fuel'], reward: 100 });
+    const r = getRejectionPicks(cheapSrc, [cheapSrc, sim, ok], new Set(['sim', 'ok']));
+    expect(r.picks[0].card.alias).toBe('ok');
+    // No card in range: the guard steps aside rather than leaving the slot empty.
+    const r2 = getRejectionPicks(cheapSrc, [cheapSrc, sim], new Set(['sim']));
+    expect(r2.picks[0].card.alias).toBe('sim');
+  });
+
   it('eligibleCount: every eligible non-invite card except the tapped one', () => {
     const r = getRejectionPicks(src, catalogue, all);
     expect(r.eligibleCount).toBe(3);

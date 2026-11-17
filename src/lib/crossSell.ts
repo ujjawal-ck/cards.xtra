@@ -150,7 +150,7 @@ export function idf(catalogue: CrossSellCard[]): Record<string, number> {
 }
 
 // ---------- money ----------
-function cost(c: CrossSellCard): number {
+export function cost(c: CrossSellCard): number {
   return Math.max(c.joiningFee, c.annualFee);
 }
 const earnOf = (c: CrossSellCard): number => c.earn;

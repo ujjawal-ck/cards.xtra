@@ -936,6 +936,7 @@ export const CardDetailScreenAndroid = forwardRef<
       onSharePress,
       onEditEligibility,
       onDismiss,
+      onCloseStart,
     },
     ref
   ) => {
@@ -1059,6 +1060,15 @@ export const CardDetailScreenAndroid = forwardRef<
       [card, onEligibilityChecked, onShowResultSheet]
     );
 
+    // gorhom fires onAnimate when a transition STARTS; toIndex -1 = closing.
+    // onDismiss only fires after the spring settles and the modal unmounts.
+    const handleAnimate = useCallback(
+      (_from: number, toIndex: number) => {
+        if (toIndex === -1) onCloseStart?.();
+      },
+      [onCloseStart]
+    );
+
     const handleClose = useCallback(() => {
       (ref as React.RefObject<BottomSheetModal>)?.current?.close();
     }, [ref]);
@@ -1080,6 +1090,7 @@ export const CardDetailScreenAndroid = forwardRef<
         ref={ref}
         snapPoints={snapPoints}
         onDismiss={onDismiss}
+        onAnimate={handleAnimate}
         animationConfigs={sheetAnimationConfigs}
         animatedIndex={animatedIndex}
         index={0}

@@ -235,19 +235,31 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
     if (visitRef.current) visitRef.current.detour = true;
   }, []);
 
-  const onDetailClosed = useCallback(() => {
-    const v = visitRef.current;
-    if (!v) return;
-    if (v.detour) {
-      v.detour = false;
-      return;
-    }
-    visitRef.current = null;
-    setDetailPager(null);
-    // Back from a pick: keep the same rail. Applied: no rail.
-    if (v.fromRail || v.applied) return;
-    tryExpand(v.anchor);
-  }, [tryExpand]);
+  // The detail left (or started leaving). Runs the visit's close rules once: the
+  // visit is consumed, so a second call for the same close does nothing. A detour
+  // (share / all benefits) is only cleared by the final dismiss, never by the
+  // start-of-close call, or the final dismiss would be read as a real exit.
+  const finishVisit = useCallback(
+    (final: boolean) => {
+      const v = visitRef.current;
+      if (!v) return;
+      if (v.detour) {
+        if (final) v.detour = false;
+        return;
+      }
+      visitRef.current = null;
+      setDetailPager(null);
+      // Back from a pick: keep the same rail. Applied: no rail.
+      if (v.fromRail || v.applied) return;
+      tryExpand(v.anchor);
+    },
+    [tryExpand]
+  );
+  // Fully closed (iOS: end of the sheet; Android: after the spring settles + unmount).
+  const onDetailClosed = useCallback(() => finishVisit(true), [finishVisit]);
+  // The close animation has just started (Android only). Opens the rail while the
+  // page is still zooming back into its tile instead of after the unmount.
+  const onDetailClosing = useCallback(() => finishVisit(false), [finishVisit]);
 
   const selectLens = useCallback(
     (lensKey: string) => {
@@ -302,6 +314,7 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
     onApplied,
     holdVisit,
     onDetailClosed,
+    onDetailClosing,
     selectLens,
     hide,
     suppress,

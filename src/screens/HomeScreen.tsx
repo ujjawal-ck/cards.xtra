@@ -2186,6 +2186,7 @@ export function HomeScreen() {
         // (and so Apply / Share / eligibility) in sync as they swipe.
         cards={crossSell.detailCards(pagerCards)}
         onDismiss={crossSell.onDetailClosed}
+        onCloseStart={crossSell.onDetailClosing}
         initialCardId={selectedCard?.id}
         onActiveCardChange={(card) => {
           // Swiping to another card in the sheet is a new card view.

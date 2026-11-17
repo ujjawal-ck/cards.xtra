@@ -203,6 +203,10 @@ export interface CardDetailSheetProps {
   /** Fires once the sheet has fully closed (swipe down, close button, or a
    *  programmatic dismiss). Used by Home for the cross-sell rail. */
   onDismiss?: () => void;
+  /** Android only: fires when the close animation STARTS (back, X, swipe down,
+   *  programmatic). `onDismiss` fires ~1 s later, after the spring settles and the
+   *  modal unmounts. Home uses it to open the cross-sell rail without that wait. */
+  onCloseStart?: () => void;
 }
 
 // "Upto Rs2,500 Cashback" -> { prefix: "Upto", value: "Rs2,500 Cashback" }
