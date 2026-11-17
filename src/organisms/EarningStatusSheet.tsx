@@ -55,7 +55,7 @@ export interface EarningStatusSheetProps {
 
 // Per-variant badge + body copy. 'pending' = amber "Cashback Pending"
 // (Know Why?); 'paid' = cobalt "Cashback Paid" (Paid row's View).
-type EarningType = 'cashback' | 'rewards';
+type EarningType = 'cashback' | 'rewards' | 'combined';
 const VARIANT_CONTENT: Record<
   EarningType,
   Record<EarningStatusVariant, { status: 'pending' | 'paid'; label: string; body: string }>
@@ -69,6 +69,18 @@ const VARIANT_CONTENT: Record<
     paid: {
       status: 'paid',
       label: 'Cashback Paid',
+      body: 'These are the earnings that have already been paid',
+    },
+  },
+  combined: {
+    pending: {
+      status: 'pending',
+      label: 'Earnings Pending',
+      body: 'Cashback and rewards stay pending until they are confirmed',
+    },
+    paid: {
+      status: 'paid',
+      label: 'Earnings Paid',
       body: 'These are the earnings that have already been paid',
     },
   },

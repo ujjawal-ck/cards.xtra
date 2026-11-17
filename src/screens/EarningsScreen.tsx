@@ -510,6 +510,7 @@ export function EarningsScreen() {
       {/* Pending ("Know Why?") sheet — combined pending amount. */}
       <EarningStatusSheet
         ref={pendingRef}
+        earningType="combined"
         amount={earnings?.pendingCombined ?? '₹0'}
       />
     </View>
