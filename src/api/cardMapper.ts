@@ -390,10 +390,12 @@ export function mapBkCardToCardModel(
   // from the card's ck_store_id; BankKaro's `commission` is only the fallback
   // when the card has no CashKaro store match (see cardRates.ts).
   const cashbackValue = ckRateValue(ckRate) || commissionValue(bk);
-  // The organism CardTile renders the badge as "Flat <value> Rewards"; the
-  // CardDetailSheet splits `cashback` on its leading word — so both stay in
-  // sync when `cashback` starts with "Flat".
-  const cashback = cashbackValue ? `Flat ${cashbackValue} Rewards` : 'Rewards';
+  // "Upto" when CashKaro has lower secondary tiers for this card, else "Flat"
+  // (same rule as cashkaro.com). The organism CardTile renders
+  // "<rewardPrefix> <value> Rewards"; the CardDetailSheet splits `cashback` on
+  // its leading word — so both stay in sync.
+  const rewardPrefix: 'Flat' | 'Upto' = ckRate?.upto ? 'Upto' : 'Flat';
+  const cashback = cashbackValue ? `${rewardPrefix} ${cashbackValue} Rewards` : 'Rewards';
 
   const tags = (bk.tags ?? [])
     .map((t) => t?.name)
@@ -474,6 +476,7 @@ export function mapBkCardToCardModel(
     cardImage: { uri: bk.image || '' },
     cashback,
     cashbackValue,
+    rewardPrefix,
     feeType: deriveFeeType(bk),
     tags,
     benefits: [], // legacy emoji list — unused by the organism tile / detail

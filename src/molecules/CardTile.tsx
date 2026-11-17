@@ -112,6 +112,9 @@ export interface CardModel {
   cashback: string;
   /** Just the value, e.g. "₹1,200" — used by the organism's CashbackBadge. */
   cashbackValue: string;
+  /** Badge lead-in for `cashbackValue`: "Upto" when CashKaro has lower
+   *  secondary tiers, else "Flat". Absent on sample cards (→ "Flat"). */
+  rewardPrefix?: 'Flat' | 'Upto';
   /** Which fee strip the organism renders. */
   feeType: 'lifetime-free' | 'discontinued' | 'with-fees';
   /** 2-3 category labels */

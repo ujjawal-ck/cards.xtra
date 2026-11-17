@@ -75,6 +75,8 @@ export interface CardTileProps {
   cardImage: ImageSourcePropType;
   cardName: string;
   cashbackText: string;
+  /** Badge lead-in: "Flat" (default) or "Upto". */
+  rewardPrefix?: 'Flat' | 'Upto';
   inviteOnly?: boolean;
   tags?: string[];
   benefits?: CardTileBenefit[];
@@ -140,6 +142,7 @@ export function CardTile({
   cardImage,
   cardName,
   cashbackText,
+  rewardPrefix = 'Flat',
   inviteOnly = false,
   tags = [],
   benefits = [],
@@ -185,12 +188,11 @@ export function CardTile({
           >
             {cardName}
           </Text>
-          {/* Commission-based reward, per product: "Flat ₹X Rewards".
-              "Flat" / "Rewards" are constant; only the value (cashbackText)
-              varies per card. */}
+          {/* CashKaro reward: "Flat ₹X Rewards", or "Upto ₹X Rewards" when
+              the card has lower secondary tiers (rewardPrefix). */}
           <CashbackBadge
             size="sm"
-            prefix="Flat"
+            prefix={rewardPrefix}
             value={`${cashbackText} Rewards`}
           />
         </View>

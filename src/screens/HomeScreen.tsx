@@ -306,6 +306,7 @@ const HomeCardTile = React.memo(function HomeCardTile({
         cardImage={card.cardImage}
         cardName={card.name}
         cashbackText={card.cashbackValue}
+        rewardPrefix={card.rewardPrefix}
         inviteOnly={card.inviteOnly}
         tags={card.tags}
         benefits={benefits}

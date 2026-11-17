@@ -27,6 +27,9 @@
 export interface CkRate {
   amount: number;
   unit: 'inr' | 'percent';
+  /** True when the store has lower secondary tiers (e.g. existing bank
+   *  customers), so `amount` is the top tier. cashkaro.com shows "Upto" then. */
+  upto?: boolean;
 }
 
 interface RateEntry extends CkRate {
@@ -79,8 +82,9 @@ export function buildCardRateIndex(stores: any[]): CardRateIndex {
 
   for (const row of stores ?? []) {
     const a = row?.attributes ?? {};
-    const rate = parseCashback(a.cashback);
-    if (!rate) continue;
+    const parsed = parseCashback(a.cashback);
+    if (!parsed) continue;
+    const rate: CkRate = { ...parsed, upto: Number(a.secondary_cashback_count) > 0 };
     const id = String(row?.id ?? '');
     const name = String(a.name ?? '');
     const entry: RateEntry = { ...rate, id, name };
@@ -115,8 +119,8 @@ export function resolveCkRate(
   const id = ckStoreId == null ? '' : String(ckStoreId).trim();
   if (id) {
     const byId = index.byId.get(id);
-    if (byId) return { amount: byId.amount, unit: byId.unit };
+    if (byId) return { amount: byId.amount, unit: byId.unit, upto: byId.upto };
   }
   const byName = index.byName.get(normCardName(cardName));
-  return byName ? { amount: byName.amount, unit: byName.unit } : null;
+  return byName ? { amount: byName.amount, unit: byName.unit, upto: byName.upto } : null;
 }

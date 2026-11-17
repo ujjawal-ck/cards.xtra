@@ -909,10 +909,10 @@ export function RecommendedCards({
       id: c.id,
       image: c.cardImage,
       name: c.name,
-      // Mapped cards carry "Flat ₹X Rewards" in `cashback`; show it as-is
+      // Mapped cards carry "Flat|Upto ₹X Rewards" in `cashback`; show it as-is
       // (prefix split handles the leading word). Sample cards keep "Upto".
       cashback: c.cashbackValue ? `${c.cashbackValue} Rewards` : c.cashback,
-      prefix: 'Flat',
+      prefix: c.rewardPrefix ?? 'Flat',
     }));
   // No other real cards → no section (it used to fall back to sample cards).
   if (items.length === 0) return null;
