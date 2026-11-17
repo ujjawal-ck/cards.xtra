@@ -1,4 +1,13 @@
 # CI: type check + unit tests on every push and pull request.
+# CD: after the checks pass on Anmol--changes, deploy two Vercel previews
+# (the BFF and a web build of the app). Never Vercel production.
+#
+# Vercel setup (repo Settings → Secrets and variables → Actions):
+#   secret   VERCEL_TOKEN           Vercel access token
+#   variable VERCEL_ORG_ID          Vercel team id
+#   variable VERCEL_BFF_PROJECT_ID  project cards-xtra-bff
+#   variable VERCEL_WEB_PROJECT_ID  project cards-xtra-web
+# A missing token skips the deploy with a warning.
 name: CI
 
 on:
@@ -9,6 +18,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   checks:
@@ -30,3 +42,63 @@ jobs:
 
       - name: Unit + contract-fixture tests
         run: npx jest --ci
+
+      - name: BFF tests
+        working-directory: bff
+        run: npm test
+
+  preview:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Anmol--changes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+    steps:
+      - name: Check token
+        id: token
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::VERCEL_TOKEN is not set; skipping Vercel previews"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.present == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.token.outputs.present == 'true'
+        run: npm ci && npm i -g vercel@65.16.0
+
+      - name: Deploy BFF preview
+        if: steps.token.outputs.present == 'true'
+        working-directory: bff
+        env:
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_BFF_PROJECT_ID }}
+        run: |
+          url=$(vercel deploy --yes --token "$VERCEL_TOKEN")
+          echo "BFF preview: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build app for web
+        if: steps.token.outputs.present == 'true'
+        env:
+          EXPO_PUBLIC_STAGE: staging
+          EXPO_PUBLIC_API_BASE_URL: https://cards-xtra-bff.vercel.app
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Deploy app web preview
+        if: steps.token.outputs.present == 'true'
+        env:
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_WEB_PROJECT_ID }}
+        run: |
+          url=$(vercel deploy dist --yes --token "$VERCEL_TOKEN")
+          echo "App web preview: $url" >> "$GITHUB_STEP_SUMMARY"
