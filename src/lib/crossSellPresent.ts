@@ -53,8 +53,9 @@ export function bandParts(src: CrossSellCard, p: CrossSellPick): { text: string;
   switch (p.lens) {
     case 'lowerFee':
       if (isLtf(c)) return { text: 'Lifetime free' };
-      if (src.annualFee - c.annualFee > 0) return { amount: inr(src.annualFee - c.annualFee), text: 'less a year' };
-      return { amount: inr(src.joiningFee - c.joiningFee), text: 'lower joining fee' };
+      if (src.annualFee - c.annualFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.annualFee - c.annualFee), text: 'less a year' };
+      if (src.joiningFee - c.joiningFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.joiningFee - c.joiningFee), text: 'lower joining fee' };
+      return { text: 'Similar fee' };
     case 'moreRewards':
       return { amount: inr(c.reward - src.reward), text: 'more Rewards' };
     case 'easier':
@@ -85,20 +86,26 @@ export function bandIcon(src: CrossSellCard, p: CrossSellPick): IconName {
   }
 }
 
+/** Rupee amounts closer than this are the same: GST rounding makes equal fees differ by a rupee or two. */
+const SAME_RUPEE_THRESHOLD = 10;
+
 const sameAmount = (a: number, b: number) => Math.round(a) === Math.round(b);
+const sameRupees = (a: number, b: number) => Math.abs(a - b) < SAME_RUPEE_THRESHOLD;
 
 /**
  * Compare `mine` with `ref`. `lowerIsGood`: a lower number is the better one (fees,
  * income). A pick that is worse is 'neutral', never 'bad': we do not paint our own
- * suggestion red, the word "more" / "less" states it.
+ * suggestion red, the word "more" / "less" states it. `isSame` decides "Same";
+ * rupee stats pass `sameRupees`, income (in lakhs) keeps exact equality.
  */
 function compare(
   mine: number,
   ref: number,
   lowerIsGood: boolean,
   fmt: (n: number) => string,
+  isSame: (a: number, b: number) => boolean = sameAmount,
 ): Pick<PickStat, 'delta' | 'direction' | 'sentiment'> {
-  if (sameAmount(mine, ref)) return { delta: 'Same', direction: 'same', sentiment: 'neutral' };
+  if (isSame(mine, ref)) return { delta: 'Same', direction: 'same', sentiment: 'neutral' };
   if (mine < ref) {
     return { delta: fmt(ref - mine) + ' less', direction: 'down', sentiment: lowerIsGood ? 'good' : 'neutral' };
   }
@@ -113,13 +120,13 @@ function feeStat(src: CrossSellCard, c: CrossSellCard): PickStat {
   return {
     label: joining ? 'Joining fee' : 'Annual fee',
     value: isLtf(c) ? 'Free' : inr(mine),
-    ...compare(mine, ref, true, inr),
+    ...compare(mine, ref, true, inr, sameRupees),
   };
 }
 
 function rewardStat(src: CrossSellCard, c: CrossSellCard, d: PickRewardDisplay): PickStat {
   const value = d.cashbackValue ? (d.rewardPrefix === 'Upto' ? 'Upto ' : '') + d.cashbackValue : 'None';
-  return { label: 'Rewards', value, ...compare(c.reward, src.reward, false, inr) };
+  return { label: 'Rewards', value, ...compare(c.reward, src.reward, false, inr, sameRupees) };
 }
 
 function incomeStat(src: CrossSellCard, c: CrossSellCard): PickStat {

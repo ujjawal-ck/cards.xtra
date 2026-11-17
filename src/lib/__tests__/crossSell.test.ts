@@ -167,6 +167,16 @@ describe('crossSell engine', () => {
     expect(p?.delta).toBe('₹1,500 lower joining fee');
   });
 
+  it('(7) lower fee needs a real saving: GST rounding gap of ₹1 does not count, ₹100 does', () => {
+    const s = mk({ alias: 's', bank: 'A', joiningFee: 590, annualFee: 590, reward: 500, earn: 800 });
+    const fee = (alias: string, bank: string, f: number) => mk({ alias, bank, joiningFee: f, annualFee: f, reward: 500, earn: 800 });
+    const cat = [s, fee('f589', 'B', 589), fee('f491', 'C', 491), fee('f490', 'D', 490), fee('f300', 'E', 300), ...fillers];
+    const aliases = lensPicks(getCrossSellV2(s, cat), 'lowerFee').map((p) => p.card.alias);
+    expect(aliases).not.toContain('f589');
+    expect(aliases).not.toContain('f491');
+    expect(aliases).toEqual(expect.arrayContaining(['f490', 'f300']));
+  });
+
   it('(8) show is false with fewer than 2 picks', () => {
     const cat = [src, cheapLtf, ...fillers];
     const r = getCrossSellV2(src, cat);

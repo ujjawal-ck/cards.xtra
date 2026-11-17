@@ -14,7 +14,7 @@
  * 'stack' puts the label above the value instead.
  *
  * The up arrow is the chevron-down glyph turned 180 degrees (no arrow glyph in
- * the icon set); 'same' uses the dot glyph.
+ * the icon set); 'same' shows no icon, only the word.
  */
 import React from 'react';
 import { View } from 'react-native';
@@ -76,12 +76,14 @@ export function StatDelta({
       </Text>
       {delta ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-          <Icon
-            name={direction === 'same' ? 'feat-dot-outline' : 'chevron-down'}
-            size={iconSize[12]}
-            color={tint}
-            style={direction === 'up' ? { transform: [{ rotate: '180deg' }] } : undefined}
-          />
+          {direction === 'same' ? null : (
+            <Icon
+              name="chevron-down"
+              size={iconSize[12]}
+              color={tint}
+              style={direction === 'up' ? { transform: [{ rotate: '180deg' }] } : undefined}
+            />
+          )}
           <Text variant="body12SemiBold" color={tint}>
             {delta}
           </Text>

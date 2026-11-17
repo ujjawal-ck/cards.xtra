@@ -29,6 +29,7 @@ export type CrossSellRailVariant = 'rail' | 'holdout';
 
 const DEFAULTS = {
   eligibility_gate: 'mandatory' as EligibilityGateVariant,
+  // TODO(owner decision): default should be 'holdout' before release; kept 'rail' for review builds.
   // Default is 'rail' (feature on) until a Remote Config experiment says otherwise.
   crosssell_rail: 'rail' as CrossSellRailVariant,
 };

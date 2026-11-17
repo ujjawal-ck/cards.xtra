@@ -35,6 +35,41 @@ describe('presentPick', () => {
     expect(same.stats[0]).toMatchObject({ delta: 'Same', direction: 'same', sentiment: 'neutral' });
   });
 
+  it('fee differences under ₹10 (GST rounding) are Same, ₹10 is shown', () => {
+    const base = mk({ annualFee: 1179 });
+    const d = (fee: number) => presentPick(base, pick(mk({ annualFee: fee }), 'similar'), rw).stats[0];
+    expect(d(1180)).toMatchObject({ value: '₹1,180', delta: 'Same', direction: 'same', sentiment: 'neutral' });
+    expect(d(1188)).toMatchObject({ delta: 'Same', direction: 'same', sentiment: 'neutral' });
+    expect(d(1189)).toMatchObject({ delta: '₹10 more', direction: 'up', sentiment: 'neutral' });
+    expect(d(1169)).toMatchObject({ delta: '₹10 less', direction: 'down', sentiment: 'good' });
+    expect(d(1170)).toMatchObject({ delta: 'Same', direction: 'same' });
+  });
+
+  it('joining-fee fallback and Rewards use the same ₹10 threshold', () => {
+    const s = mk({ annualFee: 0, joiningFee: 500, reward: 500 });
+    const j = (fee: number) => presentPick(s, pick(mk({ annualFee: 0, joiningFee: fee, reward: 509 }), 'similar'), rw).stats;
+    expect(j(509)[0]).toMatchObject({ label: 'Joining fee', delta: 'Same', direction: 'same' });
+    expect(j(510)[0]).toMatchObject({ delta: '₹10 more', direction: 'up' });
+    expect(j(509)[1]).toMatchObject({ delta: 'Same', direction: 'same', sentiment: 'neutral' });
+    const r10 = presentPick(s, pick(mk({ reward: 510 }), 'similar'), rw).stats[1];
+    expect(r10).toMatchObject({ delta: '₹10 more', direction: 'up', sentiment: 'good' });
+    const r10less = presentPick(s, pick(mk({ reward: 490 }), 'similar'), rw).stats[1];
+    expect(r10less).toMatchObject({ delta: '₹10 less', direction: 'down', sentiment: 'neutral' });
+  });
+
+  it('lowerFee band: annual diff under ₹10 falls to joining fee, then to "Similar fee"', () => {
+    const s = mk({ annualFee: 1180, joiningFee: 1180 });
+    const a = presentPick(s, pick(mk({ annualFee: 1175, joiningFee: 500 }), 'lowerFee'), rw);
+    expect(a.bandAmount).toBe('₹680');
+    expect(a.bandText).toBe('lower joining fee');
+    const b = presentPick(s, pick(mk({ annualFee: 1171, joiningFee: 1175 }), 'lowerFee'), rw);
+    expect(b.bandAmount).toBeUndefined();
+    expect(b.bandText).toBe('Similar fee');
+    const edge = presentPick(s, pick(mk({ annualFee: 1170, joiningFee: 1175 }), 'lowerFee'), rw);
+    expect(edge.bandAmount).toBe('₹10');
+    expect(edge.bandText).toBe('less a year');
+  });
+
   it('lifetime free: caption only, value Free', () => {
     const v = presentPick(src, pick(mk({ annualFee: 0, joiningFee: 0 }), 'lowerFee'), rw);
     expect(v.bandText).toBe('Lifetime free');

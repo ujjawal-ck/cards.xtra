@@ -46,6 +46,7 @@ export interface CrossSellConfig {
   gst: number; // fees are GST-inclusive; bands use fee / gst
   profileFrom: number; // viewed cards (incl. the tapped one) needed to build a profile
   minRewardGain: number; // ₹ more Rewards for the "More rewards" lens
+  minFeeGain: number; // ₹ cheaper than the tapped card for the "Lower fee" lens (GST rounding makes equal fees differ by ₹1)
   feeTolerance: number; // "More rewards" may cost up to this x the tapped card's fee
   minNet: number;
   rankBy: 'reward' | 'net';
@@ -60,6 +61,7 @@ export const CONFIG: CrossSellConfig = {
   gst: 1.18,
   profileFrom: 2,
   minRewardGain: 200,
+  minFeeGain: 100,
   feeTolerance: 1.05,
   minNet: 0,
   rankBy: 'reward',
@@ -246,7 +248,7 @@ function lensDefs(
       label: 'Lower fee',
       tone: 'success',
       applies: !ltf,
-      filter: (c) => cost(c) < cost(src) && bandIdx(c) >= sb - 2,
+      filter: (c) => cost(c) <= cost(src) - cfg.minFeeGain && bandIdx(c) >= sb - 2,
       // One band down first: a real saving on a card that still compares.
       sort: (a, b) =>
         bucket(b) - bucket(a) ||
