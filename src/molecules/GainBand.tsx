@@ -7,9 +7,12 @@
  *
  * Edge to edge, one line. With `amount`: the amount in body16SemiBold then `text`
  * in body12Regular ("₹1,180" + "less a year"). Without: `text` in body14SemiBold.
- * The text may shrink (adjustsFontSizeToFit, floor 0.75) but is never cut.
- * `viewed` switches to the gray tone and adds a check icon + "Viewed" at the
- * right end; the gain text is not prefixed.
+ * The amount is never shrunk or cut. Only `text` can change: normally it may
+ * shrink (adjustsFontSizeToFit, floor 0.85) and, if it still does not fit,
+ * ends with "…". `viewed` switches to the gray tone and adds a check icon +
+ * "Viewed" at the right end (full size, never shrunk). In that state `text`
+ * does not shrink: it keeps its normal size on one line and ends with "…"
+ * when too long. The gain text is not prefixed.
  *
  * Flat fills (no gradient) so the band reads edge to edge:
  *   success / brand / info / purple / gray → colors.tones[tone].bg + .text
@@ -32,7 +35,7 @@ export interface GainBandProps {
   viewed?: boolean;
 }
 
-const SHRINK_FLOOR = 0.75;
+const SHRINK_FLOOR = 0.85;
 
 export function GainBand({ tone, icon, text, amount, viewed = false }: GainBandProps) {
   const t = colors.tones[viewed ? 'gray' : tone];
@@ -48,27 +51,26 @@ export function GainBand({ tone, icon, text, amount, viewed = false }: GainBandP
       }}
     >
       <Icon name={icon} size={iconSize[16]} color={t.text} />
-      <Text
-        variant={amount ? 'body12Regular' : 'body14SemiBold'}
-        color={t.text}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={SHRINK_FLOOR}
-        style={{ flex: 1 }}
-      >
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing[4], minWidth: 0 }}>
         {amount ? (
-          <>
-            <Text variant="body16SemiBold" color={t.text}>
-              {amount}
-            </Text>
-            {` ${text}`}
-          </>
-        ) : (
-          text
-        )}
-      </Text>
+          <Text variant="body16SemiBold" color={t.text} numberOfLines={1} style={{ flexShrink: 0 }}>
+            {amount}
+          </Text>
+        ) : null}
+        <Text
+          variant={amount ? 'body12Regular' : 'body14SemiBold'}
+          color={t.text}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          adjustsFontSizeToFit={!viewed}
+          minimumFontScale={viewed ? undefined : SHRINK_FLOOR}
+          style={{ flexShrink: 1 }}
+        >
+          {text}
+        </Text>
+      </View>
       {viewed ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2], flexShrink: 0 }}>
           <Icon name="check-outline" size={iconSize[16]} color={t.text} />
           <Text variant="body12SemiBold" color={t.text}>
             Viewed
