@@ -31,6 +31,7 @@ import {
 } from '../tokens';
 import { Text, Tag, Button } from '../atoms';
 import type { IconName } from '../atoms';
+import type { CrossSellCard } from '../lib/crossSell';
 
 // Card placeholder image dimensions. These are content-image sizes (not
 // theme tokens), so they live here as named consts with a clear name.
@@ -141,6 +142,9 @@ export interface CardModel {
   detail?: CardDetail;
   /** Fields the Home filters match against. Present on API-mapped cards. */
   filterMeta?: CardFilterMeta;
+  /** Engine input for the Home cross-sell rail (src/lib/crossSell.ts).
+   *  Absent when the card cannot be compared (no alias / unknown fee). */
+  crossSell?: CrossSellCard;
   /** CashKaro store id (BankKaro `ck_store_id`) — the click-out tracking id and
    *  the key for the CashKaro reward lookup. */
   cashkaroStoreId?: number;

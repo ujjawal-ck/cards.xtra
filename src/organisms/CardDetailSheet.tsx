@@ -200,6 +200,9 @@ export interface CardDetailSheetProps {
    *  CTA) is tapped — the screen presents the EligibilityCheckerSheet
    *  prefilled so the user can change or clear their details. */
   onEditEligibility?: () => void;
+  /** Fires once the sheet has fully closed (swipe down, close button, or a
+   *  programmatic dismiss). Used by Home for the cross-sell rail. */
+  onDismiss?: () => void;
 }
 
 // "Upto Rs2,500 Cashback" -> { prefix: "Upto", value: "Rs2,500 Cashback" }
@@ -2239,7 +2242,7 @@ function FloatingCardRail({
 const CardDetailSheetIOS = forwardRef<
   BottomSheetModal,
   CardDetailSheetProps
->(({ card, cards, initialCardId, index = 0, onActiveCardChange, recommended, eligibilityDefaults, eligibleAliases, onEligibilityChecked, onShowResultSheet, onApply, onRecommendedPress, onLearnHow, onViewAllBenefits, onSharePress, onEditEligibility }, ref) => {
+>(({ card, cards, initialCardId, index = 0, onActiveCardChange, recommended, eligibilityDefaults, eligibleAliases, onEligibilityChecked, onShowResultSheet, onApply, onRecommendedPress, onLearnHow, onViewAllBenefits, onSharePress, onEditEligibility, onDismiss }, ref) => {
   // Two-stage sheet (Blinkit / Zomato style):
   //   index 0 = STAGE 1 — 75% partial peek (floating card, scrim around it).
   //   index 1 = STAGE 2 — 100% full page (flush, top corners only).
@@ -2473,6 +2476,7 @@ const CardDetailSheetIOS = forwardRef<
       snapPoints={snapPoints}
       onChange={handleSheetChange}
       onAnimate={handleAnimate}
+      onDismiss={onDismiss}
       animationConfigs={sheetAnimationConfigs}
       animatedIndex={animatedIndex}
       animatedPosition={animatedPosition}

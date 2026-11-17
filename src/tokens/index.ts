@@ -10,4 +10,6 @@ export { typography, fontFamily, fontSize, letterSpacing } from './typography';
 export { gradients } from './gradients';
 export { elevation } from './elevation';
 export { opacity, alpha } from './opacity';
-
+// DS-ADD(ds-expansion-1) start: motion tokens
+export { motion } from './motion';
+// DS-ADD(ds-expansion-1) end

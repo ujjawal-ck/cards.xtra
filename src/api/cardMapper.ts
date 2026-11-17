@@ -25,6 +25,8 @@ import type {
 import type { IconName } from '../atoms';
 import { cardTrackingUrl } from './cashkaro';
 import type { CkRate } from './cardRates';
+import type { CrossSellCard } from '../lib/crossSell';
+import { CROSS_SELL_CASHBACK_ALIASES } from '../lib/crossSellCashbackAliases';
 
 /** Resolved bank metadata for one bank_id (from init-bundle `bank_data`). */
 export interface BankInfo {
@@ -381,6 +383,70 @@ export function selectTileBenefits<T extends { tagId?: number }>(
   return picked;
 }
 
+/** Defensive number: "1,200" → 1200; "N/A", "", null, negatives → 0. */
+function safeNum(raw: unknown): number {
+  if (typeof raw === 'number') return isFinite(raw) && raw > 0 ? raw : 0;
+  if (typeof raw !== 'string') return 0;
+  const n = Number(raw.replace(/[^\d.]/g, ''));
+  return isFinite(n) && n > 0 ? n : 0;
+}
+
+/** ₹ the user is shown as Rewards: the CashKaro ₹ rate, else the commission
+ *  (same fallback as the badge). 0 when none, or when the rate is a percent. */
+function crossSellReward(bk: BkCard, ckRate?: CkRate | null): number {
+  if (ckRate && isFinite(ckRate.amount) && ckRate.amount > 0) {
+    return ckRate.unit === 'inr' ? ckRate.amount : 0;
+  }
+  return safeNum(bk.commission) || safeNum(bk.bk_commission);
+}
+
+const CROSS_SELL_NO_PRIORITY = 1_000_000;
+
+/**
+ * Cross-sell engine input (see src/lib/crossSell.ts). undefined when the card
+ * cannot be compared safely: no alias, or a fee that is text / unknown (a missing
+ * fee read as 0 would make the card look lifetime free).
+ */
+function buildCrossSell(
+  bk: BkCard,
+  bankDir: BankDirectory,
+  ckRate?: CkRate | null,
+): CrossSellCard | undefined {
+  if (!bk.card_alias) return undefined;
+  const joining = parseFee(bk.joining_fee_text);
+  const annual = parseFee(bk.annual_fee_text);
+  if (joining.kind === 'text' || annual.kind === 'text') return undefined;
+  // GST-inclusive rounded amount, the same figure the tile shows (feeStat).
+  const fee = (f: ParsedFee) => (f.kind === 'amount' ? Math.round(f.value * (1 + GST_RATE)) : 0);
+  const joiningFee = fee(joining);
+  const annualFee = fee(annual);
+  // Lifetime free only when BOTH fees are explicitly free.
+  if (joiningFee === 0 && annualFee === 0 && !(joining.kind === 'free' && annual.kind === 'free')) {
+    return undefined;
+  }
+  const bankId = bk.bank_id;
+  const bankName =
+    bankId != null ? (bankDir[bankId]?.name ?? FALLBACK_BANK_NAMES[bankId] ?? String(bankId)) : undefined;
+  const priority = bk.priority === '' || bk.priority == null ? NaN : Number(bk.priority);
+  return {
+    id: String(bk.id),
+    alias: bk.card_alias,
+    name: bk.name,
+    // Unknown bank → the card id, so unrelated cards are never merged into "one bank".
+    bank: bankName ?? String(bk.id),
+    rewardType: CROSS_SELL_CASHBACK_ALIASES.has(bk.card_alias) ? 'cashback' : 'rewards',
+    tags: (bk.tags ?? []).map((t) => t?.name).filter((n): n is string => !!n),
+    joiningFee,
+    annualFee,
+    inviteOnly: !!bk.invite_only,
+    reward: crossSellReward(bk, ckRate),
+    earn: safeNum(bk.bk_commission),
+    incomeLpa: safeNum(bk.income_salaried),
+    crif: safeNum(bk.crif),
+    priority: isFinite(priority) ? priority : CROSS_SELL_NO_PRIORITY,
+  };
+}
+
 export function mapBkCardToCardModel(
   bk: BkCard,
   bankDir: BankDirectory = {},
@@ -486,6 +552,7 @@ export function mapBkCardToCardModel(
     inviteOnly: !!bk.invite_only,
     detail: buildDetail(bk),
     filterMeta: buildFilterMeta(bk, bankDir),
+    crossSell: buildCrossSell(bk, bankDir, ckRate),
     cashkaroStoreId: bk.ck_store_id != null ? Number(bk.ck_store_id) : undefined,
     // "Apply Now" routes through CashKaro for attribution when a tracking host
     // is configured: `…/visitretailer/app/<ck_store_id>?id=` (id = the CashKaro

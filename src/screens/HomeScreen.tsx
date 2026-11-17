@@ -58,6 +58,7 @@ import type { CardModel, SearchResultSection } from '../molecules';
 import {
   BottomSheetHeader,
   CardDetailSheet,
+  CrossSellRail,
   ShareSheet,
   type ShareSheetRef,
   HowItWorksSheet,
@@ -104,6 +105,7 @@ import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
 import { useRecentSearches } from '../lib/recentSearches';
 import { getEligibilityGateVariant } from '../experiments';
+import { useCrossSellRail } from './useCrossSellRail';
 import { analytics, Events } from '../analytics';
 import { classifyCardEligibility, type EligibilityBucket } from '../api/eligibility';
 import { haptics, play } from '../lib/haptics';
@@ -441,7 +443,7 @@ export function HomeScreen() {
   // makes the sheet open directly at the requested snap (no partial→full hop)
   // and sidesteps the setState-vs-imperative-call race.
   const [cardSheetPresentSeq, setCardSheetPresentSeq] = useState(0);
-  const openCardSheet = useCallback((card: CardModel | null, idx: number) => {
+  const openCardSheet = useCallback((card: CardModel | null, idx: number, source?: string) => {
     if (card) {
       setSelectedCard(card);
       // Card detail sheet opened — GA4 view_item. (Re-presents on return from
@@ -451,6 +453,7 @@ export function HomeScreen() {
         item_name: card.name,
         item_brand: card.filterMeta?.bankName,
         snap: idx === 1 ? 'full' : 'partial',
+        source,
       });
     }
     setCardSheetIndex(idx);
@@ -1047,7 +1050,7 @@ export function HomeScreen() {
       item_list_name: 'home_cards',
     });
     // Normal taps open the partial (75%) stage.
-    openCardSheet(card, 0);
+    openCardSheet(card, 0, crossSell.onCardOpened(card));
   };
 
   // "View all benefits" leaves the sheet for the All Card Benefits page.
@@ -1059,6 +1062,7 @@ export function HomeScreen() {
         item_name: card.name,
       });
       reopenCardSheetRef.current = true;
+      crossSell.holdVisit();
       sheetRef.current?.dismiss();
       navigation.navigate('AllCardBenefits', {
         alias: card.filterMeta?.cardAlias,
@@ -1089,6 +1093,7 @@ export function HomeScreen() {
   //                        ineligible) and open the matching colored sheet.
   // The sheet's "Continue to Apply" / "Apply Now" then opens the bank page.
   const handleApply = (card: CardModel) => {
+    crossSell.onApplied(card);
     // "Apply Now" tapped (from tile or detail sheet). The actual outbound to
     // the bank fires later in handleResultApply (redirect: true) — or directly
     // here on a repeat apply for a card whose result was already shown once.
@@ -1153,15 +1158,39 @@ export function HomeScreen() {
     []
   );
 
-  const renderTile = (card: CardModel) => (
-    <HomeCardTile
-      key={card.id}
-      card={card}
-      categoryTagIds={appliedFilters.categoryTagIds}
-      onPress={onTilePress}
-      onApply={onTileApply}
-    />
-  );
+  // The cross-sell rail (when open for this card) expands directly under its tile.
+  const renderTile = (card: CardModel) => {
+    const rail = crossSell.rail?.anchorId === card.id ? crossSell.rail : null;
+    return (
+      <View key={card.id} style={rail ? { gap: spacing[12] } : undefined}>
+        <HomeCardTile
+          card={card}
+          categoryTagIds={appliedFilters.categoryTagIds}
+          onPress={onTilePress}
+          onApply={onTileApply}
+        />
+        {rail ? (
+          <CrossSellRail
+            sourceCard={card}
+            result={rail.result}
+            lensKey={rail.lensKey}
+            cardsById={crossSell.cardsById}
+            viewedIds={rail.viewedIds}
+            onCardPress={(pickCard, pick, slot) => {
+              crossSell.onPickTap(pickCard, pick, slot);
+              handleCardPress(pickCard);
+            }}
+            onLensChange={crossSell.selectLens}
+            onCheckEligibility={() => {
+              setApplyPendingCard(null);
+              eligibilityCheckerRef.current?.present();
+            }}
+            onHide={crossSell.hide}
+          />
+        ) : null}
+      </View>
+    );
+  };
 
   // Banks in catalog rank order (the order cards load on Home), de-duped.
   // `image` is the bank's real logo (from the init-bundle bank_data) when the
@@ -1440,6 +1469,10 @@ export function HomeScreen() {
     [grouped, groupedRows, visibleCards]
   );
 
+  // Cross-sell rail: session rules + state. Placed here because it needs the
+  // full catalogue and the list that is actually on screen (pagerCards).
+  const crossSell = useCrossSellRail({ cards, eligibleAliases, listedCards: pagerCards });
+
   // ----- Eligibility result-sheet content (Path B) ------------------
   // Detail-row values for the result mastheads (pincode · income · type),
   // derived from the details the user submitted.
@@ -1554,6 +1587,8 @@ export function HomeScreen() {
         // placeholders, keeping the list height stable so the footer doesn't
         // jump up under the carousel.
         data={categoryFetching ? (CATEGORY_SKELETON_ROWS as any) : listData}
+        // Rows read the cross-sell rail state through renderTile.
+        extraData={crossSell.rail}
         keyExtractor={(item) =>
           'kind' in item
             ? item.kind === 'header'
@@ -2068,7 +2103,8 @@ export function HomeScreen() {
         // Blinkit-style pager: swipe through the list the user was browsing,
         // opening on the tapped card. onActiveCardChange keeps selectedCard
         // (and so Apply / Share / eligibility) in sync as they swipe.
-        cards={pagerCards}
+        cards={crossSell.detailCards(pagerCards)}
+        onDismiss={crossSell.onDetailClosed}
         initialCardId={selectedCard?.id}
         onActiveCardChange={(card) => {
           // Swiping to another card in the sheet is a new card view.
@@ -2079,6 +2115,7 @@ export function HomeScreen() {
               item_brand: card.filterMeta?.bankName,
               source: 'swipe',
             });
+            crossSell.onCardViewed(card);
           }
           setSelectedCard(card);
         }}
@@ -2097,6 +2134,7 @@ export function HomeScreen() {
             item_brand: card.filterMeta?.bankName,
             source: 'recommended',
           });
+          crossSell.onCardViewed(card);
           setSelectedCard(card);
         }}
         // "Learn how it works?" → slide the HowItWorksSheet up over the
@@ -2124,6 +2162,7 @@ export function HomeScreen() {
           // platforms / nav setups where the tab bar sits in a
           // separate z-layer from the Modal.
           setHidden(true);
+          crossSell.holdVisit();
           sheetRef.current?.dismiss();
           shareSheetRef.current?.present();
         }}

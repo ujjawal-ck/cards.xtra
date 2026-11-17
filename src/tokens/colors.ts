@@ -204,6 +204,9 @@ export const colors = {
     default: primitives.saffron[500],
     onColor: primitives.slate[50],
     subtle: primitives.saffron[50],
+    // DS-ADD(ds-figma-1) start: border of CashbackTag (Figma color/cashback/subtle)
+    tagBorder: primitives.saffron[200],
+    // DS-ADD(ds-figma-1) end
   },
   promotional: {
     rubyRed: primitives.rose[500],
@@ -376,6 +379,20 @@ export const colors = {
     border: '#51d0d2',
     text: primitives.amber[700],
   },
+  // DS-ADD(ds-expansion-1) start: colors.data (marks for bars, stacked bars, progress tracks)
+  // Semantic names for existing primitives only. series1..3 are the three
+  // categorical series; positive / negative are gain / cost marks; muted is
+  // "other" or the reference; track is the empty part of a bar.
+  data: {
+    series1: primitives.cobalt[500],
+    series2: primitives.violet[400],
+    series3: primitives.sky[500],
+    positive: primitives.fern[500],
+    negative: primitives.ruby[500],
+    muted: primitives.slate[600],
+    track: primitives.cobalt[50],
+  },
+  // DS-ADD(ds-expansion-1) end
 } as const;
 
 /** Tone names — 9 semantic tone slots exposed by colors.tones. */

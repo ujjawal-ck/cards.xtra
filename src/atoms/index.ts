@@ -70,6 +70,17 @@ export type {
   StatusBadgeSize,
 } from './StatusBadge';
 
+// DS-ADD(ds-expansion-1) start: StatDelta, RankBadge, StepProgress, Skeleton
+export { StatDelta } from './StatDelta';
+export type { StatDeltaProps, StatDeltaDirection, StatDeltaSentiment } from './StatDelta';
+export { RankBadge } from './RankBadge';
+export type { RankBadgeProps } from './RankBadge';
+export { StepProgress } from './StepProgress';
+export type { StepProgressProps } from './StepProgress';
+export { Skeleton } from './Skeleton';
+export type { SkeletonProps } from './Skeleton';
+// DS-ADD(ds-expansion-1) end
+
 export { Chip } from './Chip';
 export type { ChipProps, ChipType, ChipState, ChipSize } from './Chip';
 
@@ -126,3 +137,21 @@ export { Rating } from './Rating';
 export type { RatingProps } from './Rating';
 
 export { RemoteImage } from './RemoteImage';
+
+// DS-ADD(ds-figma-1) start: CashbackTag, CardTypeTag
+export { CashbackTag } from './CashbackTag';
+export type { CashbackTagProps } from './CashbackTag';
+export { CardTypeTag } from './CardTypeTag';
+export type { CardTypeTagProps } from './CardTypeTag';
+// DS-ADD(ds-figma-1) end
+
+// DS-ADD(ds-figma-1) start: WalletTag, NumberBadge, TestimonialSavingsTag, StepIndicator
+export { WalletTag } from './WalletTag';
+export type { WalletTagProps } from './WalletTag';
+export { NumberBadge } from './NumberBadge';
+export type { NumberBadgeProps, NumberBadgeTone } from './NumberBadge';
+export { TestimonialSavingsTag } from './TestimonialSavingsTag';
+export type { TestimonialSavingsTagProps } from './TestimonialSavingsTag';
+export { StepIndicator } from './StepIndicator';
+export type { StepIndicatorProps, StepIndicatorKind } from './StepIndicator';
+// DS-ADD(ds-figma-1) end

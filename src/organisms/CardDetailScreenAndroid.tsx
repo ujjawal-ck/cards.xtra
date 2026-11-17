@@ -935,6 +935,7 @@ export const CardDetailScreenAndroid = forwardRef<
       onViewAllBenefits,
       onSharePress,
       onEditEligibility,
+      onDismiss,
     },
     ref
   ) => {
@@ -1078,6 +1079,7 @@ export const CardDetailScreenAndroid = forwardRef<
       <BottomSheetModal
         ref={ref}
         snapPoints={snapPoints}
+        onDismiss={onDismiss}
         animationConfigs={sheetAnimationConfigs}
         animatedIndex={animatedIndex}
         index={0}

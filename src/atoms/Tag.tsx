@@ -53,6 +53,9 @@ import {
   gradients,
 } from '../tokens';
 import type { ToneName } from '../tokens';
+// DS-ADD(ds-figma-1) start: status prop support
+import { STATUS_TAG_COLORS, STATUS_TAG_STYLE, type StatusTagTone } from '../lib/tagVariants';
+// DS-ADD(ds-figma-1) end
 
 export type TagSize = 'xxs' | 'xs' | 'sm' | 'md';
 export type TagAppearance = 'default' | 'subtle' | 'gradient';
@@ -72,6 +75,9 @@ export interface TagProps {
   appearance?: TagAppearance;
   icon?: TagIconOption;
   tone?: ToneName;
+  // DS-ADD(ds-figma-1) start: Figma status-tag. Sets tone + dot + pill from one word.
+  status?: StatusTagTone;
+  // DS-ADD(ds-figma-1) end
   iconName?: IconName;
   onPress?: () => void;
   onClose?: () => void;
@@ -127,6 +133,9 @@ export function Tag({
   appearance = 'default',
   icon = 'none',
   tone = 'brand',
+  // DS-ADD(ds-figma-1) start: status
+  status,
+  // DS-ADD(ds-figma-1) end
   iconName,
   onPress,
   onClose,
@@ -136,6 +145,18 @@ export function Tag({
   iconPx,
   style,
 }: TagProps) {
+  // DS-ADD(ds-figma-1) start: status-tag from Figma values: radius, hairline border, min height 24, padding 4 / 8, dot, 10 px label. Not a pill.
+  if (status) {
+    const c = STATUS_TAG_COLORS[status];
+    size = 'xxs';
+    icon = 'dot';
+    pill = false;
+    bgColor = c.bg;
+    borderColor = c.border;
+    labelColor = c.text;
+    style = [STATUS_TAG_STYLE, style];
+  }
+  // DS-ADD(ds-figma-1) end
   const config = SIZE_CONFIG[size];
   const palette = colors.tones[tone];
   const fg = labelColor ?? palette.text;

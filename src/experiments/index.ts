@@ -24,8 +24,13 @@ import { analytics } from '../analytics';
 /** Eligibility before Apply: mandatory checker (control) or skippable. */
 export type EligibilityGateVariant = 'mandatory' | 'skippable';
 
+/** Cross-sell rail under a Home tile after the detail closes: shown ('rail') or never ('holdout'). */
+export type CrossSellRailVariant = 'rail' | 'holdout';
+
 const DEFAULTS = {
   eligibility_gate: 'mandatory' as EligibilityGateVariant,
+  // Default is 'rail' (feature on) until a Remote Config experiment says otherwise.
+  crosssell_rail: 'rail' as CrossSellRailVariant,
 };
 
 type FlagName = keyof typeof DEFAULTS;
@@ -33,6 +38,7 @@ type FlagName = keyof typeof DEFAULTS;
 // Local override for QA, e.g. EXPO_PUBLIC_FORCE_ELIGIBILITY_GATE=skippable.
 const OVERRIDES: Partial<Record<FlagName, string | undefined>> = {
   eligibility_gate: process.env.EXPO_PUBLIC_FORCE_ELIGIBILITY_GATE,
+  crosssell_rail: process.env.EXPO_PUBLIC_FORCE_CROSSSELL_RAIL,
 };
 
 const isNativeBuild = Constants.executionEnvironment !== 'storeClient';
@@ -89,4 +95,9 @@ function read(flag: FlagName, allowed: readonly string[]): string {
 /** Which Apply flow this user gets. Frozen for the session after first read. */
 export function getEligibilityGateVariant(): EligibilityGateVariant {
   return read('eligibility_gate', ['mandatory', 'skippable']) as EligibilityGateVariant;
+}
+
+/** Whether this user gets the cross-sell rail. Frozen for the session after first read. */
+export function getCrossSellRailVariant(): CrossSellRailVariant {
+  return read('crosssell_rail', ['rail', 'holdout']) as CrossSellRailVariant;
 }

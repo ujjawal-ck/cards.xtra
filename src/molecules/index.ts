@@ -28,6 +28,21 @@ export type {
   PartnerPlaceholderColor,
 } from './PartnerCard';
 
+// DS-ADD(ds-expansion-1) start: GainBand, CompareCard, RankedCardRow, AmountInput, BarBreakdown, StackedBar
+export { GainBand } from './GainBand';
+export type { GainBandProps, GainBandTone } from './GainBand';
+export { CompareCard, COMPARE_CARD_W } from './CompareCard';
+export type { CompareCardProps, CompareCardStat } from './CompareCard';
+export { RankedCardRow } from './RankedCardRow';
+export type { RankedCardRowProps } from './RankedCardRow';
+export { AmountInput } from './AmountInput';
+export type { AmountInputProps } from './AmountInput';
+export { BarBreakdown } from './BarBreakdown';
+export type { BarBreakdownProps, BarBreakdownItem } from './BarBreakdown';
+export { StackedBar } from './StackedBar';
+export type { StackedBarProps, StackedBarSegment } from './StackedBar';
+// DS-ADD(ds-expansion-1) end
+
 export { FilterRow } from './FilterRow';
 export type { FilterRowProps } from './FilterRow';
 
@@ -116,3 +131,21 @@ export { HeroVideo } from './HeroVideo';
 export type { HeroVideoProps } from './HeroVideo';
 
 export { OfflineBanner } from './OfflineBanner';
+
+// DS-ADD(ds-figma-1) start: BreakdownTable, SpendCard, PodiumCompare, BigAmountCard
+export { BreakdownTable } from './BreakdownTable';
+export type { BreakdownTableProps } from './BreakdownTable';
+export { SpendCard } from './SpendCard';
+export type { SpendCardProps } from './SpendCard';
+export { PodiumCompare } from './PodiumCompare';
+export type { PodiumCompareProps, PodiumEntry } from './PodiumCompare';
+export { BigAmountCard } from './BigAmountCard';
+export type { BigAmountCardProps } from './BigAmountCard';
+// DS-ADD(ds-figma-1) end
+
+// DS-ADD(ds-figma-1) start: CompareTable, Stepper
+export { CompareTable } from './CompareTable';
+export type { CompareTableProps, CompareTableColumn, CompareTableRow } from './CompareTable';
+export { Stepper } from './Stepper';
+export type { StepperProps, StepperStep } from './Stepper';
+// DS-ADD(ds-figma-1) end

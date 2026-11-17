@@ -135,6 +135,9 @@ import {
   AMAZON_TC_BULLETS,
 } from '../data/amazonOffers';
 import type { RootStackParamList } from '../navigation/types';
+// DS-ADD(ds-expansion-1) start: gallery section for the batch
+import { DsAdditionsGallery } from './DsAdditionsGallery';
+// DS-ADD(ds-expansion-1) end
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'FoundationCheck'>;
 
@@ -4013,6 +4016,12 @@ export function FoundationCheck() {
               })}
             </View>
           </View>
+
+          {/* DS-ADD(ds-expansion-1) start: DS additions section */}
+          <View style={{ marginTop: spacing[32] }}>
+            <DsAdditionsGallery />
+          </View>
+          {/* DS-ADD(ds-expansion-1) end */}
         </ScrollView>
       </SafeAreaView>
 

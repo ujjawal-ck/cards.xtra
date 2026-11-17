@@ -7,6 +7,9 @@ export type { CardDetailSheetProps, EligibilityOutcome } from './CardDetailSheet
 export { CardArt, markCardImagesDecoded } from './CardArt';
 export type { CardArtProps } from './CardArt';
 
+export { CrossSellRail } from './CrossSellRail';
+export type { CrossSellRailProps } from './CrossSellRail';
+
 export { ShareSheet } from './ShareSheet';
 export type { ShareSheetProps, ShareSheetRef } from './ShareSheet';
 
@@ -318,3 +321,7 @@ export type { ScreenStateProps } from './ScreenState';
 export { GuestPrompt } from './GuestPrompt';
 export { EarnLoginSheet } from './EarnLoginSheet';
 export type { EarnLoginSheetProps, EarnLoginSheetRef, EarnLoginKind } from './EarnLoginSheet';
+// DS-ADD(ds-expansion-1) start: QuizStep
+export { QuizStep } from './QuizStep';
+export type { QuizStepProps } from './QuizStep';
+// DS-ADD(ds-expansion-1) end
