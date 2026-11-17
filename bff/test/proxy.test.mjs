@@ -39,9 +39,12 @@ const tokenReply = (url) =>
       ? { body: { data: { jwttoken: 'bk-jwt' } } }
       : null;
 
-const app = (script) => {
+const app = (script, extraConfig = {}) => {
   const f = fakeFetch(script);
-  return { handle: createApp({ config: CONFIG, fetchImpl: f.impl, log: () => {} }), calls: f.calls };
+  return {
+    handle: createApp({ config: { ...CONFIG, ...extraConfig }, fetchImpl: f.impl, log: () => {} }),
+    calls: f.calls,
+  };
 };
 
 const req = (path, init = {}) => new Request(`http://bff.test/api/handler?__path=${path}`, init);
@@ -91,6 +94,36 @@ test('signupV1 ip_address is set by the server from x-forwarded-for', async () =
   const up = calls.find((c) => c.url.includes('/signupV1'));
   const sent = JSON.parse(Buffer.from(up.init.body).toString('utf8'));
   assert.equal(sent.data.attributes.ip_address, '49.36.1.2');
+});
+
+test('signupV1 password is set by the server when SIGNUP_PASSWORD is configured', async () => {
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 201 }, { signupPassword: 'static-pw' });
+  const body = JSON.stringify({ data: { type: 'auth', attributes: { password: 'from-app' } } });
+  await handle(
+    req('/ck/signupV1&device=App', {
+      method: 'POST',
+      headers: { 'content-type': 'application/vnd.api+json' },
+      body,
+    }),
+  );
+  const up = calls.find((c) => c.url.includes('/signupV1'));
+  const sent = JSON.parse(Buffer.from(up.init.body).toString('utf8'));
+  assert.equal(sent.data.attributes.password, 'static-pw');
+});
+
+test('signupV1 keeps the app password when SIGNUP_PASSWORD is not set', async () => {
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 201 });
+  const body = JSON.stringify({ data: { type: 'auth', attributes: { password: 'from-app' } } });
+  await handle(
+    req('/ck/signupV1&device=App', {
+      method: 'POST',
+      headers: { 'content-type': 'application/vnd.api+json' },
+      body,
+    }),
+  );
+  const up = calls.find((c) => c.url.includes('/signupV1'));
+  const sent = JSON.parse(Buffer.from(up.init.body).toString('utf8'));
+  assert.equal(sent.data.attributes.password, 'from-app');
 });
 
 test('paths outside the allowlist get 404 and never reach upstream', async () => {

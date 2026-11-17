@@ -48,6 +48,8 @@ export function readConfig(env = process.env) {
     ckBasicPass: env.CK_BASIC_PASS || '',
     bkBaseUrl: (env.BK_BASE_URL || '').replace(/\/+$/, ''),
     bkPartnerKey: env.BK_PARTNER_KEY || '',
+    // One password for every new account (D16). Empty = keep what the app sent.
+    signupPassword: env.SIGNUP_PASSWORD || '',
   };
 }
 
@@ -128,6 +130,7 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
       const json = parseJson(body);
       if (json?.data?.attributes) {
         json.data.attributes.ip_address = ip;
+        if (config.signupPassword) json.data.attributes.password = config.signupPassword;
         payload = Buffer.from(JSON.stringify(json));
       }
     }

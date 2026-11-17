@@ -33,6 +33,15 @@ export function eccentricName(): string {
   return `${pick(ADJECTIVES)} ${pick(NOUNS)}`;
 }
 
+/**
+ * Placeholder signup email keyed to the phone number (never shown to the
+ * user). /signupV1 requires an email; the app asks for the name only (D16).
+ * Same format the app sent before D15, which the backend accepted.
+ */
+export function dummyEmail(phone: string): string {
+  return `cardsxtra.${phone.replace(/\D/g, '')}@cashkaro-demo.app`;
+}
+
 /** Throwaway password for signup (OTP-only app — never typed by the user). */
 export function randomPassword(): string {
   const chars =

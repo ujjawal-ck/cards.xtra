@@ -14,7 +14,7 @@
  * The sheet is a gorhom BottomSheetModal mounted directly here (the pattern
  * that registers reliably with BottomSheetModalProvider — see the history in
  * docs/decision.md). Steps inside are unchanged from the old onboarding
- * sheet: phone → OTP, plus name + email when the number is new to CashKaro.
+ * sheet: phone → OTP, plus a name when the number is new to CashKaro (D16).
  *
  * Mount inside BottomSheetModalProvider and NavigationContainer (App.js),
  * around RootNavigator, and pass the container ref.
@@ -56,8 +56,7 @@ import { markOnboarded } from './tokenStore';
 import { login, loginOtp, signup, signupOtp } from '../api/cashkaro';
 import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
-import { randomPassword } from '../lib/eccentricName';
-import { isValidContact } from '../screens/editContact';
+import { dummyEmail, randomPassword } from '../lib/eccentricName';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
 
 export interface LoginSuccess {
@@ -160,16 +159,11 @@ export function LoginSheetProvider({
   // Login is tried first; a number not registered with CashKaro (code 2010)
   // falls back to the signup OTP, so first-timers create an account here.
   const [isSignup, setIsSignup] = useState(false);
-  const [signupEmail, setSignupEmail] = useState('');
-  const [emailTouched, setEmailTouched] = useState(false);
-  const signupEmailValid = isValidContact('email', signupEmail);
   const [signupName, setSignupName] = useState('');
   // Two characters or more, with a letter (Latin or Devanagari). No Unicode
   // property escapes (Hermes).
   const signupNameValid =
     /[A-Za-zÀ-ɏऀ-ॿ]/.test(signupName) && signupName.trim().length >= 2;
-  const signupDetailsValid = signupNameValid && signupEmailValid;
-  const showEmailError = emailTouched && signupEmail.trim().length > 0 && !signupEmailValid;
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [requesting, setRequesting] = useState(false);
@@ -278,20 +272,20 @@ export function LoginSheetProvider({
       setError('Something went wrong. Please request a new OTP.');
       return;
     }
-    if (isSignup && !signupDetailsValid) {
-      setEmailTouched(true);
-      setError('Enter your name and email to create your account.');
+    if (isSignup && !signupNameValid) {
+      setError('Enter your name to create your account.');
       return;
     }
     setVerifying(true);
     setError(null);
     try {
-      // New number → create the account (the password is generated: login is
-      // OTP-only, nobody types it). Existing number → plain login.
+      // New number → create the account (email and password are generated:
+      // login is OTP-only, nobody types them; see D16). Existing number →
+      // plain login.
       const session = isSignup
         ? await signup({
             fullname: signupName.trim(),
-            email: signupEmail.trim(),
+            email: dummyEmail(phone),
             password: randomPassword(),
             mobileNumber: phone,
             otpGuid,
@@ -330,9 +324,8 @@ export function LoginSheetProvider({
     otpGuid,
     deviceId,
     isSignup,
-    signupDetailsValid,
+    signupNameValid,
     signupName,
-    signupEmail,
     phone,
     otp,
     signIn,
@@ -368,9 +361,7 @@ export function LoginSheetProvider({
     setOtp('');
     setOtpGuid(undefined);
     setIsSignup(false);
-    setSignupEmail('');
     setSignupName('');
-    setEmailTouched(false);
     setPhone('');
     setError(null);
     setSecondsLeft(RESEND_SECONDS);
@@ -433,10 +424,10 @@ export function LoginSheetProvider({
               <View style={panelStyle}>
                 <View style={{ width: '100%', alignItems: 'center', gap: spacing[4] }}>
                   <Text variant="heading24SemiBold" color={colors.text.primary} align="center">
-                    Log in or Sign up
+                    Log in or sign up
                   </Text>
                   <Text variant="body14Regular" color={colors.text.secondary} align="center">
-                    We will send an OTP to verify
+                    Enter your mobile number. We will text you a 6-digit OTP.
                   </Text>
                 </View>
 
@@ -501,10 +492,10 @@ export function LoginSheetProvider({
               <View style={panelStyle}>
                 <View style={{ width: '100%', alignItems: 'center', gap: spacing[4] }}>
                   <Text variant="heading24SemiBold" color={colors.text.primary} align="center">
-                    Enter OTP
+                    {isSignup ? 'Verify and finish' : 'Enter the OTP'}
                   </Text>
                   <Text variant="body14Regular" color={colors.text.secondary} align="center">
-                    OTP sent on +91 {phoneFormatted}
+                    OTP sent to +91 {phoneFormatted}
                     {'  '}
                     <Text variant="body14SemiBold" color={colors.text.link} onPress={goToPhone}>
                       Change
@@ -541,11 +532,11 @@ export function LoginSheetProvider({
                 {isSignup ? (
                   <View style={{ width: '100%', gap: spacing[8] }}>
                     <Text variant="body12Regular" color={colors.text.secondary}>
-                      New to CashKaro? Add your name and email to create your account.
+                      New here? Add your name to create your account.
                     </Text>
                     <Input
-                      label="Full name"
-                      placeholder="Your name"
+                      label="Your name"
+                      placeholder="As on your card"
                       autoCapitalize="words"
                       autoCorrect={false}
                       autoComplete="name"
@@ -556,34 +547,17 @@ export function LoginSheetProvider({
                         if (error) setError(null);
                       }}
                     />
-                    <Input
-                      label="Email"
-                      placeholder="you@example.com"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                      textContentType="emailAddress"
-                      value={signupEmail}
-                      onChangeText={(t) => {
-                        setSignupEmail(t);
-                        if (error) setError(null);
-                      }}
-                      onBlur={() => setEmailTouched(true)}
-                      state={showEmailError ? 'error' : undefined}
-                      hint={showEmailError ? 'Enter a valid email' : undefined}
-                    />
                   </View>
                 ) : null}
 
                 <Button
-                  label={isSignup ? 'Verify & create account' : 'Verify OTP'}
+                  label={isSignup ? 'Verify & create account' : 'Verify & log in'}
                   variant="solid"
                   tone="second"
                   size={52}
                   fullWidth
                   loading={verifying}
-                  disabled={otp.length !== OTP_LENGTH || verifying || (isSignup && !signupDetailsValid)}
+                  disabled={otp.length !== OTP_LENGTH || verifying || (isSignup && !signupNameValid)}
                   onPress={handleVerifyOtp}
                 />
               </View>

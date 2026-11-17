@@ -36,6 +36,15 @@ The launcher icon, Android adaptive icon, favicon and the first (native) splash 
 
 - `android/` is generated (gitignored); the source of truth is `app.json` + `assets/*.png`. Regenerate with `CI=1 npx expo prebuild --platform android --no-install`.
 
+## D16. Signup asks for the name only; email and password are generated
+2026-11-17 [claude] · user request. Partly replaces D15.
+
+`/signupV1` needs `fullname`, `email` and `password`. New numbers now enter a name on the OTP step. The app generates the email (`cardsxtra.<phone>@cashkaro-demo.app`, the format used before D15) and, when the BFF has `SIGNUP_PASSWORD`, one static password for every new account. The BFF sets the password on `/signupV1`, so it is never in the app bundle. Without that variable, the app's random password goes through. Nobody types either. The flow is two steps: phone, then OTP (plus a name for a new number). The page copy was shortened.
+
+- Static password (user choice, 2026-11-17; advised against): a shared password plus a guessable email lets anyone log in as any new user if password login is enabled for our key. The risk stays until the backend disables password login for this key or the password is made random per user (unset `SIGNUP_PASSWORD`).
+- Cost: new accounts carry a placeholder email, so email OTP login, password reset and email notices do not reach the user. The domain `cashkaro-demo.app` is not confirmed as CashKaro's. Not tested against the live backend in this session.
+- Revisit when: the backend confirms `signupV1` accepts this email, or collects email later (after the first apply or withdrawal).
+
 ## D15. Ask new users for their real name and email at signup
 2026-11-09 · `214683c`, `c0bab4d`
 
