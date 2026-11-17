@@ -52,6 +52,8 @@ export interface CashbackNotConfirmedSheetProps {
   /** Balance is positive but under the payout minimum → explain that
    *  instead of the pending / zero-state copy. */
   belowMinimum?: { balance: string; minimum: string };
+  /** Which earning type was tapped. Default 'cashback'. */
+  earningType?: 'cashback' | 'rewards';
 }
 
 // Illustration placeholder — the Figma uses a 156-px 3D stopwatch+cash
@@ -64,7 +66,11 @@ const EMOJI_SIZE = 96;
 export const CashbackNotConfirmedSheet = forwardRef<
   BottomSheetModalRef,
   CashbackNotConfirmedSheetProps
->(function CashbackNotConfirmedSheet({ pendingAmount = '₹0', belowMinimum }, ref) {
+>(function CashbackNotConfirmedSheet(
+  { pendingAmount = '₹0', belowMinimum, earningType = 'cashback' },
+  ref,
+) {
+  const noun = earningType === 'rewards' ? 'Rewards' : 'Cashback';
   // With nothing pending either, "You have ₹0 pending… once confirmed, they
   // can be withdrawn" made no sense — show a plain "nothing yet" message.
   const hasPending = Number(pendingAmount.replace(/[^\d.]/g, '')) > 0;
@@ -139,8 +145,8 @@ export const CashbackNotConfirmedSheet = forwardRef<
                 {belowMinimum
                   ? `Minimum ${belowMinimum.minimum} to withdraw`
                   : hasPending
-                    ? 'Cashback Not Confirmed'
-                    : 'No Cashback Yet!'}
+                    ? `${noun} Not Confirmed`
+                    : `No ${noun} Yet!`}
               </Text>
               <Text
                 variant="body16Regular"
@@ -151,6 +157,8 @@ export const CashbackNotConfirmedSheet = forwardRef<
                   ? `You have ${belowMinimum.balance} ready to withdraw.`
                   : hasPending
                   ? `You have ${pendingAmount} pending in your Cards.xtra account.`
+                  : earningType === 'rewards'
+                  ? "You haven't earned rewards via Cards.xtra so far. Apply for a card & earn rewards today! 😍"
                   : "You haven't shopped via Cards.xtra so far. Shop & earn Cashback today! 😍"}
               </Text>
             </View>
@@ -163,6 +171,8 @@ export const CashbackNotConfirmedSheet = forwardRef<
                 ? `You can withdraw once your balance reaches ${belowMinimum.minimum}. Keep shopping to earn more!`
                 : hasPending
                 ? 'Once confirmed, they can be withdrawn. Until then, grab deals & earn more!'
+                : earningType === 'rewards'
+                ? 'Note - Rewards show here once your card application is tracked'
                 : 'Note - If shopped, Cashback tracks within 5mins to 48 hrs'}
             </Text>
           </View>

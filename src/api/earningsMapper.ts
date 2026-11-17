@@ -4,8 +4,8 @@
  * Confirmed shape (staging): `data` is an ARRAY of one `user` row; amounts are
  * decimal strings ("22991.60"). Fields used:
  *   total_earned · total_cashback_earned · total_rewards_earned ·
- *   confirmed_cashback · pending_cashback   (also: paid_cashback,
- *   payment_threshold, firstname/email — not shown here).
+ *   confirmed/pending/paid_cashback · confirmed/pending/paid_rewards
+ *   (also: payment_threshold, firstname/email — not shown here).
  */
 import { formatINR } from '../lib/money';
 interface EarningsValues {
@@ -21,14 +21,29 @@ interface EarningsValues {
   pending: string;
   /** "₹0.0" — already paid out to the user. */
   paid: string;
-  /** "₹1500.0" — confirmed cashback + rewards, the total available to
-   *  withdraw on the Request Payment screen ("Cashback + Reward"). */
+  /** "₹1500.0" — confirmed cashback + confirmed rewards, the total available
+   *  to withdraw on the Request Payment screen ("Cashback + Reward"). */
   combined: string;
+  /** Per-type display amounts. Cashback: */
+  confirmedCashback: string;
+  pendingCashback: string;
+  paidCashback: string;
+  totalCashback: string;
+  /** Pending cashback + pending rewards (Earnings page balance card). */
+  pendingCombined: string;
+  /** Rewards (gift-card payout only): */
+  confirmedRewards: string;
+  pendingRewards: string;
+  paidRewards: string;
+  totalRewards: string;
   /** Numeric bucket amounts (₹, rounded) — used by the withdraw flow to
    *  thread the chosen bucket's value through navigation params (the
    *  string fields above are display-only). */
+  /** Confirmed (withdrawable) cashback. */
   confirmedNum: number;
+  /** Confirmed (withdrawable) rewards — NOT the rewards total. */
   rewardsNum: number;
+  /** Confirmed cashback + confirmed rewards. */
   combinedNum: number;
   /** True when the API actually returned usable numbers. */
   hasData: boolean;
@@ -58,6 +73,9 @@ export function mapEarnings(res: any): EarningsValues {
   const paid = toAmount(a.paid_cashback);
   const cashback = toAmount(a.total_cashback_earned) ?? toAmount(a.total_cashback);
   const rewards = toAmount(a.total_rewards_earned) ?? toAmount(a.total_rewards);
+  const confirmedRewards = toAmount(a.confirmed_rewards);
+  const pendingRewards = toAmount(a.pending_rewards);
+  const paidRewards = toAmount(a.paid_rewards);
   // Derived total only when there's something to derive it from — a bare 0
   // made an all-empty response look like real data.
   const totalRaw = toAmount(a.total_earned);
@@ -76,14 +94,22 @@ export function mapEarnings(res: any): EarningsValues {
     confirmed: money(confirmed ?? 0),
     pending: money(pending ?? 0),
     paid: money(paid ?? 0),
-    // Confirmed cashback is the withdrawable cashback; rewards has no
-    // separate confirmed/pending split in the API, so the full rewards
-    // balance is treated as withdrawable. Sum = the combined bucket.
-    combined: money((confirmed ?? 0) + (rewards ?? 0)),
+    // Withdrawable = confirmed cashback + confirmed rewards. Pending and
+    // paid rewards are not withdrawable.
+    combined: money((confirmed ?? 0) + (confirmedRewards ?? 0)),
+    confirmedCashback: money(confirmed ?? 0),
+    pendingCashback: money(pending ?? 0),
+    paidCashback: money(paid ?? 0),
+    totalCashback: money(cashback ?? 0),
+    pendingCombined: money((pending ?? 0) + (pendingRewards ?? 0)),
+    confirmedRewards: money(confirmedRewards ?? 0),
+    pendingRewards: money(pendingRewards ?? 0),
+    paidRewards: money(paidRewards ?? 0),
+    totalRewards: money(rewards ?? 0),
     // Exact amounts (no rounding): ₹99.60 must not become a withdrawable 100.
     confirmedNum: confirmed ?? 0,
-    rewardsNum: rewards ?? 0,
-    combinedNum: (confirmed ?? 0) + (rewards ?? 0),
+    rewardsNum: confirmedRewards ?? 0,
+    combinedNum: (confirmed ?? 0) + (confirmedRewards ?? 0),
     hasData,
   };
 }

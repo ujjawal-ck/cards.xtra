@@ -33,7 +33,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text } from '../atoms';
@@ -171,6 +172,10 @@ const SECTION_META: Array<{
 
 export function WithdrawScreen() {
   const navigation = useNavigation<Nav>();
+  // Set by the Earnings page; absent from Profile (shows every bucket).
+  const entryBucket = useRoute<
+    RouteProp<WithdrawStackParamList, 'WithdrawMethodSelect'>
+  >().params?.bucket;
   const [openTip, setOpenTip] = useState<number | null>(null);
 
   // Live withdrawable amounts from /users/earnings (the same source the
@@ -200,8 +205,9 @@ export function WithdrawScreen() {
   // Until earnings resolve, default to Cashback (amounts read 0).
   const hasCashback = amountNum('cashback') > 0;
   const hasRewards = amountNum('rewards') > 0;
-  const visibleBuckets: WithdrawBucket[] =
-    hasCashback && hasRewards
+  const visibleBuckets: WithdrawBucket[] = entryBucket
+    ? [entryBucket]
+    : hasCashback && hasRewards
       ? ['cashback', 'combined']
       : hasRewards
       ? ['rewards']
@@ -292,7 +298,10 @@ export function WithdrawScreen() {
 
           {/* Masthead headline = total available (confirmed cashback +
               rewards) from live earnings. Self-pads 16. */}
-          <Masthead variant="payment" amount={amountText('combined')} />
+          <Masthead
+            variant="payment"
+            amount={amountText(entryBucket ?? 'combined')}
+          />
 
           {sections.map((section, i) => (
             <View key={section.label} style={{ gap: 0 }}>

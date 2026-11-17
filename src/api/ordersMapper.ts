@@ -57,6 +57,9 @@ export interface OrderListRow {
   /** Stable grouping key for the Store filter (logo URL → falls back to
    *  the name, then the record id). Same store ⇒ same key. */
   merchantKey: string;
+  /** Order date (ISO) when the list payload carries `transaction_date`.
+   *  The documented list payload does not, so this is usually absent. */
+  dateISO?: string;
 }
 
 export interface OrderDetailModel {
@@ -252,6 +255,7 @@ export function mapOrders(res: any): OrderListRow[] {
       logoSrc: logoFromUrl(a.merchant_image_url),
       merchantName,
       merchantKey,
+      dateISO: str(a.transaction_date) || undefined,
     };
   });
 }

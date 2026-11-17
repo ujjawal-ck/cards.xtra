@@ -11,7 +11,9 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import type { WithdrawStackParamList } from './types';
+import { useRoute, type RouteProp } from '@react-navigation/native';
+
+import type { RootStackParamList, WithdrawStackParamList } from './types';
 import { WithdrawScreen } from '../screens/WithdrawScreen';
 import { WithdrawEnterUPI } from '../screens/withdraw/WithdrawEnterUPI';
 import { WithdrawAmazon } from '../screens/withdraw/WithdrawAmazon';
@@ -24,6 +26,8 @@ import { WithdrawTerms } from '../screens/withdraw/WithdrawTerms';
 const Stack = createNativeStackNavigator<WithdrawStackParamList>();
 
 export function WithdrawStack() {
+  // Entry bucket (Earnings page) is handed to the method-select screen.
+  const route = useRoute<RouteProp<RootStackParamList, 'WithdrawStack'>>();
   return (
     <Stack.Navigator
       id={undefined}
@@ -33,7 +37,11 @@ export function WithdrawStack() {
         animation: 'slide_from_right',
       }}
     >
-      <Stack.Screen name="WithdrawMethodSelect" component={WithdrawScreen} />
+      <Stack.Screen
+        name="WithdrawMethodSelect"
+        component={WithdrawScreen}
+        initialParams={{ bucket: route.params?.bucket }}
+      />
       <Stack.Screen name="WithdrawEnterUPI" component={WithdrawEnterUPI} />
       <Stack.Screen name="WithdrawAmazon" component={WithdrawAmazon} />
       <Stack.Screen name="WithdrawFlipkart" component={WithdrawFlipkart} />
