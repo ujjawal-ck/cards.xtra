@@ -262,6 +262,16 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
 
   const hide = useCallback(() => closeRail('hide'), [closeRail]);
 
+  // The rejection sheet was shown for this card: no rail for it afterwards.
+  const suppress = useCallback((card: CardModel) => {
+    session.current.expanded.add(card.id);
+  }, []);
+
+  // Cards the detail pager swipes through when the detail is opened for a card the
+  // feed's pager does not hold (a rejection-sheet pick under a category filter).
+  // Cleared when the detail closes, like a rail pick's pager.
+  const showInDetail = useCallback((list: CardModel[]) => setDetailPager(list), []);
+
   // Eligibility result changed (checked from the rail chip, the toggle or a
   // detail): recompute the open rail. Skip the first run.
   const prevEligible = useRef(eligibleAliases);
@@ -294,6 +304,8 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
     onDetailClosed,
     selectLens,
     hide,
+    suppress,
+    showInDetail,
     detailCards,
   };
 }

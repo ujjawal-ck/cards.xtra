@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   FlatList,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -107,6 +108,10 @@ import { useRecentSearches } from '../lib/recentSearches';
 import { getEligibilityGateVariant } from '../experiments';
 import { useCrossSellRail } from './useCrossSellRail';
 import { analytics, Events } from '../analytics';
+import { rejectionReason, getRejectionPicks, OTHER_REASON_LINE } from '../lib/rejection';
+import type { RejectionPick, RejectionReason } from '../lib/rejection';
+import { countEligible } from '../lib/eligibleList';
+import type { CrossSellCard } from '../lib/crossSell';
 import { classifyCardEligibility, type EligibilityBucket } from '../api/eligibility';
 import { haptics, play } from '../lib/haptics';
 import { Image as ExpoImage } from 'expo-image';
@@ -495,6 +500,8 @@ export function HomeScreen() {
   // Present the matching colored result sheet — driven by the card-detail
   // checker when the user runs it with NO pre-filled details (Path B).
   const presentResultSheet = useCallback((outcome: EligibilityOutcome) => {
+    // Android keeps the checker's soft keyboard up over the result sheet.
+    Keyboard.dismiss();
     // This path always celebrates a single card (card-detail Apply flow).
     setEligibleSheetMode('card');
     analytics.track(Events.ELIGIBILITY_RESULT, {
@@ -1473,6 +1480,35 @@ export function HomeScreen() {
   // full catalogue and the list that is actually on screen (pagerCards).
   const crossSell = useCrossSellRail({ cards, eligibleAliases, listedCards: pagerCards });
 
+  // Rejection sheet content (src/lib/rejection.ts) for the card the user tried to apply
+  // for: `selectedCard` (handleApply sets it before the sheet opens). The reason is
+  // stated only when the typed income supports it; the picks are cards the user can get.
+  const rejectionCatalogue = useMemo<CrossSellCard[]>(
+    () => cards.flatMap((c) => (c.crossSell ? [c.crossSell] : [])),
+    [cards]
+  );
+  const rejection = useMemo(() => {
+    const src = selectedCard?.crossSell;
+    const details = eligibilityDetails
+      ? {
+          incomeMonthly: Number(eligibilityDetails.income.replace(/[^0-9]/g, '')),
+          selfEmployed: eligibilityDetails.incomeType === 'self-employed',
+        }
+      : null;
+    // No engine model for the card (text fee / no alias): no comparison, so no picks.
+    const reason: RejectionReason = src
+      ? rejectionReason(src, details)
+      : { kind: 'other', lines: [OTHER_REASON_LINE] };
+    const result =
+      src && eligibleAliases
+        ? getRejectionPicks(src, rejectionCatalogue, new Set(eligibleAliases), { reason })
+        : { picks: [], eligibleCount: 0 };
+    // The "See all N" number: what the "Cards you can get" screen lists with no filters.
+    // `result.eligibleCount` counts only cards with a crossSell model, so it is not shown.
+    const seeAllCount = selectedCard && eligibleAliases ? countEligible(selectedCard, cards, eligibleAliases) : 0;
+    return { reason, ...result, seeAllCount };
+  }, [selectedCard, eligibilityDetails, eligibleAliases, rejectionCatalogue, cards]);
+
   // ----- Eligibility result-sheet content (Path B) ------------------
   // Detail-row values for the result mastheads (pincode · income · type),
   // derived from the details the user submitted.
@@ -1569,6 +1605,51 @@ export function HomeScreen() {
     dismissResultSheets();
     eligibilityCheckerRef.current?.present();
   }, [dismissResultSheets]);
+
+  // Rejection sheet: Edit pill, an alternative, and "See all".
+  const handleRejectionEdit = useCallback(() => {
+    analytics.track(Events.REJECTION_EDIT_DETAILS, {
+      item_id: selectedCard?.id,
+      reason_kind: rejection.reason.kind,
+    });
+    handleResultEdit();
+  }, [selectedCard, rejection.reason.kind, handleResultEdit]);
+  const handleRejectionPickPress = useCallback(
+    (pick: RejectionPick, card: CardModel) => {
+      analytics.track(Events.REJECTION_PICK_TAP, {
+        item_id: card.id,
+        source_card: selectedCard?.id,
+        slot: pick.slot,
+      });
+      ineligibleSheetRef.current?.dismiss();
+      // The detail pager must hold the pick (a category filter can leave it out of the feed).
+      if (!pagerCards.some((c) => c.id === card.id)) {
+        crossSell.showInDetail(
+          rejection.picks.flatMap((p) => {
+            const c = crossSell.cardsById.get(p.card.id);
+            return c ? [c] : [];
+          })
+        );
+      }
+      handleCardPress(card);
+    },
+    // handleCardPress is re-created every render; the ref in tileHandlersRef is the same function.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedCard, pagerCards, rejection.picks, crossSell]
+  );
+  const handleRejectionSeeAll = useCallback(() => {
+    if (!selectedCard) return;
+    analytics.track(Events.REJECTION_SEE_ALL, {
+      item_id: selectedCard.id,
+      eligible_count: rejection.seeAllCount,
+    });
+    ineligibleSheetRef.current?.dismiss();
+    navigation.navigate('CardsYouCanGet', {
+      rejectedCardId: selectedCard.id,
+      eligibleAliases: eligibleAliases ?? [],
+      reasonKind: rejection.reason.kind,
+    });
+  }, [selectedCard, rejection.seeAllCount, rejection.reason.kind, eligibleAliases, navigation]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -2332,6 +2413,7 @@ export function HomeScreen() {
             // (current behaviour); only the green case is in scope here.
             setEligibleSheetMode('cards');
             play('success');
+            Keyboard.dismiss();
             setTimeout(() => eligibleSheetRef.current?.present(), 280);
           }
         }}
@@ -2429,16 +2511,32 @@ export function HomeScreen() {
           borderTopLeftRadius: radius['2xl'],
           borderTopRightRadius: radius['2xl'],
         }}
+        onChange={(index) => {
+          // Opened (single snap point: index 0): count the view, and no cross-sell rail for this card later.
+          if (index < 0) return;
+          analytics.track(Events.REJECTION_SHEET_VIEW, {
+            item_id: selectedCard?.id,
+            reason_kind: rejection.reason.kind,
+            picks: rejection.picks.length,
+            eligible_count: rejection.seeAllCount,
+          });
+          if (selectedCard) crossSell.suppress(selectedCard);
+        }}
       >
         <BottomSheetScrollView showsVerticalScrollIndicator={false}>
           <IneligibleSheet
-            cards={resultCarouselCards}
-            exploreLead={`Explore ${exploreCount} Card${exploreCount === 1 ? '' : 's'}`}
+            reasons={rejection.reason.lines}
             pincode={eligibilityDisplay?.pincode}
             amount={eligibilityDisplay?.amount}
             occupation={eligibilityDisplay?.occupation}
             onContinue={handleResultApply}
-            onEditPress={handleResultEdit}
+            onEditPress={handleRejectionEdit}
+            sourceCard={selectedCard}
+            picks={rejection.picks}
+            cardsById={crossSell.cardsById}
+            eligibleCount={rejection.seeAllCount}
+            onPickPress={handleRejectionPickPress}
+            onSeeAll={handleRejectionSeeAll}
           />
         </BottomSheetScrollView>
       </GorhomBottomSheetModal>

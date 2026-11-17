@@ -137,6 +137,15 @@ function incomeStat(src: CrossSellCard, c: CrossSellCard): PickStat {
   };
 }
 
+/** The fee and Rewards rows of `card` against `src`, for a card that is not a lens pick (rejection sheet). */
+export function feeAndRewardStats(
+  src: CrossSellCard,
+  card: CrossSellCard,
+  reward: PickRewardDisplay,
+): [PickStat, PickStat] {
+  return [feeStat(src, card), rewardStat(src, card, reward)];
+}
+
 export function presentPick(
   src: CrossSellCard,
   p: CrossSellPick,
@@ -145,7 +154,7 @@ export function presentPick(
   const stats: [PickStat, PickStat] =
     p.lens === 'easier'
       ? [incomeStat(src, p.card), feeStat(src, p.card)]
-      : [feeStat(src, p.card), rewardStat(src, p.card, reward)];
+      : feeAndRewardStats(src, p.card, reward);
   const band = bandParts(src, p);
   return { bandText: band.text, bandAmount: band.amount, icon: bandIcon(src, p), stats };
 }

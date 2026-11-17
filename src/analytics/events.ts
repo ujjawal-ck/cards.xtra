@@ -78,6 +78,18 @@ export const Events = {
   // Rail closed. Params: source_card, why ('hide' | 'replaced' | 'scrolled_past' | 'no_picks').
   CROSSSELL_COLLAPSE: 'crosssell_collapse',
 
+  // ── rejection sheet (our eligibility check said no for the card the user tried to apply for) ──
+  // Sheet shown. Params: item_id (rejected card), reason_kind ('income' | 'employment' | 'other'),
+  // picks (count of alternatives shown), eligible_count (the "See all" number).
+  REJECTION_SHEET_VIEW: 'rejection_sheet_view',
+  // An alternative was tapped. Params: item_id (the pick), source_card (rejected card), slot
+  // ('closest' | 'topRewards' | 'lifetimeFree').
+  REJECTION_PICK_TAP: 'rejection_pick_tap',
+  // "Edit" tapped to change the details. Params: item_id, reason_kind.
+  REJECTION_EDIT_DETAILS: 'rejection_edit_details',
+  // "See all N cards you can get" tapped. Params: item_id, eligible_count.
+  REJECTION_SEE_ALL: 'rejection_see_all',
+
   // ── offers ─────────────────────────────────────────────────
   SELECT_CONTENT: 'select_content', // GA4 — partner card tapped
   OFFER_CATEGORY_SELECT: 'offer_category_select',

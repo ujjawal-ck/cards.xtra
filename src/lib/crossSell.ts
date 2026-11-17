@@ -33,6 +33,7 @@ export interface CrossSellCard {
   reward: number; // ₹ shown as Rewards (CashKaro rate, else commission). 0 when none or a percent.
   earn: number; // bk_commission in ₹, 0 when absent
   incomeLpa: number; // income_salaried (lakh per year), 0 when absent / "N/A"
+  incomeSelfEmpLpa?: number; // income_self_emp (lakh per year), 0 or undefined when absent / "N/A"
   crif: number; // 0 when absent
   priority: number; // BankKaro priority, large number when absent
 }
@@ -136,7 +137,7 @@ export function bandIdx(c: CrossSellCard): number {
 
 // IDF weights so rare tags (Fuel, UPI) count more than common ones (Travel, Shopping).
 const idfCache = new WeakMap<CrossSellCard[], Record<string, number>>();
-function idf(catalogue: CrossSellCard[]): Record<string, number> {
+export function idf(catalogue: CrossSellCard[]): Record<string, number> {
   const hit = idfCache.get(catalogue);
   if (hit) return hit;
   const freq: Record<string, number> = {};
@@ -155,6 +156,10 @@ function cost(c: CrossSellCard): number {
 const earnOf = (c: CrossSellCard): number => c.earn;
 const paidOf = (c: CrossSellCard): number => c.reward;
 const netOf = (c: CrossSellCard): number => earnOf(c) - paidOf(c);
+/** Earning gate: the user gets Rewards on the card and, when the earn is known, the net is not negative. */
+export function passesEarningGate(c: CrossSellCard, cfg: CrossSellConfig = CONFIG): boolean {
+  return !(cfg.requireRevenue && (c.reward <= 0 || (c.earn > 0 && netOf(c) < cfg.minNet)));
+}
 const lpa = (n: number): string => '₹' + n + 'L';
 export function inr(n: number): string {
   return formatINR(Math.round(n));
@@ -162,11 +167,11 @@ export function inr(n: number): string {
 const short = (n: string): string => n.replace(/\s+Credit Card$/i, '').replace(/\s+Card$/i, '');
 
 // ---------- similarity ----------
-type Profile = Record<string, number>;
+export type Profile = Record<string, number>;
 
 // Similarity reference: the tapped card's tags. After 2+ viewed cards, the tags of
 // every viewed card count too (the tapped card counts double).
-function profile(src: CrossSellCard, viewedCards: CrossSellCard[], w: Record<string, number>): Profile {
+export function profile(src: CrossSellCard, viewedCards: CrossSellCard[], w: Record<string, number>): Profile {
   const p: Profile = {};
   const add = (c: CrossSellCard, k: number) => c.tags.forEach((t) => (p[t] = (p[t] || 0) + k * (w[t] || 0)));
   add(src, 2);
@@ -175,7 +180,7 @@ function profile(src: CrossSellCard, viewedCards: CrossSellCard[], w: Record<str
   });
   return p;
 }
-function sim(p: Profile, c: CrossSellCard): number {
+export function sim(p: Profile, c: CrossSellCard): number {
   let total = 0;
   let shared = 0;
   Object.keys(p).forEach((t) => {
@@ -184,7 +189,7 @@ function sim(p: Profile, c: CrossSellCard): number {
   });
   return total ? shared / total : 0;
 }
-function topShared(src: CrossSellCard, c: CrossSellCard, w: Record<string, number>): string | undefined {
+export function topShared(src: CrossSellCard, c: CrossSellCard, w: Record<string, number>): string | undefined {
   return src.tags
     .filter((t) => c.tags.indexOf(t) !== -1)
     .sort((a, b) => (w[b] || 0) - (w[a] || 0))[0];
@@ -346,7 +351,7 @@ export function getCrossSellV2(
     if (c.id === src.id || c.inviteOnly) return false;
     // Earning gate: the user gets Rewards on it (so a payout exists) and, when the
     // earn is known, the net is not negative. Unknown earn (0) is not blocked.
-    if (cfg.requireRevenue && (c.reward <= 0 || (c.earn > 0 && netOf(c) < cfg.minNet))) return false;
+    if (!passesEarningGate(c, cfg)) return false;
     if (viewed.indexOf(c.alias) !== -1) return false;
     if (ctx.applied && ctx.applied.has(c.alias)) return false;
     if (elig && !elig.has(c.alias)) return false;

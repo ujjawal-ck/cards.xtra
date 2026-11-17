@@ -119,6 +119,14 @@ export type RootStackParamList = {
    *  detail's "View all benefits". `alias` is the BankKaro card_alias used
    *  to fetch the categorized benefits. */
   AllCardBenefits: { alias?: string; cardName?: string } | undefined;
+  /** Rejection flow, part B: every card the user CAN get, organised around the
+   *  card they were told they cannot get. `eligibleAliases` are BankKaro card
+   *  aliases; `reasonKind` tunes the context tags. */
+  CardsYouCanGet: {
+    rejectedCardId: string;
+    eligibleAliases: string[];
+    reasonKind?: 'income' | 'employment' | 'other';
+  };
   /** Profile → Payment History list (Figma 3396:51078). */
   ProfilePaymentHistory: undefined;
   /** Profile → Payment History details (Figma 3396:51408). */

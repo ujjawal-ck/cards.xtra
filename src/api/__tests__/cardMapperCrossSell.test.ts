@@ -43,6 +43,7 @@ describe('CardModel.crossSell', () => {
       reward: 1400,
       earn: 1800,
       incomeLpa: 0, // "N/A"
+      incomeSelfEmpLpa: 0, // absent
       crif: 750,
       priority: 3,
     });
@@ -50,6 +51,12 @@ describe('CardModel.crossSell', () => {
     expect(c.tags).toEqual(['Shopping', 'Dining', 'Fuel']);
     expect(c.cashback).toBe('Flat ₹1,400 Rewards');
     expect(c.detail?.fee.annual.amount).toBe('₹2,950'); // rail amount === tile amount
+  });
+
+  it('reads the self-employed income bar', () => {
+    const c = mapBkCardToCardModel(raw({ income_salaried: '3', income_self_emp: '6' }), {}, null);
+    expect(c.crossSell?.incomeLpa).toBe(3);
+    expect(c.crossSell?.incomeSelfEmpLpa).toBe(6);
   });
 
   it('uses the live bank directory name when present', () => {

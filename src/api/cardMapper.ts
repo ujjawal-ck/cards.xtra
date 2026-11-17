@@ -442,6 +442,7 @@ function buildCrossSell(
     reward: crossSellReward(bk, ckRate),
     earn: safeNum(bk.bk_commission),
     incomeLpa: safeNum(bk.income_salaried),
+    incomeSelfEmpLpa: safeNum(bk.income_self_emp),
     crif: safeNum(bk.crif),
     priority: isFinite(priority) ? priority : CROSS_SELL_NO_PRIORITY,
   };

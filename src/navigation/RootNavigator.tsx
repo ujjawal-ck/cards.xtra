@@ -41,6 +41,7 @@ import { MissingCashbackTicketListTracked } from '../screens/MissingCashbackTick
 import { OrdersList } from '../screens/OrdersList';
 import { OrdersDetail } from '../screens/OrdersDetail';
 import { AllCardBenefitsScreen } from '../screens/AllCardBenefitsScreen';
+import { CardsYouCanGetScreen } from '../screens/CardsYouCanGetScreen';
 import { ProfilePaymentHistory } from '../screens/ProfilePaymentHistory';
 import { ProfilePaymentHistoryDetails } from '../screens/ProfilePaymentHistoryDetails';
 import { ProfilePaymentHistoryEmpty } from '../screens/ProfilePaymentHistoryEmpty';
@@ -212,6 +213,7 @@ export function RootNavigator() {
       <Stack.Screen name="OrdersList" component={OrdersList} />
       <Stack.Screen name="OrdersDetail" component={OrdersDetail} />
       <Stack.Screen name="AllCardBenefits" component={AllCardBenefitsScreen} />
+      <Stack.Screen name="CardsYouCanGet" component={CardsYouCanGetScreen} />
       <Stack.Screen
         name="ProfilePaymentHistory"
         component={ProfilePaymentHistory}
