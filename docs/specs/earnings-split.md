@@ -1,99 +1,76 @@
-# Spec: Earnings page split into Cashback and Rewards
+# Spec: Earnings page, Paytm "My Cashback" layout
 
-Date: 2026-11-17. Owner: Anmol (PM). Build class: production path (tests required).
+Date: 2026-11-17 (v2, replaces the two-section version). Owner: Anmol (PM).
+Build class: production path (tests required).
+Reference: `~/repos/ck_paytm_frontend/src/features/cashback/` (`pages/MyCashbackPage.tsx`,
+`components/EarningsOverview.tsx`, `components/CashbackListItem.tsx`). Read it first.
 
 ## Problem
-Cashback and rewards are two different money types with two different payout
-routes (cashback: UPI or gift card; rewards: gift card only). The Earnings page
-mixes them:
-- The "Confirmed / Withdraw" row shows confirmed cashback + **total** rewards
-  (`earningsMapper.ts`), so pending and already-paid rewards look withdrawable.
-- The mapper comment says the API has no rewards status split. That is wrong:
-  `GET /users/earnings` returns `confirmed_rewards`, `pending_rewards`,
-  `paid_rewards` (see `~/repos/api-knowledgebase/MINI APP DOCUMENTATION/02_users.md`).
+The Earnings page shows two tall stacks (Cashback and Rewards, each with
+Confirmed / Pending / Paid rows) and hides the transactions behind
+"My Order Details". The user wants Paytm's structure: money summary on top,
+transactions on the same page.
 
-## Outcome
-A user sees, separately for Cashback and for Rewards, what is confirmed
-(withdrawable), pending and paid, and can withdraw each through its own route.
+## Page, top to bottom
+1. **Banner (keep as is):** `Masthead variant="earnings"`: all-time total,
+   with the Cashback and Rewards stat cards inside it (each opens its
+   `EarningsBreakupSheet`, which already shows that type's Confirmed / Pending /
+   Paid). This is the only place cashback and rewards are split.
+2. **Small balance card** (replaces both vertical stacks). One card, two compact
+   parts side by side, like Paytm's pending card:
+   - Left: "Confirmed" + combined confirmed amount (`combined`) + "Withdraw"
+     button (solid, main, small size). Uses the existing `useWithdrawGate`
+     with no type (combined). Withdraw opens the existing WithdrawScreen,
+     which already lets the user pick Cashback, Rewards or both.
+   - Right: "Pending" + combined pending (pending cashback + pending rewards) +
+     "Know Why?" (outline, small) -> existing `EarningStatusSheet` (pending).
+   - Paid is not shown here (it is in the breakup sheets and the list filter).
+   - Build from existing atoms/molecules (`Text`, `Button`, `Icon`,
+     `DividerVertical`, card styling copied from the existing card containers
+     on this screen). If `AmountActionRow` has a compact size, use it instead.
+3. **"Don't see your order here?" prompt**: one tappable row (existing
+   `ListRow` menu-option, `StripAlert` or `InlineMessage`, whichever fits) with
+   body "Tell us where you shopped & we'll add your Cashback" and a chevron.
+   Opens the Missing Cashback flow (same target as today's "Missing Cashback" row).
+4. **Transactions, on the page** (Paytm list):
+   - Filter chips (existing `Chip` atom, single-select): All, Pending,
+     Confirmed, Paid. Map to the orders API status filter the same way
+     `OrdersList.tsx` does (`ORDER_STATUS_OPTIONS`; Pending = pending+delayed).
+   - Data: existing `useOrders(filters)` hook. Show the first 10 rows.
+   - Rows: existing `OrderRow`, mapped exactly as `OrdersList.tsx` maps them
+     (the row type already labels each row "Cashback:" or "Rewards:"). If the
+     mapping lives inside `OrdersList.tsx`, move it to a shared helper and use
+     it in both places; do not duplicate it. Tapping a row opens order detail
+     as in OrdersList.
+   - Group rows under month headings (newest first), like Paytm `groupByMonth`.
+   - Below the rows: "View all orders" link -> `OrdersList` screen.
+   - Empty state per filter: All "Your cashback and rewards will show up here";
+     Pending "No pending earnings"; Confirmed "No confirmed earnings"; Paid
+     "No paid earnings".
+   - Loading: existing `Skeleton` rows; error: existing `ScreenState` with retry.
+5. **Get Help** row at the bottom (keep). Remove the "My Order Details" and
+   "Missing Cashback" menu rows (replaced by 3 and 4).
 
-## Scope (in)
-1. **Mapper** (`src/api/earningsMapper.ts`): add per-type fields.
-   - Cashback: `confirmed_cashback`, `pending_cashback`, `paid_cashback`,
-     total `total_cashback_earned`.
-   - Rewards: `confirmed_rewards`, `pending_rewards`, `paid_rewards`,
-     total `total_rewards_earned`.
-   - `rewardsNum` must become **confirmed rewards** (withdrawable), not total.
-   - `combinedNum` = confirmed cashback + confirmed rewards.
-   - Keep `toAmount` parsing rules. Keep exact amounts (no rounding).
-   - Keep existing field names that other screens use (WithdrawScreen reads
-     `confirmedNum`, `rewardsNum`, `combinedNum`); fix their meaning, do not
-     rename them.
-2. **Earnings screen** (`src/screens/EarningsScreen.tsx`), logged-in state only:
-   - Masthead: unchanged (total earned, Cashback stat, Rewards stat, each stat
-     opens its `EarningsBreakupSheet`).
-   - Replace the single Confirmed / Pending / Paid row group with **two
-     sections**, in this order: "Cashback", then "Rewards".
-   - Each section: a section title (Text atom, existing heading token), then
-     three `AmountActionRow`s for that type only:
-     - Confirmed → button "Withdraw" (solid, main) → withdraw for that type.
-     - Pending → button "Know Why?" (outline) → existing `EarningStatusSheet`
-       (pending variant) with that type's pending amount.
-     - Paid → button "View" (outline) → existing `EarningStatusSheet` (paid
-       variant) with that type's paid amount.
-   - Rewards section: if all three reward amounts are 0, still show it (users
-     should learn rewards exist). Do not hide it.
-   - Bottom menu card (My Order Details, Missing Cashback, Get Help):
-     unchanged.
-   - Logged-out and error states: unchanged.
-3. **Withdraw routing**: two routes, one per type.
-   - Cashback Withdraw → withdraw flow pre-set to the cashback bucket.
-   - Rewards Withdraw → withdraw flow pre-set to the rewards bucket
-     (gift card only, existing `WithdrawGiftCard variant='rewards'`).
-   - Both still go through `useWithdrawGate` (₹0 → `CashbackNotConfirmedSheet`;
-     payout in progress → `PaymentProcessingSheet`). The gate must check the
-     amount of the type the user tapped, not the combined total.
-   - Pass the chosen bucket as a navigation param (for example
-     `WithdrawStack: { bucket?: 'cashback' | 'rewards' }`). With no param,
-     WithdrawScreen keeps today's behaviour (Profile entry point).
-4. **Breakup sheets**: `EarningsBreakupSheet` variant `rewards` must show the
-   real rewards confirmed / pending / paid (not cashback numbers or zeros).
+Logged-out and full-error states: unchanged.
+
+## Keep from the previous commits
+- Mapper fix: `rewardsNum` = confirmed rewards, `combinedNum` = confirmed
+  cashback + confirmed rewards, per-type fields and their tests.
+- Withdraw gate: payout minimum checked against cashback + rewards combined;
+  `earning_type` in `WITHDRAW_START`. The gate's per-type entry stays supported;
+  this page uses the no-type (combined) entry.
+- `EarningStatusSheet` / `CashbackNotConfirmedSheet` `earningType` props stay.
+
+## Remove
+- The "Cashback" and "Rewards" section titles and their six `AmountActionRow`s.
+- The per-type pending/paid sheet instances only those rows used.
 
 ## Non-goals
-- No in-page transaction list, filter chips, or month grouping (Paytm pattern)
-  in this change.
-- No masthead redesign, no new Figma, no copy rewrite beyond section titles.
-- No change to the Orders screen, Missing Cashback, or Profile.
-- No BFF change (`/ck/users/earnings` is already allowlisted).
-
-## Components (reuse only; do not create new ones)
-`Masthead` (variant earnings), `AmountActionRow`, `EarningStatusSheet`,
-`EarningsBreakupSheet`, `CashbackNotConfirmedSheet`, `PaymentProcessingSheet`,
-`ListRow`, `Divider`, `Text`, `StaggeredEntrance`, `useWithdrawGate`.
-Icons: reuse `desc-withdrawcash`, `desc-pendingcash`, `desc-paid`.
-All values from `src/tokens` (see repo `CLAUDE.md`, "TOKENS ARE LAW"). If a
-needed token or component is missing, stop and report it; do not improvise.
-
-## Edge cases (handled)
-| Case | Expected |
-|---|---|
-| Both types ₹0 | Both sections show ₹0; Withdraw opens CashbackNotConfirmedSheet |
-| Cashback > 0, rewards 0 | Rewards Withdraw opens CashbackNotConfirmedSheet (copy may say cashback; log as known gap) |
-| Rewards fields missing in API | Treat as 0; `hasData` still true if cashback fields present |
-| Negative amount (reversal) | Show signed, as today |
-| Loading | `AmountActionRow loading` skeletons in both sections |
-
-Consciously unhandled: rewards-specific "not confirmed" copy, analytics event
-split per type (log in the report if you notice it).
+No new components, no new tokens, no masthead change, no BFF change, no
+infinite scroll on this page (the full list stays on OrdersList).
 
 ## Acceptance criteria
-1. Mapper unit tests (new, in `src/api/__tests__/`): a response with
-   confirmed/pending/paid for both types maps every field correctly;
-   `rewardsNum` equals `confirmed_rewards`; `combinedNum` equals confirmed
-   cashback + confirmed rewards; missing reward fields map to 0.
-2. Earnings screen shows two sections with the right amounts for a test
-   response (snapshot or render test if the repo has a pattern for it).
-3. Tapping Cashback Withdraw lands on the withdraw flow showing the Cashback
-   bucket; Rewards Withdraw lands on the Rewards bucket.
-4. Profile → Withdraw Cashback still works as before (no param).
-5. `npm run typecheck` and `npm test` pass.
-6. No hardcoded hex, font size or spacing number in changed code.
+1. `npx tsc --noEmit -p .` and `npx jest` pass in the worktree.
+2. Unit test for the month-grouping helper (and the shared row mapper if extracted).
+3. No hex, raw font sizes or raw spacing numbers in changed code.
+4. Report any spot where an existing component did not fit and what you used.

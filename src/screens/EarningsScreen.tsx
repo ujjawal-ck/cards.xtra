@@ -7,15 +7,16 @@
  * rendered inside the screen — see the "Navigation note" below.
  *
  * Layout (vertical column, screen bg colors.background.muted). This is a
- * TAB section, so there is NO Header / back arrow — the masthead leads:
- *   1. <Masthead variant='earnings' />                         — organism
- *   2. Two sections, "Cashback" then "Rewards", each a title over
- *      Confirmed (Withdraw) / Pending (Know Why?) / Paid (View)
- *      <AmountActionRow>s for that type only.
- *   3. List card (white, radius.xl, elevation.light.xs):
- *       Three <ListRow type='menu-option' …> stacked with <Divider />
- *       between, each with a 24-px leading icon + body14Medium title +
- *       chevron-right.
+ * TAB section, so there is NO Header / back arrow — the masthead leads.
+ * Paytm "My Cashback" structure (spec docs/specs/earnings-split.md v2):
+ *   1. <Masthead variant='earnings' />  — all-time total + Cashback / Rewards
+ *      stat cards (each opens its EarningsBreakupSheet). The only split.
+ *   2. Balance card — Confirmed (combined) + Withdraw | Pending (combined) +
+ *      Know Why?
+ *   3. "Don't see your order here?" row → Missing Cashback flow.
+ *   4. Transactions — status <Chip>s, first 10 <OrderRow>s under month
+ *      headings, "View all orders".
+ *   5. Get Help row.
  *
  * Navigation note: src/navigation/TabNavigator.tsx provides the
  * Earnings tab and floats the BottomNav via its `tabBar` prop, so this
@@ -23,7 +24,7 @@
  * the spec calls out). The spec'd 360×102 white-fade wrapper for the
  * tab bar isn't in the current FloatingBottomNav — left as a flag.
  */
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
@@ -32,11 +33,11 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 
-import { Divider, Text } from '../atoms';
+import { Text, Button, Chip, Icon, DividerVertical, AmountSkeleton, Skeleton } from '../atoms';
 import { useAuth } from '../auth/AuthContext';
 import { useLoginSheet } from '../auth/LoginSheetProvider';
 import { analytics, Events } from '../analytics';
-import { ListRow, AmountActionRow } from '../molecules';
+import { ListRow } from '../molecules';
 import {
   Masthead,
   EarningsBreakupSheet,
@@ -44,34 +45,31 @@ import {
   StaggeredEntrance,
   GuestPrompt,
   ScreenState,
+  OrderRow,
+  ORDER_STATUS_OPTIONS,
 } from '../organisms';
 import type {
   EarningsBreakupSheetRef,
   EarningStatusSheetRef,
 } from '../organisms';
-import { colors, spacing, radius, elevation } from '../tokens';
+import { colors, spacing, radius, elevation, iconSize } from '../tokens';
 import { useEarnings } from '../query/useEarnings';
+import { useOrders } from '../query/useOrders';
+import type { OrdersApiFilters } from '../api/cashkaro';
+import { groupByMonth } from '../lib/groupByMonth';
+import {
+  EARNINGS_FILTERS,
+  EARNINGS_EMPTY_COPY,
+  statusParamFor,
+  type EarningsFilter,
+} from '../lib/earningsFilters';
 import { useWithdrawGate } from './withdraw/useWithdrawGate';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 import type { RootStackParamList, TabParamList } from '../navigation/types';
 
-// Section config: which mapper field feeds each row of a type's section.
-const EARNING_SECTIONS = [
-  {
-    type: 'cashback',
-    title: 'Cashback',
-    confirmed: 'confirmedCashback',
-    pending: 'pendingCashback',
-    paid: 'paidCashback',
-  },
-  {
-    type: 'rewards',
-    title: 'Rewards',
-    confirmed: 'confirmedRewards',
-    pending: 'pendingRewards',
-    paid: 'paidRewards',
-  },
-] as const;
+// Transactions shown on the page; the full list lives on OrdersList.
+const TRANSACTIONS_PREVIEW = 10;
+const SKELETON_ROWS = 3;
 
 // Composite nav — Earnings sits inside the bottom-tab navigator,
 // which itself is a screen of the root stack. To navigate to Withdraw
@@ -116,15 +114,23 @@ export function EarningsScreen() {
   const cashbackSheetRef = useRef<EarningsBreakupSheetRef>(null);
   const rewardsSheetRef = useRef<EarningsBreakupSheetRef>(null);
 
-  // Earning-Status sheets: Pending ("Know Why?") and Paid ("View") for each
-  // type. The Withdraw-side sheets (₹0 "Cashback Not Confirmed", payment-in-
-  // process) live in useWithdrawGate, shared with Profile.
-  const cashbackPendingRef = useRef<EarningStatusSheetRef>(null);
-  const cashbackPaidRef = useRef<EarningStatusSheetRef>(null);
-  const rewardsPendingRef = useRef<EarningStatusSheetRef>(null);
-  const rewardsPaidRef = useRef<EarningStatusSheetRef>(null);
-  const pendingRefs = { cashback: cashbackPendingRef, rewards: rewardsPendingRef };
-  const paidRefs = { cashback: cashbackPaidRef, rewards: rewardsPaidRef };
+  // Pending ("Know Why?") sheet for the combined pending amount. The
+  // Withdraw-side sheets (₹0 "Cashback Not Confirmed", payment-in-process)
+  // live in useWithdrawGate, shared with Profile.
+  const pendingRef = useRef<EarningStatusSheetRef>(null);
+
+  // Transactions: status chip → server-side status filter (same rule as
+  // OrdersList), first 10 rows of useOrders.
+  const [filter, setFilter] = useState<EarningsFilter>('All');
+  const apiFilters = useMemo<OrdersApiFilters>(() => {
+    const status = statusParamFor(filter, ORDER_STATUS_OPTIONS);
+    return status ? { status } : {};
+  }, [filter]);
+  const orders = useOrders(apiFilters);
+  const sections = useMemo(
+    () => groupByMonth((orders.data ?? []).slice(0, TRANSACTIONS_PREVIEW)),
+    [orders.data]
+  );
 
   // Shared withdraw entry check (₹0 / payout already settling) — same gate
   // as Profile's "Withdraw Cashback" row.
@@ -271,62 +277,76 @@ export function EarningsScreen() {
             onRewardsPress={() => rewardsSheetRef.current?.present()}
           />
 
-          {/* 2. Two sections — Cashback, then Rewards (always shown, even at
-              ₹0, so users learn rewards exist). Each: title + Confirmed /
-              Pending / Paid rows for that type only. */}
-          {EARNING_SECTIONS.map((sec) => (
+          {/* 2. Balance card — Paytm-style: Confirmed + Withdraw on the left,
+              Pending + Know Why? on the right. Combined cashback + rewards;
+              the per-type split lives in the masthead breakup sheets. */}
+          <View style={{ paddingHorizontal: spacing[16] }}>
             <View
-              key={sec.type}
-              style={{
-                paddingHorizontal: spacing[16],
-                gap: spacing[12],
-              }}
+              style={[
+                {
+                  flexDirection: 'row',
+                  backgroundColor: colors.surface.default,
+                  borderRadius: radius.xl,
+                  padding: spacing[16],
+                  gap: spacing[16],
+                },
+                elevation.light.xs,
+              ]}
             >
-              <Text variant="heading18SemiBold" color={colors.text.primary}>
-                {sec.title}
-              </Text>
-              <AmountActionRow
-                iconName="desc-withdrawcash"
-                caption="Confirmed"
-                loading={loading}
-                value={earnings?.[sec.confirmed] ?? '₹0'}
-                buttonLabel="Withdraw"
-                buttonVariant="solid"
-                buttonTone="main"
-                // Gate checks this type's confirmed amount (₹0 → "Not
-                // Confirmed" sheet); otherwise opens withdraw on its bucket.
-                onButtonPress={() => handleWithdraw(sec.type)}
-              />
-              <AmountActionRow
-                iconName="desc-pendingcash"
-                caption="Pending"
-                loading={loading}
-                value={earnings?.[sec.pending] ?? '₹0'}
-                buttonLabel="Know Why?"
-                buttonVariant="outline"
-                buttonTone="main"
-                onButtonPress={() => pendingRefs[sec.type].current?.present()}
-              />
-              <AmountActionRow
-                iconName="desc-paid"
-                caption="Paid"
-                loading={loading}
-                value={earnings?.[sec.paid] ?? '₹0'}
-                buttonLabel="View"
-                buttonVariant="outline"
-                buttonTone="main"
-                onButtonPress={() => paidRefs[sec.type].current?.present()}
-              />
+              <View style={{ flex: 1, gap: spacing[8] }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
+                  <Icon name="desc-withdrawcash" size={iconSize[24]} />
+                  <Text variant="body12Regular" color={colors.text.primary}>
+                    Confirmed
+                  </Text>
+                </View>
+                {loading ? (
+                  <AmountSkeleton height={spacing[24]} />
+                ) : (
+                  <Text variant="body16Bold" color={colors.text.primary}>
+                    {earnings?.combined ?? '₹0'}
+                  </Text>
+                )}
+                <Button
+                  label="Withdraw"
+                  variant="solid"
+                  tone="main"
+                  size={36}
+                  fullWidth
+                  // No type → the gate checks confirmed cashback + rewards
+                  // combined; WithdrawScreen lets the user pick the bucket.
+                  onPress={() => handleWithdraw()}
+                />
+              </View>
+              <DividerVertical style="solid" height={spacing[96]} />
+              <View style={{ flex: 1, gap: spacing[8] }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
+                  <Icon name="desc-pendingcash" size={iconSize[24]} />
+                  <Text variant="body12Regular" color={colors.text.primary}>
+                    Pending
+                  </Text>
+                </View>
+                {loading ? (
+                  <AmountSkeleton height={spacing[24]} />
+                ) : (
+                  <Text variant="body16Bold" color={colors.text.primary}>
+                    {earnings?.pendingCombined ?? '₹0'}
+                  </Text>
+                )}
+                <Button
+                  label="Know Why?"
+                  variant="outline"
+                  tone="main"
+                  size={36}
+                  fullWidth
+                  onPress={() => pendingRef.current?.present()}
+                />
+              </View>
             </View>
-          ))}
+          </View>
 
-          {/* 3. List card — composed from <ListRow type='menu-option' />
-              with <Divider /> between rows. */}
-          <View
-            style={{
-              paddingHorizontal: spacing[16],
-            }}
-          >
+          {/* 3. Missing-cashback prompt — one tappable row. */}
+          <View style={{ paddingHorizontal: spacing[16] }}>
             <View
               style={[
                 {
@@ -334,27 +354,128 @@ export function EarningsScreen() {
                   borderRadius: radius.xl,
                   paddingVertical: spacing[12],
                   paddingHorizontal: spacing[16],
-                  gap: spacing[12],
+                  gap: spacing[8],
                 },
                 elevation.light.xs,
               ]}
             >
-              <ListRow
-                type="menu-option"
-                icon="cart-outline"
-                title="My Order Details"
-                onPress={() => navigation.navigate('OrdersList')}
-              />
-              <Divider style="solid" />
+              <Text variant="body14SemiBold" color={colors.text.primary}>
+                Don’t see your order here?
+              </Text>
               <ListRow
                 type="menu-option"
                 icon="clipboard-search-outline"
-                title="Missing Cashback"
+                title="Tell us where you shopped & we’ll add your Cashback"
                 onPress={() =>
                   navigation.navigate('MissingCashbackDidYouShop', { backTo: 'back' })
                 }
               />
-              <Divider style="solid" />
+            </View>
+          </View>
+
+          {/* 4. Transactions — status chips, first 10 rows by month. */}
+          <View style={{ gap: spacing[12] }}>
+            <View style={{ paddingHorizontal: spacing[16], gap: spacing[12] }}>
+              <Text variant="heading18SemiBold" color={colors.text.primary}>
+                Transactions
+              </Text>
+              <View style={{ flexDirection: 'row', gap: spacing[8] }}>
+                {EARNINGS_FILTERS.map((f) => (
+                  <Chip
+                    key={f}
+                    label={f}
+                    state={filter === f ? 'selected' : 'default'}
+                    onPress={() => setFilter(f)}
+                  />
+                ))}
+              </View>
+            </View>
+
+            {orders.isLoading ? (
+              <View style={{ paddingHorizontal: spacing[16], gap: spacing[12] }}>
+                {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                  <Skeleton key={i} height={spacing[80]} radius="lg" />
+                ))}
+              </View>
+            ) : orders.isError && !orders.data ? (
+              <ScreenState
+                title="Couldn’t load your transactions"
+                body="Something went wrong. Please try again."
+                actionLabel={orders.isFetching ? 'Retrying…' : 'Try again'}
+                onAction={() => orders.refetch()}
+              />
+            ) : sections.length === 0 ? (
+              <ScreenState title={EARNINGS_EMPTY_COPY[filter]} />
+            ) : (
+              <View>
+                {sections.map((section) => (
+                  <View key={section.key}>
+                    {section.label ? (
+                      <Text
+                        variant="body14SemiBold"
+                        color={colors.text.secondary}
+                        style={{
+                          paddingHorizontal: spacing[16],
+                          paddingVertical: spacing[8],
+                        }}
+                      >
+                        {section.label}
+                      </Text>
+                    ) : null}
+                    {section.rows.map((row) => (
+                      <OrderRow
+                        key={row.id}
+                        type={row.type}
+                        badgeVariant={row.badgeVariant}
+                        status={row.status}
+                        tagLabel={row.tagLabel}
+                        tagTone={row.tagTone}
+                        amount={row.amount}
+                        showAmountChevron={row.showAmountChevron}
+                        metaLabel={row.metaLabel}
+                        metaValue={row.metaValue}
+                        note={row.note}
+                        logoSrc={row.logoSrc}
+                        onPress={
+                          row.showAmountChevron
+                            ? () => {
+                                analytics.track(Events.ORDER_SELECT, {
+                                  order_id: row.id,
+                                  status: row.status,
+                                });
+                                navigation.navigate('OrdersDetail', { id: row.id });
+                              }
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </View>
+                ))}
+                <View style={{ alignItems: 'center', paddingTop: spacing[12] }}>
+                  <Button
+                    label="View all orders"
+                    variant="link"
+                    size={36}
+                    onPress={() => navigation.navigate('OrdersList')}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* 5. Get Help */}
+          <View style={{ paddingHorizontal: spacing[16] }}>
+            <View
+              style={[
+                {
+                  backgroundColor: colors.surface.default,
+                  borderRadius: radius.xl,
+                  paddingVertical: spacing[12],
+                  paddingHorizontal: spacing[16],
+                },
+                elevation.light.xs,
+              ]}
+            >
               <ListRow
                 type="menu-option"
                 icon="chat-outline"
@@ -386,26 +507,10 @@ export function EarningsScreen() {
       {/* Withdraw gate sheets (₹0 / payout settling) — from useWithdrawGate. */}
       {gateSheets}
 
-      {/* Pending ("Know Why?") and Paid ("View") sheets, one pair per type. */}
+      {/* Pending ("Know Why?") sheet — combined pending amount. */}
       <EarningStatusSheet
-        ref={cashbackPendingRef}
-        amount={earnings?.pendingCashback ?? '₹0'}
-      />
-      <EarningStatusSheet
-        ref={cashbackPaidRef}
-        variant="paid"
-        amount={earnings?.paidCashback ?? '₹0'}
-      />
-      <EarningStatusSheet
-        ref={rewardsPendingRef}
-        earningType="rewards"
-        amount={earnings?.pendingRewards ?? '₹0'}
-      />
-      <EarningStatusSheet
-        ref={rewardsPaidRef}
-        earningType="rewards"
-        variant="paid"
-        amount={earnings?.paidRewards ?? '₹0'}
+        ref={pendingRef}
+        amount={earnings?.pendingCombined ?? '₹0'}
       />
     </View>
   );

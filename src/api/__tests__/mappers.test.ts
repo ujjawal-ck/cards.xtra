@@ -69,6 +69,14 @@ describe('earnings', () => {
     expect(e.combinedNum).toBe(120);
   });
 
+  it('adds pending cashback and pending rewards into pendingCombined', () => {
+    const e = mapEarnings({
+      data: [{ attributes: { confirmed_cashback: '1', pending_cashback: '10.25', pending_rewards: '4.35' } }],
+    });
+    expect(e.pendingCombined).toBe('₹14.60');
+    expect(mapEarnings({}).pendingCombined).toBe('₹0');
+  });
+
   it('keeps a negative reversal signed in the per-type fields', () => {
     const e = mapEarnings({ data: [{ attributes: { confirmed_cashback: '10', pending_rewards: '-50.00' } }] });
     expect(e.pendingRewards).toBe('-₹50');
@@ -94,6 +102,17 @@ describe('orders', () => {
     for (const r of rows as any[]) {
       expect(r.id).toBeTruthy();
     }
+  });
+
+  it('reads the order date when the list row carries transaction_date', () => {
+    const rows = mapOrders({
+      data: [
+        { id: '1', attributes: { cashback_type: 'Cashback', cashback_status: 'Paid', cashback_amount: '5', transaction_date: '2026-11-03T00:00:00Z' } },
+        { id: '2', attributes: { cashback_type: 'Cashback', cashback_status: 'Paid', cashback_amount: '5' } },
+      ],
+    });
+    expect(rows[0].dateISO).toBe('2026-11-03T00:00:00Z');
+    expect(rows[1].dateISO).toBeUndefined();
   });
 
   it('maps an empty staging list to []', () => {

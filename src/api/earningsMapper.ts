@@ -29,6 +29,8 @@ interface EarningsValues {
   pendingCashback: string;
   paidCashback: string;
   totalCashback: string;
+  /** Pending cashback + pending rewards (Earnings page balance card). */
+  pendingCombined: string;
   /** Rewards (gift-card payout only): */
   confirmedRewards: string;
   pendingRewards: string;
@@ -99,6 +101,7 @@ export function mapEarnings(res: any): EarningsValues {
     pendingCashback: money(pending ?? 0),
     paidCashback: money(paid ?? 0),
     totalCashback: money(cashback ?? 0),
+    pendingCombined: money((pending ?? 0) + (pendingRewards ?? 0)),
     confirmedRewards: money(confirmedRewards ?? 0),
     pendingRewards: money(pendingRewards ?? 0),
     paidRewards: money(paidRewards ?? 0),
