@@ -160,7 +160,7 @@ export function CardsYouCanGetScreen() {
     [rejected, cards, eligibleAliases, selected, lifetimeFreeOnly, sort, reasonKind],
   );
 
-  const filtersActive = selected.length > 0 || lifetimeFreeOnly;
+  const filtersActive = selected.length > 0 || lifetimeFreeOnly || sort !== 'closest';
 
   const toggleCategory = (name: string) => {
     const on = selected.indexOf(name) === -1;
@@ -179,6 +179,7 @@ export function CardsYouCanGetScreen() {
   const clearFilters = () => {
     setUserCategories([]);
     setLifetimeFreeOnly(false);
+    setSort('closest');
     analytics.track(Events.FILTER_CLEAR, { scope: 'all', source: SOURCE });
   };
 

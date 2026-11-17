@@ -285,6 +285,60 @@ describe('contextTag', () => {
     expect(contextTag(source, other, undefined, c2).text).toBe('Also has UPI'); // UPI is rarer than Shopping
   });
 
+  describe('value tags (b, c, d)', () => {
+    // src: fee 1000, reward 500 (module-level); both fees equal for a "same fee" card.
+    const lead = mk({ alias: 'lead', bank: 'Q', joiningFee: 1000, annualFee: 1000, reward: 500, tags: ['Travel'] });
+    const base = { bank: 'Z', joiningFee: 1000, annualFee: 1000, reward: 500, tags: ['Travel'] };
+
+    it('b: lifetime free when the rejected card is not, even with more Rewards and a lower fee', () => {
+      const ltf = mk({ ...base, alias: 'ltf', joiningFee: 0, annualFee: 0, reward: 5000 });
+      expect(contextTag(lead, ltf)).toEqual({ text: 'Lifetime free', tone: 'success' });
+    });
+
+    it('b: skipped when the rejected card is lifetime free too', () => {
+      const ltfSrc = mk({ alias: 'ltfsrc', bank: 'Q', joiningFee: 0, annualFee: 0, reward: 500, tags: ['Travel'] });
+      const ltf = mk({ ...base, alias: 'ltf2', joiningFee: 0, annualFee: 0 });
+      expect(contextTag(ltfSrc, ltf).text).toBe('You can get this');
+    });
+
+    it('c: reward at least 200 higher, with the amount', () => {
+      const more = mk({ ...base, alias: 'more', reward: 700 });
+      expect(contextTag(lead, more)).toEqual({ text: '₹200 more Rewards', tone: 'brand' });
+      const lots = mk({ ...base, alias: 'lots', reward: 2500 });
+      expect(contextTag(lead, lots).text).toBe('₹2,000 more Rewards');
+    });
+
+    it('c: ₹199 more is not enough', () => {
+      const almost = mk({ ...base, alias: 'almost', reward: 699 });
+      expect(contextTag(lead, almost).text).toBe('You can get this');
+    });
+
+    it('c comes before d', () => {
+      const both = mk({ ...base, alias: 'both', reward: 900, joiningFee: 500, annualFee: 500 });
+      expect(contextTag(lead, both).text).toBe('₹400 more Rewards');
+    });
+
+    it('d: cost at least 100 lower, with the amount (cost is the larger of joining and annual)', () => {
+      const cheaper = mk({ ...base, alias: 'cheaper', joiningFee: 900, annualFee: 400 });
+      expect(contextTag(lead, cheaper)).toEqual({ text: '₹100 lower fee', tone: 'success' });
+    });
+
+    it('d: ₹99 lower is not enough', () => {
+      const near = mk({ ...base, alias: 'near', joiningFee: 901, annualFee: 901 });
+      expect(contextTag(lead, near).text).toBe('You can get this');
+    });
+
+    it('same bank still beats every value rule', () => {
+      const sameBank = mk({ ...base, alias: 'sb', bank: 'Q', joiningFee: 0, annualFee: 0, reward: 5000 });
+      expect(contextTag(lead, sameBank)).toEqual({ text: 'Also from Q', tone: 'gray' });
+    });
+
+    it('value rules beat a shared tag', () => {
+      const cat2 = [lead, mk({ ...base, alias: 'x', reward: 800 })];
+      expect(contextTag(lead, cat2[1], undefined, cat2).text).toBe('₹300 more Rewards');
+    });
+  });
+
   it('otherwise "You can get this"', () => {
     const none = mk({ alias: 'n', bank: 'Z', tags: ['Travel'] });
     expect(contextTag(source, none, otherReason, cat).text).toBe('You can get this');

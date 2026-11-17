@@ -14,7 +14,7 @@
  * Alternatives reuse the cross-sell engine's gate, similarity and fee bands
  * (src/lib/crossSell.ts); the engine itself is not changed in behaviour.
  */
-import { CONFIG, bandIdx, cost, idf, isLtf, passesEarningGate, profile, sim, topShared } from './crossSell';
+import { CONFIG, bandIdx, cost, idf, inr, isLtf, passesEarningGate, profile, sim, topShared } from './crossSell';
 import type { CrossSellCard } from './crossSell';
 import { shortCardName } from './crossSellPresent';
 
@@ -83,9 +83,12 @@ export type RejectionTone = 'info' | 'brand' | 'success' | 'purple' | 'gray';
 
 /**
  * Tag for a card in a plain list of cards the user can get. First rule that applies:
- * same bank, shares the tapped card's rarest tag, income reason, else generic.
+ * same bank, lifetime free (rejected card is not), Rewards at least `minRewardGain` higher,
+ * cost at least `minFeeGain` lower, shares the tapped card's rarest tag, income reason, else generic.
+ * Each tag says why THIS card is worth a look, so a shared tag no longer repeats down the list.
  * "Rarest" needs the catalogue (the engine's idf); without it that rule is skipped.
  * The income line is the fallback, not the lead: a rule on top would give every card the same tag.
+ * The three slot tags of the rejection sheet are separate (see `getRejectionPicks`).
  */
 export function contextTag(
   src: CrossSellCard,
@@ -94,6 +97,11 @@ export function contextTag(
   catalogue?: CrossSellCard[],
 ): { text: string; tone: RejectionTone } {
   if (src.bank && c.bank === src.bank) return { text: `Also from ${c.bank}`, tone: 'gray' };
+  if (isLtf(c) && !isLtf(src)) return { text: 'Lifetime free', tone: 'success' };
+  const rewardGain = c.reward - src.reward;
+  if (rewardGain >= CONFIG.minRewardGain) return { text: `${inr(rewardGain)} more Rewards`, tone: 'brand' };
+  const feeGain = cost(src) - cost(c);
+  if (feeGain >= CONFIG.minFeeGain) return { text: `${inr(feeGain)} lower fee`, tone: 'success' };
   if (catalogue) {
     const rarest = topShared(src, c, idf(catalogue));
     if (rarest) return { text: `Also has ${rarest}`, tone: 'info' };
