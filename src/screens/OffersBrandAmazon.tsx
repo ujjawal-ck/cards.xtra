@@ -554,7 +554,7 @@ export function OffersBrandAmazon() {
               store: brandName,
               cashback_kind: store?.cashbackKind,
             });
-            openClickOut({ kind: 'store', url: store?.cashbackUrl, itemId: slug ?? undefined, itemName: brandName });
+            openClickOut({ kind: 'store', url: store?.cashbackUrl, itemId: slug ?? undefined, itemName: brandName, source: 'store_page' });
           }}
         />
       </View>

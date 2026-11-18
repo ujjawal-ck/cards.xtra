@@ -234,7 +234,7 @@ export function CardsYouCanGetScreen() {
         eligibility_known: true,
         source: SOURCE,
       });
-      openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
+      openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name, source: 'cards_you_can_get', alias: card.crossSell?.alias ?? card.filterMeta?.cardAlias });
     },
     [openClickOut],
   );

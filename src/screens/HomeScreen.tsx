@@ -104,6 +104,8 @@ import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
+import type { ClickOutSource } from '../lib/useClickOut';
+import { loadSavedProfile, saveEligibilityInputs } from '../lib/savedProfile';
 import { useRecentSearches } from '../lib/recentSearches';
 import { getEligibilityGateVariant } from '../experiments';
 import { useCrossSellRail } from './useCrossSellRail';
@@ -785,6 +787,12 @@ export function HomeScreen() {
     incomeType: 'salaried' | 'self-employed';
   } | null>(null);
   const [eligibleAliases, setEligibleAliases] = useState<string[] | null>(null);
+  // Inputs saved on the device from an earlier session. Only prefills the checker
+  // while eligibilityDetails is null; it is NOT "eligibility known" (no result is saved).
+  const [savedEligibilityPrefill, setSavedEligibilityPrefill] = useState<typeof eligibilityDetails>(null);
+  useEffect(() => {
+    loadSavedProfile().then((p) => setSavedEligibilityPrefill(p.eligibility ?? null));
+  }, []);
 
   // Commit an eligibility result (from either checker) → store details for
   // prefill + the eligible set, and switch the toggle on.
@@ -796,6 +804,7 @@ export function HomeScreen() {
       eligibleCardAliases: string[];
     }) => {
       setEligibilityDetails({ pincode: o.pincode, income: o.income, incomeType: o.incomeType });
+      void saveEligibilityInputs({ pincode: o.pincode, income: o.income, incomeType: o.incomeType });
       setEligibleAliases(o.eligibleCardAliases);
       setEligibilityOn(true);
       // Details (re)entered — outcomes may have changed, so let each card show
@@ -852,6 +861,8 @@ export function HomeScreen() {
   // entry path where no details exist yet).
   const handleEligibilityClear = useCallback(() => {
     setEligibilityDetails(null);
+    setSavedEligibilityPrefill(null);
+    void saveEligibilityInputs(null);
     setEligibleAliases(null);
     setEligibilityOn(false);
     shownEligibilityResultRef.current.clear();
@@ -1099,7 +1110,9 @@ export function HomeScreen() {
   //   - details present → resolve THIS card's outcome (eligible / maybe /
   //                        ineligible) and open the matching colored sheet.
   // The sheet's "Continue to Apply" / "Apply Now" then opens the bank page.
+  const clickSourceRef = useRef<ClickOutSource>('unknown');
   const handleApply = (card: CardModel) => {
+    clickSourceRef.current = crossSell.clickSource();
     crossSell.onApplied(card);
     // "Apply Now" tapped (from tile or detail sheet). The actual outbound to
     // the bank fires later in handleResultApply (redirect: true) — or directly
@@ -1590,7 +1603,14 @@ export function HomeScreen() {
         redirect: true,
         gate_variant: getEligibilityGateVariant(),
       });
-      openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
+      openClickOut({
+        kind: 'card',
+        url: card.applyUrl,
+        itemId: card.id,
+        itemName: card.name,
+        source: clickSourceRef.current,
+        alias: card.crossSell?.alias ?? card.filterMeta?.cardAlias,
+      });
     },
     [eligibilityDetails, openClickOut]
   );
@@ -1622,6 +1642,7 @@ export function HomeScreen() {
         slot: pick.slot,
       });
       ineligibleSheetRef.current?.dismiss();
+      crossSell.onRejectionPickTap();
       // The detail pager must hold the pick (a category filter can leave it out of the feed).
       if (!pagerCards.some((c) => c.id === card.id)) {
         crossSell.showInDetail(
@@ -2364,9 +2385,9 @@ export function HomeScreen() {
           entered earlier (this screen or the card-detail checker). */}
       <EligibilityCheckerSheet
         ref={eligibilityCheckerRef}
-        defaultPincode={eligibilityDetails?.pincode ?? ''}
-        defaultIncome={eligibilityDetails?.income ?? ''}
-        defaultIncomeType={eligibilityDetails?.incomeType ?? 'salaried'}
+        defaultPincode={(eligibilityDetails ?? savedEligibilityPrefill)?.pincode ?? ''}
+        defaultIncome={(eligibilityDetails ?? savedEligibilityPrefill)?.income ?? ''}
+        defaultIncomeType={(eligibilityDetails ?? savedEligibilityPrefill)?.incomeType ?? 'salaried'}
         threshold={50000}
         routeResultExternally
         onClear={handleEligibilityClear}

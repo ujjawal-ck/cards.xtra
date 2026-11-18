@@ -43,7 +43,7 @@ export const Events = {
   // outbound to the bank is CARD_APPLY_OUTBOUND — count conversions on that.
   CARD_APPLY: 'card_apply',
   // Every outbound card / store click: kind, item_id, item_name, click_id,
-  // attributed (bool), link_type (ck | partner). For reconciling with partners.
+  // attributed (bool), link_type (ck | partner), source (surface). For reconciling with partners.
   CLICK_OUT: 'click_out',
   CARD_APPLY_OUTBOUND: 'card_apply_outbound', // bank page opened (the conversion)
   // A click-out we refused to open (no URL, or signed-in user id not loaded).
