@@ -2,6 +2,8 @@
 
 What appears on each screen, how users get there and leave, the data behind it, and what they see when things succeed or fail. A visual version lives on the "Cards.xtra Screen Flows" artifact. APIs are detailed in `api-reference.md`.
 
+Last updated 2026-11-18: Home has a compact masthead and a tools row, and six tool screens were added (see "Card tools"). Route counts below were not re-counted.
+
 About 46 routes are reachable in production. Not reachable (nothing navigates to them): `FoundationCheck` (dev), `Login`, `Otp`, `NameInput` (replaced by the login sheet and signup fields), `ReviewUs`, `WriteReview`, `ProfilePaymentHistory*`, `MissingCashbackTrack`, `MissingCashbackTicketStatusReview`, `MissingCashbackTicketList*`.
 
 ## Screens
@@ -19,7 +21,7 @@ About 46 routes are reachable in production. Not reachable (nothing navigates to
 
 | Screen | Shows | In → Out | States |
 |---|---|---|---|
-| **Home** | Video hero + search, help and bell icons; filter row (Category, Filters, **Eligibility** toggle); "Top picks for you", "Find the best card by category", "More to explore"; card tiles with **Apply Now** | Tab → card detail, search, filters, eligibility, Notifications, Get Help | Loading skeleton · "Couldn't load cards / Check your connection…" + Retry · "No cards match your filters" + Clear filters · eligibility groups (Eligible / Maybe / Ineligible) |
+| **Home** | Compact gradient masthead (header with help and bell icons, search bar; the hero video was removed, D25); tools row of four tiles (see "Card tools"); a divider; filter row (Category, Filters, **Eligibility** toggle); "Top picks for you", "Find the best card by category", "More to explore"; card tiles with **Apply Now** | Tab → card detail, search, filters, eligibility, Notifications, Get Help, the four tools | Loading skeleton · "Couldn't load cards / Check your connection…" + Retry · "No cards match your filters" + Clear filters · eligibility groups (Eligible / Maybe / Ineligible) |
 | **Card detail** (iOS sheet, Android full screen) | Card art, name, cashback badge, "Learn how it works?", benefits + **View all benefits**, best for, fees, eligibility tabs, inline eligibility checker, FAQ, recommended cards, sticky **Apply Now** with eligibility strip | Tile / search / store page → Apply, All benefits, How it works, Share | Benefits skeleton · eligibility result banners · a failed eligibility call silently falls back to the income rule |
 | **Search** | "Search by card name"; Popular searches; Banks and Cards results | Home → bank filter or card detail | "No results for “q”" + bank/card hint |
 | **Filters** | Category, Annual Fee, Card Network, Banks; **Apply Filter** with count | Home → filtered list | |
@@ -28,6 +30,27 @@ About 46 routes are reachable in production. Not reachable (nothing navigates to
 | **Log in to earn** | "Log in to earn cashback", **Log in** / **Apply (Shop) without cashback** | Any click-out while signed out | Signed in without a profile id: "Couldn't open this right now…" |
 | **All card benefits** | Categorised benefits | Card detail → back | "Couldn't load benefits…" / "Benefit details aren't available…" |
 | **Share / How it works** | Share tiles (system share) / 3 steps | Card detail, Get Help | |
+
+### Card tools
+
+Entry: the tools row under the Home masthead. One tap on a tile tracks `tool_tile_tap` and opens the tool. Two tiles rotate a word (category names, brand names); a tap opens the tool with the word on screen already picked. Every tool ends on a ranked list or a card comparison. All results come from one BankKaro `calculate` call per spend profile (see `api-reference.md`, row 32a). Rule and ranking: `src/lib/cardTools.ts` and D26 in `decision.md`.
+
+| Screen | Shows | In → Out | States |
+|---|---|---|---|
+| **Tools row** (on Home) | Four tiles: "Best card for" + rotating category, "Try Beat My Card", "Find My Ultimate Card", "Best card for" + rotating brand | Home → one of the four flows below | At a larger OS font size the row scrolls sideways; with reduce motion the first word stays |
+| **Spend quiz** | One spend question per screen (6 core questions), then "Your spends" review; **Add more spends** asks 15 more | Tile "Find My Ultimate Card" or Beat My Card pick → Tool results or Beat result | "Add at least one spend to continue." · skipped questions count as 0 |
+| **Tool results** | Ranked cards (first 10, then "Show all N cards"), each with Apply | Quiz, Best for category, Best for brands → card detail sheet, Apply click-out | Skeleton and wait line · offline + retry · error + retry · empty (no card saves money after its fee) |
+| **Best for category** | Category chips (one pick), monthly spend | Tile "Best card for" + category → Tool results | |
+| **Best for brands** | Brand chips (up to 5), a monthly spend for each; a note when a brand is counted in its category | Tile "Best card for" + brand → Tool results | Limit reached message |
+| **Beat my card: pick** | Search field and the app's cards that have a BankKaro alias | Tile "Try Beat My Card" → Spend quiz | |
+| **Beat my card: result** | The user's card against the best other card: podium, yearly gap, line table, Apply Now and View details | Spend quiz → card detail sheet, Apply click-out | Verdicts: best_wins, mine_wins, equal, not_found (up to 3 other cards shown) · skeleton, offline, error |
+
+**Flows**
+- **Find best card by category:** tile → Best for category (pick category, set spend) → Tool results.
+- **Beat My Card:** tile → Beat my card: pick (choose own card) → Spend quiz → Beat my card result.
+- **Find My Ultimate Card:** tile → Spend quiz (6 questions, optional 15 more, review) → Tool results.
+- **Best card for brands:** tile → Best for brands (pick brands, set spends) → Tool results.
+- Flows end on the result. Apply goes through `useClickOut` with source `tool_results` or `beat_my_card`. Back from a result returns to the screen before it; the quiz keeps its answers.
 
 ### Offers
 
@@ -80,6 +103,10 @@ About 46 routes are reachable in production. Not reachable (nothing navigates to
   - ✓ new number → OTP + name + email → Verify & create account → Greeting → Home
   - ✗ wrong / expired OTP → message, resend after 30 s · ✗ network → "Could not send / verify OTP"
 - Session expiry → silent refresh ✓ · refresh rejected → signed out, guest views ✗
+
+**B0. Card tools**
+- Home → tools row tile → category / brands / quiz / pick → Tool results or Beat result → card detail sheet or **Apply** → click-out as in B ✓
+- ✗ offline or error → message + Try again · no card saves money → empty message
 
 **B. Card → apply**
 - Home → card → detail → **Apply Now**

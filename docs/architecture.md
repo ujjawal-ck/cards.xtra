@@ -1,6 +1,6 @@
 # Architecture: what ships, what's fetched, caching, permissions
 
-How Cards.xtra is put together at runtime: which content is bundled in the app and which comes over the network, how data and images are cached, how the app behaves offline, and which Android permissions it declares and why. Verified against the code and the built APK (`dist/Cards.xtra-1.0.0.apk`) on 9 Nov 2026.
+How Cards.xtra is put together at runtime: which content is bundled in the app and which comes over the network, how data and images are cached, how the app behaves offline, and which Android permissions it declares and why. Verified against the code and the built APK (`dist/Cards.xtra-1.0.0.apk`) on 9 Nov 2026. Last updated 2026-11-18: Home hero video removed, card tools data path added (the sizes and permissions below were not re-measured).
 
 ## Runtime picture
 
@@ -31,6 +31,7 @@ Because `expo-updates` checks for an over-the-air update on every launch (`EXPO_
 | Login sheet art | Bundled SVG logos | |
 | Home hero | The hero video was removed on 2026-11-18 (D25). Home has a compact gradient masthead. | None. |
 | Home card list, tags, benefit text, fees | BankKaro `GET /cardgenius/cards` | Benefit/tag **icons** are local SVGs chosen by tag id. |
+| Card tools (Home tools row) | BankKaro `POST /cardgenius/calculate`, one call per spend profile, via `useCardSavings`: spends in, per-card savings out, ranked by `src/lib/cardTools.ts`, joined to the app's cards (`useCards`) by alias, then id. Questions, brand and category maps are bundled in `cardTools.ts`. Result is read by the screens, never passed through navigation. | Cached 10 min per profile. Offline: query pauses, screens show retry. See `api-reference.md` row 32a. |
 | Card images | BankKaro `card.image` URLs | 28 bundled card PNGs are not used by any live path. |
 | Bank logos | BankKaro `init-bundle` `bank_data[].logo` | Falls back to card art / static bank names. |
 | Card rewards ("Flat ₹X") | CashKaro `home-categories-exclusive` store rates, else BankKaro `commission` | CK category is empty on production. |
@@ -47,7 +48,7 @@ Because `expo-updates` checks for an over-the-air update on every launch (`EXPO_
 | Notifications | Empty list in code (no API) | |
 | Filter transition animation | Bundled Rive file (`cat-redirecting.riv`) | Rive's native engine adds ~10 MB to the APK for this one animation. |
 
-**Asset sizes** (`src/assets`, 23.8 MB): PNG 109 files / 18 MB (largest: help masthead 1.6 MB, onboarding-3 1.4 MB, store page 1.1 MB), SVG 117 / 3.6 MB (`pay-combined` 874 KB, payment-processing illustration 690 KB, Flipkart logos 597 KB each), Lottie 4 / 1.7 MB, MP4 516 KB. Every PNG registered in `src/assets/images/index.ts` is bundled whether used or not.
+**Asset sizes** (`src/assets`, 23.8 MB): PNG 109 files / 18 MB (largest: help masthead 1.6 MB, onboarding-3 1.4 MB, store page 1.1 MB), SVG 117 / 3.6 MB (`pay-combined` 874 KB, payment-processing illustration 690 KB, Flipkart logos 597 KB each), Lottie 4 / 1.7 MB. The 516 KB hero MP4 was removed on 2026-11-18 (D25); the other sizes were not re-measured. Every PNG registered in `src/assets/images/index.ts` is bundled whether used or not.
 
 **Fonts:** Outfit (5 weights, ~276 KB) from `@expo-google-fonts/outfit`, bundled and loaded at startup; the app shows a blank view until they load.
 
@@ -89,7 +90,7 @@ From the merged manifest of the built APK (target SDK 36).
 
 | Permission | Added by | Used? | Needed? |
 |---|---|---|---|
-| INTERNET, ACCESS_NETWORK_STATE | App template, Firebase, expo-image/video/updates | Yes | Yes |
+| INTERNET, ACCESS_NETWORK_STATE | App template, Firebase, expo-image/updates (`expo-video` was removed on 2026-11-18) | Yes | Yes |
 | WAKE_LOCK | Firebase Analytics | Indirectly | Acceptable |
 | VIBRATE | Template, `expo-haptics` | Yes (haptics) | Yes |
 | READ_EXTERNAL_STORAGE (max SDK 32) | Template, image picker | Yes, invoice upload on Android ≤ 12 | Yes, as scoped |

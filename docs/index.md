@@ -1,5 +1,7 @@
 # Cards.xtra documentation
 
+Last updated 2026-11-18: card tools added to Home.
+
 Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a credit card, applying through a cashback-tracked link, shopping partner stores for cashback, and withdrawing earnings. It talks to two production backends: the CashKaro mini-app API (`ckminapps.com`) and the BankKaro partner API.
 
 ## Start here
@@ -9,7 +11,7 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 | [development.md](development.md) | Set up, run on a phone, type-check, build a shareable APK, ship; troubleshooting. |
 | [decision.md](decision.md) | Understand why things are built the way they are, and which decisions are still open. |
 | [architecture.md](architecture.md) | See what ships in the app vs what's fetched, how caching and offline work, and which Android permissions the app declares and needs. |
-| [screen-flows.md](screen-flows.md) | See every screen, its entry/exit points and states, and the key paths with success and failure branches. |
+| [screen-flows.md](screen-flows.md) | See every screen, its entry/exit points and states, and the key paths with success and failure branches. Includes the Home tools row and the four card tool flows. |
 | [api-reference.md](api-reference.md) | Look up any endpoint: request body, response fields read, error handling, screens that use it. |
 | [auth-and-secrets.md](auth-and-secrets.md) | Follow login/signup/OTP end to end, the tokens the app holds, where secrets live, analytics identity and the signup IP field. |
 | [production-readiness.md](production-readiness.md) | What the CK mini-app team and BankKaro must configure (stores, categories, tracking host, SMS, keys) so the live setup needs no remapping; home-screen ideas grounded in the APIs. |
@@ -38,6 +40,7 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 - Package / bundle id: `com.cardsextra.miniapp`.
 - Login is optional; the phone + OTP sheet lives in `src/screens/OnboardingScreen.tsx`.
 - Every card/store click-out goes through `src/lib/useClickOut.tsx`.
+- Home card tools: tiles in `src/organisms/ToolsRow.tsx`, screens in `src/screens/tools/`, logic and ranking rule in `src/lib/cardTools.ts`, data in `src/query/useCardSavings.ts` (D24 to D26 in [decision.md](decision.md)).
 - Every network call goes through `src/api/http/client.ts` (timeouts, retries, single-flight tokens, response contracts).
 - Design tokens in `src/tokens` are mandatory for colours, spacing and type.
 - `npm run typecheck` and `npm test` run on every push (GitHub Actions, `.github/workflows/ci.yml`).

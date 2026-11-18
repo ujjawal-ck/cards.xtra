@@ -1,5 +1,7 @@
 # DS-ADD(ds-expansion-1, 2026-11-17): design-system additions manifest
 
+Last updated 2026-11-18: "Used by today" cells for Skeleton, RankedCardRow and QuizStep, and a "Changes after the batch" section at the end of this file.
+
 Batch id: `ds-expansion-1`. Date: 2026-11-17. Source: designer audit (`ds-expansion-designer.md`, sections 3.4 to 3.9, 4.1, 4.2). The user approved new semantic token NAMES that point at existing primitives, for this batch only. No new raw colour, size or font value was added. Nothing here was run on a device.
 
 ## (a) Parts
@@ -9,14 +11,14 @@ Batch id: `ds-expansion-1`. Date: 2026-11-17. Source: designer audit (`ds-expans
 | StatDelta | atom | `src/atoms/StatDelta.tsx` | A value with a stated direction (icon + word) and an optional reference line. Replaces `CompareStat` (deleted). | CompareCard, DsAdditionsGallery | Delete file + export line in `src/atoms/index.ts` |
 | RankBadge | atom | `src/atoms/RankBadge.tsx` | Round rank number. | RankedCardRow, gallery | Delete file + export line |
 | StepProgress | atom | `src/atoms/StepProgress.tsx` | Determinate bar with label and "2 of 6"; fill animates with `motion.duration.base`. | QuizStep, gallery | Delete file + export line |
-| Skeleton | atom | `src/atoms/Skeleton.tsx` | Generic pulsing block (same pulse as AmountSkeleton, `motion.duration.pulse`). AmountSkeleton / HomeSkeleton not refactored. | gallery | Delete file + export line |
+| Skeleton | atom | `src/atoms/Skeleton.tsx` | Generic pulsing block (same pulse as AmountSkeleton, `motion.duration.pulse`). AmountSkeleton / HomeSkeleton not refactored. | EarningsScreen, ToolResultsScreen, BeatMyCardResultScreen, gallery | Delete file + export line |
 | GainBand | molecule | `src/molecules/GainBand.tsx` | Flat tone band across the top of a card: icon, amount + caption, or Viewed state. | CompareCard, gallery | Delete file + export lines in `src/molecules/index.ts` |
 | CompareCard | molecule | `src/molecules/CompareCard.tsx` | Card for a "compare with another card" row: band, art + name, two StatDelta rows, pressed state + haptic, full screen-reader label. | CrossSellRail (feature), gallery | Delete file + export lines |
-| RankedCardRow | molecule | `src/molecules/RankedCardRow.tsx` | One ranked result row: rank, art, name, headline rupee value, reason, eligibility, compare toggle, apply. | gallery | Delete file + export lines |
+| RankedCardRow | molecule | `src/molecules/RankedCardRow.tsx` | One ranked result row: rank, art, name, headline rupee value, reason, eligibility, compare toggle, apply. | ToolResultsScreen, BeatMyCardResultScreen, gallery | Delete file + export lines |
 | AmountInput | molecule | `src/molecules/AmountInput.tsx` + `src/lib/amountInput.ts` | Rupee field with live Indian grouping, min / max, period, presets. Not wired into EligibilityCheckerSheet. | gallery | Delete both files, test, export lines |
 | BarBreakdown | molecule | `src/molecules/BarBreakdown.tsx` | Ranked horizontal bars, every bar labelled. | gallery | Delete file + export lines |
 | StackedBar | molecule | `src/molecules/StackedBar.tsx` | One stacked bar, `spacing[2]` gaps, labelled legend. | gallery | Delete file + export lines |
-| QuizStep | organism | `src/organisms/QuizStep.tsx` | One-question-per-screen shell: back, StepProgress, skip, title, body slot, FooterButtons footer. | none yet (not in gallery: needs a full screen) | Delete file + export lines in `src/organisms/index.ts` |
+| QuizStep | organism | `src/organisms/QuizStep.tsx` | One-question-per-screen shell: back, StepProgress, skip, title, body slot, FooterButtons footer. | SpendQuizScreen (not in gallery: needs a full screen) | Delete file + export lines in `src/organisms/index.ts` |
 | chartMath (helper) | lib | `src/lib/chartMath.ts` | Width maths for bars, stacked bars, progress. | BarBreakdown, StackedBar, StepProgress | Delete with its users + test |
 | DsAdditionsGallery | screen | `src/screens/DsAdditionsGallery.tsx` | One sample of each part for FoundationCheck. | FoundationCheck (`__DEV__` only) | Delete file + the two blocks in FoundationCheck |
 
@@ -172,3 +174,13 @@ Note: lib files in this batch import `../tokens/spacing` and `../tokens/colors`,
 - Not built: folded corner of the On Card chip; shoe-prints glyph (footprints indicator draws a dot); medal glyph (star icon used); gradient fills (flat tones used everywhere); inner shadows on the cashback and done markers; the overlapping image holder on SpendCard Large and BigAmountCard (slot only in BigAmountCard).
 - CompareTable: the inner layout is inferred (see its header). Check rows / columns orientation and the 88 x 88 value cell (ours is as tall as the hero) against the Figma file.
 - Nothing was run on a device. Only `tsc` and `jest` ran. No tests of rendered output, no analytics.
+
+## Changes after the batch, 2026-11-18
+
+Made for the Home card tools (D24 to D26). Source: the file headers in `src/`. These edits are outside the two batch commits, so `git revert` of a batch does not undo them.
+
+- `SpendCard` (`ds-figma-1`): new optional `title` (large size; an empty string shows no title) and `unit` (`'rupees'` or `'count'`, no rupee sign). The live value is committed if the card unmounts mid-drag.
+- `QuizStep` (`ds-expansion-1`): new optional `onClose`, which adds a close (x) action to the header row.
+- `PodiumCompare` (`ds-figma-1`): card art no longer paints over the value (the art overhang is reserved above each bar); no winner is marked when both values are 0 or less.
+- `SearchBar` now exports `SEARCH_BAR_H`, read by the compact Home masthead.
+- Used by the tool screens (`src/screens/tools/`), from a grep on 2026-11-18: `SpendCard` (SpendQuizScreen, BestForCategoryScreen, BestForBrandsScreen); `PodiumCompare`, `BreakdownTable`, `BigAmountCard` (BeatMyCardResultScreen); `RankedCardRow` (ToolResultsScreen, BeatMyCardResultScreen); `QuizStep` (SpendQuizScreen, which shows `StepProgress` through it). These parts are no longer gallery-only.

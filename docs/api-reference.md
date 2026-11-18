@@ -1,5 +1,7 @@
 # API reference
 
+> **Last updated 2026-11-18:** `POST /cardgenius/calculate` is now used by the card tools (row 32a). The endpoint count below was not re-counted.
+
 Every backend call the app makes, with the request it sends, the response fields it reads, how errors are handled, and which screens use it. 33 endpoints: 29 on CashKaro (CK), 6 on BankKaro (BK), 1 external. For the order of calls per user journey see the "API flow" section of the build-status page; for tokens and secrets see `auth-and-secrets.md`.
 
 No secret values appear here; keys are referred to by their `.env` names.
@@ -100,8 +102,9 @@ Defined but unused: `submitBankPayment` (`type:"imps"`); Bank Transfer shows "Co
 | 30 | `GET /cardgenius/cards` | | `data[]` (only `status === true`): `id`, `name`, `image`, `card_alias`, `network_url`, `ck_store_id`, `bank_id`, `card_type`, `commission`/`bk_commission`, fee text + waiver/comment, eligibility fields, `invite_only`, `tags[]`, `product_usps[]` | `useCards` (key `['bk','cards']`): Home list, filters, card detail, store page "best cards". |
 | 31 | `GET /cardgenius/cards/{alias}` | | `product_benefits[].{benefit_type,html_text}` → benefit tabs, "What We Love" | Card detail, All benefits. Neighbours prefetched. |
 | 32 | `POST /cardgenius/eligiblity` (spelling as in the API) | `{pincode, inhandIncome:"<monthly>", empStatus:"salaried"\|"self_employed"}` | `data[].{eligible, card_alias}` | Eligibility checker (Home toggle), checker inside card detail. Errors → fallback verdict. |
+| 32a | `POST /cardgenius/calculate` | JSON body with 21 spend keys, all required, 0 = no spend (type `CalculateSpends`, `src/api/types.ts`). Rupee keys are sent as whole rupees. The keys `insurance_health_annual`, `insurance_car_or_bike_annual`, `life_insurance`, `flights_annual` and `hotels_annual` take a yearly input. The two lounge keys are asked per year and sent per quarter. Asked and built by `SPEND_QUESTIONS`, `toApiValue`, `buildSpends` in `src/lib/cardTools.ts`. | `data.savings[]`, one row per card: `seo_card_alias`, savings, fees, fee-waiver spend, lounge value, `spending_breakdown`. Mapped by `mapCalculateResponse` in `src/lib/cardTools.ts`; checked by `src/api/schemas/calculate.ts`. The app does not read `roi`. | Card tools (`useCardSavings`, key `['bk','calculate',<spend profile>]`, 10 min stale). One call per spend profile, 45 s timeout, one retry (`calculateSavings`). Rows join to the app's cards by alias, then id; a row with no app card is dropped. Offline: the query pauses and the screen shows retry. The BFF allows this route and gives it a longer timeout (`bff/src/routes.js`, `bff/src/proxy.js`); deployed on the production BFF since 2026-11-18. |
 
-Defined but unused: `GET /cardgenius/popular-cards`, `POST /cardgenius/cards` (server-side filter/sort), `POST /cardgenius/calculate` (spend-based rewards; see the Home ideas in `production-readiness.md`).
+Defined but unused: `GET /cardgenius/popular-cards`, `POST /cardgenius/cards` (server-side filter/sort). `POST /cardgenius/calculate` is used since 2026-11-18 (row 32a).
 
 ## External
 

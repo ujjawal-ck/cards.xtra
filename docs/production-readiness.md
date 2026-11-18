@@ -1,6 +1,6 @@
 # Production readiness: mini-app configuration and integrations
 
-> **Status 2026-11-18:** Probed 2026-11-09 and not re-checked. Section 3 (keys) is partly done: partner keys moved to the BFF. The production tracking host is still empty (`src/config/env.ts`).
+> **Status 2026-11-18:** Probed 2026-11-09 and not re-checked. Section 3 (keys) is partly done: partner keys moved to the BFF. The production tracking host is still empty (`src/config/env.ts`). Section 6: the spend-based idea is built (Home card tools, 2026-11-18).
 
 What has to be configured on the CashKaro mini-app side (and with BankKaro) so the live setup works without remapping later, and what the app already does to stay stable when that configuration changes. Status as of 9 Nov 2026 (probed read-only against production).
 
@@ -62,10 +62,10 @@ What has to be configured on the CashKaro mini-app side (and with BankKaro) so t
 
 The Home list today is one long feed of all 281 cards (top picks, then the rest), with client-side filters. Ideas the existing APIs already support:
 
-- **Spend-based "best card for you" (cashback calculator).** BankKaro exposes `POST /cardgenius/calculate` with a spend breakdown (amount per category, e.g. shopping, fuel, dining, travel, bills) and returns estimated rewards per card. It's wired in `src/api/bankkaro.ts` (`calculate`) but unused. A short "How do you spend each month?" step (4–6 sliders) could replace the endless feed with a ranked shortlist and a rupee estimate per card. Needs: the exact request/response contract from BankKaro and a spend-category list that matches `init-bundle` tags.
+- **Spend-based "best card for you" (cashback calculator).** BankKaro exposes `POST /cardgenius/calculate` with a spend breakdown (amount per category, e.g. shopping, fuel, dining, travel, bills) and returns estimated rewards per card. **Built on 2026-11-18** as the Home card tools (`src/api/bankkaro.ts` `calculateSavings`, `src/lib/cardTools.ts`, `src/query/useCardSavings.ts`; see `screen-flows.md`). The Home feed was not replaced: the tools sit above it. The contract is checked by `src/api/schemas/calculate.ts`.
 - **Server-side filters and sorting.** `POST /cardgenius/cards` (`filterCards`) accepts filters and sort; today the app filters on the phone. Server-side filtering would let us show counts per filter and sort by fees or rewards without loading all 281 cards.
 - **Eligibility-first browsing.** The eligibility check (`POST /cardgenius/eligiblity`) already returns eligible card aliases; making "Show cards I'm eligible for" a first-class entry point (not a toggle) would shorten the feed for most users.
 - **Popular cards.** `GET /cardgenius/popular-cards` exists and is unused; it could seed a short "Top picks" row instead of hand-picked ordering.
 - **Category-first entry.** The "Find the best card by category" carousel could become the primary navigation (category → shortlist of 5–10), using card `tags`.
 
-Each needs a product decision before build; none needs a new backend endpoint except confirming the calculate contract.
+Except the spend-based item above (built), each needs a product decision before build; none needs a new backend endpoint.
