@@ -7,7 +7,7 @@ How to set up, run, test and ship Cards.xtra. For why things are built the way t
 - Expo SDK 54, React Native 0.81 (new architecture), TypeScript + JavaScript. Entry: `App.js` (gesture-handler import first, font loading, providers).
 - Navigation: React Navigation 7 (native stack + custom bottom tabs).
 - Data: TanStack React Query; session in `expo-secure-store`.
-- UI: design tokens in `src/tokens` (colours, spacing, typography — "tokens are law"), Outfit font, `@gorhom/bottom-sheet`, Reanimated 4, Lottie, Rive (one animation), `expo-video` (Home hero).
+- UI: design tokens in `src/tokens` (colours, spacing, typography — "tokens are law"), Outfit font, `@gorhom/bottom-sheet`, Reanimated 4, Lottie, Rive (one animation). The Home hero video was removed on 2026-11-18 (D25); Home has a compact gradient masthead.
 - Native extras: Firebase Analytics (`@react-native-firebase/*`) and a local Expo module, `modules/cashback-guard` (Android "Never Miss Cashback" reminder). Because of these, the app runs in a **development build**, not Expo Go.
 
 ## Folder map
@@ -24,7 +24,7 @@ How to set up, run, test and ship Cards.xtra. For why things are built the way t
 | `src/lib` | Helpers: click-outs (`clickOut.ts`, `useClickOut.tsx`), money and phone formatting, masking. |
 | `src/analytics` | `analytics.track()` facade, event names, Firebase sink. |
 | `src/data` | Static content shipped in the app (filter options, offer-category icons, Amazon fallback copy). |
-| `src/assets` | Images, icons (SVG), Lottie, video, logos. |
+| `src/assets` | Images, icons (SVG), Lottie, logos. |
 | `modules/cashback-guard` | Local native module (Android). |
 | `docs` | This documentation (start at `index.md`). |
 

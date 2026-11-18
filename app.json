@@ -49,7 +49,6 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-video",
       "@react-native-firebase/app",
       "@react-native-firebase/analytics",
       "@react-native-firebase/crashlytics",

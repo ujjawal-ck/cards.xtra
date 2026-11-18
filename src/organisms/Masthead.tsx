@@ -138,7 +138,7 @@ export interface MastheadProps {
   tone?: StatusBadgeStatus;
 
   // 'home' content
-  /** Background slot — any React node (image, video, animation). When
+  /** Background slot — any React node (image, animation). When
    *  undefined it falls back to <ImageBackground source={images.backgrounds.home}>
    *  ('default' size) or the plain gradients.primary fill ('compact' size),
    *  so the masthead always has a backdrop. */
@@ -934,7 +934,7 @@ function CashbackStatusMasthead({
 // undefined, the masthead falls back to <ImageBackground source=
 // images.backgrounds.home> (default size) or gradients.primary (compact
 // size) so it always has a backdrop. Caller can
-// drop an animation, video, or anything in its place later.
+// drop an animation or anything in its place later.
 // ----------------------------------------------------------------------------
 
 const HOME_MASTHEAD_H = 408;

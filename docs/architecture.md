@@ -7,7 +7,7 @@ How Cards.xtra is put together at runtime: which content is bundled in the app a
 ```
 Phone (Expo SDK 54 · React Native 0.81, new architecture)
  ├─ JS bundle (6.95 MB, embedded in the APK) — screens, copy, Lottie, SVG icons
- ├─ Native resources — 531 PNGs, hero video, Rive file, fonts (Outfit, 5 weights)
+ ├─ Native resources — 531 PNGs, Rive file, fonts (Outfit, 5 weights)
  ├─ Secure storage — session tokens, device id, display name, flags
  └─ Network
      ├─ CK Mini Apps  https://ckminapps.com/v1       login, profile, earnings, orders, offers, withdraw, claims
@@ -29,7 +29,7 @@ Because `expo-updates` checks for an over-the-air update on every launch (`EXPO_
 | Animated splash | Bundled Lottie `src/assets/animations/splash-animation.json` | |
 | Onboarding slides | Bundled Lottie `onboarding-1/2/3.json`, backdrop image; headlines hardcoded in `OnboardingScreen.tsx` | Unused `onboarding-*.png` are still bundled. |
 | Login sheet art | Bundled SVG logos | |
-| Home hero | Bundled MP4 `src/assets/videos/home-hero.mp4` (516 KB), muted loop via `expo-video` | Hero copy is baked into the video: it can't be edited without a new video. |
+| Home hero | The hero video was removed on 2026-11-18 (D25). Home has a compact gradient masthead. | None. |
 | Home card list, tags, benefit text, fees | BankKaro `GET /cardgenius/cards` | Benefit/tag **icons** are local SVGs chosen by tag id. |
 | Card images | BankKaro `card.image` URLs | 28 bundled card PNGs are not used by any live path. |
 | Bank logos | BankKaro `init-bundle` `bank_data[].logo` | Falls back to card art / static bank names. |

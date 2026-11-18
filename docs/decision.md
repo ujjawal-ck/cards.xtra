@@ -6,6 +6,15 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D25. Hero video removed; tool rules signed off
+2026-11-18 · branch `claude/remove-hero-video`
+
+The owner said yes to four points on the Home tools (D24):
+- The hero video goes: `HeroVideo`, `src/assets/videos/home-hero.mp4` and the `expo-video` dependency and plugin are removed. A build made before this change still carries the native module. The next dev build or prebuild drops it.
+- The ranking rule and the starting spend for each category stay as built.
+- The brands tile keeps rotating Myntra, Swiggy, Flipkart and Amazon. The note that only Amazon and Flipkart are exact stays on the picker and the results.
+- The four tiles get designed icons. Open: the icons are not in the repo yet.
+
 ## D24. Home: compact masthead and a row of four card tools
 2026-11-18 · branch `claude/home-tools`
 
