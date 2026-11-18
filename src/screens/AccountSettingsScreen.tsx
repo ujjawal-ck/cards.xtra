@@ -17,7 +17,7 @@
  *      Email + Mobile are sensitive, so they're display-only here and any
  *      change is gated behind the verify-identity → enter-new → verify-new
  *      flow (EditContact* screens).
- *   4. "Delete Account" red underlined link → DeleteAccount screen.
+ *   4. (Hidden) "Delete Account" red underlined link → DeleteAccount screen.
  *   5. Success InlineMessage (only after returning from a completed
  *      email/mobile change) — tone 'success' + check icon.
  *   6. Sticky "Save Changes" footer (cobalt/accent) — enabled only once
@@ -178,24 +178,9 @@ export function AccountSettingsScreen() {
             </Pressable>
           </View>
 
-          {/* Delete Account link */}
-          <View style={{ paddingHorizontal: spacing[16] }}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Delete Account"
-              hitSlop={spacing[8]}
-              onPress={() => navigation.navigate('DeleteAccount')}
-              style={{ alignSelf: 'flex-start' }}
-            >
-              <Text
-                variant="body12Medium"
-                color={colors.feedback.error.default}
-                style={{ textDecorationLine: 'underline' }}
-              >
-                Delete Account
-              </Text>
-            </Pressable>
-          </View>
+          {/* Delete Account is hidden: the screens only simulate deletion and
+              no account-deletion API exists (docs/production-readiness.md §4).
+              Restore the link to the DeleteAccount route once it does. */}
         </ScrollView>
 
         {/* Success message — only after a completed email/mobile change. */}
