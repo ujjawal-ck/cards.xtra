@@ -103,5 +103,9 @@ export function configProblems(): string[] {
   const problems: string[] = [];
   if (!API_BASE_URL) problems.push('EXPO_PUBLIC_API_BASE_URL (the BFF) is empty');
   if (!CK.trackingHost) problems.push(`CK tracking host is empty for stage "${STAGE}"`);
+  // An unset stage silently means staging. In a release build that is a mistake.
+  if (!envStage && typeof __DEV__ !== 'undefined' && !__DEV__) {
+    problems.push('EXPO_PUBLIC_STAGE is not set, so this build runs as "staging"');
+  }
   return problems;
 }
