@@ -95,10 +95,15 @@ jobs:
           EXPO_PUBLIC_API_BASE_URL: https://cards-xtra-bff.vercel.app
         run: npx expo export --platform web --output-dir dist
 
+      # Deploy as prebuilt output: a plain upload skips every node_modules
+      # folder, and Expo puts the fonts under assets/node_modules/.
       - name: Deploy app web preview
         if: steps.token.outputs.present == 'true'
         env:
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_WEB_PROJECT_ID }}
         run: |
-          url=$(vercel deploy dist --yes --token "$VERCEL_TOKEN")
+          mkdir -p .vercel/output/static
+          cp -R dist/. .vercel/output/static/
+          echo '{"version":3}' > .vercel/output/config.json
+          url=$(vercel deploy --prebuilt --yes --token "$VERCEL_TOKEN")
           echo "App web preview: $url" >> "$GITHUB_STEP_SUMMARY"
