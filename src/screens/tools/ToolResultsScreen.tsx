@@ -111,8 +111,8 @@ export function ToolResultsScreen() {
         </Text>
       ) : null}
       <Text variant="body12Regular" color={colors.text.secondary}>
-        Savings are estimates from the spends you entered, shown per year after the annual fee. CashKaro Rewards are
-        extra.
+        Savings are estimates from the spends you entered, shown per year after the annual fee. A fee the bank waives
+        at your spend is not counted, and lounge visits you entered are included. CashKaro Rewards are extra.
       </Text>
     </View>
   );

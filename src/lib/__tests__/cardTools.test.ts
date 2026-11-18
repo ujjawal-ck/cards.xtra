@@ -21,6 +21,7 @@ import {
 } from '../cardTools';
 
 const fixture = require('../../api/__fixtures__/uat.calculate_trimmed.json');
+const waiverFixture = require('../../api/__fixtures__/uat.calculate_waiver_lounge_trimmed.json');
 
 /** A small synthetic card for ranking and beat tests. */
 const card = (alias: string, p: Partial<CardSavings> = {}): CardSavings => ({
@@ -31,6 +32,10 @@ const card = (alias: string, p: Partial<CardSavings> = {}): CardSavings => ({
   extraBenefits: 0,
   joiningFee: 0,
   annualFee: 0,
+  loungeValue: 0,
+  feeWaiverSpend: 0,
+  feeWaived: false,
+  annualFeeCounted: 0,
   netYearly: 0,
   lines: [],
   ...p,
@@ -58,11 +63,18 @@ describe('mapCalculateResponse on the UAT fixture', () => {
     expect(cred.annualFee).toBe(589);
   });
 
-  it('computes netYearly = yearly + extra - annual fee', () => {
-    for (const c of list) expect(c.netYearly).toBe(c.yearlySavings + c.extraBenefits - c.annualFee);
+  it('computes netYearly = yearly + extra + lounge - counted annual fee', () => {
+    for (const c of list) {
+      expect(c.netYearly).toBe(c.yearlySavings + c.extraBenefits + c.loungeValue - c.annualFeeCounted);
+    }
     expect(byAlias('cred-indusind-bank-credit-card').netYearly).toBe(11111);
     expect(byAlias('bob-cashback-credit-card').netYearly).toBe(11111);
     expect(byAlias('magnus-burgundy-credit-card').netYearly).toBe(-22764);
+    expect(byAlias('phonepe-sbi-card-select-black').netYearly).toBe(9931);
+    // Fee 1,179 waived at 2,00,000 a year; monthly spends 22,500 x 12 = 2,70,000.
+    const sbi = byAlias('sbi-cashback-credit-card');
+    expect(sbi).toMatchObject({ annualFee: 1179, feeWaiverSpend: 200000, feeWaived: true, annualFeeCounted: 0 });
+    expect(sbi.netYearly).toBe(10740);
   });
 
   it('keeps lines only for spends above 0, highest savings first', () => {
@@ -183,14 +195,15 @@ describe('rankByNetValue', () => {
     expect(input[0].alias).toBe('a');
   });
 
-  it('ranks the fixture by net value, not by roi', () => {
-    // bob and cred tie on net, yearly and fee, so the alias decides.
+  it('ranks the fixture by net value', () => {
+    // bob and cred tie on net, yearly and fee, so the alias decides. sbi-cashback
+    // has its fee waived at this spend (10,740), so it is above phonepe (9,931).
     const out = rankByNetValue(mapCalculateResponse(fixture));
     expect(out.map((c) => c.alias)).toEqual([
       'bob-cashback-credit-card',
       'cred-indusind-bank-credit-card',
-      'phonepe-sbi-card-select-black',
       'sbi-cashback-credit-card',
+      'phonepe-sbi-card-select-black',
       'magnus-burgundy-credit-card',
     ]);
   });
@@ -513,5 +526,109 @@ describe('Home tile words open the tool with that word picked', () => {
     expect(categoryIdForWord(undefined)).toBeUndefined();
     expect(brandIdForWord('Nope')).toBeUndefined();
     expect(brandIdForWord(undefined)).toBeUndefined();
+  });
+});
+
+describe('net yearly with the fee waiver and the lounge value (D26)', () => {
+  const rows = [...fixture.data.savings, ...waiverFixture.data.savings];
+  const mapped = [...mapCalculateResponse(fixture), ...mapCalculateResponse(waiverFixture)];
+
+  it('maps all 11 UAT rows', () => {
+    expect(rows).toHaveLength(11);
+    expect(mapped).toHaveLength(11);
+  });
+
+  // Ties our explicit sum to BankKaro's undocumented roi on real data.
+  it.each(rows.map((r: any) => [r.seo_card_alias, r.roi]))(
+    '%s: netYearly equals round(roi) within 2 rupees',
+    (alias, roi) => {
+      const c = mapped.find((m) => m.alias === alias)!;
+      expect(Math.abs(c.netYearly - Math.round(Number(roi)))).toBeLessThanOrEqual(2);
+    },
+  );
+
+  it.each([
+    // alias, feeWaived, loungeValue, annualFee, annualFeeCounted, feeWaiverSpend
+    ['hsbc-live-plus-credit-card', true, 0, 1179, 0, 200000],
+    ['idfc-first-hello-cashback-credit-card', true, 0, 1180, 0, 200000],
+    ['american-express-mr-credit-card', true, 0, 5310, 0, 150000],
+    ['paytm-hdfc-bank-select-credit-card', true, 6000, 1180, 0, 150000],
+    ['canara-rupay-select-credit-card', false, 6000, 354, 354, 0],
+    ['reliance-sbi-card-prime', false, 6000, 3539, 3539, 300000],
+  ])('%s: waived %s, lounge %d, fee %d, counted %d', (alias, waived, lounge, fee, counted, waiverSpend) => {
+    const c = mapCalculateResponse(waiverFixture).find((m) => m.alias === alias)!;
+    expect(c).toMatchObject({
+      feeWaived: waived,
+      loungeValue: lounge,
+      annualFee: fee,
+      annualFeeCounted: counted,
+      feeWaiverSpend: waiverSpend,
+    });
+  });
+
+  it('reliance-sbi-card-prime: extra benefits and lounge value are both counted', () => {
+    const c = mapCalculateResponse(waiverFixture).find((m) => m.alias === 'reliance-sbi-card-prime')!;
+    expect(c.extraBenefits).toBe(3750);
+    expect(c.netYearly).toBe(1350 + 3750 + 6000 - 3539);
+  });
+
+  describe('edge cases on hand-built rows', () => {
+    const one = (extra: Record<string, unknown>) =>
+      mapCalculateResponse({
+        data: {
+          savings: [{ seo_card_alias: 'x', total_savings_yearly: 5000, annual_fees: '1000', total_spends: 10000, ...extra }],
+        },
+      })[0];
+
+    it('no waiver when annual_fee_spends is empty, "0" or not a number', () => {
+      for (const v of ['', '0', 'abc', null, undefined]) {
+        const c = one({ annual_fee_spends: v });
+        expect(c).toMatchObject({ feeWaiverSpend: 0, feeWaived: false, annualFeeCounted: 1000, netYearly: 4000 });
+      }
+    });
+
+    it('no waiver when total_spends is missing', () => {
+      const c = one({ annual_fee_spends: '50000', total_spends: undefined });
+      expect(c).toMatchObject({ feeWaiverSpend: 50000, feeWaived: false, annualFeeCounted: 1000, netYearly: 4000 });
+    });
+
+    it('waived when the yearly spend is exactly the waiver spend', () => {
+      const c = one({ annual_fee_spends: '120000' });
+      expect(c).toMatchObject({ feeWaived: true, annualFee: 1000, annualFeeCounted: 0, netYearly: 5000 });
+    });
+
+    it('not waived one rupee a year below the waiver spend', () => {
+      expect(one({ annual_fee_spends: '120001' }).feeWaived).toBe(false);
+    });
+
+    it('lounge value is 0 when travel_benefits is null or missing, and reads a string number', () => {
+      expect(one({ travel_benefits: null }).loungeValue).toBe(0);
+      expect(one({}).loungeValue).toBe(0);
+      expect(one({ travel_benefits: {} }).loungeValue).toBe(0);
+      const c = one({ travel_benefits: { total_travel_benefit_annual: '2499.6' } });
+      expect(c.loungeValue).toBe(2500);
+      expect(c.netYearly).toBe(5000 + 2500 - 1000);
+    });
+  });
+
+  it('beatMyCard: a waived card against one not waived follows the new sum', () => {
+    // Both save 10,000 a year with a 3,000 fee. Only "best" reaches its waiver.
+    const raw = (alias: string, waiver: string) => ({
+      seo_card_alias: alias,
+      total_savings_yearly: 10000,
+      annual_fees: '3000',
+      annual_fee_spends: waiver,
+      total_spends: 20000,
+    });
+    const list = rankByNetValue(
+      mapCalculateResponse({ data: { savings: [raw('mine', '300000'), raw('best', '240000')] } }),
+    );
+    expect(list.map((c) => c.alias)).toEqual(['best', 'mine']);
+    const r = beatMyCard(list, 'mine')!;
+    expect(r.best.netYearly).toBe(10000);
+    expect(r.mine.netYearly).toBe(7000);
+    expect(r.gapYearly).toBe(3000);
+    expect(r.verdict).toBe('best_wins');
+    // Under the old sum both were 7,000: the verdict would have been 'equal'.
   });
 });

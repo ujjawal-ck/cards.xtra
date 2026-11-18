@@ -6,7 +6,8 @@
  * facts come from the full UAT response of 2026-11-18 (219 cards): fees are
  * strings, `invite_only` is a bool or an int, `max_potential_savings` is
  * "Unlimited" or a number, and `spending_breakdown` has more keys than the
- * 21 inputs. Fixture: src/api/__fixtures__/uat.calculate_trimmed.json.
+ * 21 inputs. Fixtures: src/api/__fixtures__/uat.calculate_trimmed.json and
+ * uat.calculate_waiver_lounge_trimmed.json.
  */
 import { z } from 'zod';
 
@@ -40,6 +41,11 @@ const savingsCard = z
     roi: numeric,
     joining_fees: numeric,
     annual_fees: numeric,
+    // Fee waiver and lounge value (D26). `annual_fee_spends` is "" when the card has no waiver.
+    total_spends: numeric,
+    annual_fee_spends: numeric,
+    annual_fee_waiver_toggle: z.union([z.boolean(), z.number(), z.string()]).nullish(),
+    travel_benefits: z.object({ total_travel_benefit_annual: numeric }).passthrough().nullish(),
     ck_rewards: numeric,
     rating: numeric,
     invite_only: z.union([z.boolean(), z.number()]).nullish(),

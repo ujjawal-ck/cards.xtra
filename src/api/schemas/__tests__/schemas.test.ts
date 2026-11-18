@@ -27,6 +27,7 @@ const cases: Array<[string, keyof typeof S, string]> = [
   ['staging claims queue (empty)', 'McQueueResponse', 'staging.mc_queue_pending'],
   ['doc claims queue', 'McQueueResponse', 'doc.mc_queue'],
   ['uat calculate (trimmed)', 'CalculateResponse', 'uat.calculate_trimmed'],
+  ['uat calculate, fee waiver and lounge (trimmed)', 'CalculateResponse', 'uat.calculate_waiver_lounge_trimmed'],
 ];
 
 describe('response contracts accept real responses', () => {

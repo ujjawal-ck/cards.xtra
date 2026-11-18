@@ -13,6 +13,11 @@
  * Podium: PodiumCompare shows both values and marks no winner when both are 0 or less. A line under it
  * says what a value below zero means.
  *
+ * Table (D26): spend rows, then "Lounge visits" (when either card has a lounge value), "Other benefits",
+ * and "Annual fee" showing the fee COUNTED in net yearly (0 when the bank waives it at this spend).
+ * So each column adds up to its net yearly, apart from the per-line rounding of the spend rows. A line
+ * under the table names the card whose fee is waived.
+ *
  * Analytics: never the spend amounts, never the name or id of the user's card (it is kept out of every
  * row and pager). Apply goes through useCardDetailSheet, so through useClickOut.
  */
@@ -159,12 +164,20 @@ export function BeatMyCardResultScreen() {
       const mineVal = mine.savings.netYearly;
       const bestVal = best.savings.netYearly;
       const rows: BreakdownRowData[] = result.rows.map((r) => ({ label: r.label, a: r.mine, b: r.best }));
+      if (result.mine.loungeValue > 0 || result.best.loungeValue > 0) {
+        rows.push({ label: 'Lounge visits', a: result.mine.loungeValue, b: result.best.loungeValue });
+      }
       if (result.mine.extraBenefits > 0 || result.best.extraBenefits > 0) {
         rows.push({ label: 'Other benefits', a: result.mine.extraBenefits, b: result.best.extraBenefits });
       }
+      // The listed fee decides whether the row shows; the value is the fee counted in the total.
       if (result.mine.annualFee > 0 || result.best.annualFee > 0) {
-        rows.push({ label: 'Annual fee', a: -result.mine.annualFee, b: -result.best.annualFee });
+        rows.push({ label: 'Annual fee', a: -result.mine.annualFeeCounted, b: -result.best.annualFeeCounted });
       }
+      const waivedNames = [
+        ...(result.mine.feeWaived ? ['Your card'] : []),
+        ...(result.best.feeWaived ? ['Best card'] : []),
+      ];
       body = (
         <View style={{ gap: spacing[16] }}>
           <Text variant="heading18SemiBold" color={colors.text.primary}>
@@ -190,6 +203,11 @@ export function BeatMyCardResultScreen() {
             totalLabel="Net a year"
             total={{ a: mineVal, b: bestVal }}
           />
+          {waivedNames.length > 0 ? (
+            <Text variant="body12Regular" color={colors.text.secondary}>
+              {`${waivedNames.join(' and ')}: the bank waives the annual fee at this yearly spend, so it is not counted.`}
+            </Text>
+          ) : null}
           <View style={{ gap: spacing[8] }}>
             {/* No Apply for a card that also loses money on these spends. */}
             {bestVal > 0 ? (
@@ -224,15 +242,20 @@ export function BeatMyCardResultScreen() {
             </>
           ) : (
             <View style={{ gap: spacing[4] }}>
+              {/* Below zero can only come from a counted fee. At zero the fee may be waived: then say that. */}
               <Text variant="heading18SemiBold" color={colors.text.primary}>
                 {mine.savings.netYearly < 0
                   ? `${mineName} costs more than it saves on these spends`
-                  : `${mineName} saves nothing on these spends after its fee`}
+                  : mine.savings.feeWaived
+                    ? `${mineName} saves nothing on these spends`
+                    : `${mineName} saves nothing on these spends after its fee`}
               </Text>
               <Text variant="body14Regular" color={colors.text.secondary}>
                 {mine.savings.netYearly < 0
                   ? 'With these spends, its annual fee is larger than what it saves you.'
-                  : 'With these spends, its annual fee is as large as what it saves you.'}
+                  : mine.savings.feeWaived
+                    ? 'The bank waives its annual fee at this yearly spend, but the card gives no savings on these spends.'
+                    : 'With these spends, its annual fee is as large as what it saves you.'}
               </Text>
             </View>
           )}
@@ -258,7 +281,8 @@ export function BeatMyCardResultScreen() {
       >
         {body}
         <Text variant="body12Regular" color={colors.text.tertiary}>
-          Estimates from the spends you entered, per year after the annual fee. CashKaro Rewards are extra.
+          Estimates from the spends you entered, per year after the annual fee. A fee the bank waives at your spend is
+          not counted, and lounge visits you entered are included. CashKaro Rewards are extra.
         </Text>
       </ScrollView>
     );

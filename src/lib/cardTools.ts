@@ -8,8 +8,12 @@
  * rule. No React, no tokens, no network: everything here is unit tested.
  *
  * Product rules (do not change without the owner):
- *  - Rank by NET yearly value: yearly savings + extra benefits - annual fee.
- *    BankKaro's own order (`roi`) is undocumented, so we do not use it.
+ *  - Rank by NET yearly value: yearly savings + extra benefits + lounge value
+ *    - annual fee, where the annual fee is not counted when the user's yearly
+ *    spend reaches the card's waiver spend (D26 in docs/decision.md). The
+ *    joining fee is never counted.
+ *  - We compute that sum from named fields and do not read BankKaro's `roi`,
+ *    because it is undocumented. On UAT data our sum equals `roi`.
  *  - The CashKaro apply Reward is one-time. It is shown by the screens from the
  *    app's card, and it is NOT part of the ranking.
  *  - Brand accuracy: BankKaro has brand keys only for Amazon and Flipkart
@@ -178,8 +182,30 @@ export interface CardSavings {
   /** `total_extra_benefits`: milestone and welcome value per year. */
   extraBenefits: number;
   joiningFee: number;
+  /** The card's listed annual fee, rupees. Shown as is; the fee counted in `netYearly` is `annualFeeCounted`. */
   annualFee: number;
-  /** yearlySavings + extraBenefits - annualFee. Can be negative. */
+  /**
+   * `travel_benefits.total_travel_benefit_annual`: rupees a year of the lounge
+   * visits the user entered, rounded. 0 when missing. It is NOT inside
+   * `yearlySavings` or `extraBenefits`.
+   */
+  loungeValue: number;
+  /**
+   * `annual_fee_spends`: the yearly spend, rupees, at which the bank waives the
+   * annual fee. 0 when the card has no waiver (empty string or not a number).
+   */
+  feeWaiverSpend: number;
+  /**
+   * true when `feeWaiverSpend` > 0 and the user's yearly spend
+   * (`total_spends` x 12; `total_spends` is monthly) is at least `feeWaiverSpend`.
+   * false when `total_spends` is missing. This rule is derived from UAT data on
+   * 2026-11-18 (facts G51 to G55 in the project knowledge file). BankKaro has
+   * not confirmed it.
+   */
+  feeWaived: boolean;
+  /** The annual fee counted in `netYearly`, rupees: 0 when `feeWaived`, else `annualFee`. */
+  annualFeeCounted: number;
+  /** yearlySavings + extraBenefits + loungeValue - annualFeeCounted, rupees a year. Can be negative. */
   netYearly: number;
   /** Lines with spend above 0, highest savings first. */
   lines: CardSavingsLine[];
@@ -416,6 +442,12 @@ function mapCard(row: unknown): CardSavings | null {
   const yearlySavings = Math.round(num(row.total_savings_yearly));
   const extraBenefits = Math.round(num(row.total_extra_benefits));
   const annualFee = Math.round(num(row.annual_fees));
+  const travel = row.travel_benefits;
+  const loungeValue = isRecord(travel) ? Math.round(num(travel.total_travel_benefit_annual)) : 0;
+  const feeWaiverSpend = num(row.annual_fee_spends);
+  // A missing or non-numeric `total_spends` reads as 0, so it never reaches a waiver above 0.
+  const feeWaived = feeWaiverSpend > 0 && num(row.total_spends) * 12 >= feeWaiverSpend;
+  const annualFeeCounted = feeWaived ? 0 : annualFee;
   const id =
     typeof row.id === 'number' && Number.isFinite(row.id)
       ? String(row.id)
@@ -431,7 +463,11 @@ function mapCard(row: unknown): CardSavings | null {
     extraBenefits,
     joiningFee: Math.round(num(row.joining_fees)),
     annualFee,
-    netYearly: yearlySavings + extraBenefits - annualFee,
+    loungeValue,
+    feeWaiverSpend,
+    feeWaived,
+    annualFeeCounted,
+    netYearly: yearlySavings + extraBenefits + loungeValue - annualFeeCounted,
     lines,
   };
 }

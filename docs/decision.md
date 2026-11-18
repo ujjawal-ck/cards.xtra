@@ -6,6 +6,15 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D26. Ranking is our sum plus the fee waiver and the lounge value
+2026-11-18 · branch `claude/rank-waiver-lounge`
+
+The owner approved a mix of our rule and BankKaro's `roi`. Net yearly value = yearly savings + extra benefits + lounge value - annual fee. The annual fee is not counted when the user's yearly spend reaches the card's waiver spend (`annual_fee_spends`). This replaces the sum in D24.
+
+We compute the sum from named fields and do not read `roi`, because BankKaro has not documented it. On the UAT fixtures our number equals `roi` on every row (11 of 11). On two full UAT responses the same formula fits 218 of 219 cards each. The waiver rule is derived from data, not confirmed by BankKaro.
+
+The joining fee is not counted, as in `roi`. Beat my card shows a "Lounge visits" row, shows the fee that is counted, and says when a fee is waived.
+
 ## D25. Hero video removed; tool rules signed off
 2026-11-18 · branch `claude/remove-hero-video`
 

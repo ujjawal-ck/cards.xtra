@@ -413,6 +413,18 @@
        }
       ]
      }
+    },
+    "total_spends": 22500,
+    "annual_fee_spends": "2500000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": {
+     "domestic_lounge_benefits_annual": 0,
+     "international_lounge_benefits_annual": 0,
+     "railway_lounge_beneftis_annual": 0,
+     "domestic_lounges_unlocked": 0,
+     "international_lounges_unlocked": 0,
+     "railway_lounges_unlocked": 0,
+     "total_travel_benefit_annual": 0
     }
    },
    {
@@ -760,7 +772,11 @@
       "maxCapReached": false,
       "explanation": []
      }
-    }
+    },
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": null
    },
    {
     "id": 210,
@@ -1170,7 +1186,11 @@
       "maxCapReached": false,
       "explanation": []
      }
-    }
+    },
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": null
    },
    {
     "id": 183,
@@ -1607,6 +1627,18 @@
        }
       ]
      }
+    },
+    "total_spends": 22500,
+    "annual_fee_spends": "300000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": {
+     "domestic_lounge_benefits_annual": 0,
+     "international_lounge_benefits_annual": 0,
+     "railway_lounge_beneftis_annual": 0,
+     "domestic_lounges_unlocked": 0,
+     "international_lounges_unlocked": 0,
+     "railway_lounges_unlocked": 0,
+     "total_travel_benefit_annual": 0
     }
    },
    {
@@ -1963,7 +1995,11 @@
       "maxCapReached": false,
       "explanation": []
      }
-    }
+    },
+    "total_spends": 22500,
+    "annual_fee_spends": "200000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": null
    }
   ]
  }
