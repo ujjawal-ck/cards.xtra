@@ -12,13 +12,14 @@ Format: **Decision** · date · commit(s) where it landed.
 The owner said the four Home tools were "very different" from great.cards, and then said: "leave ranking, we need to improve the 4 tool on home page using this". A teardown of great.cards showed one open league table with four doors. The owner approved the merge on 2026-11-19. All four tools now end on one result screen, `ToolResultsScreen`.
 
 What is locked:
-- The screen lists every card the calculate call returns (219 on UAT), also loss-making, discontinued and invite-only cards, and cards the app does not list. Three constants in `src/lib/cardTools.ts` switch this: `SHOW_CARDS_NOT_IN_APP`, `SHOW_LOSS_MAKING`, `SHOW_DISCONTINUED`. All are true.
+- All four tools end on one result screen that shows the sum for each card.
 - Each row shows the sum: savings + milestones (+ lounge) - annual fee. Views: "Quick view" and "By category". Sort chips, find-in-list search, and the filters "Lifetime free" and "Include invite only" sit on top.
-- The category starting spends and the even split of one amount are removed. This replaces the part of D25 that signed off those starting spends. The owner did not answer a direct question to reopen D25. The basis is the owner's instruction to follow great.cards.
 - Ranking is not changed. D26 holds.
 - Saved spends are one store on the device. Logout clears them. Brand runs are not saved.
 
 What is directional (the builder chose it, the owner has not confirmed it):
+- The category starting spends and the even split of one amount are removed. This replaces the part of D25 that signed off those starting spends. The owner did not answer the direct question to reopen D25. The basis is the owner's instruction to follow great.cards.
+- The screen lists every card the calculate call returns (219 on UAT), also loss-making, discontinued and invite-only cards. Three constants in `src/lib/cardTools.ts` switch this: `SHOW_CARDS_NOT_IN_APP`, `SHOW_LOSS_MAKING`, `SHOW_DISCONTINUED`. All are true.
 - Apply moved from the rows into the breakdown sheet. One constant, `APPLY_ON_ROWS` in `ToolResultsScreen.tsx`, flips it.
 - The app lists cards it does not sell. Those rows have no Apply and no card page.
 - Beat my card asks for spends first, then the card. The full card list exists only after the calculation.
