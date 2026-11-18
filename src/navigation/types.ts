@@ -157,6 +157,9 @@ export type RootStackParamList = {
   BestForBrands: { brandId?: string } | undefined;
   /** Find best card for a category: pick a category and a monthly spend. */
   BestForCategory: { categoryId?: string } | undefined;
+  /** Card advisor: one question at a time, three cards after the first answer.
+   *  `source` says where it was opened from (analytics only). */
+  Advisor: { source?: 'search' | 'search_no_results' } | undefined;
   /** Profile → Payment History list (Figma 3396:51078). */
   ProfilePaymentHistory: undefined;
   /** Profile → Payment History details (Figma 3396:51408). */

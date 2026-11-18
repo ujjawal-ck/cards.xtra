@@ -134,6 +134,19 @@ export const Events = {
   TOOL_RESULT_SELECT: 'tool_result_select', // a result row opened. params: tool, item_id, rank
   BEAT_RESULT_VIEW: 'beat_result_view', // params: verdict (best_wins | mine_wins | equal | not_found), load_ms
 
+  // ── card advisor (guided card finder, opened from search) ──
+  // Never send an income amount or a pincode. An income answer is sent as its band id.
+  ADVISOR_ROW_VIEW: 'advisor_row_view', // the advisor row was shown in the search sheet
+  ADVISOR_START: 'advisor_start', // the opener was answered. params: source, journey, config_version
+  ADVISOR_QUESTION_VIEW: 'advisor_question_view', // params: question_id, step, journey
+  ADVISOR_ANSWER: 'advisor_answer', // params: question_id, option ('entered' for the pincode), not_sure (bool)
+  ADVISOR_REVEAL: 'advisor_reveal', // params: reveal_number, proof, card_count, relaxed (bool)
+  ADVISOR_CARD_TAP: 'advisor_card_tap', // params: item_id, slot (1-based, 0 = from the full list), proof
+  ADVISOR_CARD_ACTION: 'advisor_card_action', // params: item_id, action (have_this)
+  ADVISOR_ELIGIBILITY_BRIDGE: 'advisor_eligibility_bridge', // params: outcome (shown | accepted | declined)
+  ADVISOR_ELIGIBILITY_ERROR: 'advisor_eligibility_error',
+  ADVISOR_EXIT: 'advisor_exit', // params: destination (card | apply | list | back), step
+
   // ── orders ─────────────────────────────────────────────────
   ORDER_SELECT: 'order_select',
   ORDERS_FILTER_APPLY: 'orders_filter_apply',

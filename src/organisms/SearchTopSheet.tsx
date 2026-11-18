@@ -63,12 +63,12 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
-import { Chip, Text } from '../atoms';
+import { Chip, Icon, Text } from '../atoms';
 import { analytics, Events } from '../analytics';
 import type { IconName } from '../atoms';
 import { SearchBar, SearchResults } from '../molecules';
 import type { SearchResultSection } from '../molecules';
-import { colors, spacing, radius, opacity } from '../tokens';
+import { colors, spacing, radius, opacity, sizing, iconSize } from '../tokens';
 
 // ----------------------------------------------------------------------------
 // Types
@@ -105,6 +105,9 @@ export interface SearchTopSheetProps {
   onChangeText?: (text: string) => void;
   onClear?: () => void;
   onRecentPress?: (recent: SearchTopSheetRecent, index: number) => void;
+  /** When given, a "help me pick" row shows under the suggestions while the
+   *  query is empty or has no results. `noResults` is true for the second case. */
+  onAdvisorPress?: (noResults: boolean) => void;
   onResultPress?: (
     row: SearchResultSection['rows'][number],
     sectionIndex: number,
@@ -136,6 +139,7 @@ export function SearchTopSheet({
   onChangeText,
   onClear,
   onRecentPress,
+  onAdvisorPress,
   onResultPress,
   style,
 }: SearchTopSheetProps) {
@@ -424,8 +428,9 @@ export function SearchTopSheet({
                     </Text>
                   </View>
                   <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
+                  {onAdvisorPress ? <AdvisorRow onPress={() => onAdvisorPress(true)} /> : null}
                 </View>
-              ) : historySearches.length > 0 || recentSearches.length > 0 ? (
+              ) : historySearches.length > 0 || recentSearches.length > 0 || onAdvisorPress ? (
                 /* Empty query → the user's own recent picks, then quick
                    suggestions (top banks + a card), Figma 1985:36934. Once
                    the user types, the results above take over. */
@@ -466,6 +471,7 @@ export function SearchTopSheet({
                       <RecentSearchTags items={recentSearches} onPress={onRecentPress} />
                     </View>
                   ) : null}
+                  {onAdvisorPress ? <AdvisorRow onPress={() => onAdvisorPress(false)} /> : null}
                 </View>
               ) : null}
             </>
@@ -541,6 +547,44 @@ function RecentSearchTags({
         />
       ))}
     </View>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Advisor row: the way into the guided card finder
+// ----------------------------------------------------------------------------
+function AdvisorRow({ onPress }: { onPress: () => void }) {
+  // The row mounts only while it is on screen, so mount = shown.
+  useEffect(() => {
+    analytics.track(Events.ADVISOR_ROW_VIEW);
+  }, []);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Not sure which card? I'll help you pick"
+      style={({ pressed }) => ({
+        minHeight: sizing.touchMin,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing[8],
+        paddingHorizontal: spacing[12],
+        paddingVertical: spacing[8],
+        borderRadius: radius.md,
+        backgroundColor: colors.surface.sunken2,
+        opacity: pressed ? opacity[80] : opacity[100],
+      })}
+    >
+      <View style={{ flex: 1 }}>
+        <Text variant="body14SemiBold" color={colors.text.primary}>
+          Not sure which card?
+        </Text>
+        <Text variant="body12Regular" color={colors.text.secondary}>
+          Answer a few taps and I'll help you pick.
+        </Text>
+      </View>
+      <Icon name="chevron-right" size={iconSize[24]} color={colors.icon.actions} />
+    </Pressable>
   );
 }
 

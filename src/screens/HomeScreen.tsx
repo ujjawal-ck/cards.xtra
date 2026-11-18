@@ -2612,6 +2612,11 @@ export function HomeScreen() {
         onHistoryPress={handleSearchChipPress}
         onClearHistory={recentSearchStore.clear}
         onResultPress={handleSearchResultPress}
+        onAdvisorPress={(noResults) => {
+          setSearchOpen(false);
+          setSearchQuery('');
+          navigation.navigate('Advisor', { source: noResults ? 'search_no_results' : 'search' });
+        }}
       />
 
       {/* Filters sheet — opens via the Filters chip in the FilterBar.

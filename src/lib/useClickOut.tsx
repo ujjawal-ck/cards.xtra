@@ -40,6 +40,7 @@ export type ClickOutSource =
   | 'store_best_cards'
   | 'tool_results'
   | 'beat_my_card'
+  | 'advisor'
   | 'store_page'
   | 'unknown';
 

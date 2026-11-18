@@ -6,6 +6,27 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D27. Card advisor: a guided card finder, opened from search
+2026-11-19 · branch `claude/advisor`
+
+The owner asked for the advisor as a path of its own. It does not replace the Home inline questions and it does not use the card tools. Entry: a row in the search sheet (empty query, or no results) opens the `Advisor` screen. The advisor asks one tap question at a time and shows three cards after the first answer.
+
+How it works:
+- The engine runs on the device, on the catalogue the app already loads (`useCards`), plus the eligibility call. It adds no BankKaro route. BankKaro `POST /cardgenius/cards` is not used: seven of its behaviours are not confirmed.
+- The state is the answers. Slots, filters, the next question and the cards are derived (`src/lib/advisor/engine.ts`). Questions, options and journey order are one config object (`src/lib/advisor/config.ts`, version 1), bundled with the app.
+- Two proof levels: "Matches your answers" (filters) and "Likely to qualify" (only from the eligibility API result, through `classifyCardEligibility`). No savings number: that needs `calculate`, and no reveal waits on it.
+- Fee, category, network and first card are hard filters. The UPI habit only moves RuPay cards up. When nothing matches, `closestCards` relaxes the filters and the screen says what was set aside.
+- A question option that leaves no card is hidden. A question that cannot change the list is skipped.
+
+Builder choices, open for the owner:
+- "Under ₹20,000" is checked as ₹15,000. Every other income band uses its lower end.
+- The advisor reads the saved eligibility details and never writes them, because a band is not the real income.
+- "See all N cards" expands the list on the advisor screen. Home takes no filters through navigation.
+- "I have a card and want a better one" runs at "matches" level only. Savings, lounge and forex are not built.
+- Not built: typed-query slot filling, "Not for me", the age question, resume on a later day, the cashback-or-points question.
+
+Not checked: the screen in a running app, Android, a 360 dp screen, 130% font, the eligibility call from this screen, events in Firebase (the project is still a placeholder).
+
 ## D26. Ranking is our sum plus the fee waiver and the lounge value
 2026-11-18 · branch `claude/rank-waiver-lounge`
 
