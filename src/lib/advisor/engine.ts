@@ -218,25 +218,11 @@ function buildHeader(f: AppliedFilters, likely: boolean): string {
   return capitalize(`${free}${noun}${forCat}${upi}`);
 }
 
-type ReasonTemplate = 'firstTime' | 'upi' | 'fee' | 'category' | 'none';
+type ReasonTemplate = 'firstTime' | 'upi' | 'category' | 'none';
 
-/** The template for the last answer that changed the slots. */
-function reasonTemplate(steps: WalkStep[], slots: AdvisorSlots): ReasonTemplate {
-  const last = [...steps].reverse().find((s) => s.used);
-  const set = last?.option?.set;
-  if (!last || !set) return 'none';
-  if (set.hasHistory !== undefined) return 'firstTime';
-  if (set.network || set.upi === 'daily' || set.upi === 'sometimes') return 'upi';
-  // `sortByFee` ("Lower fees") ranks by fee, so the fee is the honest reason.
-  if (set.fee || set.sortByFee) return 'fee';
-  if (set.categoryTagId !== undefined || slots.categoryTagId !== undefined) return 'category';
-  return 'none';
-}
-
-/** True when the last answer set a filter or a rank preference. The eligibility
+/** True when an answer set a filter or a rank preference. The eligibility
  *  bridge, job, income and pincode answers cannot change the list by themselves. */
-function lastAnswerCanChangeList(steps: WalkStep[]): boolean {
-  const set = [...steps].reverse().find((s) => s.used)?.option?.set;
+function canChangeList(set: Partial<AdvisorSlots> | undefined): boolean {
   if (!set) return false;
   return (
     set.categoryTagId !== undefined ||
@@ -246,6 +232,23 @@ function lastAnswerCanChangeList(steps: WalkStep[]): boolean {
     set.upi !== undefined ||
     set.sortByFee !== undefined
   );
+}
+
+/** The template for the last answer that could change the list. So the reason
+ *  does not flip when the user answers the bridge, the job or the income.
+ *  A fee answer has no template: the card row always shows the fee line. */
+function reasonTemplate(steps: WalkStep[], slots: AdvisorSlots): ReasonTemplate {
+  const set = [...steps].reverse().find((s) => s.used && canChangeList(s.option?.set))?.option?.set;
+  if (!set) return slots.categoryTagId !== undefined ? 'category' : 'none';
+  if (set.hasHistory !== undefined) return 'firstTime';
+  if (set.network || set.upi === 'daily' || set.upi === 'sometimes') return 'upi';
+  if (set.categoryTagId !== undefined || slots.categoryTagId !== undefined) return 'category';
+  return 'none';
+}
+
+/** True when the LAST answer set a filter or a rank preference. */
+function lastAnswerCanChangeList(steps: WalkStep[]): boolean {
+  return canChangeList([...steps].reverse().find((s) => s.used)?.option?.set);
 }
 
 const clean = (s: string | undefined | null) => (s ?? '').trim();
@@ -274,10 +277,6 @@ function reasonFor(card: CardModel, proof: ProofLevel, template: ReasonTemplate,
       break;
     case 'upi':
       line = isRuPay(card) ? 'Can be linked to UPI' : '';
-      break;
-    case 'fee':
-      if (isFree(card)) line = 'No joining fee and no annual fee';
-      else if (clean(card.annualFee)) line = `Annual fee ${clean(card.annualFee)}`;
       break;
     case 'category':
       line = categoryBenefit(card, slots.categoryTagId);

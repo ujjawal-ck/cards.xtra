@@ -34,6 +34,15 @@ const SOURCE: ClickOutSource = 'advisor';
 const SKELETON_ROWS = 3;
 const PINCODE = /^[1-9]\d{5}$/;
 
+/** Keep only digits, at most six. A Hindi keyboard can send Devanagari digits
+ *  (०-९): they become 0-9, so the pincode check and the API get plain digits. */
+function toPincodeText(text: string): string {
+  return text
+    .replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
+    .replace(/\D/g, '')
+    .slice(0, 6);
+}
+
 function SkeletonRow() {
   return (
     <View
@@ -221,7 +230,7 @@ export function AdvisorScreen() {
                 <View style={{ gap: spacing[12] }}>
                   <Input
                     value={pin}
-                    onChangeText={setPin}
+                    onChangeText={(t: string) => setPin(toPincodeText(t))}
                     keyboardType="number-pad"
                     maxLength={6}
                     placeholder="6-digit PIN code"

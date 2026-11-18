@@ -26,7 +26,11 @@ Builder choices, open for the owner:
 - "I have this" only removes the card from the list. It does not change the journey, and its event carries no card id (a card the user owns never goes to analytics).
 - Not built: typed-query slot filling, "Not for me", the age question, resume on a later day, the cashback-or-points question.
 
-Not checked: the screen in a running app, Android, a 360 dp screen, 130% font, the eligibility call from this screen, events in Firebase (the project is still a placeholder).
+Changed after the first simulator run (2026-11-19): the reason line never repeats the fee (the row always shows the fee line); the reason stays the same after the bridge, job and income answers; the card row is shorter (reward and "I have this" share one footer row); the pincode field turns Devanagari digits into 0 to 9.
+
+Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the search row opens the advisor; the first-card path and the "something specific" path run to the end; the eligibility call returns and cards show "Likely to qualify"; a low income falls back to the cards that fit; a card opens the detail sheet. Seen once and not seen again in two later runs: the advisor went back to its first question after the fifth answer, and the screen then closed. Cause not known.
+
+Not checked: Apply click-out, Android, a 360 dp screen, 130% font, the "better card" and "just exploring" paths, saved eligibility details, the eligibility error state, events in Firebase (the project is still a placeholder).
 
 ## D26. Ranking is our sum plus the fee waiver and the lounge value
 2026-11-18 · branch `claude/rank-waiver-lounge`

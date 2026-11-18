@@ -1,8 +1,8 @@
 /**
  * AdvisorCardRow: one card in the advisor result.
  *
- * Art, optional label and "New" tags, name, fee line, one reason, a proof tag, the CashKaro reward
- * line, and a separate "I have this" action. The row opens the card; "I have this" does not.
+ * Art, optional label and "New" tags, name, fee line, one reason, a proof tag, then one footer row:
+ * the CashKaro reward and a separate "I have this" action. The row opens the card; "I have this" does not.
  * No fixed heights on text: the row grows with the font size.
  */
 import React from 'react';
@@ -41,8 +41,10 @@ export function AdvisorCardRow({ card, label, proof, reason, isNew, onPress, onH
     <View
       style={[
         {
-          gap: spacing[8],
-          padding: spacing[12],
+          gap: spacing[4],
+          paddingHorizontal: spacing[12],
+          paddingTop: spacing[12],
+          paddingBottom: spacing[4],
           borderRadius: radius.lg,
           borderWidth: borderWidth.thin,
           borderColor: colors.border.subtle3,
@@ -95,23 +97,28 @@ export function AdvisorCardRow({ card, label, proof, reason, isNew, onPress, onH
               <Tag label={proofText} size="xs" tone={proof === 'likely' ? 'success' : 'info'} />
             </View>
           ) : null}
+        </View>
+      </Pressable>
+      {/* One footer row keeps the card short: the CashKaro reward on the left, the action on the right. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
+        <View style={{ flex: 1 }}>
           {card.cashback ? (
             <Text variant="body12SemiBold" color={colors.cashback.default}>
               {card.cashback}
             </Text>
           ) : null}
         </View>
-      </Pressable>
-      <Pressable
-        onPress={onHaveThis}
-        accessibilityRole="button"
-        accessibilityLabel={`I have ${card.name}`}
-        style={{ minHeight: sizing.touchMin, justifyContent: 'center', alignSelf: 'flex-start' }}
-      >
-        <Text variant="body14SemiBold" color={colors.text.link}>
-          I have this
-        </Text>
-      </Pressable>
+        <Pressable
+          onPress={onHaveThis}
+          accessibilityRole="button"
+          accessibilityLabel={`I have ${card.name}`}
+          style={{ minHeight: sizing.touchMin, justifyContent: 'center' }}
+        >
+          <Text variant="body12SemiBold" color={colors.text.link}>
+            I have this
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

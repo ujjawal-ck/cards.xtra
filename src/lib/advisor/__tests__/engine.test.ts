@@ -314,7 +314,8 @@ describe('buildReveal', () => {
       expect(r.top[2].proof).toBe('none');
       expect(ids(r.all)).not.toContain(paid.id);
       expect(r.header).toBe('Free first cards');
-      expect(r.top[0].reason).toBe('No joining fee and no annual fee');
+      // The row already shows the fee line, so the reason never repeats the fee.
+      expect(r.top[0].reason).not.toMatch(/fee/i);
     });
 
     it('contrast when no fee is set: the first free card after two paid ones', () => {
@@ -398,10 +399,22 @@ describe('buildReveal', () => {
       expect(reason[withCashback.id]).toBe('Up to 10%');
     });
 
-    it('a fee answer after the category gives the fee line', () => {
+    it('a fee answer does not repeat the fee: the category benefit stays', () => {
       const paid = card({ cat: [TRAVEL], annualFee: 900, benefits: [{ title: 'Lounge access', tagId: TRAVEL }] });
       const r = buildReveal({ state: st({ opener: 'better', missing: 'travel', fee: 'upto1000' }), config: C, cards: [paid] });
-      expect(r.top[0].reason).toBe('Annual fee ₹900');
+      expect(r.top[0].reason).toBe('Lounge access');
+    });
+
+    it('the reason does not flip after the bridge, job or income answers', () => {
+      const rupay = card({ isFree: true, newToCredit: true, network: 'RuPay', benefits: [{ title: 'Some benefit' }] });
+      const before = buildReveal({ state: st({ opener: 'first', history: 'no', need: NOT_SURE, upi: 'daily' }), config: C, cards: [rupay] });
+      expect(before.top[0].reason).toBe('Can be linked to UPI');
+      const after = buildReveal({
+        state: st({ opener: 'first', history: 'no', need: NOT_SURE, upi: 'daily', eligBridge: 'yes', job: 'salaried', income: '40to75' }),
+        config: C,
+        cards: [rupay],
+      });
+      expect(after.top[0].reason).toBe('Can be linked to UPI');
     });
 
     it('a history answer says "Open to first-time applicants"', () => {
