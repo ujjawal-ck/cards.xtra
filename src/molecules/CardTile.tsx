@@ -86,6 +86,8 @@ export interface CardFilterMeta {
   annualFeeValue: number;
   /** True when both joining and annual fees are ₹0. */
   isFree: boolean;
+  /** BankKaro `new_to_credit`: the bank accepts an applicant with no credit history. */
+  newToCredit?: boolean;
 }
 
 /** Real, card-specific data for the CardDetailSheet body sections. Optional

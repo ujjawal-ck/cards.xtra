@@ -149,3 +149,6 @@ export type { CompareTableProps, CompareTableColumn, CompareTableRow } from './C
 export { Stepper } from './Stepper';
 export type { StepperProps, StepperStep } from './Stepper';
 // DS-ADD(ds-figma-1) end
+
+export { InlineFilterQuestion } from './InlineFilterQuestion';
+export type { InlineFilterQuestionProps } from './InlineFilterQuestion';

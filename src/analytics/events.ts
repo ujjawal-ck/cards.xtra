@@ -58,6 +58,12 @@ export const Events = {
   SEARCH_RESULT_SELECT: 'search_result_select',
   FILTER_APPLY: 'filter_apply',
   FILTER_CLEAR: 'filter_clear',
+  // An inline filter question became visible (once per question per Home mount). Params: question, position.
+  FILTER_INLINE_SHOWN: 'filter_inline_shown',
+  // An inline answer chip tapped. Params: question, answer, selected (bool, true when the tap turns it on), cards_left, position.
+  FILTER_INLINE_TAP: 'filter_inline_tap',
+  // The sort changed from the results line. Params: sort.
+  SORT_CHANGE: 'sort_change',
   CATEGORY_FILTER: 'category_filter',
   ELIGIBILITY_TOGGLE: 'eligibility_toggle',
   ELIGIBILITY_CHECK: 'eligibility_check',

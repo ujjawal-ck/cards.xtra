@@ -299,6 +299,7 @@ function buildFilterMeta(bk: BkCard, bankDir: BankDirectory): CardFilterMeta {
     categoryIds: (bk.tags ?? []).map((t) => t?.id).filter((id): id is number => id != null),
     annualFeeValue,
     isFree: isZeroFee(bk.annual_fee_text) && isZeroFee(bk.joining_fee_text),
+    newToCredit: bk.new_to_credit === true,
   };
 }
 
