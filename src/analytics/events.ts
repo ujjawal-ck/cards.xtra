@@ -118,6 +118,18 @@ export const Events = {
   // captured purely as an event). Params: reasons (comma-joined), reason_count.
   MISSING_CASHBACK_FEEDBACK: 'missing_cashback_feedback',
 
+  // ── card tools (Home tools row) ────────────────────────────
+  // `tool` is one of: category | beat | ultimate | brands.
+  // Never send a spend amount, a brand spend or a card the user owns by name.
+  TOOL_TILE_TAP: 'tool_tile_tap', // params: tool, position (1-based)
+  TOOL_START: 'tool_start', // first screen of a tool opened. params: tool
+  TOOL_QUIZ_STEP: 'tool_quiz_step', // params: tool, step, total, skipped (bool)
+  TOOL_QUIZ_COMPLETE: 'tool_quiz_complete', // params: tool, answered (count of spends above 0), extended (bool)
+  TOOL_RESULT_VIEW: 'tool_result_view', // params: tool, cards_shown, load_ms
+  TOOL_RESULT_ERROR: 'tool_result_error', // params: tool
+  TOOL_RESULT_SELECT: 'tool_result_select', // a result row opened. params: tool, item_id, rank
+  BEAT_RESULT_VIEW: 'beat_result_view', // params: verdict (best_wins | mine_wins | equal | not_found), load_ms
+
   // ── orders ─────────────────────────────────────────────────
   ORDER_SELECT: 'order_select',
   ORDERS_FILTER_APPLY: 'orders_filter_apply',

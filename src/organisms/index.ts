@@ -4,7 +4,7 @@
 export { CardDetailSheet, resolveCardOutcome } from './CardDetailSheet';
 export type { CardDetailSheetProps, EligibilityOutcome } from './CardDetailSheet';
 
-export { CardArt, markCardImagesDecoded } from './CardArt';
+export { CardArt, markCardImagesDecoded, CARD_THUMB_ASPECT } from './CardArt';
 export type { CardArtProps } from './CardArt';
 
 export { CrossSellRail } from './CrossSellRail';
@@ -177,6 +177,9 @@ export type {
   MastheadVariant,
   OffersCategoryStripProps,
 } from './Masthead';
+
+export { ToolsRow, TOOL_ORDER } from './ToolsRow';
+export type { ToolsRowProps, ToolId } from './ToolsRow';
 
 export { EligibilityMasthead } from './EligibilityMasthead';
 export type {

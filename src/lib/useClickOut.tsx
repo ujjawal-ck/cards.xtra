@@ -38,6 +38,8 @@ export type ClickOutSource =
   | 'rejection_pick'
   | 'cards_you_can_get'
   | 'store_best_cards'
+  | 'tool_results'
+  | 'beat_my_card'
   | 'store_page'
   | 'unknown';
 

@@ -1,13 +1,15 @@
 /**
  * DS-ADD(ds-figma-1, 2026-11-17): bar heights and winner for the PodiumCompare molecule.
+ * 2026-11-18: podiumWinner now returns 'none' when both values are 0 or less (a loss is never a win).
  * Rollback: delete this file, its test, and src/molecules/PodiumCompare.tsx.
  */
 
 export type PodiumWinner = 'a' | 'b' | 'none';
 
-/** Winner of two rupee values. Equal, negative-only or non-finite → 'none'. */
+/** Winner of two rupee values. Equal, both 0 or less, or non-finite → 'none'. */
 export function podiumWinner(a: number, b: number): PodiumWinner {
   if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return 'none';
+  if (a <= 0 && b <= 0) return 'none';
   return a > b ? 'a' : 'b';
 }
 

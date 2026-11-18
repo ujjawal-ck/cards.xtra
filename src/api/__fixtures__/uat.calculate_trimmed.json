@@ -1,0 +1,1970 @@
+{
+ "status": "success",
+ "message": "",
+ "data": {
+  "success": true,
+  "message": "Savings calculated successfully",
+  "savings": [
+   {
+    "id": 173,
+    "card_name": "Axis Burgundy Magnus Credit Card",
+    "seo_card_alias": "magnus-burgundy-credit-card",
+    "card_type": "rewards",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130225_BankKaro_20260202_181827886_Cards_7.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130226_BankKaro_20260202_181828409_Axis_Magnus.png",
+    "bank_name": "Axis",
+    "total_savings": 1052.9999721050262,
+    "total_savings_yearly": 12635.999665260315,
+    "total_extra_benefits": 0,
+    "max_potential_savings": "Unlimited",
+    "roi": -22764.000334739685,
+    "joining_fees": "35400",
+    "annual_fees": "35400",
+    "ck_rewards": 0,
+    "ck_store_id": 24658,
+    "invite_only": 1,
+    "rating": 4,
+    "user_rating_count": 200,
+    "spending_breakdown": {
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 161.99999570846558,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>180 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>2,160 RP</b>.</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 269.9999928474426,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>300 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>3,600 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 161.99999570846558,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>180 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>2,160 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 134.9999964237213,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 215.9999942779541,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>240 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>2,880 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_offline_spends": {
+      "on": "other_offline_spends",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 107.99999713897705,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>120 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 12 RP for every ₹200, so you will receive <b>1,440 RP</b>.</div>"
+       }
+      ]
+     },
+     "ott_channels": {
+      "on": "ott_channels",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "large_electronics_purchase_like_mobile_tv_etc": {
+      "on": "large_electronics_purchase_like_mobile_tv_etc",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "all_pharmacy": {
+      "on": "all_pharmacy",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "offline_grocery": {
+      "on": "offline_grocery",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "school_fees": {
+      "on": "school_fees",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "flights_annual": {
+      "on": "flights_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>Edge Travel (Hotel)</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>Edge Travel (Hotel)</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "hotels_annual": {
+      "on": "hotels_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>Edge Travel (Hotel)</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>Edge Travel (Hotel)</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "rent": {
+      "on": "rent",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 3000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "mobile_phone_bills": {
+      "on": "mobile_phone_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "electricity_bills": {
+      "on": "electricity_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "water_bills": {
+      "on": "water_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_health_annual": {
+      "on": "insurance_health_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_car_or_bike_annual": {
+      "on": "insurance_car_or_bike_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "domestic_lounge_usage_quarterly": {
+      "on": "domestic_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     },
+     "international_lounge_usage_quarterly": {
+      "on": "international_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     },
+     "life_insurance": {
+      "on": "life_insurance",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "railway_lounge_usage_quarterly": {
+      "on": "railway_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": 184,
+    "card_name": "BOB Cashback Credit Card",
+    "seo_card_alias": "bob-cashback-credit-card",
+    "card_type": "cashback",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130246_BankKaro_20260507_12472552_Cards_1.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130247_BankKaro_20260507_124725695_Mockup_1.png",
+    "bank_name": "Bank of Baroda",
+    "total_savings": 975,
+    "total_savings_yearly": 11700,
+    "total_extra_benefits": 0,
+    "max_potential_savings": 18000,
+    "roi": 11111.18,
+    "joining_fees": "588.8199999999999",
+    "annual_fees": "588.8199999999999",
+    "ck_rewards": 0,
+    "ck_store_id": 16639,
+    "invite_only": false,
+    "rating": 4.099999904632568,
+    "user_rating_count": 348,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹5K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹250</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹60K on <b>eligible brands</b> you receive <b>₹3,000</b> in cashback.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹150</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹1,800</b> in cashback.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹150</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹1,800</b> in cashback.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2.5K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹125</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹30K on <b>eligible brands</b> you receive <b>₹1,500</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹4K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹200</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹48K on <b>eligible brands</b> you receive <b>₹2,400</b> in cashback.</div>"
+       }
+      ]
+     },
+     "ott_channels": {
+      "on": "ott_channels",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "hotels_annual": {
+      "on": "hotels_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "flights_annual": {
+      "on": "flights_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 100,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹100</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹24K on <b>eligible brands</b> you receive <b>₹1,200</b> in cashback.</div>"
+       }
+      ]
+     },
+     "all_pharmacy": {
+      "on": "all_pharmacy",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 1500,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_offline_spends": {
+      "on": "other_offline_spends",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "offline_grocery": {
+      "on": "offline_grocery",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "school_fees": {
+      "on": "school_fees",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "rent": {
+      "on": "rent",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "mobile_phone_bills": {
+      "on": "mobile_phone_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "electricity_bills": {
+      "on": "electricity_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "water_bills": {
+      "on": "water_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_health_annual": {
+      "on": "insurance_health_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_car_or_bike_annual": {
+      "on": "insurance_car_or_bike_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "large_electronics_purchase_like_mobile_tv_etc": {
+      "on": "large_electronics_purchase_like_mobile_tv_etc",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "domestic_lounge_usage_quarterly": {
+      "on": "domestic_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "international_lounge_usage_quarterly": {
+      "on": "international_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "life_insurance": {
+      "on": "life_insurance",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 210,
+    "card_name": "CRED IndusInd Bank Credit Card",
+    "seo_card_alias": "cred-indusind-bank-credit-card",
+    "card_type": "rewards",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_173500919_Cards_58.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_173501453_Mockup_45.png",
+    "bank_name": "IndusInd Bank",
+    "total_savings": 975,
+    "total_savings_yearly": 11700,
+    "total_extra_benefits": 0,
+    "max_potential_savings": 45000,
+    "roi": 11111.18,
+    "joining_fees": "0",
+    "annual_fees": "588.8199999999999",
+    "ck_rewards": 0,
+    "ck_store_id": 26652,
+    "invite_only": false,
+    "rating": 4.199999809265137,
+    "user_rating_count": 486,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>250 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>3,000 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>200 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>2,400 RP</b>.</div>"
+       }
+      ]
+     },
+     "ott_channels": {
+      "on": "ott_channels",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "large_electronics_purchase_like_mobile_tv_etc": {
+      "on": "large_electronics_purchase_like_mobile_tv_etc",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "all_pharmacy": {
+      "on": "all_pharmacy",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>125 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,500 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 100,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>100 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,200 RP</b>.</div>"
+       }
+      ]
+     },
+     "flights_annual": {
+      "on": "flights_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "hotels_annual": {
+      "on": "hotels_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "other_offline_spends": {
+      "on": "other_offline_spends",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "offline_grocery": {
+      "on": "offline_grocery",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "electricity_bills": {
+      "on": "electricity_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "insurance_car_or_bike_annual": {
+      "on": "insurance_car_or_bike_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "insurance_health_annual": {
+      "on": "insurance_health_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "life_insurance": {
+      "on": "life_insurance",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "mobile_phone_bills": {
+      "on": "mobile_phone_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "water_bills": {
+      "on": "water_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>CRED</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "school_fees": {
+      "on": "school_fees",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "rent": {
+      "on": "rent",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "domestic_lounge_usage_quarterly": {
+      "on": "domestic_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "international_lounge_usage_quarterly": {
+      "on": "international_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 183,
+    "card_name": "PhonePe SBI Card SELECT BLACK ",
+    "seo_card_alias": "phonepe-sbi-card-select-black",
+    "card_type": "rewards",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130244_BankKaro_20260408_171509802_Cards_27.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130245_BankKaro_20260408_171510212_IDFC_FIRST_Indigo_Credit_Card_-mockup_9.png",
+    "bank_name": "SBI",
+    "total_savings": 975,
+    "total_savings_yearly": 11700,
+    "total_extra_benefits": 0,
+    "max_potential_savings": 12000,
+    "roi": 9931.18,
+    "joining_fees": "1768.82",
+    "annual_fees": "1768.82",
+    "ck_rewards": 0,
+    "ck_store_id": 26642,
+    "invite_only": false,
+    "rating": 4.099999904632568,
+    "user_rating_count": 337,
+    "spending_breakdown": {
+     "electricity_bills": {
+      "on": "electricity_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "water_bills": {
+      "on": "water_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "mobile_phone_bills": {
+      "on": "mobile_phone_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>250 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>3,000 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>125 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,500 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>200 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>2,400 RP</b>.</div>"
+       }
+      ]
+     },
+     "ott_channels": {
+      "on": "ott_channels",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 100,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>100 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,200 RP</b>.</div>"
+       }
+      ]
+     },
+     "large_electronics_purchase_like_mobile_tv_etc": {
+      "on": "large_electronics_purchase_like_mobile_tv_etc",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "flights_annual": {
+      "on": "flights_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "hotels_annual": {
+      "on": "hotels_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "offline_grocery": {
+      "on": "offline_grocery",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "other_offline_spends": {
+      "on": "other_offline_spends",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "insurance_car_or_bike_annual": {
+      "on": "insurance_car_or_bike_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "life_insurance": {
+      "on": "life_insurance",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "insurance_health_annual": {
+      "on": "insurance_health_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>PhonePe App</b> you earn <b>0 RP</b> (worth ₹0).</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "school_fees": {
+      "on": "school_fees",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "rent": {
+      "on": "rent",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "all_pharmacy": {
+      "on": "all_pharmacy",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "points",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "domestic_lounge_usage_quarterly": {
+      "on": "domestic_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     },
+     "international_lounge_usage_quarterly": {
+      "on": "international_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     },
+     "railway_lounge_usage_quarterly": {
+      "on": "railway_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>You get 0 lounge visits per quarter, worth ₹0 monthly.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>You get 0 lounge visits per year, worth ₹0 annually.</div>"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": 27,
+    "card_name": "SBI Cashback Credit Card",
+    "seo_card_alias": "sbi-cashback-credit-card",
+    "card_type": "cashback",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_122010_AGB_SBI_Cashback.png1732257446742",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_122010_AGB_Mockup-24.webp1736921642945",
+    "bank_name": "SBI",
+    "total_savings": 895,
+    "total_savings_yearly": 10740,
+    "total_extra_benefits": 0,
+    "max_potential_savings": 48000,
+    "roi": 10740,
+    "joining_fees": "1178.82",
+    "annual_fees": "1178.82",
+    "ck_rewards": 1400,
+    "ck_store_id": 24756,
+    "invite_only": false,
+    "rating": 4,
+    "user_rating_count": 413,
+    "spending_breakdown": {
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹150</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹1,800</b> in cashback.</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹5K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹250</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹60K on <b>eligible brands</b> you receive <b>₹3,000</b> in cashback.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹150</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹1,800</b> in cashback.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2.5K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹125</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹30K on <b>eligible brands</b> you receive <b>₹1,500</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹4K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹200</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹48K on <b>eligible brands</b> you receive <b>₹2,400</b> in cashback.</div>"
+       }
+      ]
+     },
+     "ott_channels": {
+      "on": "ott_channels",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "hotels_annual": {
+      "on": "hotels_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "flights_annual": {
+      "on": "flights_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "large_electronics_purchase_like_mobile_tv_etc": {
+      "on": "large_electronics_purchase_like_mobile_tv_etc",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "all_pharmacy": {
+      "on": "all_pharmacy",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_offline_spends": {
+      "on": "other_offline_spends",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "offline_grocery": {
+      "on": "offline_grocery",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹0 on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹0 on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 20,
+      "savings_type": "cashback",
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹20</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹24K on <b>eligible brands</b> you receive <b>₹240</b> in cashback.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "school_fees": {
+      "on": "school_fees",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "rent": {
+      "on": "rent",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "mobile_phone_bills": {
+      "on": "mobile_phone_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "electricity_bills": {
+      "on": "electricity_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "water_bills": {
+      "on": "water_bills",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_health_annual": {
+      "on": "insurance_health_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "insurance_car_or_bike_annual": {
+      "on": "insurance_car_or_bike_annual",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "domestic_lounge_usage_quarterly": {
+      "on": "domestic_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "international_lounge_usage_quarterly": {
+      "on": "international_lounge_usage_quarterly",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     },
+     "life_insurance": {
+      "on": "life_insurance",
+      "spend": 0,
+      "savings": 0,
+      "savings_type": "cashback",
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   }
+  ]
+ }
+}

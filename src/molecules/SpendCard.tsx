@@ -4,6 +4,7 @@
  * compact = radius 16, 1 px border, padding 16 / 16 / 8 / 16, gap 16, onLight/sm shadow; stepper box radius 8, padding 8 / 6, hairline;
  * tick 8 long, tick pitch 10; tick label under every 5th tick; selected value in a blue chip (radius 4) under the centre mark.
  * Large = radius 32, 1.5 border, padding 16, gap 18, centred title (18), stepper box padding 12 / 10 (48 high).
+ * 2026-11-18: optional title (large size), optional unit 'count' (no rupee sign), and the live value is committed if the card unmounts mid-drag.
  * Rollback: delete this file, src/lib/spendRuler.ts (+ test), and its DS-ADD export lines in src/molecules/index.ts.
  *
  * SpendCard — molecule. New part. Overlaps AmountInput (see docs/ds-additions.md): AmountInput types an
@@ -52,7 +53,13 @@ export interface SpendCardProps {
   period?: string;
   /** 'compact' (default): name left, stepper right. 'large': centred question title above the stepper. */
   size?: 'compact' | 'large';
+  /** Large size only. Replaces the built title "{name} spends {period}?". An empty string shows no title. */
+  title?: string;
+  /** 'rupees' (default) shows ₹ amounts. 'count' shows plain whole numbers, e.g. visits. */
+  unit?: 'rupees' | 'count';
 }
+
+const formatCount = (n: number) => String(Math.round(n));
 
 // Figma: tick pitch 10, tick length 8.
 const TICK_GAP = spacing[10];
@@ -72,14 +79,34 @@ export function SpendCard({
   labelEvery = 5,
   period = 'per month',
   size = 'compact',
+  title,
+  unit = 'rupees',
 }: SpendCardProps) {
   const large = size === 'large';
+  const formatValue = unit === 'count' ? formatCount : formatINR;
+  const formatTick = unit === 'count' ? formatCount : formatAmount;
   const cfg: RulerConfig = { min, max, step, tickGap: TICK_GAP };
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
   const [live, setLive] = useState(value);
   const dragging = useRef(false);
   const ticks = tickCount(cfg);
+
+  // Commit the latest live value if the card unmounts before the ruler settles (drag, then Next at once).
+  const liveRef = useRef(value);
+  const committedRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+  liveRef.current = live;
+  onChangeRef.current = onChange;
+  useEffect(() => {
+    committedRef.current = value;
+  }, [value]);
+  useEffect(
+    () => () => {
+      if (liveRef.current !== committedRef.current) onChangeRef.current(liveRef.current);
+    },
+    [],
+  );
 
   // Keep the ruler in step with the value prop (stepper, preset, parent change).
   useEffect(() => {
@@ -103,12 +130,16 @@ export function SpendCard({
     dragging.current = false;
     const v = offsetToValue(e.nativeEvent.contentOffset.x, cfg);
     setLive(v);
-    if (v !== value) onChange(v);
+    if (v !== value) {
+      committedRef.current = v;
+      onChange(v);
+    }
   };
 
   const bump = (dir: 1 | -1) => {
     const next = stepValue(live, dir, cfg);
     setLive(next);
+    committedRef.current = next;
     onChange(next);
   };
 
@@ -157,7 +188,7 @@ export function SpendCard({
     >
       {stepper(`Decrease ${name} spend`, '−', -1, atMin)}
       <Text variant="body16Bold" color={colors.text.link} style={{ minWidth: spacing[48] }} align="center">
-        {formatINR(live)}
+        {formatValue(live)}
       </Text>
       {stepper(`Increase ${name} spend`, '+', 1, atMax)}
     </View>
@@ -189,9 +220,11 @@ export function SpendCard({
               style={{ width: mediaSize[56], height: mediaSize[56], resizeMode: 'contain', borderRadius: radius.sm }}
             />
           ) : null}
-          <Text variant="heading18SemiBold" color={colors.text.primary} align="center">
-            {`${name} spends ${period}?`}
-          </Text>
+          {title === '' ? null : (
+            <Text variant="heading18SemiBold" color={colors.text.primary} align="center">
+              {title ?? `${name} spends ${period}?`}
+            </Text>
+          )}
           {stepperBox}
         </View>
       ) : (
@@ -220,7 +253,7 @@ export function SpendCard({
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={`${name} spend ${period}`}
-        accessibilityValue={{ min, max, now: live, text: formatINR(live) }}
+        accessibilityValue={{ min, max, now: live, text: formatValue(live) }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => bump(e.nativeEvent.actionName === 'increment' ? 1 : -1)}
         style={{ marginHorizontal: -spacing[16] }}
@@ -264,7 +297,7 @@ export function SpendCard({
                         numberOfLines={1}
                         style={{ width: spacing[64], textAlign: 'center' }}
                       >
-                        {formatAmount(min + i * step)}
+                        {formatTick(min + i * step)}
                       </Text>
                     ) : null}
                   </View>
@@ -300,7 +333,7 @@ export function SpendCard({
             }}
           >
             <Text variant="caption10Medium" color={colors.text.inverse}>
-              {formatAmount(live)}
+              {formatTick(live)}
             </Text>
           </View>
         </View>

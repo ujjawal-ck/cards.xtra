@@ -26,6 +26,7 @@ const cases: Array<[string, keyof typeof S, string]> = [
   ['doc exit click dates', 'McExitDatesResponse', 'doc.mc_exit_dates'],
   ['staging claims queue (empty)', 'McQueueResponse', 'staging.mc_queue_pending'],
   ['doc claims queue', 'McQueueResponse', 'doc.mc_queue'],
+  ['uat calculate (trimmed)', 'CalculateResponse', 'uat.calculate_trimmed'],
 ];
 
 describe('response contracts accept real responses', () => {

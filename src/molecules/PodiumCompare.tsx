@@ -4,6 +4,7 @@
  * root radius 16, hairline border, padding top 16 only, gap 24; bars 128 wide, top corners 12, winner 87 / other 65 high (we scale by value, max 88);
  * heading Figma sf-pro 500 16; "40K Spends" link Figma 600 14 in link colour with a trailing edit icon; winner value Outfit 700 16 in success text;
  * other value sf-pro 600 18 in tertiary text.
+ * 2026-11-18: card art no longer paints over the value (the art overhang is now reserved above each bar); no winner when both values are 0 or less.
  * Rollback: delete this file, src/lib/podium.ts (+ test), and its DS-ADD export lines in src/molecules/index.ts.
  *
  * PodiumCompare — molecule. New part (semantic name; Figma calls it beat-my-card-graph). Plain Views, no chart library.
@@ -43,6 +44,8 @@ const MIN_BAR = spacing[24];
 const BAR_W = spacing[128]; // Figma bars are 128 wide
 const CARD_W = spacing[64];
 const CARD_H = spacing[40];
+// The card art sticks out above its bar by this much. The gap above the bar must be larger, or the art covers the value.
+const CARD_OVERHANG = spacing[16];
 
 export function PodiumCompare({ title, contextLabel, onContextPress, a, b }: PodiumCompareProps) {
   const winner = podiumWinner(a.value, b.value);
@@ -68,7 +71,7 @@ export function PodiumCompare({ title, contextLabel, onContextPress, a, b }: Pod
             width: BAR_W,
             maxWidth: '100%',
             height: heights[side],
-            marginTop: spacing[4],
+            marginTop: spacing[4] + CARD_OVERHANG,
             alignItems: 'center',
             borderTopLeftRadius: radius.lg,
             borderTopRightRadius: radius.lg,
@@ -78,7 +81,7 @@ export function PodiumCompare({ title, contextLabel, onContextPress, a, b }: Pod
           <Image
             source={entry.image}
             accessibilityIgnoresInvertColors
-            style={{ width: CARD_W, height: CARD_H, resizeMode: 'contain', marginTop: -spacing[16] }}
+            style={{ width: CARD_W, height: CARD_H, resizeMode: 'contain', marginTop: -CARD_OVERHANG }}
           />
           {wins ? (
             <View

@@ -66,6 +66,9 @@ function imageCacheKey(src: CardModel['cardImage']): string | null {
 // Reduced 15% from the original 240×150 (aspect ratio preserved) so the
 // hero card reads a touch smaller in the detail sheet.
 export const CARD_ART_W = 204;
+
+/** Width / height of a small card-art thumbnail (rows, pickers, compare cards). One home for the 132:84 ratio. */
+export const CARD_THUMB_ASPECT = 132 / 84;
 export const CARD_ART_H = 127.5;
 
 // Crossfade window (in sheet animatedIndex units, 0=partial → 1=full) for

@@ -56,31 +56,6 @@ export function checkEligibility(payload: EligibilityPayload): Promise<any> {
 }
 
 
-/** Every key 0 = no spend. Start from this and set the categories the user gave. */
-export const EMPTY_CALCULATE_SPENDS: CalculateSpends = {
-  amazon_spends: 0,
-  flipkart_spends: 0,
-  other_online_spends: 0,
-  grocery_spends_online: 0,
-  online_food_ordering: 0,
-  other_offline_spends: 0,
-  offline_grocery: 0,
-  dining_or_going_out: 0,
-  fuel: 0,
-  mobile_phone_bills: 0,
-  electricity_bills: 0,
-  water_bills: 0,
-  rent: 0,
-  school_fees: 0,
-  insurance_health_annual: 0,
-  insurance_car_or_bike_annual: 0,
-  life_insurance: 0,
-  flights_annual: 0,
-  hotels_annual: 0,
-  domestic_lounge_usage_quarterly: 0,
-  international_lounge_usage_quarterly: 0,
-};
-
 /** Per-card savings for a spend profile. Read-only computation, so safe to retry.
  *  UAT can take up to 30 s and the BFF waits 45 s, so the default 15 s would
  *  abort a slow call and send it again. One long attempt, one retry. */

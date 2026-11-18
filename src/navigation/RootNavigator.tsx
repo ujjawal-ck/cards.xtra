@@ -42,6 +42,12 @@ import { OrdersList } from '../screens/OrdersList';
 import { OrdersDetail } from '../screens/OrdersDetail';
 import { AllCardBenefitsScreen } from '../screens/AllCardBenefitsScreen';
 import { CardsYouCanGetScreen } from '../screens/CardsYouCanGetScreen';
+import { SpendQuizScreen } from '../screens/tools/SpendQuizScreen';
+import { ToolResultsScreen } from '../screens/tools/ToolResultsScreen';
+import { BeatMyCardPickScreen } from '../screens/tools/BeatMyCardPickScreen';
+import { BeatMyCardResultScreen } from '../screens/tools/BeatMyCardResultScreen';
+import { BestForBrandsScreen } from '../screens/tools/BestForBrandsScreen';
+import { BestForCategoryScreen } from '../screens/tools/BestForCategoryScreen';
 import { ProfilePaymentHistory } from '../screens/ProfilePaymentHistory';
 import { ProfilePaymentHistoryDetails } from '../screens/ProfilePaymentHistoryDetails';
 import { ProfilePaymentHistoryEmpty } from '../screens/ProfilePaymentHistoryEmpty';
@@ -214,6 +220,12 @@ export function RootNavigator() {
       <Stack.Screen name="OrdersDetail" component={OrdersDetail} />
       <Stack.Screen name="AllCardBenefits" component={AllCardBenefitsScreen} />
       <Stack.Screen name="CardsYouCanGet" component={CardsYouCanGetScreen} />
+      <Stack.Screen name="SpendQuiz" component={SpendQuizScreen} />
+      <Stack.Screen name="ToolResults" component={ToolResultsScreen} />
+      <Stack.Screen name="BeatMyCardPick" component={BeatMyCardPickScreen} />
+      <Stack.Screen name="BeatMyCardResult" component={BeatMyCardResultScreen} />
+      <Stack.Screen name="BestForBrands" component={BestForBrandsScreen} />
+      <Stack.Screen name="BestForCategory" component={BestForCategoryScreen} />
       <Stack.Screen
         name="ProfilePaymentHistory"
         component={ProfilePaymentHistory}

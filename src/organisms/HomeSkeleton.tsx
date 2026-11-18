@@ -27,9 +27,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { colors, primitives, spacing, radius, opacity, borderWidth } from '../tokens';
+import { HOME_MASTHEAD_COMPACT_H } from './Masthead';
+import { TOOLS_ROW_FIT_H } from './ToolsRow';
 
 export function HomeSkeleton() {
+  const insets = useSafeAreaInsets();
   const shimmer = useSharedValue(0);
   useEffect(() => {
     shimmer.value = withRepeat(
@@ -79,7 +84,8 @@ export function HomeSkeleton() {
       <Animated.View
         style={[
           {
-            height: 320,
+            // Same height as Home's compact masthead (plus the status bar).
+            height: HOME_MASTHEAD_COMPACT_H + insets.top,
             backgroundColor: primitives.cobalt[100],
           },
           pulseStyle,
@@ -94,6 +100,8 @@ export function HomeSkeleton() {
         }}
       >
         <Block height={48} />
+        {/* Tools row — four tiles under the masthead */}
+        <Block height={TOOLS_ROW_FIT_H} style={{ borderRadius: radius.lg }} />
         {/* Filter chips row */}
         <View style={{ flexDirection: 'row', gap: spacing[8] }}>
           <Block height={32} width={96} />

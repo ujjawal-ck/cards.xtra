@@ -1,5 +1,6 @@
 /**
  * DS-ADD(ds-figma-1, 2026-11-17): value <-> scroll offset maths for the SpendCard ruler, and the +/- stepper clamp.
+ * 2026-11-18: no change to the maths. Count display (unit 'count') and unmount commit live in SpendCard.tsx.
  * Rollback: delete this file, its test, and src/molecules/SpendCard.tsx.
  */
 import { clampAmount } from './amountInput';

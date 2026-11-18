@@ -6,6 +6,22 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D24. Home: compact masthead and a row of four card tools
+2026-11-18 · branch `claude/home-tools`
+
+This replaces D20. The owner decided the Home banner gave no utility for its size. Home now has a compact masthead (header and search bar, 128 dp plus the top inset, plain brand gradient) and one row of four tool tiles under it. The hero video is no longer used on Home; `HeroVideo`, the clip and `expo-video` stay in the repo until the owner decides to remove them (that needs a new dev build).
+
+The four tools, in order: Best card for a category, Beat my card, Find my ultimate card, Best card for brands. A fifth tile was dropped by the owner. All four read one BankKaro `calculate` call (`src/query/useCardSavings.ts`, `src/lib/cardTools.ts`).
+
+Rules behind the tools:
+- Rank by net yearly value: yearly savings + extra benefits - annual fee. BankKaro's `roi` order is not used because it is not documented. The CashKaro apply Reward is one-time and is not in the ranking.
+- A card whose net yearly value is 0 or less is never shown as a saving, and has no Apply on the Beat my card result.
+- Brands: BankKaro has brand keys only for Amazon and Flipkart. Every other brand is counted in its category, and the picker and the results say so. The Home tile rotates Myntra, Swiggy, Flipkart and Amazon by the owner's choice.
+- Calculate rows join to the app's cards by alias, then by id. Rows with no app card are dropped.
+- No spend amount and no card the user owns goes to analytics.
+
+Open: the deployed BFF needs the `calculate` route (it is in `bff/src/routes.js`, not deployed yet). The four tile icons are the nearest existing icons, not designed ones. The category starting spends in `TOOL_CATEGORIES` were chosen by the builder, not by data.
+
 ## D23. Delete Account is hidden; preview builds set the stage
 2026-11-18 · `dc62fda`, `1b2cfa5`
 

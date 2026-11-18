@@ -61,6 +61,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Text,
   Button,
@@ -84,6 +85,7 @@ import {
   sizing,
   elevation,
   typography,
+  gradients,
 } from '../tokens';
 
 // ----------------------------------------------------------------------------
@@ -135,10 +137,14 @@ export interface MastheadProps {
   tone?: StatusBadgeStatus;
 
   // 'home' content
-  /** Background slot — any React node (image, video, animation). Falls
-   *  back to <ImageBackground source={images.backgrounds.home}> when
-   *  undefined, so the masthead always has a backdrop. */
+  /** Background slot — any React node (image, video, animation). When
+   *  undefined it falls back to <ImageBackground source={images.backgrounds.home}>
+   *  ('default' size) or the plain gradients.primary fill ('compact' size),
+   *  so the masthead always has a backdrop. */
   background?: React.ReactNode;
+  /** 'home' — 'default' is the tall hero; 'compact' is only the header
+   *  row and the SearchBar (height HOME_MASTHEAD_COMPACT_H). */
+  size?: 'default' | 'compact';
   notificationCount?: number;
   /** SearchBar placeholder — default "Search by card name". */
   placeholder?: string;
@@ -925,11 +931,21 @@ function CashbackStatusMasthead({
 //
 // The background is a slot: pass any React node via `background`. When
 // undefined, the masthead falls back to <ImageBackground source=
-// images.backgrounds.home> so it always has a backdrop. Caller can
+// images.backgrounds.home> (default size) or gradients.primary (compact
+// size) so it always has a backdrop. Caller can
 // drop an animation, video, or anything in its place later.
 // ----------------------------------------------------------------------------
 
-const HOME_MASTHEAD_H = 408;
+export const HOME_MASTHEAD_H = 408;
+// Compact home masthead, excluding the safe-area top inset: HomeHeader row
+// (sizing.headerHeight 56) + gap 8 + SearchBar (48, SearchBar's BAR_H =
+// spacing[48]) + bottom padding 16 = 128. Built from the same tokens the
+// layout uses, so the number and the layout cannot drift. Home's scroll
+// threshold and HomeSkeleton read this constant.
+const HOME_COMPACT_GAP = spacing[8];
+const HOME_COMPACT_PAD_BOTTOM = spacing[16];
+export const HOME_MASTHEAD_COMPACT_H =
+  sizing.headerHeight + HOME_COMPACT_GAP + spacing[48] + HOME_COMPACT_PAD_BOTTOM;
 // Earnings info tooltip width — Figma 5820:27081 (component spec).
 const EARNINGS_TOOLTIP_W = 247;
 // Auto-dismiss delay for the earnings info tooltip.
@@ -937,6 +953,7 @@ const EARNINGS_TOOLTIP_MS = 4000;
 
 function HomeMasthead({
   background,
+  size = 'default',
   notificationCount = 1,
   placeholder = 'Search by card name',
   // Default ticker on the Home masthead — cycles between card-name and
@@ -956,15 +973,22 @@ function HomeMasthead({
   // hero image. Container height grows by the inset so the existing
   // 408 area below the buffer keeps its proportions.
   const insets = useSafeAreaInsets();
+  const compact = size === 'compact';
 
+  // Compact falls back to the plain brand gradient: the static home image
+  // has promo text baked in, which a 128-dp crop cuts under the header.
+  // HomeHeader (scrolled=false) draws white logo + icons, readable on it.
   const backgroundNode =
-    background ?? (
+    background ??
+    (compact ? (
+      <LinearGradient {...gradients.primary} style={{ flex: 1 }} />
+    ) : (
       <ImageBackground
         source={images.backgrounds.home}
         resizeMode="cover"
         style={{ flex: 1 }}
       />
-    );
+    ));
 
   return (
     <View
@@ -975,7 +999,8 @@ function HomeMasthead({
           // 360 (iPhone 13+ are 375–430). '100%' lets the masthead
           // stretch edge-to-edge in HomeScreen's ScrollView.
           width: '100%',
-          height: HOME_MASTHEAD_H + insets.top,
+          height:
+            (compact ? HOME_MASTHEAD_COMPACT_H : HOME_MASTHEAD_H) + insets.top,
           overflow: 'hidden',
           // Bottom corners curve back into the screen — matches the
           // SearchTopSheet's bottom corner radius for visual consistency
@@ -1000,7 +1025,8 @@ function HomeMasthead({
         style={{
           flex: 1,
           paddingTop: insets.top,
-          justifyContent: 'space-between',
+          // Compact: header row, then the SearchBar right under it.
+          justifyContent: compact ? 'flex-start' : 'space-between',
         }}
       >
         <HomeHeader
@@ -1011,10 +1037,18 @@ function HomeMasthead({
           onHelpPress={onHelpPress}
         />
         <View
-          style={{
-            paddingHorizontal: spacing[16],
-            paddingBottom: spacing[20],
-          }}
+          style={
+            compact
+              ? {
+                  paddingHorizontal: spacing[16],
+                  paddingTop: HOME_COMPACT_GAP,
+                  paddingBottom: HOME_COMPACT_PAD_BOTTOM,
+                }
+              : {
+                  paddingHorizontal: spacing[16],
+                  paddingBottom: spacing[20],
+                }
+          }
         >
           <SearchBar
             state="default"

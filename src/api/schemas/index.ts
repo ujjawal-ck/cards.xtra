@@ -226,3 +226,7 @@ export const AuthTokensResponse = z
 export const OtpRequestResponse = z
   .object({ data: z.object({ id: z.string() }).passthrough() })
   .passthrough();
+
+// ── BankKaro ────────────────────────────────────────────────────────────────
+
+export { CalculateResponse } from './calculate';

@@ -54,7 +54,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 import { Text, Chip, Switch, Icon } from '../atoms';
-import { HeroVideo, InlineFilterQuestion } from '../molecules';
+import { InlineFilterQuestion } from '../molecules';
 import type { CardModel, SearchResultSection } from '../molecules';
 import {
   BottomSheetHeader,
@@ -90,6 +90,10 @@ import type {
   SearchTopSheetRecent,
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
+import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
+import { ToolsRow, TOOL_ORDER } from '../organisms/ToolsRow';
+import type { ToolId } from '../organisms/ToolsRow';
+import { TOOL_CATEGORIES, TOOL_BRANDS } from '../lib/cardTools';
 import {
   colors,
   primitives,
@@ -134,12 +138,13 @@ import type { InlineRow, InlineChip } from '../lib/inlineFilters';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
-// Scroll Y at which the frosted scrolled HomeHeader fully appears.
-// Roughly the masthead height (≈ 408) — pick a value past the
-// masthead so the frosted bar fades in once the masthead is out of
-// view. Tunable.
-const FROSTED_HEADER_FADE_IN = 220;
-const FROSTED_HEADER_FADE_FULL = 280;
+// Scroll Y at which the frosted scrolled HomeHeader starts to appear: the
+// compact masthead's height, so the bar fades in once the masthead has
+// scrolled out of view. Follows HOME_MASTHEAD_COMPACT_H if it changes.
+const FROSTED_HEADER_FADE_IN = HOME_MASTHEAD_COMPACT_H;
+// Fade length in scroll px (the same 60 the old 220 → 280 ramp used).
+const FROSTED_HEADER_FADE_RAMP = 60;
+const FROSTED_HEADER_FADE_FULL = FROSTED_HEADER_FADE_IN + FROSTED_HEADER_FADE_RAMP;
 // Minimum forward scroll delta (per frame) before the BottomNav hides —
 // protects against tiny rubber-band noise hiding it accidentally.
 const NAV_HIDE_THRESHOLD = 6;
@@ -878,6 +883,39 @@ export function HomeScreen() {
     eligibilityCheckerRef.current?.present();
   }, []);
 
+  // Tools row tile → track, then open the tool.
+  // `word` is what the tile showed at the tap; the tool opens with it picked.
+  const handleToolPress = useCallback(
+    (tool: ToolId, word?: string) => {
+      haptics.impact('light');
+      analytics.track(Events.TOOL_TILE_TAP, {
+        tool,
+        position: TOOL_ORDER.indexOf(tool) + 1,
+      });
+      switch (tool) {
+        case 'category':
+          navigation.navigate('BestForCategory', {
+            categoryId: TOOL_CATEGORIES.find((c) => c.label === word)?.id,
+          });
+          return;
+        case 'beat':
+          navigation.navigate('BeatMyCardPick');
+          return;
+        case 'ultimate':
+          navigation.navigate('SpendQuiz', { next: 'ultimate' });
+          return;
+        case 'brands':
+          navigation.navigate('BestForBrands', {
+            brandId: TOOL_BRANDS.find(
+              (b) => b.name.toLowerCase() === word?.toLowerCase()
+            )?.id,
+          });
+          return;
+      }
+    },
+    [navigation]
+  );
+
   // "Clear" inside the checker → wipe saved details + filter + toggle, then
   // close. Returns the flow to its blank state (e.g. to test the card-detail
   // entry path where no details exist yet).
@@ -1025,14 +1063,16 @@ export function HomeScreen() {
   // on scroll. While it's invisible (page at the top) it must NOT capture
   // touches — otherwise its right-pinned Eligibility toggle sits on top of the
   // masthead's bell/message icons and steals taps. Gate interactivity on
-  // whether the header has begun to reveal.
+  // whether the header has fully faded in.
   const [frostedInteractive, setFrostedInteractive] = useState(false);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     scrollY.value = y;
 
-    const shouldInteract = y >= FROSTED_HEADER_FADE_IN;
+    // Touchable only once fully faded in, so the half-transparent bar does
+    // not swallow taps on the tools row under it during the fade.
+    const shouldInteract = y >= FROSTED_HEADER_FADE_FULL;
     if (shouldInteract !== frostedInteractive) {
       setFrostedInteractive(shouldInteract);
     }
@@ -1931,12 +1971,12 @@ export function HomeScreen() {
             SearchTopSheet). */}
         <Masthead
           variant="home"
+          // Compact: header row + SearchBar only, over the plain brand
+          // gradient (no image, no hero video).
+          size="compact"
           // No unread badge: there's no notifications feed yet (it was a
           // hard-coded "1" that never cleared).
           notificationCount={0}
-          background={
-            <HeroVideo source={require('../assets/videos/home-hero.mp4')} />
-          }
           onSearchPress={() => setSearchOpen(true)}
           onMessagePress={() => undefined}
           onBellPress={() => {
@@ -1945,6 +1985,9 @@ export function HomeScreen() {
           }}
           onHelpPress={() => navigation.navigate('GetHelp')}
         />
+
+        {/* Card tools — four tiles directly under the masthead. */}
+        <ToolsRow onPress={handleToolPress} style={{ marginTop: spacing[12] }} />
 
         {/* Post-order nudge — only shows on Android once the user has tracked
             an order and hasn't enabled/dismissed it. Self-gating; no-op otherwise. */}

@@ -4,6 +4,7 @@
  * pulling in the navigator implementations (avoids circular deps).
  */
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { CalculateSpends } from '../api/types';
 
 /**
  * Accumulating state for one Missing Cashback claim, threaded through the flow
@@ -134,6 +135,28 @@ export type RootStackParamList = {
     /** 'bounce' only: true when the user's eligibility result is known. */
     eligibilityKnown?: boolean;
   };
+  // ── Card tools (Home tools row). Results are read from useCardSavings, keyed
+  // by `spends`; a result is never passed through navigation. ──
+  /** Spend questions, one per screen. 'ultimate' ends on ToolResults, 'beat' on
+   *  BeatMyCardResult (needs `cardAlias`, the user's own card). */
+  SpendQuiz: { next: 'ultimate' | 'beat'; cardAlias?: string };
+  /** Ranked cards for one spend profile. `tool` names the entry for analytics and copy. */
+  ToolResults: {
+    tool: 'ultimate' | 'category' | 'brands';
+    spends: CalculateSpends;
+    title: string;
+    /** One honest line under the title, e.g. how brands were counted. */
+    subtitle?: string;
+  };
+  /** Beat my card, step 1: pick the card the user has. */
+  BeatMyCardPick: undefined;
+  /** Beat my card, result: the user's card against the best other card. */
+  BeatMyCardResult: { cardAlias: string; spends: CalculateSpends };
+  /** Best card for brands: pick up to 5 brands and a monthly spend for each.
+   *  `brandId` (a TOOL_BRANDS id) preselects the brand the Home tile was showing. */
+  BestForBrands: { brandId?: string } | undefined;
+  /** Find best card for a category: pick a category and a monthly spend. */
+  BestForCategory: { categoryId?: string } | undefined;
   /** Profile → Payment History list (Figma 3396:51078). */
   ProfilePaymentHistory: undefined;
   /** Profile → Payment History details (Figma 3396:51408). */
