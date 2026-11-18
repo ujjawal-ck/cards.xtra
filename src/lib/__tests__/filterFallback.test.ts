@@ -11,7 +11,6 @@ interface Opts {
   annualFee?: number;
   isFree?: boolean;
   newToCredit?: boolean;
-  cashback?: boolean;
 }
 const card = (o: Opts = {}): CardModel => {
   n += 1;
@@ -27,7 +26,6 @@ const card = (o: Opts = {}): CardModel => {
       isFree: o.isFree ?? false,
       newToCredit: o.newToCredit ?? false,
     },
-    crossSell: { rewardType: o.cashback ? 'cashback' : 'rewards' },
   } as unknown as CardModel;
 };
 const ids = (cards: CardModel[]) => cards.map((c) => c.id);
@@ -46,7 +44,7 @@ describe('closestCards', () => {
   it('0 cards: drops one dimension, the least cared-for first (traits before network before bank)', () => {
     const fuelVisa = card({ cat: [FUEL], network: 'VISA' });
     const catalogue = [fuelVisa, card({ cat: [SHOPPING] })];
-    const out = closestCards(catalogue, F({ categoryTagIds: [FUEL], traits: ['cashback'] }));
+    const out = closestCards(catalogue, F({ categoryTagIds: [FUEL], traits: ['firstCard'] }));
     expect(out.dropped).toEqual(['traits']);
     expect(ids(out.cards)).toEqual([fuelVisa.id]);
   });
@@ -83,7 +81,7 @@ describe('closestCards', () => {
     const catalogue = [card({ cat: [SHOPPING], network: 'RuPay' }), card({ cat: [SHOPPING], network: 'RuPay' })];
     const out = closestCards(
       catalogue,
-      F({ categoryTagIds: [FUEL], networks: ['Visa'], bankNames: ['Nope Bank'], feeBucketIndices: [0], traits: ['cashback', 'firstCard'] }),
+      F({ categoryTagIds: [FUEL], networks: ['Visa'], bankNames: ['Nope Bank'], feeBucketIndices: [0], traits: ['firstCard'] }),
     );
     expect(out.cards.length).toBeGreaterThan(0);
   });
@@ -93,9 +91,9 @@ describe('closestCards', () => {
   });
 
   it('does not change the input filters', () => {
-    const applied = F({ categoryTagIds: [FUEL], traits: ['cashback'] });
+    const applied = F({ categoryTagIds: [FUEL], traits: ['firstCard'] });
     closestCards([card()], applied);
-    expect(applied).toEqual(F({ categoryTagIds: [FUEL], traits: ['cashback'] }));
+    expect(applied).toEqual(F({ categoryTagIds: [FUEL], traits: ['firstCard'] }));
   });
 });
 
@@ -106,7 +104,7 @@ describe('copy', () => {
     expect(describeDim(F({ feeBucketIndices: [0, 1] }), 'feeBucketIndices')).toBe('Up to ₹1,000 a year');
     expect(describeDim(F({ feeBucketIndices: [0, 1, 2] }), 'feeBucketIndices')).toBe('Up to ₹2,000 a year');
     expect(describeDim(F({ networks: ['Visa', 'RuPay'] }), 'networks')).toBe('Visa or RuPay');
-    expect(describeDim(F({ traits: ['firstCard', 'cashback'] }), 'traits')).toBe('First card · Cashback');
+    expect(describeDim(F({ traits: ['firstCard'] }), 'traits')).toBe('First card');
     expect(describeDim(EMPTY_FILTERS, 'networks')).toBeNull();
   });
 
@@ -123,7 +121,7 @@ describe('copy', () => {
   });
 
   it('with more than 3 filters the title does not list them all', () => {
-    const applied = F({ categoryTagIds: [FUEL], feeBucketIndices: [0], networks: ['Visa'], traits: ['cashback'] });
+    const applied = F({ categoryTagIds: [FUEL], feeBucketIndices: [0], networks: ['Visa'], traits: ['firstCard'] });
     expect(fallbackCopy(applied, ['traits']).title).toBe('No card matches all your filters');
   });
 

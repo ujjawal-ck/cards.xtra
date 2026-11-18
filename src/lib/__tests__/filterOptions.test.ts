@@ -15,7 +15,6 @@ interface Opts {
   annualFee?: number;
   isFree?: boolean;
   newToCredit?: boolean;
-  cashback?: boolean;
   noMeta?: boolean;
 }
 const card = (o: Opts = {}): CardModel => {
@@ -33,7 +32,6 @@ const card = (o: Opts = {}): CardModel => {
           isFree: o.isFree ?? false,
           newToCredit: o.newToCredit,
         },
-    crossSell: { rewardType: o.cashback ? 'cashback' : 'rewards' },
   } as unknown as CardModel;
 };
 const ids = (cards: CardModel[]) => cards.map((c) => c.id);
@@ -92,17 +90,9 @@ describe('traits', () => {
     expect(ids(applyFilters([yes, no, unknown], { ...EMPTY_FILTERS, traits: ['firstCard'] }))).toEqual([yes.id]);
   });
 
-  it('two traits are AND: the card must have both', () => {
-    const both = card({ newToCredit: true, cashback: true });
-    const onlyFirst = card({ newToCredit: true });
-    const onlyCashback = card({ cashback: true });
-    const out = applyFilters([both, onlyFirst, onlyCashback], { ...EMPTY_FILTERS, traits: ['firstCard', 'cashback'] });
-    expect(ids(out)).toEqual([both.id]);
-  });
-
   it('a trait counts as an active filter', () => {
     expect(hasActiveFilters(EMPTY_FILTERS)).toBe(false);
-    expect(hasActiveFilters({ ...EMPTY_FILTERS, traits: ['cashback'] })).toBe(true);
+    expect(hasActiveFilters({ ...EMPTY_FILTERS, traits: ['firstCard'] })).toBe(true);
   });
 });
 

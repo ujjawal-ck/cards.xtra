@@ -94,7 +94,7 @@ import type {
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
 import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
-import { TOOL_CATEGORIES, TOOL_BRANDS } from '../lib/cardTools';
+import { categoryIdForWord, brandIdForWord } from '../lib/cardTools';
 import {
   colors,
   primitives,
@@ -899,9 +899,7 @@ export function HomeScreen() {
       });
       switch (tool) {
         case 'category':
-          navigation.navigate('BestForCategory', {
-            categoryId: TOOL_CATEGORIES.find((c) => c.label === word)?.id,
-          });
+          navigation.navigate('BestForCategory', { categoryId: categoryIdForWord(word) });
           return;
         case 'beat':
           navigation.navigate('BeatMyCardPick');
@@ -910,11 +908,7 @@ export function HomeScreen() {
           navigation.navigate('SpendQuiz', { next: 'ultimate' });
           return;
         case 'brands':
-          navigation.navigate('BestForBrands', {
-            brandId: TOOL_BRANDS.find(
-              (b) => b.name.toLowerCase() === word?.toLowerCase()
-            )?.id,
-          });
+          navigation.navigate('BestForBrands', { brandId: brandIdForWord(word) });
           return;
       }
     },

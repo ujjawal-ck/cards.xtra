@@ -10,7 +10,7 @@
 import type { CardModel } from '../molecules';
 import { applyFilters, type AppliedFilters, type CardTrait } from '../data/filterOptions';
 
-export type InlineQuestionId = 'fee' | 'firstCard' | 'cashback' | 'eligibility';
+export type InlineQuestionId = 'fee' | 'firstCard' | 'eligibility';
 
 export interface InlineChip {
   key: string;
@@ -50,7 +50,6 @@ const FEE_ANSWERS: Array<{ key: string; label: string; buckets: number[] }> = [
 
 const TRAIT_QUESTIONS: Array<{ id: InlineQuestionId; trait: CardTrait; title: string; label: string }> = [
   { id: 'firstCard', trait: 'firstCard', title: 'Is this your first credit card?', label: 'Yes, show cards I can start with' },
-  { id: 'cashback', trait: 'cashback', title: 'Want cashback and not reward points?', label: 'Show cashback cards' },
 ];
 
 const sameSet = (a: number[], b: number[]) => a.length === b.length && b.every((x) => a.includes(x));

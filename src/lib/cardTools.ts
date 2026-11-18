@@ -109,6 +109,17 @@ export interface ToolCategory {
   defaultMonthly: number;
 }
 
+/** The category a Home tile word names ("Fuel" → 'fuel'). undefined when no category has that label. */
+export function categoryIdForWord(word: string | undefined): string | undefined {
+  return TOOL_CATEGORIES.find((c) => c.label === word)?.id;
+}
+
+/** The brand a Home tile word names ("Myntra" → 'myntra'), ignoring case. undefined when unknown. */
+export function brandIdForWord(word: string | undefined): string | undefined {
+  const w = word?.toLowerCase();
+  return w ? TOOL_BRANDS.find((b) => b.name.toLowerCase() === w)?.id : undefined;
+}
+
 export const TOOL_CATEGORIES: ToolCategory[] = [
   { id: 'online-shopping', label: 'Online Shopping', keys: ['amazon_spends', 'flipkart_spends', 'other_online_spends'], defaultMonthly: 9000 },
   { id: 'groceries', label: 'Groceries', keys: ['grocery_spends_online', 'offline_grocery'], defaultMonthly: 8000 },

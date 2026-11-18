@@ -2,7 +2,9 @@ import {
   EMPTY_SPENDS,
   SPEND_QUESTIONS,
   beatMyCard,
+  brandIdForWord,
   buildSpends,
+  categoryIdForWord,
   hasAnySpend,
   mapCalculateResponse,
   rankByNetValue,
@@ -489,5 +491,27 @@ describe('lines and the savings totals (live UAT 2026-11-18)', () => {
     const loungeOnly = { ...mine, lines: mine.lines.filter((l) => l.outsideTotal) };
     expect(topReason(loungeOnly)).toBeUndefined();
     expect(topReason(mine)).toBe('x');
+  });
+});
+
+describe('Home tile words open the tool with that word picked', () => {
+  it('every word the category tile rotates through maps to its own category', () => {
+    for (const c of TOOL_CATEGORIES) expect(categoryIdForWord(c.label)).toBe(c.id);
+  });
+
+  it('every word the brands tile rotates through maps to a brand', () => {
+    for (const name of ROTATING_BRANDS) {
+      const id = brandIdForWord(name);
+      expect(id).toBeDefined();
+      expect(TOOL_BRANDS.find((b) => b.id === id)!.name).toBe(name);
+    }
+    expect(brandIdForWord('MYNTRA')).toBe('myntra');
+  });
+
+  it('an unknown or missing word picks nothing', () => {
+    expect(categoryIdForWord('Nope')).toBeUndefined();
+    expect(categoryIdForWord(undefined)).toBeUndefined();
+    expect(brandIdForWord('Nope')).toBeUndefined();
+    expect(brandIdForWord(undefined)).toBeUndefined();
   });
 });
