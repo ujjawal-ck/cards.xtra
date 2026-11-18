@@ -5,6 +5,8 @@
  * tick 8 long, tick pitch 10; tick label under every 5th tick; selected value in a blue chip (radius 4) under the centre mark.
  * Large = radius 32, 1.5 border, padding 16, gap 18, centred title (18), stepper box padding 12 / 10 (48 high).
  * 2026-11-18: optional title (large size), optional unit 'count' (no rupee sign), and the live value is committed if the card unmounts mid-drag.
+ * 2026-11-19: optional typed entry (`typedEntry`, `typedMax`, `useBottomSheetInput`). The value text becomes a field; the ruler
+ * stops at `max` (the ruler end) and a typed value above it pins the ruler at its end. Default look and behaviour are unchanged.
  * Rollback: delete this file, src/lib/spendRuler.ts (+ test), and its DS-ADD export lines in src/molecules/index.ts.
  *
  * SpendCard — molecule. New part. Overlaps AmountInput (see docs/ds-additions.md): AmountInput types an
@@ -23,19 +25,23 @@ import {
   ScrollView,
   Pressable,
   ImageSourcePropType,
+  TextInput,
   NativeSyntheticEvent,
   NativeScrollEvent,
   LayoutChangeEvent,
 } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Text } from '../atoms';
-import { colors, spacing, radius, borderWidth, sizing, mediaSize, elevation } from '../tokens';
+import { colors, spacing, radius, borderWidth, sizing, mediaSize, elevation, typography } from '../tokens';
 import { formatINR } from '../lib/money';
-import { formatAmount } from '../lib/amountInput';
+import { formatAmount, parseAmount, clampAmount } from '../lib/amountInput';
 import {
   tickCount,
   valueToOffset,
   offsetToValue,
   stepValue,
+  stepTyped,
+  rulerStep,
   isLabelTick,
   type RulerConfig,
 } from '../lib/spendRuler';
@@ -57,6 +63,15 @@ export interface SpendCardProps {
   title?: string;
   /** 'rupees' (default) shows ₹ amounts. 'count' shows plain whole numbers, e.g. visits. */
   unit?: 'rupees' | 'count';
+  /**
+   * Off by default. When true the value is a field the user can type in. `max` stays the ruler end;
+   * a typed value above it keeps the ruler pinned at its end and the typed value is shown.
+   */
+  typedEntry?: boolean;
+  /** Typed entry only: the highest amount the user can type. Default `max`. */
+  typedMax?: number;
+  /** Typed entry only: set when the card is inside a gorhom bottom sheet. */
+  useBottomSheetInput?: boolean;
 }
 
 const formatCount = (n: number) => String(Math.round(n));
@@ -81,11 +96,20 @@ export function SpendCard({
   size = 'compact',
   title,
   unit = 'rupees',
+  typedEntry = false,
+  typedMax,
+  useBottomSheetInput = false,
 }: SpendCardProps) {
   const large = size === 'large';
   const formatValue = unit === 'count' ? formatCount : formatINR;
   const formatTick = unit === 'count' ? formatCount : formatAmount;
-  const cfg: RulerConfig = { min, max, step, tickGap: TICK_GAP };
+  // The ruler draws at most about 300 ticks; the buttons and typed entry use the real step.
+  const cfg: RulerConfig = { min, max, step: rulerStep(min, max, step), tickGap: TICK_GAP };
+  const stepCfg: RulerConfig = { ...cfg, step };
+  const limit = typedEntry ? Math.max(typedMax ?? max, max) : max;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const dragStartValue = useRef(min);
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
   const [live, setLive] = useState(value);
@@ -129,6 +153,11 @@ export function SpendCard({
   const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     dragging.current = false;
     const v = offsetToValue(e.nativeEvent.contentOffset.x, cfg);
+    // A typed value above the ruler end: a touch that does not move the ruler keeps the typed value.
+    if (value > max && v === max && dragStartValue.current === max) {
+      setLive(value);
+      return;
+    }
     setLive(v);
     if (v !== value) {
       committedRef.current = v;
@@ -137,14 +166,26 @@ export function SpendCard({
   };
 
   const bump = (dir: 1 | -1) => {
-    const next = stepValue(live, dir, cfg);
+    const next = typedEntry ? stepTyped(live, dir, stepCfg, limit) : stepValue(live, dir, cfg);
     setLive(next);
+    if (editing) setDraft(next > 0 ? formatAmount(next) : '');
     committedRef.current = next;
     onChange(next);
   };
 
   const atMin = live <= min;
-  const atMax = live >= max;
+  const atMax = live >= limit;
+
+  const onType = (text: string) => {
+    const parsed = parseAmount(text);
+    const n = parsed == null ? 0 : clampAmount(parsed, min, limit);
+    setDraft(parsed == null ? '' : formatAmount(n));
+    setLive(n);
+    committedRef.current = n;
+    onChange(n);
+  };
+
+  const ValueField = useBottomSheetInput ? BottomSheetTextInput : TextInput;
 
   // Figma draws the buttons at 16; hitSlop keeps the touch area at 44 dp.
   const stepper = (label: string, glyph: string, dir: 1 | -1, disabled: boolean) => (
@@ -187,9 +228,32 @@ export function SpendCard({
       }}
     >
       {stepper(`Decrease ${name} spend`, '−', -1, atMin)}
-      <Text variant="body16Bold" color={colors.text.link} style={{ minWidth: spacing[48] }} align="center">
-        {formatValue(live)}
-      </Text>
+      {typedEntry ? (
+        <ValueField
+          value={editing ? draft : formatValue(live)}
+          onChangeText={onType}
+          onFocus={() => {
+            setDraft(live > 0 ? formatAmount(live) : '');
+            setEditing(true);
+          }}
+          onBlur={() => setEditing(false)}
+          placeholder="0"
+          placeholderTextColor={colors.text.placeholder}
+          selectionColor={colors.action.accent.default}
+          keyboardType="number-pad"
+          selectTextOnFocus
+          maxLength={String(limit).length + Math.ceil(String(limit).length / 2)}
+          accessibilityLabel={`${name} amount`}
+          style={[
+            typography.body16Bold,
+            { color: colors.text.link, textAlign: 'center', minWidth: spacing[64], padding: 0 },
+          ]}
+        />
+      ) : (
+        <Text variant="body16Bold" color={colors.text.link} style={{ minWidth: spacing[48] }} align="center">
+          {formatValue(live)}
+        </Text>
+      )}
       {stepper(`Increase ${name} spend`, '+', 1, atMax)}
     </View>
   );
@@ -253,7 +317,7 @@ export function SpendCard({
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={`${name} spend ${period}`}
-        accessibilityValue={{ min, max, now: live, text: formatValue(live) }}
+        accessibilityValue={{ min, max: limit, now: live, text: formatValue(live) }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
         onAccessibilityAction={(e) => bump(e.nativeEvent.actionName === 'increment' ? 1 : -1)}
         style={{ marginHorizontal: -spacing[16] }}
@@ -266,8 +330,9 @@ export function SpendCard({
             snapToInterval={TICK_GAP}
             decelerationRate="fast"
             scrollEventThrottle={16}
-            onScrollBeginDrag={() => {
+            onScrollBeginDrag={(e) => {
               dragging.current = true;
+              dragStartValue.current = offsetToValue(e.nativeEvent.contentOffset.x, cfg);
             }}
             onScroll={onScroll}
             onScrollEndDrag={(e) => {

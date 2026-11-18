@@ -9,8 +9,12 @@
  * Join rule: name, art, fees text, Rewards and the Apply link come from the
  * app card (useCards). Only the savings numbers come from `calculate`. A row
  * joins by alias first, then by BankKaro id; one app card joins at most one
- * row. A calculate row with no app card is dropped, because the app cannot
- * open or apply for it.
+ * row (`joinAppCards` in src/lib/cardTools.ts).
+ *
+ * `league`: every calculate row in rank order (SHOW_CARDS_NOT_IN_APP), with
+ * `card` set only when the join finds one. It needs only the calculate call:
+ * while the cards list loads, or when it fails, rows come without `card`.
+ * `isLoading`, `isOffline` and `isError` follow the calculate call only.
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -20,11 +24,14 @@ import { CalculateResponse } from '../api/schemas/calculate';
 import type { CalculateSpends } from '../api/types';
 import type { CardModel } from '../molecules';
 import {
+  buildLeague,
   hasAnySpend,
   mapCalculateResponse,
   rankByNetValue,
   spendsKey,
+  SHOW_CARDS_NOT_IN_APP,
   type CardSavings,
+  type LeagueRowOf,
 } from '../lib/cardTools';
 import { useCards } from './useCards';
 
@@ -42,29 +49,25 @@ const nowMs = () =>
     ? performance.now()
     : Date.now();
 
-export interface ToolCard {
-  /** 1-based position after ranking and the join. */
-  rank: number;
-  card: CardModel;
-  savings: CardSavings;
-}
+/** One league row: every calculate row, `card` set when the app lists the card. */
+export type LeagueRow = LeagueRowOf<CardModel>;
 
 export interface UseCardSavingsResult {
-  /** Ranked by net yearly value. Only cards the app lists. Empty until loaded. */
-  ranked: ToolCard[];
+  /** Every calculate row in rank order. `card` is set only when the join finds one. Empty until loaded. */
+  league: LeagueRow[];
   /**
-   * true while the cards list or the calculate call has no data and is fetching.
+   * true while the calculate call has no data and is fetching.
    * false while paused offline (see `isOffline`).
    */
   isLoading: boolean;
   /**
-   * true when the hook is enabled, has no result yet, and the cards list or the
-   * calculate call is paused because the phone is offline. React Query resumes
-   * the call by itself when the phone is back online. `ranked` is empty here,
-   * and that does NOT mean "no card saves you money".
+   * true when the hook is enabled, has no result yet, and the calculate call is
+   * paused because the phone is offline. React Query resumes the call by itself
+   * when the phone is back online. `league` is empty here, and that does NOT
+   * mean "no card saves you money".
    */
   isOffline: boolean;
-  /** true when the calculate call (or the cards list) failed for good. */
+  /** true when the calculate call failed for good. A failed cards list only leaves `card` unset. */
   isError: boolean;
   refetch: () => void;
   /**
@@ -94,42 +97,10 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
     retry: false,
   });
 
-  const ranked = useMemo<ToolCard[]>(() => {
+  const league = useMemo<LeagueRow[]>(() => {
     const list = calc.data?.list;
-    const appCards = cards.data;
-    if (!list || !appCards) return [];
-    const byAlias = new Map<string, CardModel>();
-    const byId = new Map<string, CardModel>();
-    for (const card of appCards) {
-      const alias = card.filterMeta?.cardAlias;
-      if (alias && !byAlias.has(alias)) byAlias.set(alias, card);
-      if (card.id && !byId.has(card.id)) byId.set(card.id, card);
-    }
-    // Pass 1: alias. Pass 2: id, only for rows still without a card. One app
-    // card joins at most one row, and an alias match always beats an id match.
-    const used = new Set<CardModel>();
-    const matched = new Map<CardSavings, CardModel>();
-    for (const savings of list) {
-      const card = byAlias.get(savings.alias);
-      if (card && !used.has(card)) {
-        used.add(card);
-        matched.set(savings, card);
-      }
-    }
-    for (const savings of list) {
-      if (matched.has(savings) || !savings.id) continue;
-      const card = byId.get(savings.id);
-      if (card && !used.has(card)) {
-        used.add(card);
-        matched.set(savings, card);
-      }
-    }
-    const out: ToolCard[] = [];
-    for (const savings of list) {
-      const card = matched.get(savings);
-      if (card) out.push({ rank: out.length + 1, card, savings });
-    }
-    return out;
+    if (!list) return [];
+    return buildLeague(list, cards.data, SHOW_CARDS_NOT_IN_APP);
   }, [calc.data, cards.data]);
 
   const calcRefetch = calc.refetch;
@@ -149,18 +120,15 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
   // Offline: App.js wires NetInfo into onlineManager and the network mode is
   // 'online', so a query with no data is PAUSED (isPending, fetchStatus
   // 'paused'). v5 `isLoading` is false then, so it cannot be used here.
-  const hasResult = calc.data !== undefined && cards.data !== undefined;
-  const paused = cards.fetchStatus === 'paused' || calc.fetchStatus === 'paused';
-  const isOffline = enabled && !hasResult && paused;
-  const pendingActive = (q: { isPending: boolean; fetchStatus: string }) =>
-    q.isPending && q.fetchStatus !== 'paused';
-  const isLoading = enabled && !isOffline && (pendingActive(cards) || pendingActive(calc));
+  // The cards list does not gate these flags: the league shows without it.
+  const isOffline = enabled && calc.data === undefined && calc.fetchStatus === 'paused';
+  const isLoading = enabled && !isOffline && calc.isPending && calc.fetchStatus !== 'paused';
 
   return {
-    ranked,
+    league,
     isLoading,
     isOffline,
-    isError: enabled && (cards.isError || calc.isError),
+    isError: enabled && calc.isError,
     refetch,
     // A cached result keeps the first call's duration; report it only for a
     // call this instance saw finish.

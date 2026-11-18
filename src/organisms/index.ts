@@ -328,3 +328,9 @@ export type { EarnLoginSheetProps, EarnLoginSheetRef, EarnLoginKind } from './Ea
 export { QuizStep } from './QuizStep';
 export type { QuizStepProps } from './QuizStep';
 // DS-ADD(ds-expansion-1) end
+// Tools v2 (league table) start: EditSpendsSheet, SavingsBreakdownSheet
+export { EditSpendsSheet } from './EditSpendsSheet';
+export type { EditSpendsSheetProps, EditSpendsSheetHandle } from './EditSpendsSheet';
+export { SavingsBreakdownSheet } from './SavingsBreakdownSheet';
+export type { SavingsBreakdownSheetProps, SavingsBreakdownSheetHandle } from './SavingsBreakdownSheet';
+// Tools v2 (league table) end

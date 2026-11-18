@@ -11,12 +11,10 @@ import {
   ROTATING_BRANDS,
   TOOL_BRANDS,
   TOOL_CATEGORIES,
-  spendsForCategory,
   spendsFromBrands,
   spendsKey,
   stripHtml,
   toApiValue,
-  topReason,
   type CardSavings,
 } from '../cardTools';
 
@@ -38,6 +36,9 @@ const card = (alias: string, p: Partial<CardSavings> = {}): CardSavings => ({
   annualFeeCounted: 0,
   netYearly: 0,
   lines: [],
+  discontinued: false,
+  inviteOnly: false,
+  lifetimeFree: false,
   ...p,
 });
 
@@ -275,43 +276,6 @@ describe('spendsFromBrands', () => {
   });
 });
 
-describe('spendsForCategory', () => {
-  it('splits the monthly amount evenly across the keys', () => {
-    const out = spendsForCategory('online-shopping', 9000);
-    expect(out.amazon_spends).toBe(3000);
-    expect(out.flipkart_spends).toBe(3000);
-    expect(out.other_online_spends).toBe(3000);
-    expect(out.fuel).toBe(0);
-  });
-
-  it('multiplies the share of an _annual key by 12', () => {
-    const out = spendsForCategory('travel', 8000);
-    expect(out.flights_annual).toBe(48000);
-    expect(out.hotels_annual).toBe(48000);
-  });
-
-  it('rounds an uneven share to whole rupees', () => {
-    const out = spendsForCategory('bills', 1000);
-    expect(out.mobile_phone_bills).toBe(333);
-  });
-
-  it('returns an empty body for an unknown id', () => {
-    expect(spendsForCategory('nope', 5000)).toEqual(EMPTY_SPENDS);
-  });
-
-  it('gives life_insurance (yearly input, no _annual suffix) a yearly share', () => {
-    // spendsForCategory reads TOOL_CATEGORIES by id, so add a test category and remove it after.
-    TOOL_CATEGORIES.push({ id: 'test-insurance', label: 'Insurance', keys: ['life_insurance', 'rent'], defaultMonthly: 0 });
-    try {
-      const out = spendsForCategory('test-insurance', 4000);
-      expect(out.life_insurance).toBe(24000);
-      expect(out.rent).toBe(2000);
-    } finally {
-      TOOL_CATEGORIES.pop();
-    }
-  });
-});
-
 describe('ROTATING_BRANDS', () => {
   it('names only brands in TOOL_BRANDS, so Home can turn each name into a brandId', () => {
     const names = new Set(TOOL_BRANDS.map((b) => b.name));
@@ -351,7 +315,9 @@ describe('beatMyCard', () => {
     expect(r.mine.alias).toBe('mine');
     expect(r.gapYearly).toBe(3000);
     expect(r.verdict).toBe('best_wins');
-    expect(r.rows).toEqual([
+    // Contract v2 added spendYearly, mineLine and bestLine to each row; they are checked in
+    // cardTools.league.test.ts. Here only the original four fields are compared.
+    expect(r.rows.map(({ key, label, mine, best }) => ({ key, label, mine, best }))).toEqual([
       { key: 'amazon_spends', label: 'amazon_spends', mine: 1200, best: 3600 },
       { key: 'flights_annual', label: 'flights_annual', mine: 600, best: 0 },
       { key: 'fuel', label: 'fuel', mine: 0, best: 120 },
@@ -404,28 +370,6 @@ describe('beatMyCard', () => {
     expect(r.rows.map((row) => row.mine)).toEqual([1290, 1290, 1290]);
     expect(r.rows.reduce((t, row) => t + row.mine, 0)).toBe(3870);
     expect(mine.yearlySavings).toBe(3870);
-  });
-});
-
-describe('topReason', () => {
-  it('gives the explanation of the line with the most savings', () => {
-    const c = card('a', {
-      lines: [
-        { key: 'fuel', label: 'Fuel', spend: 1, savings: 5, explanation: 'small' },
-        { key: 'rent', label: 'Rent', spend: 1, savings: 50, explanation: 'big' },
-      ],
-    });
-    expect(topReason(c)).toBe('big');
-  });
-
-  it('is undefined when no line has savings', () => {
-    expect(topReason(card('a'))).toBeUndefined();
-    expect(topReason(card('a', { lines: [{ key: 'fuel', label: 'Fuel', spend: 1, savings: 0, explanation: 'x' }] }))).toBeUndefined();
-  });
-
-  it('works on the fixture', () => {
-    const magnus = mapCalculateResponse(fixture).find((c) => c.alias === 'magnus-burgundy-credit-card')!;
-    expect(topReason(magnus)).toMatch(/^On yearly spend of ₹60K/);
   });
 });
 
@@ -495,15 +439,10 @@ describe('lines and the savings totals (live UAT 2026-11-18)', () => {
     expect(Math.abs(sum - mine.yearlySavings)).toBeLessThanOrEqual(6 * inTotal.length);
   });
 
-  it('keeps the lounge line out of beat rows and out of topReason', () => {
+  it('keeps the lounge line out of beat rows', () => {
     const r = beatMyCard([card('other', { netYearly: 99999 }), mine], 'mine')!;
     expect(r.rows.map((row) => row.key)).not.toContain('domestic_lounge_usage_quarterly');
     expect(r.rows).toHaveLength(4);
-    // The lounge line has the most savings (500) but is not the top reason.
-    expect(mine.lines[0].key).toBe('domestic_lounge_usage_quarterly');
-    const loungeOnly = { ...mine, lines: mine.lines.filter((l) => l.outsideTotal) };
-    expect(topReason(loungeOnly)).toBeUndefined();
-    expect(topReason(mine)).toBe('x');
   });
 });
 

@@ -1,0 +1,1398 @@
+{
+ "status": "success",
+ "message": "",
+ "data": {
+  "success": true,
+  "message": "Savings calculated successfully",
+  "savings": [
+   {
+    "id": 50,
+    "card_name": "HSBC Live Plus Credit Card",
+    "seo_card_alias": "hsbc-live-plus-credit-card",
+    "bank_name": "HSBC Bank",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_122030_AGB_HSBCLIVE.png1735897901116",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_122030_AGB_Mockup-22.webp1735897902637",
+    "sourceable": 1,
+    "invite_only": false,
+    "total_savings": 930,
+    "total_savings_yearly": 11160,
+    "total_extra_benefits": 0,
+    "roi": 11160,
+    "joining_fees": "1178.82",
+    "annual_fees": "1178.82",
+    "total_spends": 22500,
+    "annual_fee_spends": "200000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": {
+     "total_travel_benefit_annual": 0
+    },
+    "spending_breakdown": {
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 45,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 1.5% cashback, so you receive <b>₹45</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹540</b> in cashback.</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 75,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹5K on <b>eligible brands</b> you get 1.5% cashback, so you receive <b>₹75</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹60K on <b>eligible brands</b> you receive <b>₹900</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 60,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹4K on <b>eligible brands</b> you get 1.5% cashback, so you receive <b>₹60</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹48K on <b>eligible brands</b> you receive <b>₹720</b> in cashback.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 300,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 1200,
+      "maxCapReached": false,
+      "cashback_percentage": 10,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 10% cashback, so you receive <b>₹300</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹3,600</b> in cashback.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 250,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 1200,
+      "maxCapReached": false,
+      "cashback_percentage": 10,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2.5K on <b>eligible brands</b> you get 10% cashback, so you receive <b>₹250</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹30K on <b>eligible brands</b> you receive <b>₹3,000</b> in cashback.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 200,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 1200,
+      "maxCapReached": false,
+      "cashback_percentage": 10,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2K on <b>eligible brands</b> you get 10% cashback, so you receive <b>₹200</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹24K on <b>eligible brands</b> you receive <b>₹2,400</b> in cashback.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 210,
+    "card_name": "CRED IndusInd Bank Credit Card",
+    "seo_card_alias": "cred-indusind-bank-credit-card",
+    "bank_name": "IndusInd Bank",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_173500919_Cards_58.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_173501453_Mockup_45.png",
+    "sourceable": 1,
+    "invite_only": false,
+    "total_savings": 975,
+    "total_savings_yearly": 11700,
+    "total_extra_benefits": 0,
+    "roi": 11111.18,
+    "joining_fees": "0",
+    "annual_fees": "588.8199999999999",
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": null,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "points",
+      "points_earned": 250,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>250 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>3,000 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "points_earned": 150,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "points",
+      "points_earned": 200,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>200 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>2,400 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "points_earned": 150,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "points",
+      "points_earned": 125,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>125 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,500 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 100,
+      "savings_type": "points",
+      "points_earned": 100,
+      "maxCap": 5000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>100 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,200 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 183,
+    "card_name": "PhonePe SBI Card SELECT BLACK ",
+    "seo_card_alias": "phonepe-sbi-card-select-black",
+    "bank_name": "SBI",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130244_BankKaro_20260408_171509802_Cards_27.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_130245_BankKaro_20260408_171510212_IDFC_FIRST_Indigo_Credit_Card_-mockup_9.png",
+    "sourceable": 1,
+    "invite_only": false,
+    "total_savings": 975,
+    "total_savings_yearly": 11700,
+    "total_extra_benefits": 0,
+    "roi": 9931.18,
+    "joining_fees": "1768.82",
+    "annual_fees": "1768.82",
+    "total_spends": 22500,
+    "annual_fee_spends": "300000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": {
+     "total_travel_benefit_annual": 0
+    },
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "points",
+      "points_earned": 250,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>250 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>3,000 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "points_earned": 150,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 150,
+      "savings_type": "points",
+      "points_earned": 150,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 125,
+      "savings_type": "points",
+      "points_earned": 125,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>125 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,500 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 200,
+      "savings_type": "points",
+      "points_earned": 200,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>200 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>2,400 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 100,
+      "savings_type": "points",
+      "points_earned": 100,
+      "maxCap": 1000,
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>100 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 5 RP for every ₹100, so you will receive <b>1,200 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 209,
+    "card_name": "Kotak Solitaire Credit Card ",
+    "seo_card_alias": "kotak-solitaire-credit-card",
+    "bank_name": "Kotak",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_152822930_Cards_57.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260625_152823482_Mockup_44.png",
+    "sourceable": 1,
+    "invite_only": 1,
+    "total_savings": 585,
+    "total_savings_yearly": 7020,
+    "total_extra_benefits": 0,
+    "roi": 7020,
+    "joining_fees": "0",
+    "annual_fees": "0",
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": {
+     "total_travel_benefit_annual": 0
+    },
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 150,
+      "savings_type": "points",
+      "points_earned": 150,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>150 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>1,800 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 60,
+      "savings_type": "points",
+      "points_earned": 60,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>60 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>720 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 90,
+      "savings_type": "points",
+      "points_earned": 90,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>90 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>1,080 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 90,
+      "savings_type": "points",
+      "points_earned": 90,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>90 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>1,080 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 120,
+      "savings_type": "points",
+      "points_earned": 120,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>120 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>1,440 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 75,
+      "savings_type": "points",
+      "points_earned": 75,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>75 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 3 RP for every ₹100, so you will receive <b>900 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 77,
+    "card_name": "Amazon Pay ICICI Bank Credit Card",
+    "seo_card_alias": "icici-amazon-pay-credit-card",
+    "bank_name": "ICICI Bank",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125125_BankKaro_Amazon_Pay_ICICI.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125139_BankKaro_Mobile.png",
+    "sourceable": 1,
+    "invite_only": false,
+    "total_savings": 395,
+    "total_savings_yearly": 4740,
+    "total_extra_benefits": 0,
+    "roi": 4740,
+    "joining_fees": "0",
+    "annual_fees": "0",
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": null,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 250,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹5K on <b>eligible brands</b> you get 5% cashback, so you receive <b>₹250</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹60K on <b>eligible brands</b> you receive <b>₹3,000</b> in cashback.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 30,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹30</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹360</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 40,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹4K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹40</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹48K on <b>eligible brands</b> you receive <b>₹480</b> in cashback.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 20,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹20</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹24K on <b>eligible brands</b> you receive <b>₹240</b> in cashback.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 30,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹30</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹360</b> in cashback.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 25,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2.5K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹25</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹30K on <b>eligible brands</b> you receive <b>₹300</b> in cashback.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 281,
+    "card_name": "SBI OLA Money Credit Card",
+    "seo_card_alias": "sbi-ola-money-credit-card",
+    "bank_name": "SBI",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260904_162452564_Cards_-_2026-09-04T162322.163.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260904_162452990_Mockup_82.png",
+    "sourceable": false,
+    "invite_only": false,
+    "total_savings": 225,
+    "total_savings_yearly": 2700,
+    "total_extra_benefits": 0,
+    "roi": 2700,
+    "joining_fees": "0",
+    "annual_fees": "588.8199999999999",
+    "total_spends": 22500,
+    "annual_fee_spends": "100000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": null,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 50,
+      "savings_type": "points",
+      "points_earned": 50,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>50 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>600 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 20,
+      "savings_type": "points",
+      "points_earned": 20,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>20 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>240 RP</b>.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 30,
+      "savings_type": "points",
+      "points_earned": 30,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>30 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>360 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 30,
+      "savings_type": "points",
+      "points_earned": 30,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>30 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>360 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 30,
+      "savings_type": "points",
+      "points_earned": 30,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>30 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>360 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 25,
+      "savings_type": "points",
+      "points_earned": 25,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>25 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>300 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 40,
+      "savings_type": "points",
+      "points_earned": 40,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>40 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 1 RP for every ₹100, so you will receive <b>480 RP</b>.</div>"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "id": 291,
+    "card_name": "RBL Popcorn Credit Card",
+    "seo_card_alias": "rbl-popcorn-credit-card",
+    "bank_name": "RBL Bank",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260914_151835420_Cards_-_2026-09-14T151818.462.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260914_151836175_Mockup_91.png",
+    "sourceable": false,
+    "invite_only": false,
+    "total_savings": 25,
+    "total_savings_yearly": 300,
+    "total_extra_benefits": 0,
+    "roi": -880,
+    "joining_fees": "1180",
+    "annual_fees": "1180",
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": null,
+    "spending_breakdown": {
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 25,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹5K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹25</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹60K on <b>eligible brands</b> you receive <b>₹300</b> in cashback.</div>"
+       }
+      ]
+     },
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹4K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹48K on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹24K on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹3K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹36K on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": 25,
+      "maxCapReached": true,
+      "cashback_percentage": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spends of ₹2.5K on <b>eligible brands</b> you get 1% cashback, so you receive <b>₹0</b> every month.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spends of ₹30K on <b>eligible brands</b> you receive <b>₹0</b> in cashback.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "cashback",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 80,
+    "card_name": "HDFC Regalia Gold Credit Card",
+    "seo_card_alias": "hdfc-regalia-gold",
+    "bank_name": "HDFC",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125151_BankKaro_Card_TypeHDFC_Regalia_Gold_Credit_Card.png",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125153_BankKaro_Mockup-12.webp",
+    "sourceable": 1,
+    "invite_only": false,
+    "total_savings": 243.75,
+    "total_savings_yearly": 2925,
+    "total_extra_benefits": 0,
+    "roi": -25,
+    "joining_fees": "2950",
+    "annual_fees": "2950",
+    "total_spends": 22500,
+    "annual_fee_spends": "400000",
+    "annual_fee_waiver_toggle": 1,
+    "travel_benefits": {
+     "total_travel_benefit_annual": 0
+    },
+    "spending_breakdown": {
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 37.5,
+      "savings_type": "points",
+      "points_earned": 75,
+      "maxCap": 50000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>75 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>900 RP</b>.</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 62.5,
+      "savings_type": "points",
+      "points_earned": 125,
+      "maxCap": 50000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>125 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>1,500 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 31.25,
+      "savings_type": "points",
+      "points_earned": 62.5,
+      "maxCap": 50000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>63 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>750 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 25,
+      "savings_type": "points",
+      "points_earned": 50,
+      "maxCap": 50000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>50 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>600 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 50,
+      "savings_type": "points",
+      "points_earned": 100,
+      "maxCap": 50000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>Nykaa, Myntra</b> you get 5 RP for every ₹200, so you will receive <b>100 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>Nykaa, Myntra</b> you get 5 RP for every ₹200, so you will receive <b>1,200 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 37.5,
+      "savings_type": "points",
+      "points_earned": 75,
+      "maxCap": 2000,
+      "maxCapReached": false,
+      "conv_rate": 0.5,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>75 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 5 RP for every ₹200, so you will receive <b>900 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   },
+   {
+    "id": 116,
+    "card_name": "MakeMyTrip ICICI Bank Signature Credit Card",
+    "seo_card_alias": "makemytrip-icici-signature",
+    "bank_name": "ICICI Bank",
+    "image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125522_BankKaro_Card_TypeICICI_MakeMyTrip_Signature.webp",
+    "card_bg_image": "https://d2sriifpjiqv0p.cloudfront.net/admin/BankKaro_20260622_125531_BankKaro_Mockup_3.png",
+    "sourceable": false,
+    "invite_only": false,
+    "total_savings": 97.5,
+    "total_savings_yearly": 1170,
+    "total_extra_benefits": 0,
+    "roi": 1170,
+    "joining_fees": "2950",
+    "annual_fees": "0",
+    "total_spends": 22500,
+    "annual_fee_spends": "",
+    "annual_fee_waiver_toggle": 0,
+    "travel_benefits": {
+     "total_travel_benefit_annual": 0
+    },
+    "spending_breakdown": {
+     "flipkart_spends": {
+      "on": "flipkart_spends",
+      "spend": 3000,
+      "savings": 15,
+      "savings_type": "points",
+      "points_earned": 15,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>15 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>180 RP</b>.</div>"
+       }
+      ]
+     },
+     "amazon_spends": {
+      "on": "amazon_spends",
+      "spend": 5000,
+      "savings": 25,
+      "savings_type": "points",
+      "points_earned": 25,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹5K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>25 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹60K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>300 RP</b>.</div>"
+       }
+      ]
+     },
+     "grocery_spends_online": {
+      "on": "grocery_spends_online",
+      "spend": 3000,
+      "savings": 15,
+      "savings_type": "points",
+      "points_earned": 15,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹3K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>15 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹36K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>180 RP</b>.</div>"
+       }
+      ]
+     },
+     "online_food_ordering": {
+      "on": "online_food_ordering",
+      "spend": 2500,
+      "savings": 12.5,
+      "savings_type": "points",
+      "points_earned": 12.5,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2.5K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>13 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹30K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>150 RP</b>.</div>"
+       }
+      ]
+     },
+     "other_online_spends": {
+      "on": "other_online_spends",
+      "spend": 4000,
+      "savings": 20,
+      "savings_type": "points",
+      "points_earned": 20,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹4K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>20 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹48K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>240 RP</b>.</div>"
+       }
+      ]
+     },
+     "dining_or_going_out": {
+      "on": "dining_or_going_out",
+      "spend": 2000,
+      "savings": 10,
+      "savings_type": "points",
+      "points_earned": 10,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "conv_rate": 1,
+      "explanation": [
+       {
+        "key": "monthly",
+        "explanation": "<div>On monthly spend of ₹2K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>10 RP</b>.</div>"
+       },
+       {
+        "key": "annual",
+        "explanation": "<div>On yearly spend of ₹24K on <b>eligible brands</b> you get 1 RP for every ₹200, so you will receive <b>120 RP</b>.</div>"
+       }
+      ]
+     },
+     "fuel": {
+      "on": "fuel",
+      "spend": 3000,
+      "savings": 0,
+      "savings_type": "points",
+      "points_earned": 0,
+      "maxCap": "Unlimited",
+      "maxCapReached": false,
+      "explanation": []
+     }
+    }
+   }
+  ]
+ }
+}

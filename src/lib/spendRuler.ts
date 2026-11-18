@@ -46,3 +46,32 @@ export function stepValue(value: number, direction: 1 | -1, cfg: RulerConfig): n
 export function isLabelTick(index: number, every: number): boolean {
   return every > 0 && index % every === 0;
 }
+
+/** The most ticks a ruler may draw. A longer ruler gets a wider step. */
+export const MAX_RULER_TICKS = 300;
+
+/**
+ * The step to draw the ruler with: `step`, or a whole multiple of it when
+ * [min, max] would need more than `maxTicks` ticks. The +/- buttons and typed
+ * entry still use the real step.
+ */
+export function rulerStep(min: number, max: number, step: number, maxTicks: number = MAX_RULER_TICKS): number {
+  if (!(step > 0) || !(max > min)) return step;
+  const ticks = Math.floor((max - min) / step) + 1;
+  return ticks <= maxTicks ? step : step * Math.ceil((ticks - 1) / (maxTicks - 1));
+}
+
+/**
+ * "+" / "-" for a field that allows typed values above the ruler end (`typedMax`).
+ * Below the ruler end it behaves like `stepValue`. At or above it, "+" adds one step
+ * (up to `typedMax`) and "-" subtracts one step but never lands inside the ruler gap:
+ * it stops at the ruler end.
+ */
+export function stepTyped(value: number, direction: 1 | -1, cfg: RulerConfig, typedMax: number): number {
+  const limit = Math.max(typedMax, cfg.max);
+  if (value < cfg.max && !(direction === 1 && snapValue(value, cfg) >= cfg.max)) {
+    return stepValue(value, direction, cfg);
+  }
+  if (direction === 1) return clampAmount(Math.max(value, cfg.max) + cfg.step, cfg.min, limit);
+  return clampAmount(value - cfg.step < cfg.max ? cfg.max : value - cfg.step, cfg.min, limit);
+}
