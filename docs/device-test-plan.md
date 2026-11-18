@@ -1,5 +1,7 @@
 # Device test plan: api-hardening (Android)
 
+> **Status 2026-11-18:** Written 2026-11-03 for branch `api-hardening`, before the BFF. Setup step 3 no longer applies: set `EXPO_PUBLIC_API_BASE_URL` instead of partner keys. The checks may still fit a release build. Re-run them before you trust them.
+
 Run on a physical Android phone over USB. Never paste API keys, tokens, OTPs or mobile numbers into chat or logs.
 
 ## Setup

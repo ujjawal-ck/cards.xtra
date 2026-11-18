@@ -1,5 +1,7 @@
 # Production readiness: mini-app configuration and integrations
 
+> **Status 2026-11-18:** Probed 2026-11-09 and not re-checked. Section 3 (keys) is partly done: partner keys moved to the BFF. The production tracking host is still empty (`src/config/env.ts`).
+
 What has to be configured on the CashKaro mini-app side (and with BankKaro) so the live setup works without remapping later, and what the app already does to stay stable when that configuration changes. Status as of 9 Nov 2026 (probed read-only against production).
 
 ## 1. Offers: stores and categories

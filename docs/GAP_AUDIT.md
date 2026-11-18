@@ -1,5 +1,7 @@
 # Cards.xtra: Figma vs code gap audit and roadmap
 
+> **Status 2026-11-18:** Written 2026-11-03, before the BFF, the cross-sell rail and the rejection flow. P0 #5 (client-side secrets) is done: partner keys now live in the BFF (`bff/`). P0 #1 (delete account) was re-checked and is still UI-only. The other items were not re-checked.
+
 Audited 2026-11-03. Figma file `P7UcoZYBnfyefmJIA8wcM7`, page "Refined Flow" (248 screen frames). Code at commit `ae263b5`. Read-only audit: no app code was changed.
 
 ## 1. The short version

@@ -1,5 +1,7 @@
 # Play Store release checklist (P0)
 
+> **Status 2026-11-18:** For a Play Store build. Section 2 is out of date: partner keys now live in the BFF, so the app needs only `EXPO_PUBLIC_STAGE`, `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_CK_TRACKING_HOST` (see `.env.example`). Sections 3 to 5 still apply to a store release. Not needed for a sideloaded tester APK.
+
 Things a store build needs that OTA updates cannot deliver. Do these before
 the first production release that includes the P0 fixes.
 
