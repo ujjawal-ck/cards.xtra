@@ -49,6 +49,7 @@ import { BeatMyCardResultScreen } from '../screens/tools/BeatMyCardResultScreen'
 import { BestForBrandsScreen } from '../screens/tools/BestForBrandsScreen';
 import { BestForCategoryScreen } from '../screens/tools/BestForCategoryScreen';
 import { AdvisorScreen } from '../screens/advisor/AdvisorScreen';
+import { AdvisorAvatarDemo } from '../screens/advisor/AdvisorAvatarDemo';
 import { ProfilePaymentHistory } from '../screens/ProfilePaymentHistory';
 import { ProfilePaymentHistoryDetails } from '../screens/ProfilePaymentHistoryDetails';
 import { ProfilePaymentHistoryEmpty } from '../screens/ProfilePaymentHistoryEmpty';
@@ -228,6 +229,7 @@ export function RootNavigator() {
       <Stack.Screen name="BestForBrands" component={BestForBrandsScreen} />
       <Stack.Screen name="BestForCategory" component={BestForCategoryScreen} />
       <Stack.Screen name="Advisor" component={AdvisorScreen} />
+      {__DEV__ ? <Stack.Screen name="AdvisorAvatarDemo" component={AdvisorAvatarDemo} /> : null}
       <Stack.Screen
         name="ProfilePaymentHistory"
         component={ProfilePaymentHistory}

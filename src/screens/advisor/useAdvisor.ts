@@ -1,10 +1,14 @@
 /**
- * useAdvisor: state, eligibility query and analytics for the card advisor screen.
+ * useAdvisor: state, eligibility query and analytics for the card advisor chat.
  *
- * The state is only the answers. Slots, the next question and the reveal are derived from it
- * (the engine in src/lib/advisor). The eligibility call is the only network call besides the
+ * The state is only the answers. The transcript (messages), the next question and the reveal are
+ * derived from it (src/lib/advisor). The eligibility call is the only network call besides the
  * catalogue (useCards). Saved eligibility inputs are read, never written.
  * Analytics never carries an income amount or a pincode.
+ *
+ * The hook also drives the mascot: it derives the avatar state from real screen events.
+ * `messageArriving` is true from the moment a new advisor message id appears until the screen
+ * calls `markArrivalDone(id)` (the entrance ended, the row unmounted, or no entrance runs).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -14,9 +18,11 @@ import { fetchEligibility } from '../../api/eligibility';
 import { loadSavedProfile } from '../../lib/savedProfile';
 import { analytics, Events } from '../../analytics';
 import { ADVISOR_CONFIG } from '../../lib/advisor/config';
-import { deriveSlots, nextQuestion, buildReveal, answerPills } from '../../lib/advisor/engine';
+import { deriveSlots } from '../../lib/advisor/engine';
+import { buildTranscript, rewindAnswers, avatarStateFor } from '../../lib/advisor/transcript';
 import { EMPTY_ADVISOR_STATE, NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorEligibility, AdvisorState, QuestionId } from '../../lib/advisor/types';
+import type { ChatMessage } from '../../lib/advisor/chatTypes';
 
 export type AdvisorSource = 'search' | 'search_no_results';
 
@@ -28,13 +34,24 @@ interface SavedInputs {
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const PINCODE = /^[1-9]\d{5}$/;
+/** How long the mascot celebrates when cards turn "likely to qualify" (ms). */
+const LIKELY_CELEBRATION_MS = 2000;
+/** The id of the eligibility status message. One id for both states. */
+const STATUS_ID = 'elig-status';
+
+/** The id of the newest message that is not the user's own. */
+function lastAdvisorId(messages: ChatMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i].kind !== 'user-answer') return messages[i].id;
+  }
+  return null;
+}
 
 export function useAdvisor(source: AdvisorSource | undefined) {
   const cardsQ = useCards();
   const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
 
   const [state, setState] = useState<AdvisorState>(EMPTY_ADVISOR_STATE);
-  const [prevTop, setPrevTop] = useState<string[]>([]);
   const [saved, setSaved] = useState<SavedInputs | null>(null);
   const [useSaved, setUseSaved] = useState(false);
 
@@ -84,20 +101,90 @@ export function useAdvisor(source: AdvisorSource | undefined) {
 
   const eligibilityKnown = useSaved && !!saved;
 
-  const step = useMemo(
-    () => nextQuestion(state, ADVISOR_CONFIG, cards, { eligibilityKnown }),
-    [state, cards, eligibilityKnown],
-  );
+  // "Checking" uses isFetching, not isLoading: a retry after an error keeps the query in the
+  // error status (isLoading stays false), but the user must still see that a check runs.
+  const isCheckingEligibility = !!inputs && eligibilityQ.isFetching && !eligibilityQ.data;
+  const eligibilityError = !!inputs && eligibilityQ.isError && !eligibilityQ.isFetching;
 
-  const reveal = useMemo(
-    () =>
-      state.answers.opener
-        ? buildReveal({ state, config: ADVISOR_CONFIG, cards, eligibility, previousTop: prevTop })
-        : null,
-    [state, cards, eligibility, prevTop],
+  const transcript = useMemo(
+    () => buildTranscript({ state, config: ADVISOR_CONFIG, cards, eligibility, eligibilityKnown }),
+    [state, cards, eligibility, eligibilityKnown],
   );
+  const { step, reveal } = transcript;
 
-  const pills = useMemo(() => answerPills(state, ADVISOR_CONFIG), [state]);
+  // The eligibility status goes just before the tail (the current question or the closing line),
+  // so the question that waits for an answer stays last, next to the reply tray.
+  const messages = useMemo<ChatMessage[]>(() => {
+    const base = transcript.messages;
+    const status: 'checking' | 'check-failed' | null = isCheckingEligibility
+      ? 'checking'
+      : eligibilityError
+        ? 'check-failed'
+        : null;
+    if (!status) return base;
+    const statusMessage: ChatMessage = { id: STATUS_ID, kind: 'agent-status', status };
+    const tail = base[base.length - 1];
+    const tailIsPrompt =
+      !!tail &&
+      ((tail.kind === 'agent-question' && tail.current) || (tail.kind === 'agent-text' && tail.id === 'closing'));
+    if (!tailIsPrompt) return [...base, statusMessage];
+    return [...base.slice(0, -1), statusMessage, tail];
+  }, [transcript.messages, isCheckingEligibility, eligibilityError]);
+
+  // ---- Avatar: a new advisor message is arriving ----
+  // Only ids never seen before count. The catalogue must be loaded: before that the screen shows
+  // skeletons, so no message is on screen.
+  const newestAdvisorId = cards.length > 0 ? lastAdvisorId(messages) : null;
+  const seenAdvisorIds = useRef<Set<string>>(new Set());
+  const [arrivingId, setArrivingId] = useState<string | null>(null);
+  // Forget ids that left the transcript (a rewind, "Start over"): when one comes back, it arrives again.
+  useEffect(() => {
+    const present = new Set(messages.map((m) => m.id));
+    seenAdvisorIds.current.forEach((id) => {
+      if (!present.has(id)) seenAdvisorIds.current.delete(id);
+    });
+  }, [messages]);
+  useEffect(() => {
+    if (!newestAdvisorId) return;
+    if (seenAdvisorIds.current.has(newestAdvisorId)) {
+      // A rewind or a status change can make an older id the newest again. No entrance runs
+      // for it, so clear any arrival still pending: the flag can never stick on.
+      setArrivingId(null);
+      return;
+    }
+    seenAdvisorIds.current.add(newestAdvisorId);
+    setArrivingId(newestAdvisorId);
+  }, [newestAdvisorId]);
+
+  /** The screen calls this when the entrance of message `id` has ended (or will not run). */
+  const markArrivalDone = useCallback((id: string) => {
+    setArrivingId((current) => (current === id ? null : current));
+  }, []);
+
+  // ---- Avatar: cards just turned "likely to qualify" ----
+  const [justFoundLikely, setJustFoundLikely] = useState(false);
+  const proof = reveal?.proof;
+  const prevProof = useRef(proof);
+  useEffect(() => {
+    const before = prevProof.current;
+    prevProof.current = proof;
+    if (proof !== 'likely' || before === 'likely') return;
+    setJustFoundLikely(true);
+    const timer = setTimeout(() => setJustFoundLikely(false), LIKELY_CELEBRATION_MS);
+    return () => {
+      clearTimeout(timer);
+      setJustFoundLikely(false);
+    };
+  }, [proof]);
+
+  const avatarState = avatarStateFor({
+    catalogueError: cardsQ.isError,
+    eligibilityError,
+    eligibilityFetching: isCheckingEligibility,
+    messageArriving: arrivingId !== null,
+    justFoundLikely,
+    waitingForAnswer: !!step,
+  });
 
   // ---- Analytics ----
   const questionId = step?.question.id;
@@ -155,35 +242,24 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   }, [eligibilityQ.isError, eligibilityQ.errorUpdatedAt]);
 
   // ---- Actions ----
-  const answer = useCallback(
-    (id: QuestionId, value: string) => {
-      const question = ADVISOR_CONFIG.questions[id];
-      analytics.track(Events.ADVISOR_ANSWER, {
-        question_id: id,
-        option: question?.kind === 'pincode' ? 'entered' : value,
-        not_sure: value === NOT_SURE,
-      });
-      if (id === 'eligBridge') {
-        const wants = question.options.find((o) => o.id === value)?.set.wantsEligibility === true;
-        analytics.track(Events.ADVISOR_ELIGIBILITY_BRIDGE, { outcome: wants ? 'accepted' : 'declined' });
-      }
-      setPrevTop(reveal ? reveal.top.map((t) => t.card.id) : []);
-      setState((s) => ({ ...s, answers: { ...s.answers, [id]: value } }));
-    },
-    [reveal],
-  );
-
-  const reopen = useCallback((id: QuestionId) => {
-    if (id === 'opener') {
-      setState(EMPTY_ADVISOR_STATE);
-      setPrevTop([]);
-      return;
-    }
-    setState((s) => {
-      const answers = { ...s.answers };
-      delete answers[id];
-      return { ...s, answers };
+  const answer = useCallback((id: QuestionId, value: string) => {
+    const question = ADVISOR_CONFIG.questions[id];
+    analytics.track(Events.ADVISOR_ANSWER, {
+      question_id: id,
+      option: question?.kind === 'pincode' ? 'entered' : value,
+      not_sure: value === NOT_SURE,
     });
+    if (id === 'eligBridge') {
+      const wants = question.options.find((o) => o.id === value)?.set.wantsEligibility === true;
+      analytics.track(Events.ADVISOR_ELIGIBILITY_BRIDGE, { outcome: wants ? 'accepted' : 'declined' });
+    }
+    setState((s) => ({ ...s, answers: { ...s.answers, [id]: value } }));
+  }, []);
+
+  /** Change an earlier answer: that answer and every later one go. No analytics event fires here:
+   *  no event exists for it, and ADVISOR_ANSWER would count a tap that is not an answer. */
+  const rewind = useCallback((id: QuestionId) => {
+    setState((s) => rewindAnswers(s, ADVISOR_CONFIG, id));
   }, []);
 
   const markHeld = useCallback((cardId: string) => {
@@ -194,7 +270,6 @@ export function useAdvisor(source: AdvisorSource | undefined) {
 
   const restart = useCallback(() => {
     setState(EMPTY_ADVISOR_STATE);
-    setPrevTop([]);
   }, []);
 
   const retryEligibility = useCallback(() => {
@@ -203,18 +278,22 @@ export function useAdvisor(source: AdvisorSource | undefined) {
 
   return {
     state,
+    messages,
     step,
     reveal,
-    pills,
+    avatarState,
+    /** The newest advisor message whose entrance has not ended, or null. */
+    arrivingId,
+    markArrivalDone,
     usingSaved: eligibilityKnown,
-    isCheckingEligibility: !!inputs && eligibilityQ.isLoading,
-    eligibilityError: !!inputs && eligibilityQ.isError,
+    isCheckingEligibility,
+    eligibilityError,
     isLoading: cardsQ.isLoading,
     isError: cardsQ.isError,
     hasCards: cards.length > 0,
     refetch: cardsQ.refetch,
     answer,
-    reopen,
+    rewind,
     markHeld,
     changeSavedDetails,
     restart,

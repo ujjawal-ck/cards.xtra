@@ -176,7 +176,8 @@ const NOTE_ELIG_CATEGORY = 'None of those fit your income and pincode. These do.
 const NOTE_ELIG_ANY = 'No card for this need fits your income and pincode. These are the ones that do.';
 const NOTE_ELIG_NONE =
   'We could not find a card that fits this income and pincode. You can change your answers. These have the lowest fees.';
-const NOTE_SAME = 'Same cards. That answer did not change the best three.';
+/** Exported for the chat transcript: the only note it repeats as its own line. */
+export const NOTE_SAME = 'Same cards. That answer did not change the best three.';
 
 const DIMS: FilterDim[] = ['categoryTagIds', 'feeBucketIndices', 'networks', 'bankNames', 'traits'];
 

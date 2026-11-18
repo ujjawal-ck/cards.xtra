@@ -184,3 +184,18 @@ Made for the Home card tools (D24 to D26). Source: the file headers in `src/`. T
 - `PodiumCompare` (`ds-figma-1`): card art no longer paints over the value (the art overhang is reserved above each bar); no winner is marked when both values are 0 or less.
 - `SearchBar` now exports `SEARCH_BAR_H`, read by the compact Home masthead.
 - Used by the tool screens (`src/screens/tools/`), from a grep on 2026-11-18: `SpendCard` (SpendQuizScreen, BestForCategoryScreen, BestForBrandsScreen); `PodiumCompare`, `BreakdownTable`, `BigAmountCard` (BeatMyCardResultScreen); `RankedCardRow` (ToolResultsScreen, BeatMyCardResultScreen); `QuizStep` (SpendQuizScreen, which shows `StepProgress` through it). These parts are no longer gallery-only.
+
+## Batch `advisor-chat-1`, 2026-11-19
+
+Made for the card advisor chat (D28 in `decision.md`). Marked with `DS-ADD(advisor-chat-1)`.
+
+| Part | Layer | File | What it gives | Used by today | Rollback |
+|---|---|---|---|---|---|
+| CreditCardAdvisorAvatar | organism | `src/organisms/CreditCardAdvisorAvatar.tsx` + `src/organisms/creditCardAdvisorAvatar/` + `src/lib/advisorAvatar/` | The card advisor mascot ("Swipey"): a credit card with a face, six states, sizes 48 to 300. SVG parts moved by Reanimated views. Still poses on Android and under reduce motion. | AdvisorScreen (chat header and intro), AdvisorAvatarDemo (`__DEV__`), Storybook | Delete the three paths, the test, the export block in `src/organisms/index.ts`, and the users |
+| useReduceMotion (helper) | lib | `src/lib/useReduceMotion.ts` | The OS "reduce motion" setting as a hook. ToolsRow keeps its own copy. | CreditCardAdvisorAvatar, AdvisorScreen | Delete with its users |
+
+| Token name | Value (primitive) | File | Used by |
+|---|---|---|---|
+| `colors.advisorAvatar.*` (17 names) | Existing violet, amber, slate, cobalt, rose and saffron primitives. No new raw colour. | `src/tokens/colors.ts` | CreditCardAdvisorAvatar |
+
+The card body uses `gradients.premium`. Guide: `docs/card-advisor-avatar.md`.

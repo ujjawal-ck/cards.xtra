@@ -393,6 +393,33 @@ export const colors = {
     track: primitives.cobalt[50],
   },
   // DS-ADD(ds-expansion-1) end
+  // DS-ADD(advisor-chat-1) start: colors.advisorAvatar (the card advisor mascot)
+  // Semantic names for existing primitives only. The card body is not here:
+  // it uses gradients.premium (cobalt to violet).
+  advisorAvatar: {
+    /** Edge of the card body and its darker underside. */
+    outline: primitives.violet[800],
+    /** Soft light band across the card. Use with a low opacity. */
+    sheen: primitives.slate[50],
+    chip: primitives.amber[400],
+    chipLine: primitives.amber[700],
+    contactless: primitives.slate[50],
+    eyeWhite: primitives.slate[50],
+    pupil: primitives.cobalt[1000],
+    /** Small highlight dot in the pupil. */
+    eyeShine: primitives.slate[50],
+    brow: primitives.cobalt[1000],
+    mouth: primitives.cobalt[1000],
+    tongue: primitives.rose[300],
+    cheek: primitives.rose[300],
+    limb: primitives.violet[700],
+    glove: primitives.slate[50],
+    shoe: primitives.saffron[500],
+    sparkle: primitives.amber[300],
+    /** Ring behind the card while it listens. Use with a low opacity. */
+    glow: primitives.cobalt[200],
+  },
+  // DS-ADD(advisor-chat-1) end
 } as const;
 
 /** Tone names — 9 semantic tone slots exposed by colors.tones. */

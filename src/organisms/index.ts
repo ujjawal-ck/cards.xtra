@@ -328,3 +328,7 @@ export type { EarnLoginSheetProps, EarnLoginSheetRef, EarnLoginKind } from './Ea
 export { QuizStep } from './QuizStep';
 export type { QuizStepProps } from './QuizStep';
 // DS-ADD(ds-expansion-1) end
+// DS-ADD(advisor-chat-1) start: CreditCardAdvisorAvatar (the card advisor mascot)
+export { CreditCardAdvisorAvatar } from './CreditCardAdvisorAvatar';
+export type { CreditCardAdvisorAvatarProps, AdvisorAvatarState } from '../lib/advisorAvatar/types';
+// DS-ADD(advisor-chat-1) end

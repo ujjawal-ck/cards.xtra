@@ -41,6 +41,7 @@ Cards.xtra (powered by CashKaro) is a React Native / Expo app for finding a cred
 - Login is optional; the phone + OTP sheet lives in `src/screens/OnboardingScreen.tsx`.
 - Every card/store click-out goes through `src/lib/useClickOut.tsx`.
 - Home card tools: tiles in `src/organisms/ToolsRow.tsx`, screens in `src/screens/tools/`, logic and ranking rule in `src/lib/cardTools.ts`, data in `src/query/useCardSavings.ts` (D24 to D26 in [decision.md](decision.md)).
+- Card advisor chat: screen in `src/screens/advisor/`, engine, config and transcript in `src/lib/advisor/`, mascot in `src/organisms/CreditCardAdvisorAvatar.tsx` (D27 and D28 in [decision.md](decision.md); mascot guide: [card-advisor-avatar.md](card-advisor-avatar.md)).
 - Every network call goes through `src/api/http/client.ts` (timeouts, retries, single-flight tokens, response contracts).
 - Design tokens in `src/tokens` are mandatory for colours, spacing and type.
 - `npm run typecheck` and `npm test` run on every push (GitHub Actions, `.github/workflows/ci.yml`).

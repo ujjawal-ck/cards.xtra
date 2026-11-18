@@ -160,6 +160,8 @@ export type RootStackParamList = {
   /** Card advisor: one question at a time, three cards after the first answer.
    *  `source` says where it was opened from (analytics only). */
   Advisor: { source?: 'search' | 'search_no_results' } | undefined;
+  /** __DEV__ only: every state and size of the card advisor avatar. */
+  AdvisorAvatarDemo: undefined;
   /** Profile → Payment History list (Figma 3396:51078). */
   ProfilePaymentHistory: undefined;
   /** Profile → Payment History details (Figma 3396:51408). */
