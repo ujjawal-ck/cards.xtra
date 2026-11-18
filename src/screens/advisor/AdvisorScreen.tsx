@@ -92,6 +92,13 @@ export function AdvisorScreen() {
     return reveal.all.filter((c) => !inTop.has(c.id));
   }, [reveal]);
 
+  // The detail sheet swipes through these. A "Worth a look" card is in `top` but
+  // not in `all`, so the list is the top cards first, then the rest.
+  const pagerCards = useMemo(
+    () => (reveal ? [...reveal.top.map((t) => t.card), ...extraCards] : []),
+    [reveal, extraCards],
+  );
+
   const goBack = () => {
     analytics.track(Events.ADVISOR_EXIT, { destination: 'back', step: stepNumber });
     navigation.goBack();
@@ -101,11 +108,12 @@ export function AdvisorScreen() {
     if (!reveal) return;
     analytics.track(Events.ADVISOR_CARD_TAP, { item_id: card.id, slot, proof });
     analytics.track(Events.ADVISOR_EXIT, { destination: 'card', step: stepNumber });
-    openCard(card, reveal.all, reveal.all);
+    openCard(card, pagerCards, pagerCards);
   };
 
   const haveThis = (card: CardModel) => {
-    analytics.track(Events.ADVISOR_CARD_ACTION, { item_id: card.id, action: 'have_this' });
+    // No card id: a card the user owns never goes to analytics (same rule as the card tools).
+    analytics.track(Events.ADVISOR_CARD_ACTION, { action: 'have_this' });
     advisor.markHeld(card.id);
   };
 

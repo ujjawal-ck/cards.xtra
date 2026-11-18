@@ -233,6 +233,21 @@ function reasonTemplate(steps: WalkStep[], slots: AdvisorSlots): ReasonTemplate 
   return 'none';
 }
 
+/** True when the last answer set a filter or a rank preference. The eligibility
+ *  bridge, job, income and pincode answers cannot change the list by themselves. */
+function lastAnswerCanChangeList(steps: WalkStep[]): boolean {
+  const set = [...steps].reverse().find((s) => s.used)?.option?.set;
+  if (!set) return false;
+  return (
+    set.categoryTagId !== undefined ||
+    set.network !== undefined ||
+    set.fee !== undefined ||
+    set.hasHistory !== undefined ||
+    set.upi !== undefined ||
+    set.sortByFee !== undefined
+  );
+}
+
 const clean = (s: string | undefined | null) => (s ?? '').trim();
 
 function categoryBenefit(card: CardModel, tagId: number | undefined): string {
@@ -333,8 +348,9 @@ export function buildReveal(input: BuildRevealInput): AdvisorReveal {
   };
   const template = reasonTemplate(steps, slots);
   const prev = previousTop && previousTop.length > 0 ? previousTop : null;
-  const make = (card: CardModel, label: RevealCard['label']): RevealCard => {
-    const proof = proofOf();
+  const make = (card: CardModel, label: RevealCard['label'], outsideFilters = false): RevealCard => {
+    // A card shown from outside the user's filters never claims to match them.
+    const proof = outsideFilters ? 'none' : proofOf();
     return {
       card,
       label,
@@ -356,16 +372,19 @@ export function buildReveal(input: BuildRevealInput): AdvisorReveal {
     if (second) top.push(make(second, 'Also great'));
 
     let contrast: CardModel | undefined;
+    let contrastOutside = false;
     if (mode !== 'likely' && slots.job !== 'not-earning' && slots.feeSource !== 'user') {
       if (slots.fee === 'free') {
         contrast = applyFilters(pool, { ...filters, feeBucketIndices: [1] }).find(notShown);
+        // Outside only while the free filter is still applied (not relaxed away).
+        contrastOutside = filters.feeBucketIndices.length > 0;
       } else if (slots.fee === undefined) {
         const bothFree = top.length >= 2 && top.every((t) => isFree(t.card));
         contrast = bothFree ? undefined : list.find((c) => isFree(c) && notShown(c));
       }
     }
     if (contrast) {
-      top.push(make(contrast, 'Worth a look'));
+      top.push(make(contrast, 'Worth a look', contrastOutside));
     } else {
       const third = list.find(notShown);
       if (third) top.push(make(third, 'Also great'));
@@ -375,7 +394,13 @@ export function buildReveal(input: BuildRevealInput): AdvisorReveal {
   const topIds = top.map((t) => t.card.id);
   if (!note && dropped.length > 0) {
     note = fallbackCopy(requested, dropped).body;
-  } else if (!note && prev && prev.length === topIds.length && prev.every((id, i) => id === topIds[i])) {
+  } else if (
+    !note &&
+    prev &&
+    lastAnswerCanChangeList(steps) &&
+    prev.length === topIds.length &&
+    prev.every((id, i) => id === topIds[i])
+  ) {
     note = NOTE_SAME;
   }
 

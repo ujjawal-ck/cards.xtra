@@ -23,6 +23,7 @@ Builder choices, open for the owner:
 - The advisor reads the saved eligibility details and never writes them, because a band is not the real income.
 - "See all N cards" expands the list on the advisor screen. Home takes no filters through navigation.
 - "I have a card and want a better one" runs at "matches" level only. Savings, lounge and forex are not built.
+- "I have this" only removes the card from the list. It does not change the journey, and its event carries no card id (a card the user owns never goes to analytics).
 - Not built: typed-query slot filling, "Not for me", the age question, resume on a later day, the cashback-or-points question.
 
 Not checked: the screen in a running app, Android, a 360 dp screen, 130% font, the eligibility call from this screen, events in Firebase (the project is still a placeholder).

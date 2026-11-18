@@ -310,7 +310,8 @@ describe('buildReveal', () => {
       const r = buildReveal({ state: st({ opener: 'first' }), config: C, cards: [f1, f2, f3, paid] });
       expect(r.top.map((t) => t.card.id)).toEqual([f1.id, f2.id, paid.id]);
       expect(r.top.map((t) => t.label)).toEqual(['Best match', 'Also great', 'Worth a look']);
-      expect(r.top[2].proof).toBe('matches');
+      // The paid card is outside the free filter, so it does not claim to match.
+      expect(r.top[2].proof).toBe('none');
       expect(ids(r.all)).not.toContain(paid.id);
       expect(r.header).toBe('Free first cards');
       expect(r.top[0].reason).toBe('No joining fee and no annual fee');
@@ -355,6 +356,17 @@ describe('buildReveal', () => {
       const changed = buildReveal({ state, config: C, cards: [a, b, c, d], previousTop: [a.id, b.id, d.id] });
       expect(changed.note).toBeUndefined();
       expect(changed.top.map((t) => t.isNew)).toEqual([false, false, true]);
+    });
+
+    it('does not say "Same cards" after an answer that cannot change the list', () => {
+      const a = card();
+      const b = card();
+      const c = card();
+      // The last answers are the bridge and the job: neither filters nor ranks.
+      const state = st({ opener: 'specific', need: NOT_SURE, fee: 'any', eligBridge: 'yes', job: 'salaried' });
+      const r = buildReveal({ state, config: C, cards: [a, b, c], previousTop: [a.id, b.id, c.id] });
+      expect(r.top.map((t) => t.card.id)).toEqual([a.id, b.id, c.id]);
+      expect(r.note).toBeUndefined();
     });
 
     it('works with one card and with an empty catalogue', () => {
