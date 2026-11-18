@@ -41,18 +41,6 @@ export const CK_ROUTES = [
   ['POST', new RegExp(`^/users/tickets/${SEG}/${SEG}/${SEG}$`), 'users/tickets'],
 ];
 
-/**
- * CashKaro writes that move money or create support records on the live
- * backend: withdraw, missing-cashback submit and update, ticket upload.
- * Blocked unless ALLOW_MONEY_ROUTES is set (see readConfig).
- */
-export const MONEY_ROUTES = new Set([
-  'payment/paymentV1',
-  'mc/queue (submit)',
-  'mc/queue/:id (update)',
-  'users/tickets',
-]);
-
 /** BankKaro partner API (CardGenius). `/token` is never exposed. */
 export const BK_ROUTES = [
   ['GET', /^\/cardgenius\/init-bundle$/, 'cardgenius/init-bundle'],

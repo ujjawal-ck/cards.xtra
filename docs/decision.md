@@ -6,10 +6,12 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
-## D23. Money-out routes are off by default; Delete Account is hidden; preview builds set the stage
-2026-11-18 · `6447b74`, `dc62fda`, `1b2cfa5`
+## D23. Delete Account is hidden; preview builds set the stage
+2026-11-18 · `dc62fda`, `1b2cfa5`
 
-The BFF talks to the production CashKaro API, so a tester could request a real payout. Withdraw (`payment/paymentV1`), missing-cashback submit and update, and ticket upload now return 404 `ROUTE_DISABLED` unless the BFF env `ALLOW_MONEY_ROUTES` is `1`. The app shows the server message ("This feature is switched off in this build."). The withdraw OTP steps (`users/sendotp`, `users/verify`) stay open, so a tester still receives an OTP SMS before the block. Delete Account is hidden because the screens only simulate deletion. The EAS `preview` profile sets `EXPO_PUBLIC_STAGE=prod` and the BFF URL, and a release build with no stage logs a startup config problem. A local release build ignores `eas.json`: set both variables in the shell. These apply before a build leaves the owner's device. Not deployed yet: the live BFF still has the old code.
+Delete Account is hidden because the screens only simulate deletion (any 4-digit code, "Account deleted", nothing deleted). Show the link again once an account-deletion API exists. The EAS `preview` profile sets `EXPO_PUBLIC_STAGE=prod` and the BFF URL, and a release build with no stage logs a startup config problem. A local release build ignores `eas.json`: set both variables in the shell.
+
+A switch for the money-out routes (withdraw, missing-cashback writes, ticket upload) was built and removed the same day (`6447b74` and its revert): the owner decided it is not needed. Those routes are open on the BFF.
 
 ## D22. Rejection shows a reason, 3 alternatives and a page of cards the user can get
 2026-11-17 · `5263571`, `ee381e3`, `478be31`

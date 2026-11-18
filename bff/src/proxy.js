@@ -15,7 +15,7 @@
  * Never log request or response bodies: they hold OTPs, tokens, UPI ids and
  * eligibility details.
  */
-import { BK_ROUTES, CK_ROUTES, MONEY_ROUTES, OTP_ROUTES, canonicalPath, matchRoute } from './routes.js';
+import { BK_ROUTES, CK_ROUTES, OTP_ROUTES, canonicalPath, matchRoute } from './routes.js';
 import { UpstreamAuthError, bkPartnerToken, ckSiteToken } from './tokens.js';
 import { createRateLimiter } from './ratelimit.js';
 
@@ -50,8 +50,6 @@ export function readConfig(env = process.env) {
     bkPartnerKey: env.BK_PARTNER_KEY || '',
     // One password for every new account (D16). Empty = keep what the app sent.
     signupPassword: env.SIGNUP_PASSWORD || '',
-    // Withdraw, missing-cashback writes and ticket upload. Off unless set to 1 or true.
-    allowMoneyRoutes: /^(1|true)$/i.test(env.ALLOW_MONEY_ROUTES || ''),
   };
 }
 
@@ -198,7 +196,6 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
           ok: true,
           ck: Boolean(config.ckApiKey),
           bk: Boolean(config.bkPartnerKey && config.bkBaseUrl),
-          moneyRoutes: config.allowMoneyRoutes,
           region: process.env.VERCEL_REGION || 'local',
         });
       }
@@ -218,10 +215,6 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
       if (route === '-') {
         status = 404;
         return apiError(404, 'NOT_FOUND', 'Not found.');
-      }
-      if (upstream === 'ck' && MONEY_ROUTES.has(route) && !config.allowMoneyRoutes) {
-        status = 404;
-        return apiError(404, 'ROUTE_DISABLED', 'This feature is switched off in this build.');
       }
       if (upstream === 'ck' && !config.ckApiKey) {
         status = 503;

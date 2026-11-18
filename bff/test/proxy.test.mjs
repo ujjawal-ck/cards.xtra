@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createApp, readConfig } from '../src/proxy.js';
+import { createApp } from '../src/proxy.js';
 import { matchRoute, canonicalPath, CK_ROUTES } from '../src/routes.js';
 import { createCachedToken } from '../src/tokens.js';
 
@@ -247,8 +247,7 @@ test('per-mobile OTP limit cannot be dodged by reformatting the number', async (
 });
 
 test('encoded segments are canonicalised; double-encoded and smuggled characters are refused', async () => {
-  // The ticket route is a money route, so it is switched on for this test.
-  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 200 }, { allowMoneyRoutes: true });
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 200 });
   assert.equal(canonicalPath('/users/tickets/2026-11-01 10:00:00/42/abc'), '/users/tickets/2026-11-01%2010%3A00%3A00/42/abc');
   const ok = await handle(
     req('/ck/users/tickets/2026-11-01%2010%3A00%3A00/42/abc', { method: 'POST', headers: { authorization: 'Bearer u' }, body: '{}' }),
@@ -275,48 +274,4 @@ test('a stale token cannot evict a newer one', async () => {
   t.invalidate(first); // late failure with the old token
   assert.equal(await t.get(), second);
   assert.equal(n, 2);
-});
-
-const MONEY_CALLS = [
-  ['POST', '/ck/payment/paymentV1'],
-  ['POST', '/ck/users/missingcashback/queue'],
-  ['PUT', '/ck/users/missingcashback/queue/9'],
-  ['POST', '/ck/users/tickets/2026-11-01/42/abc'],
-];
-
-test('money routes are switched off by default and never reach upstream', async () => {
-  for (const [method, path] of MONEY_CALLS) {
-    const { handle, calls } = app(() => ({ body: {} }));
-    const res = await handle(req(path, { method, headers: { authorization: 'Bearer user-1' }, body: '{}' }));
-    assert.equal(res.status, 404, `${method} ${path}`);
-    assert.equal((await res.json()).errors[0].code, 'ROUTE_DISABLED');
-    assert.equal(calls.length, 0, `${method} ${path} reached upstream`);
-  }
-});
-
-test('money routes are forwarded when ALLOW_MONEY_ROUTES is on', async () => {
-  for (const [method, path] of MONEY_CALLS) {
-    const { handle, calls } = app(() => ({ body: {} }), { allowMoneyRoutes: true });
-    const res = await handle(req(path, { method, headers: { authorization: 'Bearer user-1' }, body: '{}' }));
-    assert.equal(res.status, 200, `${method} ${path}`);
-    assert.equal(calls.length, 1);
-  }
-});
-
-test('switching money routes off leaves reads and the claim check alone', async () => {
-  const { handle } = app((url) => tokenReply(url) ?? { body: { data: [] } });
-  for (const [method, path] of [
-    ['GET', '/ck/users/earnings'], ['GET', '/ck/payment/payment'], ['GET', '/ck/users/missingcashback/queue'],
-    ['POST', '/ck/users/missingcashback/validate'],
-  ]) {
-    const res = await handle(req(path, { method, headers: { authorization: 'Bearer user-1' }, body: method === 'POST' ? '{}' : undefined }));
-    assert.equal(res.status, 200, `${method} ${path}`);
-  }
-});
-
-test('readConfig reads ALLOW_MONEY_ROUTES; unset and 0 mean off', () => {
-  assert.equal(readConfig({}).allowMoneyRoutes, false);
-  assert.equal(readConfig({ ALLOW_MONEY_ROUTES: '0' }).allowMoneyRoutes, false);
-  assert.equal(readConfig({ ALLOW_MONEY_ROUTES: '1' }).allowMoneyRoutes, true);
-  assert.equal(readConfig({ ALLOW_MONEY_ROUTES: 'true' }).allowMoneyRoutes, true);
 });
