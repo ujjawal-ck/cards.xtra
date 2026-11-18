@@ -1528,7 +1528,7 @@ export function HomeScreen() {
     ? 'Closest cards'
     : sortKey === 'recommended'
     ? 'Top picks for you'
-    : SORT_OPTIONS.find((o) => o.id === sortKey)?.label ?? 'Top picks for you';
+    : `${SORT_OPTIONS.find((o) => o.id === sortKey)?.label ?? 'Top picks'} first`;
   const firstCards = shownCards.slice(0, 2);
   const restCards = shownCards.slice(2);
 
@@ -2027,8 +2027,9 @@ export function HomeScreen() {
 
         {/* Card tools — four tiles directly under the masthead. */}
         <ToolsRow onPress={handleToolPress} style={{ marginTop: spacing[12] }} />
-        {/* Quiet break between the tools and the content below. */}
-        <Divider containerStyle={{ marginTop: spacing[24] }} />
+        {/* Section break: the tools above, the card list below. The thick band is the
+            design system's break between major page floors. */}
+        <Divider style="section" containerStyle={{ marginTop: spacing[24] }} />
 
         {/* Post-order nudge — only shows on Android once the user has tracked
             an order and hasn't enabled/dismissed it. Self-gating; no-op otherwise. */}
@@ -2284,7 +2285,7 @@ export function HomeScreen() {
               marginTop: spacing[12],
             }}
           >
-            <Text variant="body12Regular" color={colors.text.secondary}>
+            <Text variant="body14Medium" color={colors.text.primary}>
               {resultsCount === 1 ? '1 card' : `${resultsCount} cards`}
             </Text>
             <Pressable

@@ -102,6 +102,15 @@ export function HomeSkeleton() {
         <Block height={48} />
         {/* Tools row — four tiles under the masthead */}
         <Block height={TOOLS_ROW_FIT_H} style={{ borderRadius: radius.lg }} />
+        {/* Section band under the tools row (24 above it with the gap, 16 below). */}
+        <View
+          style={{
+            height: spacing[8],
+            marginHorizontal: -spacing[16],
+            marginTop: spacing[8],
+            backgroundColor: colors.surface.sunken,
+          }}
+        />
         {/* Filter chips row */}
         <View style={{ flexDirection: 'row', gap: spacing[8] }}>
           <Block height={32} width={96} />
