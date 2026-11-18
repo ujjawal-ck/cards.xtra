@@ -106,7 +106,8 @@ export function BestForBrandsScreen() {
       tool: 'brands',
       spends: spendsFromBrands(picks),
       answers: brandAnswers(picks),
-      brandIds: picked.map((b) => b.id),
+      // Only brands with a spend, so a column label never names a brand at 0.
+      brandIds: picks.map((p) => p.brandId),
       title: 'Best cards for your brands',
       subtitle: brandsSubtitle(picks),
     });

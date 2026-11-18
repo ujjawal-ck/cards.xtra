@@ -141,4 +141,14 @@ describe('beatView', () => {
     expect(bestApplicable(rows, 'me', 500)?.savings.alias).toBe('y');
     expect(bestApplicable(rows, 'me', 800)).toBeUndefined();
   });
+
+  it('never pushes a loss-making card, even when the user card loses more', () => {
+    const rows = [
+      { savings: sv({ alias: 'x', netYearly: -100 }), card: {} },
+      { savings: sv({ alias: 'me', netYearly: -500 }), card: {} },
+    ];
+    expect(bestApplicable(rows, 'me', -500)).toBeUndefined();
+    const withZero = [{ savings: sv({ alias: 'x', netYearly: 0 }), card: {} }];
+    expect(bestApplicable(withZero, 'me', -500)).toBeUndefined();
+  });
 });

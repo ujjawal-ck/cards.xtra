@@ -216,6 +216,11 @@ export interface CardSavingsLine {
    * line per month). Lounge lines: visits per quarter.
    */
   spend: number;
+  /**
+   * `spend` as the API sent it, NOT rounded. A yearly input comes back as yearly / 12,
+   * so use round(rawSpend x 12) for a yearly figure. Read it as `line.rawSpend ?? line.spend`.
+   */
+  rawSpend?: number;
   /** Rupees saved per month, rounded to whole rupees (for display). */
   savings: number;
   /**
@@ -541,7 +546,8 @@ function mapCard(row: unknown): CardSavings | null {
   if (isRecord(breakdown)) {
     for (const [key, value] of Object.entries(breakdown)) {
       if (!isRecord(value)) continue;
-      const spend = Math.round(num(value.spend));
+      const rawSpend = num(value.spend);
+      const spend = Math.round(rawSpend);
       if (spend <= 0) continue;
       const rawSavings = num(value.savings);
       const explanationMonthly = pickMonthlyExplanation(value.explanation);
@@ -553,6 +559,7 @@ function mapCard(row: unknown): CardSavings | null {
         key,
         label: QUESTION_BY_KEY[key]?.label ?? key,
         spend,
+        rawSpend,
         savings: Math.round(rawSavings),
         rawSavings,
         explanation: pickExplanation(value.explanation),
@@ -677,8 +684,8 @@ export function beatMyCard(
         label: line.label,
         mine: 0,
         best: 0,
-        // Both cards get the same spend, so either line gives it.
-        spendYearly: line.spend * 12,
+        // Both cards get the same spend, so either line gives it. Unrounded x 12, rounded once.
+        spendYearly: Math.round((line.rawSpend ?? line.spend) * 12),
       };
       // Every rupee line is per month, whatever the key name says (`_annual` keys and
       // `life_insurance` take a yearly input but come back monthly), verified on UAT
@@ -794,11 +801,6 @@ export function yearlyForKey(card: CardSavings, key: string): number {
   return line ? Math.round((line.rawSavings ?? line.savings) * 12) : 0;
 }
 
-/** Extra benefits plus lounge value, rupees a year: the part of `netYearly` that is not spend savings or fee. */
-export function extrasYearly(card: CardSavings): number {
-  return card.extraBenefits + card.loungeValue;
-}
-
 /** Keys with a spend above 0, in question order. Lounge keys are left out. */
 export function enteredKeys(spends: CalculateSpends): SpendKey[] {
   if (!isRecord(spends)) return [];
@@ -845,7 +847,8 @@ export function filterLeague<T extends LeagueItem>(list: T[], filters: LeagueFil
 }
 
 /**
- * 'net': rank order (rankByNetValue). 'savings': yearlySavings. 'extras': extrasYearly.
+ * 'net': rank order (rankByNetValue). 'savings': yearlySavings. 'extras': extraBenefits
+ * (milestones only, the same figure as the row's Milestones cell).
  * 'fee': annualFeeCounted (the fee after the waiver), low to high. { key }: yearlyForKey.
  */
 export type LeagueSort = 'net' | 'savings' | 'extras' | 'fee' | { key: string };
@@ -859,7 +862,7 @@ export function sortLeague<T extends LeagueItem>(list: T[], sort: LeagueSort): T
   const value = (s: CardSavings): number => {
     if (typeof sort === 'object' && sort !== null) return yearlyForKey(s, sort.key);
     if (sort === 'savings') return s.yearlySavings;
-    if (sort === 'extras') return extrasYearly(s);
+    if (sort === 'extras') return s.extraBenefits;
     if (sort === 'fee') return -s.annualFeeCounted;
     return 0;
   };

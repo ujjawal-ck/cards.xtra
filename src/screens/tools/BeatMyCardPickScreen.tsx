@@ -22,7 +22,7 @@ import { colors, spacing, radius, borderWidth, iconSize } from '../../tokens';
 import { useCardSavings } from '../../query/useCardSavings';
 import type { LeagueRow } from '../../query/useCardSavings';
 import { useSavedSpends } from '../../lib/savedSpends';
-import { buildSpends, totalYearlySpend } from '../../lib/cardTools';
+import { buildSpends, hasAnySpend, totalYearlySpend } from '../../lib/cardTools';
 import type { SpendKey } from '../../lib/cardTools';
 import { filterPickRows, pickBanks, pickName } from '../../lib/beatView';
 import { formatINR } from '../../lib/money';
@@ -145,6 +145,16 @@ export function BeatMyCardPickScreen() {
     </SafeAreaView>
   );
 
+  if (!hasAnySpend(spends)) {
+    return shell(
+      <ScreenState
+        title="Enter at least one spend"
+        body="Every spend is 0 now, so there is nothing to compare."
+        actionLabel="Edit spends"
+        onAction={() => editRef.current?.present()}
+      />,
+    );
+  }
   if (isLoading) {
     return shell(
       <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16], gap: spacing[12] }}>

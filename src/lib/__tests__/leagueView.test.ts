@@ -208,7 +208,7 @@ describe('breakdownLines and lineFigures', () => {
     expect(withPct).toBeDefined();
     expect(lineFigures(withPct!, 'year').rate).toEqual({ kind: 'percent', percent: withPct!.cashbackPct });
 
-    const withPoints = mapped.flatMap((s) => s.lines).find((l) => l.cashbackPct === undefined && l.pointsEarned !== undefined);
+    const withPoints = mapped.flatMap((s) => s.lines).find((l) => l.cashbackPct === undefined && (l.pointsEarned ?? 0) > 0);
     expect(withPoints).toBeDefined();
     const rate = lineFigures(withPoints!, 'month').rate;
     expect(rate?.kind).toBe('points');
@@ -220,6 +220,19 @@ describe('breakdownLines and lineFigures', () => {
 
   it('has no rate when the API sent neither', () => {
     expect(lineFigures(line('fuel', 1), 'year').rate).toBeUndefined();
+  });
+
+  it('shows no points row when the API sent 0 points', () => {
+    expect(lineFigures(line('fuel', 1, { pointsEarned: 0 }), 'year').rate).toBeUndefined();
+    expect(lineFigures(line('fuel', 1, { pointsEarned: 0, pointValue: 1 }), 'month').rate).toBeUndefined();
+  });
+
+  it('yearly spend uses the unrounded monthly spend, rounded once', () => {
+    // A yearly input of 1,00,000 comes back as 1,00,000 / 12 a month.
+    const raw = 100000 / 12;
+    const l = line('flights_annual', 1, { spend: Math.round(raw), rawSpend: raw });
+    expect(lineFigures(l, 'year').spend).toBe(100000);
+    expect(lineFigures(l, 'month').spend).toBe(Math.round(raw));
   });
 });
 

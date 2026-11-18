@@ -110,6 +110,9 @@ export function SpendCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const dragStartValue = useRef(min);
+  // Set only by a real finger drag. An animated scrollTo (value prop change) also fires
+  // onMomentumScrollEnd; that one must not change the value.
+  const userDragged = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
   const [live, setLive] = useState(value);
@@ -152,6 +155,8 @@ export function SpendCard({
 
   const settle = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     dragging.current = false;
+    if (!userDragged.current) return;
+    userDragged.current = false;
     const v = offsetToValue(e.nativeEvent.contentOffset.x, cfg);
     // A typed value above the ruler end: a touch that does not move the ruler keeps the typed value.
     if (value > max && v === max && dragStartValue.current === max) {
@@ -332,6 +337,7 @@ export function SpendCard({
             scrollEventThrottle={16}
             onScrollBeginDrag={(e) => {
               dragging.current = true;
+              userDragged.current = true;
               dragStartValue.current = offsetToValue(e.nativeEvent.contentOffset.x, cfg);
             }}
             onScroll={onScroll}
@@ -362,7 +368,7 @@ export function SpendCard({
                         numberOfLines={1}
                         style={{ width: spacing[64], textAlign: 'center' }}
                       >
-                        {formatTick(min + i * step)}
+                        {formatTick(min + i * cfg.step)}
                       </Text>
                     ) : null}
                   </View>

@@ -12,7 +12,7 @@
  *     X% from `cashbackPct`, or points earned and the value of one point),
  *     savings and the API explanation text.
  *  4. With an app card: the CashKaro Rewards line, "View card details" and a
- *     sticky "Apply now" (hidden by `hideApply`). Without one: "You cannot
+ *     sticky "Apply now" (both hidden by `hideApply`). Without one: "You cannot
  *     apply for this card in this app." and no actions.
  *
  * Actions: "View card details" dismisses this sheet first, then calls
@@ -62,7 +62,7 @@ export interface SavingsBreakdownSheetProps {
   onViewCard?: (card: CardModel) => void;
   /** Shown only when row.card exists. */
   onApply?: (card: CardModel) => void;
-  /** Hide Apply (e.g. the user's own card). */
+  /** Hide Apply and "View card details" (the user's own card: the card page has its own Apply). */
   hideApply?: boolean;
 }
 
@@ -278,7 +278,7 @@ export const SavingsBreakdownSheet = forwardRef<SavingsBreakdownSheetHandle, Sav
                     </>
                   ) : null}
                 </SumLine>
-                {savings.feeWaiverSpend > 0 ? (
+                {savings.feeWaiverSpend > 0 && sum.fee > 0 ? (
                   <Text variant="body12Regular" color={colors.feedback.success.text}>
                     {`The bank waives the annual fee when you spend ${formatINR(savings.feeWaiverSpend)} or more in a year.`}
                   </Text>
@@ -361,7 +361,7 @@ export const SavingsBreakdownSheet = forwardRef<SavingsBreakdownSheetHandle, Sav
                   {reward ? (
                     <CashbackBadge size="sm" prefix={card.rewardPrefix ?? 'Flat'} value={`${reward} Rewards`} />
                   ) : null}
-                  {onViewCard ? (
+                  {onViewCard && !hideApply ? (
                     <Pressable
                       accessibilityRole="button"
                       hitSlop={spacing[8]}

@@ -125,7 +125,7 @@ describe('mapCalculateResponse on the UAT fixture', () => {
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ alias: 'odd', yearlySavings: 0, annualFee: 0, netYearly: 0, name: 'odd' });
     expect(out[0].lines).toEqual([
-      { key: 'new_x', label: 'new_x', spend: 200, savings: 5, rawSavings: 5, explanation: '' },
+      { key: 'new_x', label: 'new_x', spend: 200, rawSpend: 200, savings: 5, rawSavings: 5, explanation: '' },
     ]);
     expect(out[0].id).toBeUndefined();
   });

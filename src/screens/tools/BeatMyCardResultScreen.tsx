@@ -37,6 +37,7 @@ import {
   beatMyCard,
   buildSpends,
   filterLeague,
+  hasAnySpend,
   totalYearlySpend,
 } from '../../lib/cardTools';
 import type { BeatRow, LeagueFilters, SpendKey } from '../../lib/cardTools';
@@ -154,6 +155,11 @@ export function BeatMyCardResultScreen() {
 
   const [answers, setAnswers] = useState(params.answers);
   const [spends, setSpends] = useState(params.spends);
+  // New params (e.g. the league table edited the spends) replace local state.
+  useEffect(() => {
+    setAnswers(params.answers);
+    setSpends(params.spends);
+  }, [params.answers, params.spends]);
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
   const { save } = useSavedSpends();
   const editRef = useRef<EditSpendsSheetHandle>(null);
@@ -176,7 +182,9 @@ export function BeatMyCardResultScreen() {
     [loaded, mineRow, filtered, league, cardAlias],
   );
   const otherRow = result ? filtered.find((r) => r.savings.alias === result.best.alias) : undefined;
-  const verdict = loaded ? (!mineRow ? 'not_found' : result ? result.verdict : null) : null;
+  const noSpend = !hasAnySpend(spends);
+  // All spends 0 is not "card not found": no verdict is tracked for it.
+  const verdict = loaded && !noSpend ? (!mineRow ? 'not_found' : result ? result.verdict : null) : null;
 
   // Analytics: once each. No spends, no name of the user's card.
   const viewTracked = useRef(false);
@@ -233,8 +241,20 @@ export function BeatMyCardResultScreen() {
     </View>
   );
 
+  // Back to the pick screen with the spends as they are now (they may have been edited here).
+  const tryAnother = () => navigation.popTo('BeatMyCardPick', { spends, answers });
+
   let content: React.ReactNode;
-  if (isLoading) {
+  if (noSpend) {
+    content = (
+      <ScreenState
+        title="Enter at least one spend"
+        body="Every spend is 0 now, so there is nothing to compare."
+        actionLabel="Edit spends"
+        onAction={() => editRef.current?.present()}
+      />
+    );
+  } else if (isLoading) {
     content = (
       <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16], gap: spacing[16] }}>
         <Text variant="body14Regular" color={colors.text.secondary}>
@@ -285,7 +305,7 @@ export function BeatMyCardResultScreen() {
             </Text>
           </View>
           {top.map((t) => rankedRow(t, pager))}
-          <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={() => navigation.goBack()} />
+          <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={tryAnother} />
         </View>
       );
     } else if (!result || !otherRow) {
@@ -492,7 +512,7 @@ export function BeatMyCardResultScreen() {
                 })
               }
             />
-            <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={() => navigation.goBack()} />
+            <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={tryAnother} />
           </View>
         </View>
       );

@@ -14,7 +14,6 @@ import {
   buildLeague,
   categoryIdForWord,
   enteredKeys,
-  extrasYearly,
   filterLeague,
   joinAppCards,
   mapCalculateResponse,
@@ -370,9 +369,10 @@ describe('sortLeague', () => {
     expect(order('savings')).toEqual(['b', 'c', 'a']);
   });
 
-  it("'extras' is extra benefits plus lounge value, high to low", () => {
-    expect(extrasYearly(b)).toBe(150);
-    expect(order('extras')).toEqual(['b', 'a', 'c']);
+  it("'extras' is extra benefits only (the Milestones cell), high to low", () => {
+    // Lounge value does not count: c has a big lounge value and no milestones.
+    const withLounge = [...list, card('d', { netYearly: 50, extraBenefits: 0, loungeValue: 900 })];
+    expect(sortLeague(withLounge, 'extras').map((x) => x.alias)).toEqual(['b', 'a', 'c', 'd']);
   });
 
   it("'fee' is the counted fee, low to high, ties by net", () => {
@@ -432,6 +432,14 @@ describe('beatMyCard v2 fields', () => {
     const fuel = r.rows.find((x) => x.key === 'fuel')!;
     expect(fuel).toMatchObject({ spendYearly: 24000, mine: 0, best: 120 });
     expect(fuel.mineLine).toBeUndefined();
+  });
+
+  it('spendYearly uses the unrounded spend, rounded once', () => {
+    const raw = 100000 / 12;
+    const mineLine = line('flights_annual', 10, { spend: Math.round(raw), rawSpend: raw });
+    const bestLine = line('flights_annual', 20, { spend: Math.round(raw), rawSpend: raw });
+    const r = beatMyCard([card('best', { netYearly: 500, lines: [bestLine] }), card('mine', { lines: [mineLine] })], 'mine')!;
+    expect(r.rows[0].spendYearly).toBe(100000);
   });
 
   it('finds my card in `all` when a filter hid it', () => {

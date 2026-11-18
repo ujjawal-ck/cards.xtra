@@ -128,13 +128,13 @@ export function lineDetail(who: string, line: CardSavingsLine | undefined, yearl
 
 /**
  * The best card the user can apply for in this app that beats the user's card:
- * first row with an app card, not the user's card, with a higher net yearly.
- * `list` is in rank order.
+ * first row with an app card, not the user's card, with a higher net yearly
+ * that is also above 0 (a loss-making card is never pushed). `list` is in rank order.
  */
 export function bestApplicable<T extends { savings: CardSavings; card?: unknown }>(
   list: T[],
   myAlias: string,
   mineNet: number,
 ): T | undefined {
-  return list.find((r) => !!r.card && r.savings.alias !== myAlias && r.savings.netYearly > mineNet);
+  return list.find((r) => !!r.card && r.savings.alias !== myAlias && r.savings.netYearly > mineNet && r.savings.netYearly > 0);
 }

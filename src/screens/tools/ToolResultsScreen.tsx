@@ -209,7 +209,14 @@ export function ToolResultsScreen() {
   const matches = useMemo(() => searchLeague(rows, query), [rows, query]);
   const matchCursor = matches.length > 0 ? Math.min(cursor, matches.length - 1) : 0;
   const hitIndex = matches.length > 0 ? matches[matchCursor] : -1;
-  const pagerCards = useMemo(() => rows.flatMap((r) => (r.card ? [r.card] : [])), [rows]);
+  // Beat tool: the user's own card stays out of the pager, so its Apply is never one swipe away.
+  const pagerCards = useMemo(
+    () =>
+      rows.flatMap((r) =>
+        r.card && !(tool === 'beat' && highlightAlias && r.savings.alias === highlightAlias) ? [r.card] : [],
+      ),
+    [rows, tool, highlightAlias],
+  );
   const yearlySpend = useMemo(() => totalYearlySpend(spends), [spends]);
   const keysForEdit = useMemo(() => editKeys(tool, answers), [tool, answers]);
   const myIndex = indexOfAlias(rows, highlightAlias);
@@ -328,6 +335,16 @@ export function ToolResultsScreen() {
   );
 
   const openEdit = useCallback(() => editRef.current?.present(), []);
+
+  // Beat tool: after an edit, Back takes the new spends to the result screen.
+  // `answers` is a new object only after an edit.
+  const onBack = () => {
+    if (tool === 'beat' && highlightAlias && answers !== params.answers) {
+      navigation.popTo('BeatMyCardResult', { cardAlias: highlightAlias, spends, answers });
+    } else {
+      navigation.goBack();
+    }
+  };
 
   const closeSearch = () => {
     setSearchOpen(false);
@@ -570,7 +587,7 @@ export function ToolResultsScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.surface.default }}>
       <StatusBar style="dark" />
-      <Header leading="back" title={title} onLeadingPress={() => navigation.goBack()} />
+      <Header leading="back" title={title} onLeadingPress={onBack} />
       {controls}
       <View style={{ flex: 1 }}>{content}</View>
       <EditSpendsSheet ref={editRef} keys={keysForEdit} answers={answers} onSubmit={onEditSubmit} />

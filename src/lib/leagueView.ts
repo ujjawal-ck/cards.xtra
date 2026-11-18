@@ -190,7 +190,7 @@ export function lineFigures(line: CardSavingsLine, period: BreakdownPeriod): Lin
   let rate: LineRate | undefined;
   if (line.cashbackPct !== undefined) {
     rate = { kind: 'percent', percent: line.cashbackPct };
-  } else if (line.pointsEarned !== undefined) {
+  } else if (line.pointsEarned !== undefined && line.pointsEarned > 0) {
     const points = yearly ? line.pointsEarned * 12 : line.pointsEarned;
     rate = {
       kind: 'points',
@@ -199,7 +199,8 @@ export function lineFigures(line: CardSavingsLine, period: BreakdownPeriod): Lin
     };
   }
   return {
-    spend: yearly ? line.spend * 12 : line.spend,
+    // Unrounded monthly spend x 12, rounded once (yearly inputs come back as yearly / 12).
+    spend: yearly ? Math.round((line.rawSpend ?? line.spend) * 12) : line.spend,
     savings: yearly ? Math.round(raw * 12) : Math.round(raw),
     ...(rate ? { rate } : {}),
     explanation: yearly ? line.explanation : line.explanationMonthly ?? line.explanation,
