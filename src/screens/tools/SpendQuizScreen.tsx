@@ -100,6 +100,9 @@ export function SpendQuizScreen() {
     }, [phase, index, goPrev]),
   );
 
+  // Leave the quiz in one step, from any question or the review.
+  const leaveQuiz = () => navigation.goBack();
+
   const leaveQuestion = (skipped: boolean) => {
     analytics.track(Events.TOOL_QUIZ_STEP, { tool, step: index + 1, total, skipped });
     if (index < lastIndex) setIndex(index + 1);
@@ -148,7 +151,13 @@ export function SpendQuizScreen() {
     return (
       <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1, backgroundColor: colors.surface.default }}>
         <StatusBar style="dark" />
-        <Header leading="back" title="Your spends" onLeadingPress={goPrev} />
+        <Header
+          leading="back"
+          title="Your spends"
+          onLeadingPress={goPrev}
+          trailingIcon="close"
+          onTrailingPress={leaveQuiz}
+        />
         <ScrollView contentContainerStyle={{ padding: spacing[16], gap: spacing[16] }}>
           <Text variant="body14Regular" color={colors.text.secondary}>
             We will use these spends. Questions you skipped count as 0.
@@ -209,6 +218,7 @@ export function SpendQuizScreen() {
         subtitle="Not sure? Skip it and we count it as 0."
         onBack={goPrev}
         onSkip={onSkip}
+        onClose={leaveQuiz}
         primary={{ label: 'Next', onPress: () => leaveQuestion(false) }}
       >
         <SpendCard

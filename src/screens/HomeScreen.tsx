@@ -53,7 +53,7 @@ import { useNavigation, useFocusEffect, useIsFocused, useScrollToTop } from '@re
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
-import { Text, Chip, Switch, Icon } from '../atoms';
+import { Text, Chip, Switch, Icon, Divider } from '../atoms';
 import { InlineFilterQuestion } from '../molecules';
 import type { CardModel, SearchResultSection } from '../molecules';
 import {
@@ -81,6 +81,8 @@ import {
   Masthead,
   MaybeSheet,
   SearchTopSheet,
+  ToolsRow,
+  TOOL_ORDER,
   resolveCardOutcome,
   markCardImagesDecoded,
 } from '../organisms';
@@ -88,11 +90,10 @@ import type {
   FilterCategoryId,
   EligibilityOutcome,
   SearchTopSheetRecent,
+  ToolId,
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
 import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
-import { ToolsRow, TOOL_ORDER } from '../organisms/ToolsRow';
-import type { ToolId } from '../organisms/ToolsRow';
 import { TOOL_CATEGORIES, TOOL_BRANDS } from '../lib/cardTools';
 import {
   colors,
@@ -2026,6 +2027,8 @@ export function HomeScreen() {
 
         {/* Card tools — four tiles directly under the masthead. */}
         <ToolsRow onPress={handleToolPress} style={{ marginTop: spacing[12] }} />
+        {/* Quiet break between the tools and the content below. */}
+        <Divider containerStyle={{ marginTop: spacing[24] }} />
 
         {/* Post-order nudge — only shows on Android once the user has tracked
             an order and hasn't enabled/dismissed it. Self-gating; no-op otherwise. */}

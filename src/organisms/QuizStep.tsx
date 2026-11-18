@@ -1,5 +1,6 @@
 /**
  * DS-ADD(ds-expansion-1, 2026-11-17): the shell of one question per screen (back, StepProgress, skip, title, body slot, sticky footer).
+ * 2026-11-18: optional onClose adds a close (x) action to the header row.
  * Rollback: delete this file and its DS-ADD export lines in src/organisms/index.ts.
  *
  * QuizStep — organism
@@ -20,12 +21,14 @@ export interface QuizStepProps {
   title: string;
   subtitle?: string;
   onBack: () => void;
+  /** When given, a close (x) action shows after Skip and leaves the quiz in one step. */
+  onClose?: () => void;
   onSkip?: () => void;
   primary: { label: string; onPress: () => void; disabled?: boolean };
   children?: React.ReactNode;
 }
 
-export function QuizStep({ step, total, title, subtitle, onBack, onSkip, primary, children }: QuizStepProps) {
+export function QuizStep({ step, total, title, subtitle, onBack, onSkip, onClose, primary, children }: QuizStepProps) {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <View
@@ -62,6 +65,16 @@ export function QuizStep({ step, total, title, subtitle, onBack, onSkip, primary
             <Text variant="body14SemiBold" color={colors.text.link}>
               Skip
             </Text>
+          </Pressable>
+        ) : null}
+        {onClose ? (
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            style={{ width: sizing.touchMin, height: sizing.touchMin, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Icon name="close" size={iconSize[24]} color={colors.icon.actions} />
           </Pressable>
         ) : null}
       </View>

@@ -120,7 +120,8 @@ export interface SearchBarProps {
 }
 
 // Bar + row geometry — fixed Figma specs, not in any global scale.
-const BAR_H = spacing[48]; // 48
+export const SEARCH_BAR_H = spacing[48]; // 48
+const BAR_H = SEARCH_BAR_H;
 const ROW_H = 72;
 const LOGO_SLOT = 40;
 

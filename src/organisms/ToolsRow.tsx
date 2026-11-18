@@ -9,7 +9,9 @@
  * width, labels wrap, no scroll). At a larger OS font size they keep their own
  * width and the row scrolls sideways.
  *
- * Rotation: one shared timer drives both rotating tiles. It runs only while
+ * Rotation: one shared timer (tick every 2100 ms) drives both rotating tiles,
+ * half a cycle apart: each word stays 4200 ms and the two tiles never change
+ * on the same tick (src/lib/toolsRowRotation). It runs only while
  * the screen is focused (useScreenFocused) and never when the OS "reduce
  * motion" setting is on; then the first word stays. The screen-reader label
  * of a rotating tile is fixed text so it does not announce every change.
@@ -33,6 +35,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Text, Icon } from '../atoms';
 import type { IconName } from '../atoms/Icon';
 import { useScreenFocused } from '../lib/useScreenFocused';
+import { rotatingWordIndex, TOOLS_ROW_TICK_MS } from '../lib/toolsRowRotation';
 import { TOOL_CATEGORIES, ROTATING_BRANDS } from '../lib/cardTools';
 import {
   colors,
@@ -49,10 +52,6 @@ export type ToolId = 'category' | 'beat' | 'ultimate' | 'brands';
 
 /** Tile order, left to right. Callers derive the 1-based position from it. */
 export const TOOL_ORDER: ToolId[] = ['category', 'beat', 'ultimate', 'brands'];
-
-// How long each rotating word stays on screen. Same rhythm as the SearchBar
-// placeholder ticker (PLACEHOLDER_DWELL_MS). No motion token covers a dwell.
-const ROTATE_DWELL_MS = 2400;
 
 // Up to this OS font scale the tiles share the row width and wrap their text.
 // Above it they size to their text and the row scrolls.
@@ -156,12 +155,12 @@ export function ToolsRow({ onPress, style }: ToolsRowProps) {
 
   useEffect(() => {
     if (!focused || reduceMotion) return;
-    const id = setInterval(() => setTick((t) => t + 1), ROTATE_DWELL_MS);
+    const id = setInterval(() => setTick((t) => t + 1), TOOLS_ROW_TICK_MS);
     return () => clearInterval(id);
   }, [focused, reduceMotion]);
 
-  // Reduce motion → always the first word.
-  const wordIndex = reduceMotion ? 0 : tick;
+  // Reduce motion → always the first word. Category is phase 0, brands phase 1.
+  const phaseOf = (id: ToolId): 0 | 1 => (id === 'brands' ? 1 : 0);
 
   return (
     <ScrollView
@@ -177,7 +176,9 @@ export function ToolsRow({ onPress, style }: ToolsRowProps) {
       {TOOL_ORDER.map((id) => {
         const tile = TILES[id];
         const word = tile.words
-          ? tile.words[wordIndex % tile.words.length]
+          ? tile.words[
+              reduceMotion ? 0 : rotatingWordIndex(tick, phaseOf(id), tile.words.length)
+            ]
           : tile.line2;
         return (
           <Pressable

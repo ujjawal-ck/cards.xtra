@@ -72,6 +72,7 @@ import {
 } from '../atoms';
 import type { StatusBadgeStatus } from '../atoms';
 import { BrandLogo, SearchBar, Tooltip } from '../molecules';
+import { SEARCH_BAR_H } from '../molecules/SearchBar';
 import { HomeHeader } from './HomeHeader';
 import { images } from '../assets/images';
 import {
@@ -936,16 +937,16 @@ function CashbackStatusMasthead({
 // drop an animation, video, or anything in its place later.
 // ----------------------------------------------------------------------------
 
-export const HOME_MASTHEAD_H = 408;
+const HOME_MASTHEAD_H = 408;
 // Compact home masthead, excluding the safe-area top inset: HomeHeader row
-// (sizing.headerHeight 56) + gap 8 + SearchBar (48, SearchBar's BAR_H =
-// spacing[48]) + bottom padding 16 = 128. Built from the same tokens the
-// layout uses, so the number and the layout cannot drift. Home's scroll
+// (sizing.headerHeight 56) + gap 8 + SearchBar (48, SEARCH_BAR_H, exported
+// by SearchBar) + bottom padding 16 = 128. The bar height is read from the
+// SearchBar itself, so the number cannot drift from the bar. Home's scroll
 // threshold and HomeSkeleton read this constant.
 const HOME_COMPACT_GAP = spacing[8];
 const HOME_COMPACT_PAD_BOTTOM = spacing[16];
 export const HOME_MASTHEAD_COMPACT_H =
-  sizing.headerHeight + HOME_COMPACT_GAP + spacing[48] + HOME_COMPACT_PAD_BOTTOM;
+  sizing.headerHeight + HOME_COMPACT_GAP + SEARCH_BAR_H + HOME_COMPACT_PAD_BOTTOM;
 // Earnings info tooltip width — Figma 5820:27081 (component spec).
 const EARNINGS_TOOLTIP_W = 247;
 // Auto-dismiss delay for the earnings info tooltip.
