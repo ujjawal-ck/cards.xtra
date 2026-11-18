@@ -107,7 +107,8 @@ function saveAnswers(next: SpendAnswers) {
   void write(merged);
 }
 
-function clearAnswers() {
+/** Remove the saved answers (also called on logout: the spends belong to the user who entered them). */
+export function clearSavedSpends() {
   setSnapshot({ ...snapshot, answers: {} });
   void write({});
 }
@@ -121,5 +122,5 @@ export function useSavedSpends(): {
   clear: () => void;
 } {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  return { answers: state.answers, loaded: state.loaded, save: saveAnswers, clear: clearAnswers };
+  return { answers: state.answers, loaded: state.loaded, save: saveAnswers, clear: clearSavedSpends };
 }
