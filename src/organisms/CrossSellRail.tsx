@@ -4,7 +4,8 @@
  * The "Not sure about X?" rail that expands directly under a Home tile after the
  * user closes that card's detail without applying. Up to 3 alternative cards in a
  * horizontal row; each states what the user gains against the card they left
- * ("₹2,000 lower annual fee"). Chips above the row switch the reason (lens).
+ * ("₹2,000 lower annual fee"). Chips above the row switch the reason (lens). The last
+ * item of the swipe is a small "View all cards" tile that opens the full page.
  *
  * Pure presentation: the engine result, the open/close rules and analytics live
  * in src/lib/crossSell.ts and src/screens/useCrossSellRail.ts.
@@ -17,7 +18,7 @@
  * lens chips action.accent (selected) / surface.default + action.secondary.border.
  */
 import React, { useEffect, useRef } from 'react';
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Image } from 'react-native';
 import { Text } from '../atoms';
 import { CompareCard, COMPARE_CARD_W } from '../molecules';
 import type { CardModel } from '../molecules';
@@ -40,6 +41,8 @@ export interface CrossSellRailProps {
   /** Eligibility result unknown: opens the eligibility checker. */
   onCheckEligibility: () => void;
   onHide: () => void;
+  /** "View all cards": opens the full "Cards you can get" page for the tapped card. */
+  onViewAll?: () => void;
 }
 
 function LensChip({
@@ -91,6 +94,67 @@ function LensChip({
   );
 }
 
+const VIEW_ALL_W = 112;
+
+/** Small secondary-CTA card at the end of the swipe: fanned card art + "View all cards". */
+function ViewAllTile({
+  images,
+  label,
+  onPress,
+}: {
+  images: CardModel['cardImage'][];
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{
+        width: VIEW_ALL_W,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing[8],
+        padding: spacing[12],
+        borderRadius: radius.xl,
+        borderWidth: borderWidth.thin,
+        borderColor: colors.action.secondary.border,
+        backgroundColor: colors.surface.default,
+      }}
+    >
+      <View style={{ width: 72, height: 48 }}>
+        {images.map((src, i) => (
+          <Image
+            key={i}
+            source={src}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+            style={{
+              position: 'absolute',
+              left: i * 8,
+              top: i * 5,
+              width: 56,
+              height: 35,
+              borderRadius: radius.sm,
+              borderWidth: borderWidth.thin,
+              borderColor: colors.surface.default,
+              backgroundColor: colors.surface.sunken,
+              transform: [{ rotate: `${(i - 1) * 6}deg` }],
+            }}
+          />
+        ))}
+      </View>
+      <Text variant="body14SemiBold" color={colors.text.link} align="center">
+        View all cards
+      </Text>
+      <Text variant="body12SemiBold" color={colors.text.link} align="center">
+        ›
+      </Text>
+    </Pressable>
+  );
+}
+
 export function CrossSellRail({
   sourceCard,
   result,
@@ -101,6 +165,7 @@ export function CrossSellRail({
   onLensChange,
   onCheckEligibility,
   onHide,
+  onViewAll,
 }: CrossSellRailProps) {
   const lens = result.lenses.find((l) => l.key === lensKey) ?? result.lenses[0];
   const picksRef = useRef<ScrollView>(null);
@@ -196,6 +261,19 @@ export function CrossSellRail({
             />
           );
         })}
+        {/* Last item of the swipe: a small card that opens the full page. */}
+        {onViewAll ? (
+          <ViewAllTile
+            images={lens.picks
+              .slice(0, 3)
+              .flatMap((p) => {
+                const c = cardsById.get(p.card.id);
+                return c ? [c.cardImage] : [];
+              })}
+            label={`View all cards, like ${sourceCard.name}`}
+            onPress={onViewAll}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

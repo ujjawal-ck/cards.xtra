@@ -77,6 +77,8 @@ export const Events = {
   CROSSSELL_TAP: 'crosssell_tap',
   // Rail closed. Params: source_card, why ('hide' | 'replaced' | 'scrolled_past' | 'no_picks').
   CROSSSELL_COLLAPSE: 'crosssell_collapse',
+  // "View all cards" on the rail tapped. Params: source_card (card id), eligible_known (boolean).
+  CROSSSELL_VIEW_ALL: 'crosssell_view_all',
 
   // ── rejection sheet (our eligibility check said no for the card the user tried to apply for) ──
   // Sheet shown. Params: item_id (rejected card), reason_kind ('income' | 'employment' | 'other'),

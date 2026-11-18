@@ -996,12 +996,16 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 // screen top before gorhom drives the real values.
 const IS_ANDROID = Platform.OS === 'android';
 const ANDROID_FLOAT = false;
-// Card contained fully inside the masthead (no half-out float). Android only,
-// and only when the float experiment is OFF.
-const CONTAIN_CARD = IS_ANDROID && !ANDROID_FLOAT;
-// Whether the half-out floating rail renders at all (iOS always; Android when
-// the experiment is on).
-const SHOW_RAIL = !IS_ANDROID || ANDROID_FLOAT;
+// iOS float OFF (2026-11-18): on a real iPhone 16 (iOS 26.6, Release build) the card
+// floated in the FullWindowOverlay did not show at the 75% snap; it appeared only at full
+// height. Contain the card in the masthead, as on Android, so it always shows. Set
+// IOS_FLOAT true to bring the half-out float back once the overlay is fixed.
+const IOS_FLOAT = false;
+// Card contained fully inside the masthead (no half-out float).
+const CONTAIN_CARD = IS_ANDROID ? !ANDROID_FLOAT : !IOS_FLOAT;
+// Whether the half-out floating rail renders at all (iOS when IOS_FLOAT; Android
+// when the experiment is on).
+const SHOW_RAIL = IS_ANDROID ? ANDROID_FLOAT : IOS_FLOAT;
 // Contained-card (Android) spacing — card sits this far below the sheet's top
 // edge; the content under the card (name + everything below) sits this far
 // below the card's bottom.

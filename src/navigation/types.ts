@@ -127,6 +127,12 @@ export type RootStackParamList = {
     rejectedCardId: string;
     eligibleAliases: string[];
     reasonKind?: 'income' | 'employment' | 'other';
+    /** Where the user came from. 'rejection' (default): the "we're sorry" sheet, the
+     *  list is the cards they CAN get. 'bounce': "View all cards" on the Home rail;
+     *  eligibility may be unknown, so the copy does not claim they can get the cards. */
+    source?: 'rejection' | 'bounce';
+    /** 'bounce' only: true when the user's eligibility result is known. */
+    eligibilityKnown?: boolean;
   };
   /** Profile → Payment History list (Figma 3396:51078). */
   ProfilePaymentHistory: undefined;

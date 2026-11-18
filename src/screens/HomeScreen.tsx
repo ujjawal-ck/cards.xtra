@@ -416,6 +416,9 @@ export function HomeScreen() {
   // filter is applied from search (so the filtered cards read as "new
   // results" rather than resuming mid-scroll).
   const listRef = useRef<FlatList<any>>(null);
+  // Set when a card opened from the rejection sheet's alternatives: when the cross-sell rail
+  // opens under that card after the user bounces back, bring its tile into view.
+  const scrollToAnchorRef = useRef<string | null>(null);
   // Re-tapping this tab in the bottom nav scrolls back to the top.
   useScrollToTop(listRef);
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -490,6 +493,7 @@ export function HomeScreen() {
   const maybeSheetRef = useRef<BottomSheetModal>(null);
   const ineligibleSheetRef = useRef<BottomSheetModal>(null);
   const eligibilitySnapPoints = useMemo(() => ['90%'], []);
+  const rejectionSnapPoints = useMemo(() => ['95%'], []);
   // Which flavour the green sheet shows:
   //   'card'  → card-detail Apply path: single hero card + its reward + Apply.
   //   'cards' → Home toggle path: fanned STACK + "eligible for N cards" +
@@ -1193,6 +1197,22 @@ export function HomeScreen() {
               eligibilityCheckerRef.current?.present();
             }}
             onHide={crossSell.hide}
+            onViewAll={() => {
+              analytics.track(Events.CROSSSELL_VIEW_ALL, {
+                source_card: card.id,
+                eligible_known: !!eligibleAliases,
+              });
+              navigation.navigate('CardsYouCanGet', {
+                rejectedCardId: card.id,
+                // Eligibility unknown: list every card, ranked by closeness to this one.
+                eligibleAliases:
+                  eligibleAliases ??
+                  cards.flatMap((c) => (c.filterMeta?.cardAlias ? [c.filterMeta.cardAlias] : [])),
+                reasonKind: 'other',
+                source: 'bounce',
+                eligibilityKnown: !!eligibleAliases,
+              });
+            }}
           />
         ) : null}
       </View>
@@ -1480,6 +1500,19 @@ export function HomeScreen() {
   // full catalogue and the list that is actually on screen (pagerCards).
   const crossSell = useCrossSellRail({ cards, eligibleAliases, listedCards: pagerCards });
 
+  // After a rejection pick is closed, its rail opens under ITS tile, which can be far from
+  // where the user was. Scroll that tile into view once, so the cross-sell is seen.
+  const railAnchorId = crossSell.rail?.anchorId;
+  useEffect(() => {
+    if (!railAnchorId || scrollToAnchorRef.current !== railAnchorId) return;
+    scrollToAnchorRef.current = null;
+    const index = listData.findIndex((it) =>
+      'kind' in it ? it.kind !== 'header' && it.card.id === railAnchorId : it.id === railAnchorId
+    );
+    if (index < 0) return;
+    listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.1 });
+  }, [railAnchorId, listData]);
+
   // Rejection sheet content (src/lib/rejection.ts) for the card the user tried to apply
   // for: `selectedCard` (handleApply sets it before the sheet opens). The reason is
   // stated only when the typed income supports it; the picks are cards the user can get.
@@ -1622,6 +1655,7 @@ export function HomeScreen() {
         slot: pick.slot,
       });
       ineligibleSheetRef.current?.dismiss();
+      scrollToAnchorRef.current = card.id;
       // The detail pager must hold the pick (a category filter can leave it out of the feed).
       if (!pagerCards.some((c) => c.id === card.id)) {
         crossSell.showInDetail(
@@ -1670,6 +1704,14 @@ export function HomeScreen() {
         data={categoryFetching ? (CATEGORY_SKELETON_ROWS as any) : listData}
         // Rows read the cross-sell rail state through renderTile.
         extraData={crossSell.rail}
+        // Rows have unequal heights: if the target row is not measured yet, jump near it, then retry.
+        onScrollToIndexFailed={(info) => {
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+          setTimeout(
+            () => listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 }),
+            250
+          );
+        }}
         keyExtractor={(item) =>
           'kind' in item
             ? item.kind === 'header'
@@ -2503,7 +2545,8 @@ export function HomeScreen() {
           the card-detail checker (Path B) when the user is not eligible. */}
       <GorhomBottomSheetModal
         ref={ineligibleSheetRef}
-        snapPoints={eligibilitySnapPoints}
+        // A little taller than the other result sheets (90%) so the alternatives show without scrolling.
+        snapPoints={rejectionSnapPoints}
         enablePanDownToClose
         backdropComponent={renderEligibilityBackdrop}
         handleComponent={() => null}

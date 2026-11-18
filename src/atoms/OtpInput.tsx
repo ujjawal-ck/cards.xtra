@@ -37,6 +37,7 @@ import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import {
   View,
   Pressable,
+  Platform,
   TextInput,
   StyleProp,
   ViewStyle,
@@ -247,7 +248,10 @@ export const OtpInput = forwardRef<OtpInputHandle, OtpInputProps>(function OtpIn
           // truncated the raw paste first, losing digits.
           maxLength={length + 24}
           textContentType="oneTimeCode"
-          autoComplete="one-time-code"
+          // iOS reads "one-time-code"; Android reads "sms-otp" (RN maps each value
+          // to its own platform only). Both offer the code from the SMS on the keyboard.
+          autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'}
+          importantForAutofill="yes"
           autoFocus={autoFocus}
           style={{
             position: 'absolute',

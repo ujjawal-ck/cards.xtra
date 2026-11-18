@@ -151,6 +151,9 @@ export function getRejectionPicks(
 
   const srcBand = bandIdx(src);
   const bucket = (c: CrossSellCard) => Math.round(S(c) * 10);
+  // Commission is the LOWEST ranking criterion (user, 2026-11-18): it only separates cards that tie on
+  // every other rule. Same measure as the engine's business tie-break: what we earn minus what the user is paid.
+  const net = (c: CrossSellCard) => c.earn - c.reward;
   // Softer guard: "closest" never sits more than one fee band above the rejected card,
   // unless no card in the pool is inside that range.
   const nearBand = pool.filter((c) => bandIdx(c) <= srcBand + 1);
@@ -160,10 +163,11 @@ export function getRejectionPicks(
       bucket(b) - bucket(a) ||
       Math.abs(bandIdx(a) - srcBand) - Math.abs(bandIdx(b) - srcBand) ||
       b.reward - a.reward ||
-      a.priority - b.priority,
+      a.priority - b.priority ||
+      net(b) - net(a),
   );
   const rewardSort = (a: CrossSellCard, b: CrossSellCard) =>
-    b.reward - a.reward || S(b) - S(a) || a.priority - b.priority;
+    b.reward - a.reward || S(b) - S(a) || a.priority - b.priority || net(b) - net(a);
   // A one-time reward must not sell a card that costs far more every year: same fee or lower
   // (the engine's "More rewards" rule). Lifetime free source: cost 0, so only lifetime free cards.
   const feeCap = cost(src) * CONFIG.feeTolerance;

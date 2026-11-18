@@ -127,7 +127,10 @@ const EligibleTile = React.memo(function EligibleTile({ card, tag, onPress }: El
 export function CardsYouCanGetScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
-  const { rejectedCardId, eligibleAliases, reasonKind } = params;
+  const { rejectedCardId, eligibleAliases, reasonKind, source = 'rejection', eligibilityKnown = false } = params;
+  // Two doors lead here: the "we're sorry" sheet, and "View all cards" on the Home rail
+  // after the user left a card. The page says which one brought them (see `why` below).
+  const isBounce = source === 'bounce';
   const insets = useSafeAreaInsets();
   const { data: cards = [], isLoading, isError, refetch } = useCards();
   const { openClickOut, clickOutSheets } = useClickOut();
@@ -210,6 +213,7 @@ export function CardsYouCanGetScreen() {
       item_brand: card.filterMeta?.bankName,
       item_list_name: listName,
       source: SOURCE,
+      entry: source,
     });
     analytics.track(Events.VIEW_ITEM, {
       item_id: card.id,
@@ -217,10 +221,11 @@ export function CardsYouCanGetScreen() {
       item_brand: card.filterMeta?.bankName,
       snap: 'partial',
       source: SOURCE,
+      entry: source,
     });
     setSelectedCard(card);
     setPresentSeq((s) => s + 1);
-  }, []);
+  }, [source]);
   const onTilePress = useCallback((card: CardModel) => openCard(card, SOURCE), [openCard]);
 
   const applyTo = useCallback(
@@ -230,13 +235,15 @@ export function CardsYouCanGetScreen() {
         item_name: card.name,
         item_brand: card.filterMeta?.bankName,
         redirect: true,
-        // Every card here is eligible, so Home's eligibility gate is skipped on purpose.
-        eligibility_known: true,
+        // From the rejection sheet every card here is eligible, so Home's eligibility gate is
+        // skipped on purpose. From the Home rail it is only true if the result was known.
+        eligibility_known: !isBounce || eligibilityKnown,
         source: SOURCE,
+        entry: source,
       });
       openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
     },
-    [openClickOut],
+    [openClickOut, isBounce, eligibilityKnown, source],
   );
 
   const viewAllBenefits = useCallback(
@@ -252,7 +259,9 @@ export function CardsYouCanGetScreen() {
   const sourceName = rejected ? shortCardName(rejected.name) : '';
 
   // ---- Header + non-list states ----
-  const header = <Header leading="back" title="Cards you can get" onLeadingPress={goBack} />;
+  const header = (
+    <Header leading="back" title={isBounce ? 'More cards to consider' : 'Cards you can get'} onLeadingPress={goBack} />
+  );
   const shell = (body: React.ReactNode) => (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.surface.default }}>
       <StatusBar style="dark" />
@@ -291,7 +300,21 @@ export function CardsYouCanGetScreen() {
   }
 
   // ---- Sections ----
-  const countText = list.count === 1 ? '1 card you can get' : `${list.count} cards you can get`;
+  // Eligibility is claimed only where it is known: always from the rejection sheet,
+  // from the rail only when the user's result exists.
+  const claimsEligible = !isBounce || eligibilityKnown;
+  const countText = claimsEligible
+    ? list.count === 1
+      ? '1 card you can get'
+      : `${list.count} cards you can get`
+    : list.count === 1
+      ? '1 card, closest first'
+      : `${list.count} cards, closest first`;
+  // The PM lens on this page: say why the user is here, so the list reads as an answer to
+  // what they just did and not as a generic catalogue. One line per door.
+  const why = isBounce
+    ? `You left ${sourceName} without applying. These may suit you better.`
+    : `We can't offer you ${sourceName} with the details you gave. These you can get.`;
 
   const listHeader = (
     <View style={{ gap: spacing[24], paddingBottom: spacing[16] }}>
@@ -323,9 +346,12 @@ export function CardsYouCanGetScreen() {
         />
         <View style={{ flex: 1 }}>
           <Text variant="body14SemiBold" color={colors.text.primary}>
-            You wanted {sourceName}
+            {isBounce ? `You looked at ${sourceName}` : `You wanted ${sourceName}`}
           </Text>
           <Text variant="body12Regular" color={colors.text.secondary}>
+            {why}
+          </Text>
+          <Text variant="body12SemiBold" color={colors.text.secondary}>
             {countText}
           </Text>
         </View>
@@ -340,7 +366,7 @@ export function CardsYouCanGetScreen() {
             accessibilityRole="header"
             style={{ paddingHorizontal: spacing[16] }}
           >
-            Closest to what you wanted
+            {isBounce ? `Closest to ${sourceName}` : 'Closest to what you wanted'}
           </Text>
           <ScrollView
             horizontal
@@ -385,7 +411,7 @@ export function CardsYouCanGetScreen() {
           }}
         >
           <Text variant="heading18SemiBold" color={colors.text.primary} accessibilityRole="header">
-            All cards you can get
+            {claimsEligible ? 'All cards you can get' : 'All cards'}
           </Text>
           {filtersActive ? (
             <Pressable

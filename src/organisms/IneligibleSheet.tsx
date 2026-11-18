@@ -161,6 +161,7 @@ export function IneligibleSheet({
           </View>
         </View>
       ) : null}
+
     </View>
   );
 }

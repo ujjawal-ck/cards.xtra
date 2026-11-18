@@ -116,6 +116,18 @@ describe('getRejectionPicks', () => {
     expect(r.picks[0].card.alias).toBe('near');
   });
 
+  it('commission is the last tie-break: it never beats similarity, fee band, reward or priority', () => {
+    // Same tags, band, reward and priority: only the net (earn minus reward) differs.
+    const lowNet = mk({ alias: 'low', bank: 'H', joiningFee: 1000, annualFee: 1000, reward: 600, earn: 700 });
+    const highNet = mk({ alias: 'high', bank: 'I', joiningFee: 1000, annualFee: 1000, reward: 600, earn: 2500 });
+    const r1 = getRejectionPicks(src, [src, lowNet, highNet], new Set(['low', 'high']));
+    expect(r1.picks[0].card.alias).toBe('high');
+    // A better priority wins even when the net is lower.
+    const prioritised = mk({ alias: 'prio', bank: 'J', joiningFee: 1000, annualFee: 1000, reward: 600, earn: 700, priority: 1 });
+    const r2 = getRejectionPicks(src, [src, prioritised, highNet], new Set(['prio', 'high']));
+    expect(r2.picks[0].card.alias).toBe('prio');
+  });
+
   it('one card per bank, no card twice', () => {
     const sameBank = mk({ alias: 'same-bank', bank: 'B', reward: 9000 }); // bank B again, highest reward
     const cat = [src, closest, sameBank, rich, free];

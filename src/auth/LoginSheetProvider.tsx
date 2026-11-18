@@ -437,6 +437,11 @@ export function LoginSheetProvider({
                   <Input
                     label="Mobile Number"
                     keyboardType="number-pad"
+                    // Offer the device's own number on the keyboard (iOS and Android
+                    // autofill). normalizeIndianMobile strips a +91 / 0 prefix.
+                    textContentType="telephoneNumber"
+                    autoComplete="tel"
+                    importantForAutofill="yes"
                     autoFocus
                     value={phone}
                     onChangeText={(t) => {
