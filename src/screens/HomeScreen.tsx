@@ -54,7 +54,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 import { Text, Chip, Switch, Icon } from '../atoms';
-import { HeroVideo } from '../molecules';
+import { HeroVideo, InlineFilterQuestion } from '../molecules';
 import type { CardModel, SearchResultSection } from '../molecules';
 import {
   BottomSheetHeader,
@@ -104,6 +104,8 @@ import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
+import type { ClickOutSource } from '../lib/useClickOut';
+import { loadSavedProfile, saveEligibilityInputs } from '../lib/savedProfile';
 import { useRecentSearches } from '../lib/recentSearches';
 import { getEligibilityGateVariant } from '../experiments';
 import { useCrossSellRail } from './useCrossSellRail';
@@ -121,8 +123,14 @@ import {
   applyFilters,
   hasActiveFilters,
   EMPTY_FILTERS,
+  TRAIT_OPTIONS,
+  SORT_OPTIONS,
+  sortCards,
   type AppliedFilters,
+  type SortKey,
 } from '../data/filterOptions';
+import { buildInlineRows, placeInlineRows } from '../lib/inlineFilters';
+import type { InlineRow, InlineChip } from '../lib/inlineFilters';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
@@ -543,6 +551,7 @@ export function HomeScreen() {
   const [filterTileIndices, setFilterTileIndices] = useState<number[]>([]);
   const [annualFeeIndices, setAnnualFeeIndices] = useState<number[]>([]);
   const [cardNetworkIndices, setCardNetworkIndices] = useState<number[]>([]);
+  const [cardTraitIndices, setCardTraitIndices] = useState<number[]>([]);
   const [bankIndices, setBankIndices] = useState<number[]>([]);
   // Shared toggle factory — every rail uses the same add/remove logic.
   const makeToggle = useCallback(
@@ -568,6 +577,10 @@ export function HomeScreen() {
     () => makeToggle(setCardNetworkIndices),
     [makeToggle]
   );
+  const toggleCardTrait = useMemo(
+    () => makeToggle(setCardTraitIndices),
+    [makeToggle]
+  );
   const toggleBank = useMemo(
     () => makeToggle(setBankIndices),
     [makeToggle]
@@ -577,6 +590,7 @@ export function HomeScreen() {
     filterTileIndices.length +
     annualFeeIndices.length +
     cardNetworkIndices.length +
+    cardTraitIndices.length +
     bankIndices.length;
 
   // Bank rail options — derived from the loaded cards so the list always
@@ -594,6 +608,7 @@ export function HomeScreen() {
   // through these. Carousel taps / Clear update this directly.
   const [appliedFilters, setAppliedFilters] =
     useState<AppliedFilters>(EMPTY_FILTERS);
+  const [sortKey, setSortKey] = useState<SortKey>('recommended');
 
   // "Apply Filter" white-screen transition (FilterTransitionOverlay). The
   // selection computed on apply is parked here until the white screen covers
@@ -725,16 +740,20 @@ export function HomeScreen() {
         .filter(Boolean),
       // Annual-fee rail order matches ANNUAL_FEE_BUCKETS, so indices map 1:1.
       feeBucketIndices: annualFeeIndices,
+      traits: cardTraitIndices
+        .map((i) => TRAIT_OPTIONS[i]?.id)
+        .filter((t): t is NonNullable<typeof t> => t != null),
     };
     analytics.track(Events.FILTER_APPLY, {
       category_count: filterTileIndices.length,
       bank_count: bankIndices.length,
       network_count: cardNetworkIndices.length,
       fee_count: annualFeeIndices.length,
+      trait_count: cardTraitIndices.length,
     });
     filtersSheetRef.current?.dismiss();
     setFilterOverlayVisible(true);
-  }, [filterTileIndices, bankIndices, cardNetworkIndices, annualFeeIndices, bankOptions]);
+  }, [filterTileIndices, bankIndices, cardNetworkIndices, cardTraitIndices, annualFeeIndices, bankOptions]);
 
   // White screen fully covers Home → commit the parked filters + snap to the
   // top, all behind the overlay so the reveal shows fresh results from the top.
@@ -771,6 +790,7 @@ export function HomeScreen() {
     setFilterTileIndices([]);
     setAnnualFeeIndices([]);
     setCardNetworkIndices([]);
+    setCardTraitIndices([]);
     setBankIndices([]);
     setAppliedFilters(EMPTY_FILTERS);
     // Also drop the eligibility filter + toggle.
@@ -789,6 +809,12 @@ export function HomeScreen() {
     incomeType: 'salaried' | 'self-employed';
   } | null>(null);
   const [eligibleAliases, setEligibleAliases] = useState<string[] | null>(null);
+  // Inputs saved on the device from an earlier session. Only prefills the checker
+  // while eligibilityDetails is null; it is NOT "eligibility known" (no result is saved).
+  const [savedEligibilityPrefill, setSavedEligibilityPrefill] = useState<typeof eligibilityDetails>(null);
+  useEffect(() => {
+    loadSavedProfile().then((p) => setSavedEligibilityPrefill(p.eligibility ?? null));
+  }, []);
 
   // Commit an eligibility result (from either checker) → store details for
   // prefill + the eligible set, and switch the toggle on.
@@ -800,6 +826,7 @@ export function HomeScreen() {
       eligibleCardAliases: string[];
     }) => {
       setEligibilityDetails({ pincode: o.pincode, income: o.income, incomeType: o.incomeType });
+      void saveEligibilityInputs({ pincode: o.pincode, income: o.income, incomeType: o.incomeType });
       setEligibleAliases(o.eligibleCardAliases);
       setEligibilityOn(true);
       // Details (re)entered — outcomes may have changed, so let each card show
@@ -856,6 +883,8 @@ export function HomeScreen() {
   // entry path where no details exist yet).
   const handleEligibilityClear = useCallback(() => {
     setEligibilityDetails(null);
+    setSavedEligibilityPrefill(null);
+    void saveEligibilityInputs(null);
     setEligibleAliases(null);
     setEligibilityOn(false);
     shownEligibilityResultRef.current.clear();
@@ -884,6 +913,7 @@ export function HomeScreen() {
       });
       setAnnualFeeIndices([]);
       setCardNetworkIndices([]);
+      setCardTraitIndices([]);
       setBankIndices([]);
       if (isDeselect) {
         setFilterTileIndices([]);
@@ -912,6 +942,7 @@ export function HomeScreen() {
       setFilterTileIndices([]);
       setAnnualFeeIndices([]);
       setCardNetworkIndices([]);
+      setCardTraitIndices([]);
       setBankIndices(idx >= 0 ? [idx] : []);
       setAppliedFilters({ ...EMPTY_FILTERS, bankNames: [bankName] });
       // Snap the list to the top so the bank's cards show from the start
@@ -1103,7 +1134,9 @@ export function HomeScreen() {
   //   - details present → resolve THIS card's outcome (eligible / maybe /
   //                        ineligible) and open the matching colored sheet.
   // The sheet's "Continue to Apply" / "Apply Now" then opens the bank page.
+  const clickSourceRef = useRef<ClickOutSource>('unknown');
   const handleApply = (card: CardModel) => {
+    clickSourceRef.current = crossSell.clickSource();
     crossSell.onApplied(card);
     // "Apply Now" tapped (from tile or detail sheet). The actual outbound to
     // the bank fires later in handleResultApply (redirect: true) — or directly
@@ -1395,8 +1428,8 @@ export function HomeScreen() {
         (c) => c.filterMeta?.cardAlias && set.has(c.filterMeta.cardAlias)
       );
     }
-    return list;
-  }, [cards, appliedFilters, eligibilityFilterActive, eligibleAliases]);
+    return sortCards(list, sortKey);
+  }, [cards, appliedFilters, eligibilityFilterActive, eligibleAliases, sortKey]);
   const anyFilterActive =
     hasActiveFilters(appliedFilters) || eligibilityFilterActive;
 
@@ -1410,7 +1443,8 @@ export function HomeScreen() {
   const otherFilterCount =
     appliedFilters.bankNames.length +
     appliedFilters.networks.length +
-    appliedFilters.feeBucketIndices.length;
+    appliedFilters.feeBucketIndices.length +
+    appliedFilters.traits.length;
 
   // Active-bank banner — shown when a bank filter is applied (almost always
   // via a search bank tap, which sets exactly this dimension). Surfaces WHICH
@@ -1431,6 +1465,10 @@ export function HomeScreen() {
   // Top picks = first 2; "More to explore" = every remaining card. The
   // list is virtualized (FlatList below) so all ~159 tiles render smoothly
   // without mounting at once.
+  const topPicksLabel =
+    sortKey === 'recommended'
+      ? 'Top picks for you'
+      : SORT_OPTIONS.find((o) => o.id === sortKey)?.label ?? 'Top picks for you';
   const firstCards = visibleCards.slice(0, 2);
   const restCards = visibleCards.slice(2);
 
@@ -1449,7 +1487,7 @@ export function HomeScreen() {
     );
     // ALL filtered cards (NOT the eligibility-filtered visibleCards) — the
     // grouped view shows every card under its bucket, not just eligible ones.
-    const filtered = applyFilters(cards, appliedFilters);
+    const filtered = sortCards(applyFilters(cards, appliedFilters), sortKey);
     const buckets: Record<EligibilityBucket, CardModel[]> = {
       eligible: [],
       maybe: [],
@@ -1471,13 +1509,31 @@ export function HomeScreen() {
       arr.forEach((card) => rows.push({ kind: 'card', card }));
     });
     return rows;
-  }, [eligibilityFilterActive, eligibleAliases, eligibilityDetails, cards, appliedFilters]);
+  }, [eligibilityFilterActive, eligibleAliases, eligibilityDetails, cards, appliedFilters, sortKey]);
 
   // Data + empties: in grouped mode the list renders groupedRows; otherwise
   // the usual restCards (top picks live in the header). "No results" keys off
   // whichever list is actually showing.
   const grouped = groupedRows != null;
-  const listData: Array<CardModel | GroupedRow> = grouped ? groupedRows! : restCards;
+  const inlineRows = useMemo(
+    () =>
+      buildInlineRows({
+        cards,
+        applied: appliedFilters,
+        eligibilityKnown: !!eligibilityDetails,
+      }),
+    [cards, appliedFilters, eligibilityDetails]
+  );
+  const listData: Array<CardModel | GroupedRow | InlineRow> = grouped
+    ? groupedRows!
+    : categoryFetching
+    ? restCards
+    : placeInlineRows(restCards, inlineRows);
+
+  // Cards in the list now (the results line under the filter bar).
+  const resultsCount = grouped
+    ? groupedRows!.filter((r) => r.kind === 'card').length
+    : visibleCards.length;
   const noResults =
     anyFilterActive &&
     (grouped ? groupedRows!.length === 0 : visibleCards.length === 0);
@@ -1499,6 +1555,69 @@ export function HomeScreen() {
   // Cross-sell rail: session rules + state. Placed here because it needs the
   // full catalogue and the list that is actually on screen (pagerCards).
   const crossSell = useCrossSellRail({ cards, eligibleAliases, listedCards: pagerCards });
+  const listExtra = useMemo(
+    () => ({ rail: crossSell.rail, inlineRows }),
+    [crossSell.rail, inlineRows]
+  );
+
+  // Inline filter questions: y of the results line inside the list (for the
+  // scroll-after-answer), and once-per-mount "shown" tracking.
+  const resultsLineY = useRef(0);
+  const inlineShownRef = useRef<Set<string>>(new Set());
+  const inlineRowsRef = useRef<InlineRow[]>(inlineRows);
+  inlineRowsRef.current = inlineRows;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item: unknown }> }) => {
+      for (const v of viewableItems) {
+        const it = v.item as { kind?: string; id?: string } | null;
+        if (it?.kind !== 'question' || !it.id) continue;
+        if (inlineShownRef.current.has(it.id)) continue;
+        inlineShownRef.current.add(it.id);
+        analytics.track(Events.FILTER_INLINE_SHOWN, {
+          question: it.id,
+          position: inlineRowsRef.current.findIndex((r) => r.id === it.id),
+        });
+      }
+    }
+  ).current;
+
+  const handleInlineChip = useCallback(
+    (row: InlineRow, chip: InlineChip, position: number) => {
+      analytics.track(Events.FILTER_INLINE_TAP, {
+        question: row.id,
+        answer: chip.key,
+        selected: !chip.selected,
+        cards_left: chip.count,
+        position,
+      });
+      if (chip.action === 'eligibility') {
+        handleEligibilityToggle(true);
+        return;
+      }
+      const next = chip.next;
+      if (!next) return;
+      setAppliedFilters(next);
+      setAnnualFeeIndices(next.feeBucketIndices);
+      setCardTraitIndices(
+        next.traits
+          .map((t) => TRAIT_OPTIONS.findIndex((o) => o.id === t))
+          .filter((i) => i >= 0)
+      );
+      triggerCardStagger();
+      // Park the results line ("N cards · Sort") just under the pinned
+      // HomeHeader (≈128 tall plus the status-bar inset; the header height is
+      // not measured anywhere). The pinned header carries its own filter
+      // chips, so the list's filter bar is scrolled out of view.
+      requestAnimationFrame(() =>
+        listRef.current?.scrollToOffset({
+          offset: Math.max(0, resultsLineY.current - (insets.top + spacing[128])),
+          animated: true,
+        })
+      );
+    },
+    [handleEligibilityToggle, triggerCardStagger, insets.top]
+  );
 
   // After a rejection pick is closed, its rail opens under ITS tile, which can be far from
   // where the user was. Scroll that tile into view once, so the cross-sell is seen.
@@ -1507,7 +1626,7 @@ export function HomeScreen() {
     if (!railAnchorId || scrollToAnchorRef.current !== railAnchorId) return;
     scrollToAnchorRef.current = null;
     const index = listData.findIndex((it) =>
-      'kind' in it ? it.kind !== 'header' && it.card.id === railAnchorId : it.id === railAnchorId
+      'kind' in it ? it.kind === 'card' && it.card.id === railAnchorId : it.id === railAnchorId
     );
     if (index < 0) return;
     listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.1 });
@@ -1623,7 +1742,14 @@ export function HomeScreen() {
         redirect: true,
         gate_variant: getEligibilityGateVariant(),
       });
-      openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name });
+      openClickOut({
+        kind: 'card',
+        url: card.applyUrl,
+        itemId: card.id,
+        itemName: card.name,
+        source: clickSourceRef.current,
+        alias: card.crossSell?.alias ?? card.filterMeta?.cardAlias,
+      });
     },
     [eligibilityDetails, openClickOut]
   );
@@ -1655,6 +1781,7 @@ export function HomeScreen() {
         slot: pick.slot,
       });
       ineligibleSheetRef.current?.dismiss();
+      crossSell.onRejectionPickTap();
       scrollToAnchorRef.current = card.id;
       // The detail pager must hold the pick (a category filter can leave it out of the feed).
       if (!pagerCards.some((c) => c.id === card.id)) {
@@ -1703,7 +1830,9 @@ export function HomeScreen() {
         // jump up under the carousel.
         data={categoryFetching ? (CATEGORY_SKELETON_ROWS as any) : listData}
         // Rows read the cross-sell rail state through renderTile.
-        extraData={crossSell.rail}
+        extraData={listExtra}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
         // Rows have unequal heights: if the target row is not measured yet, jump near it, then retry.
         onScrollToIndexFailed={(info) => {
           listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
@@ -1714,7 +1843,9 @@ export function HomeScreen() {
         }}
         keyExtractor={(item) =>
           'kind' in item
-            ? item.kind === 'header'
+            ? item.kind === 'question'
+              ? `q-${item.id}`
+              : item.kind === 'header'
               ? `h-${item.key}`
               : item.card.id
             : item.id
@@ -1725,6 +1856,18 @@ export function HomeScreen() {
             return (
               <View style={{ marginTop: spacing[16] }}>
                 <CardListSkeleton count={1} />
+              </View>
+            );
+          }
+          // Inline filter question row (default mode only).
+          if ('kind' in item && item.kind === 'question') {
+            const position = inlineRows.findIndex((r) => r.id === item.id);
+            return (
+              <View style={{ paddingHorizontal: spacing[16], marginTop: spacing[16] }}>
+                <InlineFilterQuestion
+                  row={item}
+                  onChipPress={(chip) => handleInlineChip(item, chip, position)}
+                />
               </View>
             );
           }
@@ -2043,6 +2186,42 @@ export function HomeScreen() {
           </View>
         ) : null}
 
+        {/* Results line — card count + sort toggle. */}
+        {!categoryFetching && !bankRefreshing && !noResults ? (
+          <View
+            onLayout={(e) => {
+              resultsLineY.current = e.nativeEvent.layout.y;
+            }}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: spacing[16],
+              marginTop: spacing[12],
+            }}
+          >
+            <Text variant="body12Regular" color={colors.text.secondary}>
+              {resultsCount === 1 ? '1 card' : `${resultsCount} cards`}
+            </Text>
+            <Pressable
+              onPress={() => {
+                const i = SORT_OPTIONS.findIndex((o) => o.id === sortKey);
+                const nextKey = SORT_OPTIONS[(i + 1) % SORT_OPTIONS.length].id;
+                setSortKey(nextKey);
+                triggerCardStagger();
+                analytics.track(Events.SORT_CHANGE, { sort: nextKey });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Change sort order"
+              hitSlop={spacing[8]}
+            >
+              <Text variant="body12Regular" color={colors.text.link}>
+                {`Sort: ${SORT_OPTIONS.find((o) => o.id === sortKey)?.label}`}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {/* No-results state — only when filters are active and nothing
             matched. Offers a one-tap Clear to restore the full list. */}
         {noResults ? (
@@ -2109,10 +2288,10 @@ export function HomeScreen() {
                     separator treatment (label + line on the right) — like the
                     eligibility group headers — instead of the plain heading. */}
                 {activeBankNames.length > 0 ? (
-                  <SectionRule label="Top picks for you" />
+                  <SectionRule label={topPicksLabel} />
                 ) : (
                   <Text variant="heading18SemiBold" color={colors.text.primary}>
-                    Top picks for you
+                    {topPicksLabel}
                   </Text>
                 )}
                 <View style={{ gap: spacing[16] }}>
@@ -2393,6 +2572,8 @@ export function HomeScreen() {
             onToggleAnnualFee={toggleAnnualFee}
             selectedCardNetwork={cardNetworkIndices}
             onToggleCardNetwork={toggleCardNetwork}
+            selectedCardType={cardTraitIndices}
+            onToggleCardType={toggleCardTrait}
             selectedBanks={bankIndices}
             onToggleBanks={toggleBank}
             bankOptions={bankOptions}
@@ -2406,9 +2587,9 @@ export function HomeScreen() {
           entered earlier (this screen or the card-detail checker). */}
       <EligibilityCheckerSheet
         ref={eligibilityCheckerRef}
-        defaultPincode={eligibilityDetails?.pincode ?? ''}
-        defaultIncome={eligibilityDetails?.income ?? ''}
-        defaultIncomeType={eligibilityDetails?.incomeType ?? 'salaried'}
+        defaultPincode={(eligibilityDetails ?? savedEligibilityPrefill)?.pincode ?? ''}
+        defaultIncome={(eligibilityDetails ?? savedEligibilityPrefill)?.income ?? ''}
+        defaultIncomeType={(eligibilityDetails ?? savedEligibilityPrefill)?.incomeType ?? 'salaried'}
         threshold={50000}
         routeResultExternally
         onClear={handleEligibilityClear}

@@ -164,6 +164,25 @@ test('BankKaro calls get the partner token; the app never sends it', async () =>
   assert.deepEqual(JSON.parse(mint.init.body), { 'x-api-key': 'bk-key' });
 });
 
+test('BankKaro calculate: POST is allowed with the partner token; GET is refused', async () => {
+  const { handle, calls } = app((url) => tokenReply(url) ?? { status: 200, body: { data: [] } });
+  const res = await handle(
+    req('/bk/cardgenius/calculate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ amazon_spends: 0 }),
+    }),
+  );
+  assert.equal(res.status, 200);
+  const up = calls.find((c) => c.url.endsWith('/cardgenius/calculate'));
+  assert.equal(up.init.method, 'POST');
+  assert.equal(up.init.headers['partner-token'], 'bk-jwt');
+  const before = calls.length;
+  const get = await handle(req('/bk/cardgenius/calculate'));
+  assert.equal(get.status, 404);
+  assert.equal(calls.length, before);
+});
+
 test('OTP routes are rate limited per mobile number', async () => {
   const { handle } = app((url) => tokenReply(url) ?? { status: 201 });
   const send = (ip) =>

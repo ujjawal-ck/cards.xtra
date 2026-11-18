@@ -47,6 +47,7 @@ export const BK_ROUTES = [
   ['GET', /^\/cardgenius\/cards$/, 'cardgenius/cards'],
   ['GET', new RegExp(`^/cardgenius/cards/${SEG}$`), 'cardgenius/cards/:alias'],
   ['POST', /^\/cardgenius\/eligiblity$/, 'cardgenius/eligiblity'],
+  ['POST', /^\/cardgenius\/calculate$/, 'cardgenius/calculate'],
 ];
 
 /** OTP-sending routes: rate limited per client IP. */

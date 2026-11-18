@@ -24,6 +24,10 @@ const MAX_BODY_BYTES = 4_400_000; // Vercel rejects bodies over 4.5 MB.
 // A guest call may run twice (re-mint + retry), so each attempt gets less.
 const USER_TIMEOUT_MS = 55_000;
 const GUEST_TIMEOUT_MS = 25_000;
+// BankKaro calculate took ~3 s on UAT but can take up to 30 s. A 401/403 retry
+// answers fast, so one slow attempt plus one quick retry stays under 60 s.
+const BK_SLOW_TIMEOUT_MS = 45_000;
+const BK_SLOW_ROUTES = new Set(['cardgenius/calculate']);
 
 /**
  * Headers the app may send that are passed to CashKaro. x-chkr-app-version is
@@ -160,14 +164,15 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
   }
 
   /** Forward to BankKaro with the partner JWT. */
-  async function forwardBk(request, path, search, body) {
+  async function forwardBk(request, path, search, body, route) {
+    const timeoutMs = BK_SLOW_ROUTES.has(route) ? BK_SLOW_TIMEOUT_MS : GUEST_TIMEOUT_MS;
     const headers = pickHeaders(request, BK_FORWARD);
     const url = `${config.bkBaseUrl}${path}${search}`;
     const send = async (token) =>
       callUpstream(
         url,
         { method: request.method, headers: { ...headers, 'partner-token': token }, body },
-        GUEST_TIMEOUT_MS,
+        timeoutMs,
       );
     const token = await partnerToken.get();
     const res = await send(token);
@@ -256,7 +261,7 @@ export function createApp({ config = readConfig(), fetchImpl = fetch, log = cons
       const res =
         upstream === 'ck'
           ? await forwardCk(request, path, search, route, body, ip)
-          : await forwardBk(request, path, search, body);
+          : await forwardBk(request, path, search, body, route);
       status = res.status;
       // Node fetch already decoded the body, so only the content type is kept.
       // Streamed: Vercel's 4.5 MB response cap does not apply to streams, and

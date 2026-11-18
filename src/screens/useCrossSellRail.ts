@@ -35,6 +35,8 @@ import {
 } from '../lib/crossSell';
 import { getCrossSellRailVariant } from '../experiments';
 import { analytics, Events } from '../analytics';
+import { loadSavedProfile } from '../lib/savedProfile';
+import type { ClickOutSource } from '../lib/useClickOut';
 
 export type CrossSellCollapseReason = 'hide' | 'replaced' | 'scrolled_past' | 'no_picks';
 
@@ -51,6 +53,7 @@ export interface CrossSellRailState {
 interface Visit {
   anchor: CardModel;
   fromRail: boolean;
+  fromRejection: boolean;
   applied: boolean;
   /** Sheet is being dismissed for a detour (share / all benefits) and comes back. */
   detour: boolean;
@@ -88,6 +91,18 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
   });
   const visitRef = useRef<Visit | null>(null);
   const pickTapRef = useRef<{ anchor: CardModel } | null>(null);
+  const rejectionTapRef = useRef(false);
+
+  // Cards applied to on an earlier day: never a rail for them (rule above).
+  useEffect(() => {
+    let live = true;
+    loadSavedProfile().then((p) => {
+      if (live) p.applied.forEach((a) => session.current.applied.add(a.alias));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const [rail, setRail] = useState<CrossSellRailState | null>(null);
   const railRef = useRef<CrossSellRailState | null>(null);
@@ -189,9 +204,12 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
     (card: CardModel): 'crosssell' | undefined => {
       const pick = pickTapRef.current;
       pickTapRef.current = null;
+      const fromRejection = rejectionTapRef.current;
+      rejectionTapRef.current = false;
       visitRef.current = {
         anchor: pick ? pick.anchor : card,
         fromRail: !!pick,
+        fromRejection,
         applied: false,
         detour: false,
       };
@@ -233,6 +251,19 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
   const onApplied = useCallback((card: CardModel) => {
     if (card.crossSell) session.current.applied.add(card.crossSell.alias);
     if (visitRef.current) visitRef.current.applied = true;
+  }, []);
+
+  // A pick on the rejection sheet was tapped. Call right before opening its detail.
+  const onRejectionPickTap = useCallback(() => {
+    rejectionTapRef.current = true;
+  }, []);
+
+  // Where an Apply tapped now comes from (for CLICK_OUT `source`): no detail
+  // visit = the tile's own button; else the rail / rejection pick that opened it.
+  const clickSource = useCallback((): ClickOutSource => {
+    const v = visitRef.current;
+    if (!v) return 'home_tile';
+    return v.fromRail ? 'crosssell_rail' : v.fromRejection ? 'rejection_pick' : 'home_detail';
   }, []);
 
   // The sheet is about to be dismissed and re-presented (share, all benefits):
@@ -316,6 +347,8 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
     cardsById,
     onCardOpened,
     onPickTap,
+    onRejectionPickTap,
+    clickSource,
     onCardViewed,
     onApplied,
     holdVisit,

@@ -147,7 +147,7 @@ export function StoreBestCards({ category, title, style }: StoreBestCardsProps) 
         onActiveCardChange={setSelectedCard}
         onRecommendedPress={setSelectedCard}
         onApply={(card) =>
-          openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name })
+          openClickOut({ kind: 'card', url: card.applyUrl, itemId: card.id, itemName: card.name, source: 'store_best_cards', alias: card.crossSell?.alias ?? card.filterMeta?.cardAlias })
         }
         onViewAllBenefits={handleViewAllBenefits}
       />

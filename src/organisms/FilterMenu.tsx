@@ -77,6 +77,7 @@ import {
   CATEGORY_OPTIONS,
   NETWORK_OPTIONS,
   ANNUAL_FEE_BUCKETS,
+  TRAIT_OPTIONS,
 } from '../data/filterOptions';
 import {
   colors,
@@ -101,6 +102,7 @@ export type FilterCategoryId =
   | 'category'
   | 'annual-fee'
   | 'card-network'
+  | 'card-type'
   | 'banks';
 
 interface RailItem {
@@ -112,6 +114,7 @@ const RAIL_ITEMS: RailItem[] = [
   { id: 'category', label: 'Category' },
   { id: 'annual-fee', label: 'Annual Fee' },
   { id: 'card-network', label: 'Card Network' },
+  { id: 'card-type', label: 'Card Type' },
   { id: 'banks', label: 'Banks' },
 ];
 
@@ -120,6 +123,7 @@ const RAIL_ITEMS: RailItem[] = [
 // index-based selections into real values (tag ids, fee buckets, etc.).
 const ANNUAL_FEE_OPTIONS = ANNUAL_FEE_BUCKETS.map((b) => b.label);
 const CARD_NETWORK_OPTIONS = NETWORK_OPTIONS;
+const CARD_TYPE_OPTIONS = TRAIT_OPTIONS.map((o) => o.label);
 
 const CHECKBOX_HELPER_TEXT = 'Select all the options you wish to apply';
 
@@ -138,6 +142,9 @@ export interface FilterMenuProps {
   /** Indices of selected rows in the Card Network rail. Default []. */
   selectedCardNetwork?: number[];
   onToggleCardNetwork?: (index: number) => void;
+  /** Indices of selected rows in the Card Type rail. Default []. */
+  selectedCardType?: number[];
+  onToggleCardType?: (index: number) => void;
   /** Indices of selected rows in the Banks rail. Default []. */
   selectedBanks?: number[];
   onToggleBanks?: (index: number) => void;
@@ -266,6 +273,8 @@ export function FilterMenu({
   onToggleAnnualFee,
   selectedCardNetwork = [],
   onToggleCardNetwork,
+  selectedCardType = [],
+  onToggleCardType,
   selectedBanks = [],
   onToggleBanks,
   bankOptions = [],
@@ -284,6 +293,7 @@ export function FilterMenu({
     category: selectedTileIndices.length > 0,
     'annual-fee': selectedAnnualFee.length > 0,
     'card-network': selectedCardNetwork.length > 0,
+    'card-type': selectedCardType.length > 0,
     banks: selectedBanks.length > 0,
   };
 
@@ -378,6 +388,12 @@ export function FilterMenu({
             options={CARD_NETWORK_OPTIONS}
             selectedIndices={selectedCardNetwork}
             onToggle={onToggleCardNetwork}
+          />
+        ) : activeCategory === 'card-type' ? (
+          <CheckboxPanel
+            options={CARD_TYPE_OPTIONS}
+            selectedIndices={selectedCardType}
+            onToggle={onToggleCardType}
           />
         ) : activeCategory === 'banks' ? (
           // Banks list — derived from the loaded cards, so it can be long;

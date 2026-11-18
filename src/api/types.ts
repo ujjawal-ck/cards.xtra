@@ -47,3 +47,28 @@ export interface CardListFilters {
   eligiblityPayload?: EligibilityPayload;
   cardGeniusPayload?: Record<string, unknown>;
 }
+
+/** Body of POST /cardgenius/calculate. All 21 keys required; 0 = no spend. Monthly unless the name says annual or quarterly. */
+export interface CalculateSpends {
+  amazon_spends: number;
+  flipkart_spends: number;
+  other_online_spends: number;
+  grocery_spends_online: number;
+  online_food_ordering: number;
+  other_offline_spends: number;
+  offline_grocery: number;
+  dining_or_going_out: number;
+  fuel: number;
+  mobile_phone_bills: number;
+  electricity_bills: number;
+  water_bills: number;
+  rent: number;
+  school_fees: number;
+  insurance_health_annual: number;
+  insurance_car_or_bike_annual: number;
+  life_insurance: number;
+  flights_annual: number;
+  hotels_annual: number;
+  domestic_lounge_usage_quarterly: number;
+  international_lounge_usage_quarterly: number;
+}

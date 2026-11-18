@@ -45,10 +45,30 @@ export interface FeeBucket {
 
 export const ANNUAL_FEE_BUCKETS: FeeBucket[] = [
   { label: 'Lifetime Free (₹0)', test: (_f, isFree) => isFree },
-  { label: '₹0 - ₹1,000', test: (f) => f > 0 && f <= 1000 },
+  // Not lifetime free, annual fee up to ₹1,000. Includes a ₹0 annual fee with
+  // a joining fee above ₹0, which no bucket matched before.
+  { label: '₹0 - ₹1,000', test: (f, isFree) => !isFree && f <= 1000 },
   { label: '₹1,000 - ₹2,000', test: (f) => f > 1000 && f <= 2000 },
   { label: '₹2,000 - ₹5,000', test: (f) => f > 2000 && f <= 5000 },
   { label: '₹5,000+', test: (f) => f > 5000 },
+];
+
+/** Card traits: yes/no properties of a card. A card must have EVERY selected
+ *  trait (AND), unlike the other rails where any selected value matches. */
+export type CardTrait = 'firstCard' | 'cashback';
+
+export interface TraitOption {
+  id: CardTrait;
+  label: string;
+}
+
+// Order matters: the filter sheet's "Card Type" rail selects by index.
+export const TRAIT_OPTIONS: TraitOption[] = [
+  // BankKaro `new_to_credit`: the bank accepts an applicant with no credit history.
+  { id: 'firstCard', label: 'Good for a first credit card' },
+  // The card pays cashback on spends (not reward points). Source: the static
+  // alias list in lib/crossSellCashbackAliases, so only the positive side is offered.
+  { id: 'cashback', label: 'Cashback on spends, not points' },
 ];
 
 /** A resolved filter selection (values, not sheet indices). Empty arrays = no
@@ -58,6 +78,7 @@ export interface AppliedFilters {
   bankNames: string[];
   networks: string[];
   feeBucketIndices: number[];
+  traits: CardTrait[];
 }
 
 export const EMPTY_FILTERS: AppliedFilters = {
@@ -65,14 +86,32 @@ export const EMPTY_FILTERS: AppliedFilters = {
   bankNames: [],
   networks: [],
   feeBucketIndices: [],
+  traits: [],
 };
+
+/** "American Express" / "AmericanExpress" / "VISA" → one comparable form. */
+function normalizeNetwork(name: string): string {
+  return name.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+/** A card's networks. BankKaro `card_type` is one network or a comma list
+ *  ("VISA,RuPay"), in its own spelling ("AmericanExpress", "DinersClub"). */
+export function cardNetworks(raw: string | undefined): string[] {
+  return (raw ?? '').split(',').map(normalizeNetwork).filter(Boolean);
+}
+
+function hasTrait(card: CardModel, trait: CardTrait): boolean {
+  if (trait === 'firstCard') return card.filterMeta?.newToCredit === true;
+  return card.crossSell?.rewardType === 'cashback';
+}
 
 export function hasActiveFilters(f: AppliedFilters): boolean {
   return (
     f.categoryTagIds.length > 0 ||
     f.bankNames.length > 0 ||
     f.networks.length > 0 ||
-    f.feeBucketIndices.length > 0
+    f.feeBucketIndices.length > 0 ||
+    f.traits.length > 0
   );
 }
 
@@ -97,8 +136,9 @@ export function applyFilters(
     if (f.bankNames.length && !(m.bankName && f.bankNames.includes(m.bankName))) {
       return false;
     }
-    if (f.networks.length && !f.networks.includes(m.network)) {
-      return false;
+    if (f.networks.length) {
+      const own = cardNetworks(m.network);
+      if (!f.networks.some((n) => own.includes(normalizeNetwork(n)))) return false;
     }
     if (
       f.feeBucketIndices.length &&
@@ -108,6 +148,34 @@ export function applyFilters(
     ) {
       return false;
     }
+    if (f.traits.length && !f.traits.every((t) => hasTrait(card, t))) {
+      return false;
+    }
     return true;
   });
+}
+
+/** Sort order of the Home list. `recommended` is the order the API returns. */
+export type SortKey = 'recommended' | 'annualFeeAsc';
+
+export const SORT_OPTIONS: Array<{ id: SortKey; label: string }> = [
+  { id: 'recommended', label: 'Recommended' },
+  { id: 'annualFeeAsc', label: 'Lowest annual fee' },
+];
+
+/** Stable sort. `recommended` returns the same array. For `annualFeeAsc`,
+ *  lifetime-free cards come first, then the annual fee low to high; cards
+ *  with an unknown fee (text fee / no filterMeta) go last. Ties keep the
+ *  API order. */
+export function sortCards(cards: CardModel[], key: SortKey): CardModel[] {
+  if (key === 'recommended') return cards;
+  const rank = (c: CardModel): number => {
+    const m = c.filterMeta;
+    if (!m || !isFinite(m.annualFeeValue)) return Infinity;
+    return m.isFree ? -1 : m.annualFeeValue;
+  };
+  return cards
+    .map((card, i) => ({ card, i, r: rank(card) }))
+    .sort((a, b) => (a.r === b.r ? a.i - b.i : a.r - b.r))
+    .map((x) => x.card);
 }

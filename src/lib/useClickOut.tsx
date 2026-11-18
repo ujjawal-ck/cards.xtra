@@ -28,6 +28,18 @@ import { qk } from '../query/keys';
 import { analytics, Events } from '../analytics';
 import { openUrl } from './openUrl';
 import { buildClickOutUrl, newClickId } from './clickOut';
+import { addAppliedCard } from './savedProfile';
+
+/** Which surface an outbound click came from (the `source` param of CLICK_OUT). */
+export type ClickOutSource =
+  | 'home_tile'
+  | 'home_detail'
+  | 'crosssell_rail'
+  | 'rejection_pick'
+  | 'cards_you_can_get'
+  | 'store_best_cards'
+  | 'store_page'
+  | 'unknown';
 
 export interface ClickOutTarget {
   kind: EarnLoginKind;
@@ -35,6 +47,10 @@ export interface ClickOutTarget {
   url?: string | null;
   itemId?: string | number;
   itemName?: string;
+  /** Surface the click came from. Logged as `source`; 'unknown' when absent. */
+  source?: ClickOutSource;
+  /** Card alias. Saved as "applied" when the bank link opens (cards only). */
+  alias?: string;
 }
 
 export function useClickOut() {
@@ -57,7 +73,9 @@ export function useClickOut() {
       click_id: clickId,
       attributed: built.attributed,
       link_type: built.linkType,
+      source: target.source ?? 'unknown',
     });
+    if (target.kind === 'card' && target.alias) void addAppliedCard(target.alias);
     openUrl(built.url);
   }, []);
 

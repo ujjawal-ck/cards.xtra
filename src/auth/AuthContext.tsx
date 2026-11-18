@@ -28,6 +28,7 @@ import {
   loadDisplayName,
   type Session,
 } from './tokenStore';
+import { clearSavedProfile } from '../lib/savedProfile';
 import {
   logout as ckLogout,
   refreshTokens as ckRefreshTokens,
@@ -276,6 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     await clearSession();
+    void clearSavedProfile();
     sessionRef.current = null;
     setSession(null);
     setStatus('unauthenticated');
