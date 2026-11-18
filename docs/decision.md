@@ -6,6 +6,16 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D22. Rejection shows a reason, 3 alternatives and a page of cards the user can get
+2026-11-17 · `5263571`, `ee381e3`, `478be31`
+
+When the eligibility check says no, the sheet shows why, a way to change details, 3 alternatives with different jobs (closest, highest Rewards, lifetime free) and "See all N cards you can get", which opens the "Cards you can get" screen. The reason comes only from the card's own income bar. Otherwise a generic line shows, so a wrong reason never reaches the user. "Continue to Apply" stays on the sheet: a rejection is not a hard stop. Costs: the reason covers income only (employment values are unknown); "Edit" does not focus the income field; "See all N" counts cards that have a cross-sell model.
+
+## D21. Cross-sell rail under the tapped Home tile
+2026-11-17 · `01ce49c`, `ee381e3`, `2717a36`, `f9c9056`
+
+After a user closes a card without applying, a row of up to 3 alternatives opens under its tile. Each card states its gain against the card the user left. Picks come from all cards, never only the filtered list, and only from cards that pay Rewards with a net that is not negative. One rail per card per session, no limit per session. Flag: `crosssell_rail` (`rail` or `holdout`). PRD (private workspace): `~/Desktop/Professional/mini appas/docs/cross-sell-prd.md`. Costs: the net gate rests on `bk_commission`, which BankKaro has not confirmed. The flag default is `rail` and should be `holdout` before release. The cashback card list is a static snapshot of 30 aliases. Several analytics gaps block a readable 50/50 test (PRD section 8).
+
 ## D20. Home masthead keeps its current height
 2026-11-09 · no code change
 
@@ -131,3 +141,5 @@ The screen still renders sample payouts; `/payment/history` exists but isn't map
 | Card click-out tracking | CashKaro tracking host / BankKaro direct with postback | Needs CK mini-app team and BankKaro. |
 | Signup IP field | Keep `api.ipify.org` lookup / backend reads the request IP | See `auth-and-secrets.md`. |
 | Analytics | Real Firebase project + event plan | `google-services.json` is a placeholder project today. |
+| Cross-sell flag default | `holdout` in code, rail on through Remote Config / `rail` by default | The PM review says `rail` spoils the holdout. The owner decides before release. |
+| Which commission field CashKaro earns | `bk_commission` / `commission` | The cross-sell earning gate uses `bk_commission`. Ask BankKaro. |
