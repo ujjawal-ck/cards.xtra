@@ -64,7 +64,11 @@ export const Events = {
   FILTER_INLINE_TAP: 'filter_inline_tap',
   // The sort changed from the results line. Params: sort.
   SORT_CHANGE: 'sort_change',
+  // Params: category, selected, source, other_filters (count kept from other rails), cards_left.
   CATEGORY_FILTER: 'category_filter',
+  // The applied filters left 0 cards and Home showed the closest cards. Params: dropped (comma list of
+  // the filter groups set aside), filters (count of groups applied), cards_shown. Once per filter set.
+  FILTER_NO_MATCH: 'filter_no_match',
   ELIGIBILITY_TOGGLE: 'eligibility_toggle',
   ELIGIBILITY_CHECK: 'eligibility_check',
   // Per-card verdict actually shown to the user. Params: item_id, outcome

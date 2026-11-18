@@ -130,6 +130,7 @@ import {
   type SortKey,
 } from '../data/filterOptions';
 import { buildInlineRows, placeInlineRows } from '../lib/inlineFilters';
+import { closestCards, fallbackCopy } from '../lib/filterFallback';
 import type { InlineRow, InlineChip } from '../lib/inlineFilters';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
@@ -609,6 +610,9 @@ export function HomeScreen() {
   const [appliedFilters, setAppliedFilters] =
     useState<AppliedFilters>(EMPTY_FILTERS);
   const [sortKey, setSortKey] = useState<SortKey>('recommended');
+  // Latest applied filters for callbacks that must not re-create on change.
+  const appliedFiltersRef = useRef<AppliedFilters>(appliedFilters);
+  appliedFiltersRef.current = appliedFilters;
 
   // "Apply Filter" white-screen transition (FilterTransitionOverlay). The
   // selection computed on apply is parked here until the white screen covers
@@ -891,8 +895,9 @@ export function HomeScreen() {
     eligibilityCheckerRef.current?.dismiss();
   }, []);
 
-  // Category carousel tap → filter Home to that single category (and sync
-  // the sheet's Category rail so it reflects the active selection).
+  // Category carousel tap → set that single category and KEEP every other applied
+  // filter (fee, network, bank, card type), like an inline answer. A second tap on
+  // the active tile removes only the category. Syncs the sheet's Category rail.
   // Currently-selected carousel tile — the sole applied category (a single
   // categoryTagId, set by a carousel tap). Drives the saffron stroke + tick.
   const selectedCategoryId = useMemo(() => {
@@ -906,31 +911,25 @@ export function HomeScreen() {
       if (idx < 0) return;
       // Re-tapping the active tile deselects it → back to the full list.
       const isDeselect = selectedCategoryId === id;
+      const nextFilters: AppliedFilters = {
+        ...appliedFiltersRef.current,
+        categoryTagIds: isDeselect ? [] : [CATEGORY_OPTIONS[idx].tagId],
+      };
       analytics.track(Events.CATEGORY_FILTER, {
         category: CATEGORY_OPTIONS[idx]?.label,
         selected: !isDeselect,
         source: 'carousel',
+        other_filters: nextFilters.bankNames.length + nextFilters.networks.length + nextFilters.feeBucketIndices.length + nextFilters.traits.length,
+        cards_left: applyFilters(cards, nextFilters).length,
       });
-      setAnnualFeeIndices([]);
-      setCardNetworkIndices([]);
-      setCardTraitIndices([]);
-      setBankIndices([]);
-      if (isDeselect) {
-        setFilterTileIndices([]);
-        setAppliedFilters(EMPTY_FILTERS);
-      } else {
-        setFilterTileIndices([idx]);
-        setAppliedFilters({
-          ...EMPTY_FILTERS,
-          categoryTagIds: [CATEGORY_OPTIONS[idx].tagId],
-        });
-      }
+      setFilterTileIndices(isDeselect ? [] : [idx]);
+      setAppliedFilters(nextFilters);
       // Bracket the carousel with card skeletons while the new selection
       // "loads"; the fetch's completion arms the stagger so the revealed cards
       // cascade in.
       triggerCategoryFetch();
     },
-    [selectedCategoryId, triggerCategoryFetch]
+    [selectedCategoryId, triggerCategoryFetch, cards]
   );
 
   // Search → tap a bank: filter the Home list to that bank's cards (card
@@ -1209,7 +1208,7 @@ export function HomeScreen() {
       <View key={card.id} style={rail ? { gap: spacing[12] } : undefined}>
         <HomeCardTile
           card={card}
-          categoryTagIds={appliedFilters.categoryTagIds}
+          categoryTagIds={tileCategoryIds}
           onPress={onTilePress}
           onApply={onTileApply}
         />
@@ -1465,12 +1464,32 @@ export function HomeScreen() {
   // Top picks = first 2; "More to explore" = every remaining card. The
   // list is virtualized (FlatList below) so all ~159 tiles render smoothly
   // without mounting at once.
-  const topPicksLabel =
-    sortKey === 'recommended'
-      ? 'Top picks for you'
-      : SORT_OPTIONS.find((o) => o.id === sortKey)?.label ?? 'Top picks for you';
-  const firstCards = visibleCards.slice(0, 2);
-  const restCards = visibleCards.slice(2);
+  // Filters left exactly 0 cards (and the eligibility grouping is off): show the closest
+  // cards and say what was set aside. 1 to 3 matching cards are shown as they are.
+  // `visibleCards` stays the EXACT result (count, copy, inline rows); `shownCards` is
+  // what the list renders.
+  const noMatch = anyFilterActive && !eligibilityFilterActive && visibleCards.length === 0;
+  const fallback = useMemo(
+    () => (noMatch ? closestCards(cards, appliedFilters) : null),
+    [noMatch, cards, appliedFilters]
+  );
+  const shownCards = useMemo(
+    () => (fallback ? sortCards(fallback.cards, sortKey) : visibleCards),
+    [fallback, visibleCards, sortKey]
+  );
+  const fallbackText = useMemo(
+    () => (fallback ? fallbackCopy(appliedFilters, fallback.dropped) : null),
+    [fallback, appliedFilters]
+  );
+  // Tiles lead with the benefit of the category that still applies.
+  const tileCategoryIds = fallback ? fallback.applied.categoryTagIds : appliedFilters.categoryTagIds;
+  const topPicksLabel = fallback
+    ? 'Closest cards'
+    : sortKey === 'recommended'
+    ? 'Top picks for you'
+    : SORT_OPTIONS.find((o) => o.id === sortKey)?.label ?? 'Top picks for you';
+  const firstCards = shownCards.slice(0, 2);
+  const restCards = shownCards.slice(2);
 
   // Eligibility grouping (Figma 5972:28691). When the eligibility toggle is
   // on AND a check has run, the list switches from the top-picks/carousel
@@ -1526,7 +1545,7 @@ export function HomeScreen() {
   );
   const listData: Array<CardModel | GroupedRow | InlineRow> = grouped
     ? groupedRows!
-    : categoryFetching
+    : categoryFetching || fallback
     ? restCards
     : placeInlineRows(restCards, inlineRows);
 
@@ -1538,6 +1557,25 @@ export function HomeScreen() {
     anyFilterActive &&
     (grouped ? groupedRows!.length === 0 : visibleCards.length === 0);
 
+  // One event per filter set that ended with no exact match (not per render).
+  const noMatchKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!fallback) {
+      noMatchKeyRef.current = null;
+      return;
+    }
+    const key = JSON.stringify(appliedFilters);
+    if (noMatchKeyRef.current === key) return;
+    noMatchKeyRef.current = key;
+    analytics.track(Events.FILTER_NO_MATCH, {
+      dropped: fallback.dropped.join(','),
+      filters: (['categoryTagIds', 'feeBucketIndices', 'networks', 'bankNames', 'traits'] as const).filter(
+        (d) => appliedFilters[d].length > 0
+      ).length,
+      cards_shown: fallback.cards.length,
+    });
+  }, [fallback, appliedFilters]);
+
   // Cards the CardDetailSheet pager swipes through. In grouped mode it must be
   // EVERY shown card (eligible + maybe + ineligible, in grouped order) so
   // tapping a maybe/ineligible tile opens that card — not just the eligible
@@ -1548,8 +1586,8 @@ export function HomeScreen() {
         ? groupedRows!
             .filter((r): r is { kind: 'card'; card: CardModel } => r.kind === 'card')
             .map((r) => r.card)
-        : visibleCards,
-    [grouped, groupedRows, visibleCards]
+        : shownCards,
+    [grouped, groupedRows, shownCards]
   );
 
   // Cross-sell rail: session rules + state. Placed here because it needs the
@@ -2233,15 +2271,15 @@ export function HomeScreen() {
               gap: spacing[8],
             }}
           >
-            <Text variant="body16SemiBold" color={colors.text.primary}>
-              No cards match your filters
+            <Text variant="body16SemiBold" color={colors.text.primary} align="center">
+              {fallbackText ? fallbackText.title : 'No cards match your filters'}
             </Text>
             <Text
               variant="body12Regular"
               color={colors.text.secondary}
               align="center"
             >
-              Try removing a filter or two.
+              {fallbackText ? fallbackText.body : 'Try removing a filter or two.'}
             </Text>
             <Pressable
               onPress={clearFilters}

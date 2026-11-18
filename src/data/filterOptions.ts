@@ -60,15 +60,17 @@ export type CardTrait = 'firstCard' | 'cashback';
 export interface TraitOption {
   id: CardTrait;
   label: string;
+  /** Short name for sentences ("No exact match for Fuel · First card"). */
+  short: string;
 }
 
 // Order matters: the filter sheet's "Card Type" rail selects by index.
 export const TRAIT_OPTIONS: TraitOption[] = [
   // BankKaro `new_to_credit`: the bank accepts an applicant with no credit history.
-  { id: 'firstCard', label: 'Good for a first credit card' },
+  { id: 'firstCard', label: 'Good for a first credit card', short: 'First card' },
   // The card pays cashback on spends (not reward points). Source: the static
   // alias list in lib/crossSellCashbackAliases, so only the positive side is offered.
-  { id: 'cashback', label: 'Cashback on spends, not points' },
+  { id: 'cashback', label: 'Cashback on spends, not points', short: 'Cashback' },
 ];
 
 /** A resolved filter selection (values, not sheet indices). Empty arrays = no
