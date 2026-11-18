@@ -9,7 +9,7 @@ Format: **Decision** · date · commit(s) where it landed.
 ## D22. Rejection shows a reason, 3 alternatives and a page of cards the user can get
 2026-11-17 · `5263571`, `ee381e3`, `478be31`
 
-When the eligibility check says no, the sheet shows why, a way to change details, 3 alternatives with different jobs (closest, highest Rewards, lifetime free) and "See all N cards you can get", which opens the "Cards you can get" screen. The reason comes only from the card's own income bar. Otherwise a generic line shows, so a wrong reason never reaches the user. "Continue to Apply" stays on the sheet: a rejection is not a hard stop. Costs: the reason covers income only (employment values are unknown); "Edit" does not focus the income field; "See all N" counts cards that have a cross-sell model.
+When the eligibility check says no, the sheet shows why, a way to change details, 3 alternatives with different jobs (closest, highest Rewards, lifetime free) and "See all N cards you can get", which opens the "Cards you can get" screen. The reason comes only from the card's own income bar. Otherwise a generic line shows, so a wrong reason never reaches the user. "Continue to Apply" stays on the sheet: a rejection is not a hard stop. Costs: the reason covers income only (employment values are unknown); the flow has no flag and reaches all users; "Edit" does not focus the income field; "See all N" counts cards that have a cross-sell model.
 
 ## D21. Cross-sell rail under the tapped Home tile
 2026-11-17 · `01ce49c`, `ee381e3`, `2717a36`, `f9c9056`
