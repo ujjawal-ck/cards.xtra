@@ -114,7 +114,12 @@ export function BeatMyCardPickScreen() {
   }, []);
 
   const banks = useMemo(() => pickBanks(league), [league]);
-  const shown = useMemo(() => filterPickRows(league, bank, query), [league, bank, query]);
+  // A to Z by name, not rank order: the rank order would show the winner before the result does.
+  const byName = useMemo(
+    () => [...league].sort((x, y) => pickName(x).localeCompare(pickName(y))),
+    [league],
+  );
+  const shown = useMemo(() => filterPickRows(byName, bank, query), [byName, bank, query]);
   // A pick that no longer exists (spends changed) is dropped.
   const pickedRow = useMemo(() => league.find((r) => r.savings.alias === picked), [league, picked]);
 

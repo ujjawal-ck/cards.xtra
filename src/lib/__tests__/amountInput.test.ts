@@ -34,3 +34,14 @@ describe('amountInput', () => {
     expect(clampAmount(5000, undefined, 1000)).toBe(1000);
   });
 });
+
+describe('parseAmount with Indian-script digits', () => {
+  it('reads Devanagari digits', () => {
+    expect(parseAmount('५२३४')).toBe(5234);
+    expect(parseAmount('₹ १,२०,०००')).toBe(120000);
+  });
+
+  it('reads a mix of scripts and ASCII', () => {
+    expect(parseAmount('5২3௪')).toBe(5234);
+  });
+});

@@ -184,7 +184,10 @@ export function SpendCard({
   const onType = (text: string) => {
     const parsed = parseAmount(text);
     const n = parsed == null ? 0 : clampAmount(parsed, min, limit);
-    setDraft(parsed == null ? '' : formatAmount(n));
+    // Keep the field text exactly as typed while the user edits. Rewriting it on each key
+    // (commas, or 0-9 in place of Hindi digits) races with fast typing and drops or doubles keys.
+    // The formatted value shows again on blur.
+    setDraft(text);
     setLive(n);
     committedRef.current = n;
     onChange(n);

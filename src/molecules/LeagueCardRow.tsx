@@ -184,6 +184,14 @@ function LeagueCardRowImpl({
               </Cell>
             );
           })}
+          {/* The rest of the sum, so the cells add up to the annual savings above. */}
+          {sum.milestones > 0 ? <Cell label="Milestones" value={formatINR(sum.milestones)} /> : null}
+          {sum.lounge > 0 ? <Cell label="Lounge" value={formatINR(sum.lounge)} /> : null}
+          {sum.fee > 0 ? (
+            <Cell label="Annual fee" value={sum.feeCounted > 0 ? `-${formatINR(sum.feeCounted)}` : formatINR(0)}>
+              {sum.feeWaived ? <Tag size="xxs" label="Waived at your spend" tone="success" /> : null}
+            </Cell>
+          ) : null}
         </View>
       )}
 
