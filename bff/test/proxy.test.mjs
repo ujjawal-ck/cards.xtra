@@ -303,7 +303,7 @@ test('money routes are forwarded when ALLOW_MONEY_ROUTES is on', async () => {
   }
 });
 
-test('switching money routes off leaves reads and the withdraw OTP steps alone', async () => {
+test('switching money routes off leaves reads and the claim check alone', async () => {
   const { handle } = app((url) => tokenReply(url) ?? { body: { data: [] } });
   for (const [method, path] of [
     ['GET', '/ck/users/earnings'], ['GET', '/ck/payment/payment'], ['GET', '/ck/users/missingcashback/queue'],

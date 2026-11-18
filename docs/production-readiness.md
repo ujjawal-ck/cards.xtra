@@ -47,7 +47,7 @@ What has to be configured on the CashKaro mini-app side (and with BankKaro) so t
 
 | Feature | State in the app | Needs |
 |---|---|---|
-| Delete account | Screens only: the OTP step accepts any 4-digit code and shows "Account deleted" without deleting anything | Account deletion API (required by both app stores); until then hide the entry |
+| Delete account | Screens only: the OTP step accepts any 4-digit code and shows "Account deleted" without deleting anything. The entry is hidden since 2026-11-18 (`dc62fda`) | Account deletion API (required by both app stores); until then hide the entry |
 | Edit email / mobile | Screens validate input, save nothing | Profile update API, or hide the entry |
 | Payment history | Hidden (screen has sample data) | Map `/payment/history` |
 | Notifications | Honest empty state | Feed API |
