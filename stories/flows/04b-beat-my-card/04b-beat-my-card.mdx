@@ -1,0 +1,67 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/4b Beat my card/Overview" />
+
+<PageHeader title="4b Beat my card" meta="flow · 4 steps">Is there a better card than the one I have? The user gives spends (saved or from the quiz), picks the card they hold, and sees the best other card against it.</PageHeader>
+
+## Flow
+
+```
+Home tools row
+   |
+   +-- saved spends on device -----------------+
+   |                                           v
+   +-- no saved spends -> SpendQuiz {next:'beat'} -> Pick list (BeatMyCardPick)
+                                                          |
+                                                          v
+                                                 Result (BeatMyCardResult)
+                                                  verdicts: best_wins, mine_wins, equal, not_found
+                                                          |
+                                           Full ranking (ToolResults, highlightAlias)
+                                                          |
+                                           Breakdown sheet -> click-out (not for the user's own card)
+```
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## Spends
+
+<StateMatrix rows={[
+  { state: "Quiz, first question", status: 'live', story: 'flows-4b-beat-my-card-spends--quiz-first-question', note: "No saved spends." },
+  { state: "From saved spends", status: 'live', story: 'flows-4b-beat-my-card-spends--from-saved-spends', note: "Route params stand in for the saved spends (web cannot persist them)." },
+]} />
+
+## Pick list
+
+<StateMatrix rows={[
+  { state: "Loaded", status: 'live', story: 'flows-4b-beat-my-card-pick-list--loaded', note: "A to Z, with search and bank chips." },
+]} />
+
+## Result
+
+<StateMatrix rows={[
+  { state: "best_wins", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins', note: "Another card beats the user's card." },
+  { state: "mine_wins", status: 'live', story: 'flows-4b-beat-my-card-result--mine-wins', note: "Rank 1 card is not in the app list; check the hero." },
+  { state: "equal", status: 'live', story: 'flows-4b-beat-my-card-result--equal', note: "Built tie: the story edits the calculate answer." },
+  { state: "not_found", status: 'live', story: 'flows-4b-beat-my-card-result--not-found', note: "Card missing from the calculate list." },
+]} />
+
+## Full ranking
+
+<StateMatrix rows={[
+  { state: "Loaded", status: 'live', story: 'flows-4b-beat-my-card-full-ranking--loaded', note: "User's card highlighted, no Apply for it." },
+]} />
+
+## Risks
+
+- R7 (score 6): the top rows of the league can be cards the app cannot sell, with no Apply and no card page. Decision D27 is directional.
+- R11 (score 4): Apply from the tools skips the eligibility gate that Home runs. The user sees no verdict. A tool click-out has no gate.
+- R8 (score 6): no "redirecting" step and no pre-apply terms before the click-out from the breakdown sheet.
+- R6 (score 6): offline cold start. The tool results handle the paused call with "You're offline"; most other screens show a false empty state.
+
+## Open questions
+
+- League table scope (D27, directional): keep showing cards the app cannot sell, loss-making and discontinued cards, with Apply only in the breakdown sheet? Owner: product owner.
+- Should Apply from the tools run the same eligibility gate as Home? Owner: product owner.
+- What does the user see before and after a click-out (redirect step, terms, a "did you apply" return state)? Owner: product owner with the CashKaro tracking team.

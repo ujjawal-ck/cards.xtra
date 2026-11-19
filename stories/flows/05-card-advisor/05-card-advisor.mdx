@@ -1,0 +1,65 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/5 Card advisor/Overview" />
+
+<PageHeader title="5 Card advisor" meta="flow · 2 steps">A short chat with the card advisor: one tap-to-answer question at a time, three cards after the first answer, an optional eligibility check, and a full list. Guest flow; income and pincode never go to route params or analytics.</PageHeader>
+
+## Flow
+
+```
+Search sheet: advisor row (empty query or no results)
+   |
+   v
+Chat (Advisor)
+   intro -> opener -> reveal (3 cards) -> questions -> tip(s)
+        -> eligibility bridge -> form -> likely to qualify / error
+        -> end menu: See all N cards | Check which cards I can get | Change an answer | Start over
+   |                                   |
+   | card tap -> card detail           v
+   v                          Results (AdvisorResults): sort, Free cards only
+click-out (source: advisor)
+```
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## Chat
+
+Mid-chat states are seeded through the advisor session store (the chat is rebuilt from the answers), not replayed with taps.
+
+<StateMatrix rows={[
+  { state: "Intro", status: 'live', story: 'flows-5-card-advisor-chat--intro', note: "Empty session." },
+  { state: "Question", status: 'live', story: 'flows-5-card-advisor-chat--question', note: "Seeded answer." },
+  { state: "Reveal", status: 'live', story: 'flows-5-card-advisor-chat--reveal', note: "Seeded answer." },
+  { state: "Tip", status: 'live', story: 'flows-5-card-advisor-chat--tip', note: "Seeded answers." },
+  { state: "Eligibility bridge", status: 'live', story: 'flows-5-card-advisor-chat--eligibility-bridge', note: "Seeded answers." },
+  { state: "Form", status: 'live', story: 'flows-5-card-advisor-chat--eligibility-form', note: "Seeded answers." },
+  { state: "Likely to qualify", status: 'live', story: 'flows-5-card-advisor-chat--likely-to-qualify', note: "Seeded answers, partial eligibility fixture." },
+  { state: "Eligibility error", status: 'live', story: 'flows-5-card-advisor-chat--eligibility-error', note: "Eligibility answers 500." },
+  { state: "Relaxed results", status: 'live', story: 'flows-5-card-advisor-chat--relaxed', note: "Free filter relaxed for Fuel." },
+  { state: "End menu", status: 'live', story: 'flows-5-card-advisor-chat--end-menu', note: "Seeded answers." },
+  { state: "Change answer", status: 'live', story: 'flows-5-card-advisor-chat--change-answer', note: "One tap after mount." },
+  { state: "Start over confirm", status: 'proposed', story: 'flows-5-card-advisor-chat--start-over-confirm', note: "Today a native Alert. Proposed: a sheet." },
+  { state: "Catalogue error", status: 'live', story: 'flows-5-card-advisor-chat--catalogue-error', note: "Cards list answers 500." },
+]} />
+
+## Results
+
+<StateMatrix rows={[
+  { state: "Loaded", status: 'live', story: 'flows-5-card-advisor-results--loaded', note: "" },
+  { state: "Sorted by lowest fee", status: 'live', story: 'flows-5-card-advisor-results--sorted', note: "One tap after mount." },
+  { state: "Free only", status: 'live', story: 'flows-5-card-advisor-results--free-only', note: "One tap after mount." },
+  { state: "No cards", status: 'live', story: 'flows-5-card-advisor-results--no-cards', note: "Ids not in the catalogue." },
+]} />
+
+## Risks
+
+- R11 (score 4): Apply from the tools skips the eligibility gate that Home runs. The user sees no verdict. A tool click-out has no gate.
+- R6 (score 6): offline cold start. The tool results handle the paused call with "You're offline"; most other screens show a false empty state. The advisor shows "No cards are available right now" when the card list is paused offline (ux-states section 5, missing).
+- Consciously not covered: the advisor went back to its first question and closed, seen once (D28, cause unknown).
+
+## Open questions
+
+- Should Apply from the tools run the same eligibility gate as Home? Owner: product owner.
+- Native Alert for Start over and the rewind warning ("Change this answer?"): keep, or use a sheet like the other confirms? Owner: product owner with design.
+- Should the chat keep its answers for the app session (today) or reset when the user leaves? Owner: product owner.

@@ -1,0 +1,58 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/4d Best for brands/Overview" />
+
+<PageHeader title="4d Best for brands" meta="flow · 4 steps">Best card for the brands the user buys from. Up to 5 of 13 brands, then a monthly spend for each. Only Amazon and Flipkart are exact brands in BankKaro; the rest are counted in their category, and the screen says so.</PageHeader>
+
+## Flow
+
+```
+Home tools row (tile with the rotating brand word)
+   |  brandId optional
+   v
+Brand pick (up to 5)  ->  Spends (one monthly amount per brand)  ->  Results (ToolResults, tool: brands)
+   |                                                                       |
+   +-- limit reached: info message, other tiles disabled       Breakdown sheet -> click-out
+Brand runs are not saved to the device.
+```
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## Brand pick
+
+<StateMatrix rows={[
+  { state: "Nothing picked", status: 'live', story: 'flows-4d-best-for-brands-brand-pick--nothing-picked', note: "No footer." },
+  { state: "Preselected from the Home tile", status: 'live', story: 'flows-4d-best-for-brands-brand-pick--preselected', note: "Route param brandId." },
+]} />
+
+## Limit reached
+
+<StateMatrix rows={[
+  { state: "Five brands picked", status: 'live', story: 'flows-4d-best-for-brands-limit-reached--five-brands-picked', note: "Five taps after mount." },
+]} />
+
+## Spends
+
+<StateMatrix rows={[
+  { state: "One brand", status: 'live', story: 'flows-4d-best-for-brands-spends--one-brand', note: "One tap after mount." },
+  { state: "Nothing entered", status: 'live', story: 'flows-4d-best-for-brands-spends--nothing-entered', note: "Warning shown, no navigation." },
+]} />
+
+## Results
+
+<StateMatrix rows={[
+  { state: "Loaded", status: 'live', story: 'flows-4d-best-for-brands-results--loaded', note: "Shared table, brand column labels." },
+]} />
+
+## Risks
+
+- R7 (score 6): the top rows of the league can be cards the app cannot sell, with no Apply and no card page. Decision D27 is directional.
+- R11 (score 4): Apply from the tools skips the eligibility gate that Home runs. The user sees no verdict. A tool click-out has no gate.
+- Brands other than Amazon and Flipkart are counted in a category, so a result can differ from the real brand rate. The screen states it; no state shows the difference (product requirement, not ranked).
+
+## Open questions
+
+- League table scope (D27, directional): keep showing cards the app cannot sell, loss-making and discontinued cards, with Apply only in the breakdown sheet? Owner: product owner.
+- Should Apply from the tools run the same eligibility gate as Home? Owner: product owner.
+- Brand tiles are text only (no brand logos exist). Design gap. Owner: design.

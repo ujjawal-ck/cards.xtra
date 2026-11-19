@@ -1,6 +1,33 @@
 import React from 'react';
 import type { Preview } from '@storybook/react-native-web-vite';
-import { View, Text } from 'react-native';
+import { View, Text, BackHandler, Alert } from 'react-native';
+
+// Android back button does not exist on web; react-native-web logs an error on every use.
+(BackHandler as any).addEventListener = () => ({ remove() {} });
+(BackHandler as any).removeEventListener = () => {};
+
+// react-native-web's Alert.alert does nothing, so money-failure dialogs would be invisible.
+// Draw the native dialog as a plain DOM overlay: title, message, buttons. Tapping a button runs its onPress.
+(Alert as any).alert = (title: string, message?: string, buttons?: { text?: string; onPress?: () => void; style?: string }[]) => {
+  console.info('[storybook] Alert', title, message ?? '');
+  const doc = document;
+  doc.getElementById('sb-alert')?.remove();
+  const scrim = doc.createElement('div');
+  scrim.id = 'sb-alert';
+  Object.assign(scrim.style, { position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: '9999', fontFamily: 'Outfit, system-ui, sans-serif' });
+  const box = doc.createElement('div');
+  Object.assign(box.style, { width: '280px', background: primitives.slate[50], borderRadius: '14px', padding: '20px 20px 8px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' });
+  const h = doc.createElement('div'); h.textContent = title; Object.assign(h.style, { fontWeight: '700', fontSize: '17px', color: primitives.slate[900], marginBottom: '6px' });
+  const m = doc.createElement('div'); m.textContent = message ?? ''; Object.assign(m.style, { fontSize: '14px', lineHeight: '1.4', color: primitives.slate[800], marginBottom: '12px' });
+  const row = doc.createElement('div'); Object.assign(row.style, { display: 'flex', justifyContent: 'flex-end', gap: '8px' });
+  (buttons?.length ? buttons : [{ text: 'OK' }]).forEach((b) => {
+    const btn = doc.createElement('button'); btn.textContent = b.text ?? 'OK';
+    Object.assign(btn.style, { border: '0', background: 'transparent', color: b.style === 'destructive' ? primitives.ruby[500] : primitives.cobalt[700], fontWeight: '600', fontSize: '15px', padding: '10px 8px', cursor: 'pointer', fontFamily: 'inherit' });
+    btn.onclick = () => { scrim.remove(); b.onPress?.(); };
+    row.appendChild(btn);
+  });
+  box.append(h, m, row); scrim.appendChild(box); doc.body.appendChild(scrim);
+};
 import { useFonts, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold } from '@expo-google-fonts/outfit';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

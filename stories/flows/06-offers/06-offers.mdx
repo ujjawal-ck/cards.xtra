@@ -1,0 +1,66 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/6 Offers/Overview" />
+
+<PageHeader title="6 Offers" meta="flow · 2 steps">Shop at a store through CashKaro and earn cashback. The Offers tab lists stores by category. A store page ends in the cashback click-out. Guest users can read everything and are asked to log in at the click-out.</PageHeader>
+
+## Flow
+
+```
+Offers tab (MainTabs/Offers)
+   |  category strip, 2-column store grid
+   |  welcome promo sheet (once per session, only when stores exist)
+   |  tap a store
+   v
+Store page (OffersBrandAmazon, any slug)
+   |  about, cashback rates, how it works, timelines, terms,
+   |  Best cards to use here, similar stores, FAQ
+   |  share (OS share sheet)
+   |  tap "Earn Cashback on <Brand>"
+   v
+$ Click-out (useClickOut, kind store, source store_page)
+   guest: "Log in to earn" prompt, then the click continues
+   signed in: link opens in the browser
+   exit: store site or app, outside the app. Best cards opens card detail (flow 3a)
+```
+
+`$` marks a money step: the click-out carries the attribution (user id, click id). Its states live in flow 3a, Click-out.
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## Offers tab
+
+<StateMatrix rows={[
+  { state: "Loading", status: 'live', story: 'flows-6-offers-offers-tab--loading', note: "Three rows of skeleton tiles." },
+  { state: "Loaded", status: 'live', story: 'flows-6-offers-offers-tab--loaded', note: "Category strip and 5 stores." },
+  { state: "Promo sheet", status: 'live', story: 'flows-6-offers-offers-tab--promo-sheet', note: "Once per page load. The seen flag cannot be reset; reload the iframe to see it again." },
+  { state: "Empty, No offers here yet (R10)", status: 'live', story: 'flows-6-offers-offers-tab--empty-no-offers-yet', note: "Production today (D11), not re-checked since 2026-11-09." },
+  { state: "Error", status: 'live', story: 'flows-6-offers-offers-tab--load-error', note: "HTTP 500, after the app's retries." },
+  { state: "Offline, shows No offers here yet (R6)", status: 'live', story: 'flows-6-offers-offers-tab--offline-shows-empty', note: "Inferred from code: false empty state." },
+  { state: "Offline, proposed fix (R6)", status: 'proposed', story: 'flows-6-offers-offers-tab--offline-proposed', note: "Standard offline state. Needs the shared paused-with-no-data helper." },
+]} />
+
+## Store page
+
+<StateMatrix rows={[
+  { state: "Loading", status: 'live', story: 'flows-6-offers-store-page--loading', note: "Bare spinner today." },
+  { state: "Loading, proposed skeleton", status: 'proposed', story: 'flows-6-offers-store-page--loading-proposed', note: "Skeleton blocks in the page shape." },
+  { state: "Loaded", status: 'live', story: 'flows-6-offers-store-page--loaded', note: "AJIO fixture; the fixture answers every slug." },
+  { state: "Error", status: 'live', story: 'flows-6-offers-store-page--load-error', note: "Store call answers 404." },
+  { state: "Best cards", status: 'live', story: 'flows-6-offers-store-page--best-cards', note: "Page scrolled to the carousel after mount." },
+  { state: "Share", status: 'live', story: 'flows-6-offers-store-page--share', note: "Share glyph tapped; the harness only logs it." },
+]} />
+
+## Risks
+
+- R10: the Offers tab may be empty on production, so every visit shows "No offers here yet". A whole revenue tab looks broken and store click-outs are lost. Doc only, not re-checked since 2026-11-09.
+- R6: offline cold start with no cache. The tab shows "No offers here yet" while only the top banner says offline. Inferred from code, not seen on a device.
+- R3 and R8 (click-out): a blocked click-out is silent, and there is no "Redirecting" step. Both are drawn in flow 3a.
+- R11: Apply from the store page best cards skips the eligibility gate that Home runs.
+
+## Open questions
+
+- Should the empty state stay "No offers here yet" with an Explore cards action, or should the tab hide until stores are mapped on production (R10)?
+- What does the user see before and after the store click-out: a redirect step, terms to accept, a return state (pm-flows question 5)?
+- Should Apply from the store best cards run the same eligibility gate as Home (pm-flows question 2)?

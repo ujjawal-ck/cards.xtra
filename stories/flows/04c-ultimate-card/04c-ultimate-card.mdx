@@ -1,0 +1,55 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/4c Ultimate card/Overview" />
+
+<PageHeader title="4c Ultimate card" meta="flow · 3 steps">Rank every card on the user's own spends. A 21-question quiz, a Skip to results button on every question, then the shared league table.</PageHeader>
+
+## Flow
+
+```
+Home tools row
+   |
+   v
+Quiz step (SpendQuiz {next:'ultimate'}, 21 questions)
+   |  Next x21                \  Skip to results (needs one spend above 0)
+   v                           v
+Results (ToolResults, tool: ultimate)  <-- replace, so Back skips the quiz
+   |
+Breakdown sheet -> card detail / click-out
+```
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## Quiz step
+
+<StateMatrix rows={[
+  { state: "First question", status: 'live', story: 'flows-4c-ultimate-card-quiz-step--first-question', note: "Question 1 of 21." },
+  { state: "Middle question", status: 'live', story: 'flows-4c-ultimate-card-quiz-step--middle-question', note: "Seven taps on Next after mount." },
+  { state: "Last question", status: 'live', story: 'flows-4c-ultimate-card-quiz-step--last-question', note: "Twenty taps on Next after mount; button reads See my cards." },
+]} />
+
+## Skip
+
+<StateMatrix rows={[
+  { state: "Skip with nothing entered", status: 'live', story: 'flows-4c-ultimate-card-skip--skip-with-nothing-entered', note: "Warning shown. Skip with a typed spend is not scripted." },
+]} />
+
+## Results
+
+<StateMatrix rows={[
+  { state: "Loaded", status: 'live', story: 'flows-4c-ultimate-card-results--loaded', note: "Shared table." },
+]} />
+
+## Risks
+
+- R7 (score 6): the top rows of the league can be cards the app cannot sell, with no Apply and no card page. Decision D27 is directional.
+- R11 (score 4): Apply from the tools skips the eligibility gate that Home runs. The user sees no verdict. A tool click-out has no gate.
+- R8 (score 6): no "redirecting" step and no pre-apply terms before the click-out from the breakdown sheet.
+- The quiz has no review step: the user cannot see all 21 answers before the result (code comment, not ranked).
+
+## Open questions
+
+- League table scope (D27, directional): keep showing cards the app cannot sell, loss-making and discontinued cards, with Apply only in the breakdown sheet? Owner: product owner.
+- Should Apply from the tools run the same eligibility gate as Home? Owner: product owner.
+- 21 questions on one run: keep the full quiz, or ship a short version first? Not in the product docs. Owner: product owner.
