@@ -1,0 +1,101 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/3c Bounce/Overview" />
+
+<PageHeader title="3c Bounce" meta="Flow 3c · 2 steps · 7 states">
+I left a card without applying; show me a better-fitting one. Entry: closing a card detail that was opened from a Home tile, with no Apply. Auth: guest. Money-sensitive: click-out (source crosssell_rail).
+</PageHeader>
+
+## Flow
+
+```
+ENTRY: close a Home-tile card detail with no Apply
+  v
+Cross-sell rail under the tile   (flag crosssell_rail = "rail" by default; holdout logs nothing)
+  lens chips -> up to 3 picks -> "Check what I can get" -> Hide -> "View all cards"
+  |-- a pick ------------------> Card detail (3a) -> Apply [MONEY]
+  |-- "Check what I can get" --> Eligibility checker (no event)
+  |-- "View all cards" --------> Cards you can get (bounce)
+  v
+Cards you can get (bounce)   copy does not promise eligibility when it is unknown
+  |-- tile -> Card detail -> Apply -> click-out [MONEY, AUTH gate]
+EXIT: bank page; card detail (3a).
+```
+
+States: 7 live, 0 proposed, 0 hidden, 0 demo. Each state is a story; a row links to it. Screen stories use the real app screen with no network (fixtures answer every call); a proposed state is composed from design-system parts and is not in the app.
+
+## Steps and states
+
+### Cross-sell rail
+
+<StateMatrix rows={[
+  {
+    "state": "Lenses",
+    "status": "live",
+    "source": "src/organisms/CrossSellRail.tsx:158",
+    "story": "flows-3c-bounce-cross-sell-rail--lenses",
+    "note": "The tapped tile, with its rail under it as Home draws it (src/screens/HomeScreen.tsx:1255). */\nfunction Tile({ showRail = true, result = resultUnknown, lensKey = 'top', viewedIds = [] }: { showRail?: boolean; result?: CrossSellResult; lensKey?: string; viewedIds?: string[] }) {\n  const [lens, setLens] = useState(lensKey);\n  const c = sourceCard;\n  return (\n    <PhoneFrame>\n      <ScrollView style={{ flex: 1, backgroundColor: colors.background.default }} contentContainerStyle={{ padding: spacing[16], gap: spacing[12] }}>\n        <CardTile type=\"full\" cardImage={c.cardImage} cardName={c.name} cashbackText={c.cashbackValue} rewardPrefix={c.rewardPrefix} inviteOnly={c.inviteOnly} tags={c.tags}\n          benefits={c.tileBenefits.slice(0, 3)} feeType={c.feeType} feeProps={{ joiningFee: c.joiningFee, annualFee: c.annualFee }} onApply={noop} />\n        {showRail ? (\n          <CrossSellRail sourceCard={c} result={result} lensKey={lens} cardsById={cardsById} viewedIds={viewedIds}\n            onCardPress={noop} onLensChange={setLens} onCheckEligibility={noop} onHide={noop} onViewAll={noop} />\n        ) : null}\n        <View style={{ height: spacing[24] }} />\n      </ScrollView>\n    </PhoneFrame>\n  );\n}\n\nconst meta: Meta = {\n  title: 'Flows/3c Bounce/Cross-sell rail',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'After the user closes a card detail opened from a Home tile without applying, a rail opens under that tile: lens chips (Top picks and others), up to three compare cards, \"Check what I can get\" when eligibility is unknown, Hide and \"View all cards\". It is gated by the experiment flag crosssell_rail (default \"rail\"; the holdout arm logs nothing). The stories render the real rail with a result from the app\\'s own engine (src/lib/crossSell.ts) over invented sample fees, under the real CardTile. They do not run the close-to-rail interaction on Home.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Lenses: Top picks, eligibility unknown (dashed \"Check what I can get\" chip)"
+  },
+  {
+    "state": "Other Lens",
+    "status": "live",
+    "source": "src/organisms/CrossSellRail.tsx:158",
+    "story": "flows-3c-bounce-cross-sell-rail--other-lens",
+    "note": "A different lens selected"
+  },
+  {
+    "state": "Viewed Pick",
+    "status": "live",
+    "source": "src/organisms/CrossSellRail.tsx:158",
+    "story": "flows-3c-bounce-cross-sell-rail--viewed-pick",
+    "note": "A pick already viewed: dimmed, \"Viewed ·\""
+  },
+  {
+    "state": "One Pick",
+    "status": "live",
+    "source": "src/organisms/CrossSellRail.tsx:158",
+    "story": "flows-3c-bounce-cross-sell-rail--one-pick",
+    "note": "One pick only"
+  },
+  {
+    "state": "Hidden No Rail",
+    "status": "live",
+    "source": "src/screens/useCrossSellRail.ts:176",
+    "story": "flows-3c-bounce-cross-sell-rail--hidden-no-rail",
+    "note": "Hidden: fewer than 2 picks, or the holdout arm. Nothing opens under the tile"
+  }
+]} />
+
+### Cards you can get (bounce)
+
+<StateMatrix rows={[
+  {
+    "state": "Eligibility Unknown",
+    "status": "live",
+    "source": "src/screens/CardsYouCanGetScreen.tsx:127",
+    "story": "flows-3c-bounce-cards-you-can-get-bounce--eligibility-unknown",
+    "note": "Eligibility unknown: \"N cards, closest first\", no promise"
+  },
+  {
+    "state": "Eligibility Known",
+    "status": "live",
+    "source": "src/screens/CardsYouCanGetScreen.tsx:127",
+    "story": "flows-3c-bounce-cards-you-can-get-bounce--eligibility-known",
+    "note": "Eligibility known: the count reads \"N cards you can get\""
+  }
+]} />
+
+## Risks
+
+- **R1**: The bank page return gives no record of the click, so a rail pick and an applied card look the same afterwards. Seen in: both steps (see flow 3a, Click-out).
+- **R11**: Apply on the bounce page skips Home's eligibility gate. Seen in: Cards you can get (bounce).
+- **R3**: A blocked click-out is silent (see flow 3a). Seen in: Cards you can get (bounce).
+
+## Open questions
+
+- 6. crosssell_rail default: "rail" (today) or "holdout" before any release? Owner: product owner.
+- The rail can open below the visible area and look like nothing happened (PRD section 9, not covered here). Scroll the tile into view? Owner: product owner with design.
+- "Check what I can get" has no analytics event. Add one? Owner: analytics owner.
+
+Not storied: the rail on Home (the close-to-rail interaction) is not driven; the stories render the real rail under a tile. Rail "off screen" is not covered, as listed in pm-flows.

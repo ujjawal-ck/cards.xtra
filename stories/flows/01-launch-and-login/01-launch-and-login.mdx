@@ -1,0 +1,253 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/1 Launch and login/Overview" />
+
+<PageHeader title="1 Launch and login" meta="Flow 1 · 4 steps · 26 states">
+Get into the app fast, as a guest or with a CashKaro account. The intro plays, first launch sees Onboarding, and the login sheet (one app-wide phone and OTP sheet) opens from Onboarding and from every login gate. Auth: guest to login. Money-sensitive: verifying an OTP on production creates or signs in a real account.
+</PageHeader>
+
+## Flow
+
+```
+ENTRY: app start                 other gates: Earnings, Profile, Get Help,
+  |                              "Log in to earn", session expiry
+  v                                    |
+Splash (Lottie, 7 s safety timer)      |
+  |-- signed in or returning guest --> MainTabs (Home)
+  |-- first launch
+  v
+Onboarding (3 slides)
+  |-- "Get Started" ------------------> MainTabs (as guest)
+  |-- "Already on CashKaro? Log in" --+
+  v                                   |
+Login sheet  <------------------------+   [AUTH]
+  phone -> Get OTP -> OTP (30 s resend)
+  |      |-- new number: also asks for a name   [MONEY: creates an account, D16]
+  |-- verify OK, returning --------------> MainTabs
+  |-- verify OK, signup from Onboarding -> Greeting -> MainTabs
+  |-- verify OK, from another gate ------> back to that screen (onSuccess runs)
+
+[hidden] NameInput: no route links to it since D16 (not storied)
+```
+
+States: 23 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row links to it. Screen stories use the real app screen with no network (fixtures answer every call); a proposed state is composed from design-system parts and is not in the app.
+
+## Steps and states
+
+### Splash
+
+<StateMatrix rows={[
+  {
+    "state": "Default",
+    "status": "live",
+    "source": "src/screens/SplashScreen.tsx:35",
+    "story": "flows-1-launch-and-login-splash--default",
+    "note": "Guest on a fresh install: after the intro the app goes to Onboarding"
+  },
+  {
+    "state": "Session Loading",
+    "status": "live",
+    "source": "src/screens/SplashScreen.tsx:63",
+    "story": "flows-1-launch-and-login-splash--session-loading",
+    "note": "Signed in (saved session): after the intro the app goes to the tabs"
+  },
+  {
+    "state": "Offline With Saved Session",
+    "status": "live",
+    "source": "src/auth/AuthContext.tsx:127",
+    "story": "flows-1-launch-and-login-splash--offline-with-saved-session",
+    "note": "Saved session, no network: the session is kept and the user still reaches the tabs"
+  }
+]} />
+
+### Onboarding
+
+<StateMatrix rows={[
+  {
+    "state": "Slides",
+    "status": "live",
+    "source": "src/screens/OnboardingScreen.tsx:393",
+    "story": "flows-1-launch-and-login-onboarding--slides",
+    "note": "Slides with the two buttons"
+  },
+  {
+    "state": "Guest Start",
+    "status": "live",
+    "source": "src/screens/OnboardingScreen.tsx:398",
+    "story": "flows-1-launch-and-login-onboarding--guest-start",
+    "note": "\"Get Started\": enters the app as a guest, lands on the tabs"
+  },
+  {
+    "state": "Login Tapped",
+    "status": "live",
+    "source": "src/screens/OnboardingScreen.tsx:401",
+    "story": "flows-1-launch-and-login-onboarding--login-tapped",
+    "note": "\"Already on CashKaro? Log in\": the login sheet opens over the slides"
+  }
+]} />
+
+### Login sheet
+
+<StateMatrix rows={[
+  {
+    "state": "Phone Empty",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:462",
+    "story": "flows-1-launch-and-login-login-sheet--phone-empty",
+    "note": "* The real login sheet (LoginSheetProvider) opened over an empty app page, then driven by the story:\n * it types into the real inputs and taps the real buttons. The harness fetch mock answers the OTP calls.\n */\nfunction Login({ api: a, steps = [] }: { api: ApiParams; steps?: Step[] }) {\n  return (\n    <ComponentHarness api={a} auth=\"guest\">\n      <OpenLogin steps={steps} />\n    </ComponentHarness>\n  );\n}\n\nconst typePhone: Step = [300, () => typeInto(0, PHONE)];\nconst tapGetOtp: Step = [400, () => clickByText('Get OTP')];\nconst typeOtp: Step = [900, () => typeInto(1, '123456')];\n\nconst meta: Meta = {\n  title: 'Flows/1 Launch and login/Login sheet',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'One app-wide sheet: phone step, then OTP step. A number that is new to CashKaro also gets a name field on the OTP step. Stories type and tap through the real sheet after it opens; wait about two seconds.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Phone step, nothing typed: \"Get OTP\" disabled"
+  },
+  {
+    "state": "Phone Invalid",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:462",
+    "story": "flows-1-launch-and-login-login-sheet--phone-invalid",
+    "note": "Phone step with 5 digits: still invalid, \"Get OTP\" stays disabled"
+  },
+  {
+    "state": "Phone Requesting Otp",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:461",
+    "story": "flows-1-launch-and-login-login-sheet--phone-requesting-otp",
+    "note": "Valid number, Get OTP tapped, API never answers: button shows its spinner"
+  },
+  {
+    "state": "Phone Send Failed",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:231",
+    "story": "flows-1-launch-and-login-login-sheet--phone-send-failed",
+    "note": "Send OTP fails: the API message shows under the button"
+  },
+  {
+    "state": "Rate Limit (today)",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:466",
+    "story": "flows-1-launch-and-login-login-sheet--rate-limit-today",
+    "note": "Rate limit today: the raw API message, no retry time (R20)"
+  },
+  {
+    "state": "Otp Entry",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:519",
+    "story": "flows-1-launch-and-login-login-sheet--otp-entry",
+    "note": "OTP step: 6 boxes, resend timer running"
+  },
+  {
+    "state": "Otp Filled",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:564",
+    "story": "flows-1-launch-and-login-login-sheet--otp-filled",
+    "note": "OTP step with the code typed, Verify enabled"
+  },
+  {
+    "state": "Otp Wrong",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:519",
+    "story": "flows-1-launch-and-login-login-sheet--otp-wrong",
+    "note": "Wrong OTP: boxes turn red, API message below"
+  },
+  {
+    "state": "Otp Verifying",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:564",
+    "story": "flows-1-launch-and-login-login-sheet--otp-verifying",
+    "note": "Verifying: Verify tapped, API hangs"
+  },
+  {
+    "state": "Resend Ready",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:520",
+    "story": "flows-1-launch-and-login-login-sheet--resend-ready",
+    "note": "Resend ready: the 30 s timer has run out"
+  },
+  {
+    "state": "New Number Name",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:537",
+    "story": "flows-1-launch-and-login-login-sheet--new-number-name",
+    "note": "New number: login says \"not registered\", the app falls back to signup; OTP step asks for a name"
+  },
+  {
+    "state": "New Number Name Missing",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:564",
+    "story": "flows-1-launch-and-login-login-sheet--new-number-name-missing",
+    "note": "New number, OTP typed but no name: Verify stays disabled"
+  },
+  {
+    "state": "Success Returning",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:564",
+    "story": "flows-1-launch-and-login-login-sheet--success-returning",
+    "note": "Success, returning user: sheet closes and the app goes to the tabs"
+  },
+  {
+    "state": "Success New Number",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:567",
+    "story": "flows-1-launch-and-login-login-sheet--success-new-number",
+    "note": "Success, new number: account is created and the app shows the Greeting"
+  },
+  {
+    "state": "Session Expired (proposed)",
+    "status": "proposed",
+    "source": "src/auth/LoginSheetProvider.tsx:427",
+    "story": "flows-1-launch-and-login-login-sheet--session-expired-proposed",
+    "note": "The phone panel of the sheet, rebuilt from atoms. Shape copies LoginSheetProvider panel 1. */\nfunction PhonePanelReplica({ title, body, message, tone }: { title: string; body: string; message?: string; tone?: 'warning' | 'info' | 'error' }) {\n  return (\n    <PhoneFrame>\n      <View style={{ flex: 1, backgroundColor: colors.background.default, justifyContent: 'flex-end' }}>\n        <View style={{ backgroundColor: colors.surface.default, borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], paddingBottom: spacing[20] }}>\n          <BottomSheetHeader showStroke={false} />\n          <View style={{ padding: spacing[20], gap: spacing[24] }}>\n            <View style={{ alignItems: 'center', gap: spacing[4] }}>\n              <Text variant=\"heading24SemiBold\" color={colors.text.primary} align=\"center\">{title}</Text>\n              <Text variant=\"body14Regular\" color={colors.text.secondary} align=\"center\">{body}</Text>\n            </View>\n            {message ? <InlineMessage tone={tone ?? 'warning'} message={message} /> : null}\n            <Input label=\"Mobile Number\" value={PHONE} onChangeText={() => {}} keyboardType=\"number-pad\" />\n            <Button label=\"Get OTP\" variant=\"solid\" tone=\"second\" size={52} fullWidth />\n          </View>\n        </View>\n      </View>\n    </PhoneFrame>\n  );\n}\n\n/** Proposed: session expired. Same sheet, title and body say why"
+  },
+  {
+    "state": "Offline (proposed)",
+    "status": "proposed",
+    "source": "src/auth/LoginSheetProvider.tsx:466",
+    "story": "flows-1-launch-and-login-login-sheet--offline-proposed",
+    "note": "Proposed: offline when requesting the OTP"
+  },
+  {
+    "state": "Rate Limit (proposed)",
+    "status": "proposed",
+    "source": "src/auth/LoginSheetProvider.tsx:466",
+    "story": "flows-1-launch-and-login-login-sheet--rate-limit-proposed",
+    "note": "Proposed: rate limit with a retry time"
+  }
+]} />
+
+### Greeting
+
+<StateMatrix rows={[
+  {
+    "state": "Default",
+    "status": "live",
+    "source": "src/screens/GreetingScreen.tsx:65",
+    "story": "flows-1-launch-and-login-greeting--default",
+    "note": "Signup name \"Test User\": the screen says the first name"
+  },
+  {
+    "state": "No Name",
+    "status": "live",
+    "source": "src/screens/GreetingScreen.tsx:65",
+    "story": "flows-1-launch-and-login-greeting--no-name",
+    "note": "No name: the screen falls back to \"there\""
+  },
+  {
+    "state": "Long Name",
+    "status": "live",
+    "source": "src/screens/GreetingScreen.tsx:184",
+    "story": "flows-1-launch-and-login-greeting--long-name",
+    "note": "A very long first name: no line limit today"
+  }
+]} />
+
+## Risks
+
+- **R9**: New users get a generated placeholder email. Profile shows it masked. Payout, claim and reset emails never reach them. Seen in: Login sheet, new number.
+- **R17**: A session that expires during a money step opens the login sheet, clears the cache, and the return to the step is not defined. Seen in: Login sheet, session expired (proposed copy).
+- **R20**: OTP rate limit (5 per number, 10 per IP in 10 minutes) shows the raw API message with no retry time. Seen in: Login sheet, rate limit.
+
+## Open questions
+
+- 8. New users get a generated email (D16): collect a real email, and at which step (signup, first withdrawal, first claim)? Owner: product owner.
+- Login sheet: should the session-expired sheet say why it opened, and does "Your cashback is safe" hold while a withdrawal may be in flight? Owner: product owner.
+- Offline OTP request and rate limit: fixed 10-minute copy or generic "try later"? Owner: product owner with the backend team.
+- Greeting: cap the name at signup, or ellipsize on the greeting? Owner: product owner.
+
+Not storied: Splash "session loading" is shown as a signed-in splash because the screen has one visual state; the resend-ready state needs a real 30 second wait.

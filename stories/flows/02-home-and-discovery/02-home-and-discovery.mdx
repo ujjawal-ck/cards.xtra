@@ -1,0 +1,214 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/2 Home and discovery/Overview" />
+
+<PageHeader title="2 Home and discovery" meta="Flow 2 · 5 steps · 21 states">
+Find cards that fit me without knowing card names. The Home tab holds the masthead with search, the tools row, the filter row (Category, Filters, Eligibility toggle) and the card tiles. Auth: guest. No money step on this flow; the tile "Apply Now" starts flow 3a.
+</PageHeader>
+
+## Flow
+
+```
+ENTRY: Home tab
+  v
+Home  ---- search bar --------> Search sheet --- result ----> Card detail (3a)
+  |                                  |-- "help me pick" ---> Advisor (flow 5)
+  |-- Filters chip --> Filters sheet --> Apply Filter --> white transition --> filtered list
+  |-- Eligibility toggle --> Eligibility checker --> result sheet --> Home regrouped
+  |                                       (Eligible / Maybe / Ineligible)
+  |-- tools row ------------> Tools (flow 4)
+  |-- tile tap / "Apply Now" -> Card detail (3a)        [Apply gate and click-out: 3a, MONEY]
+  |-- bell -----------------> Notifications (always empty)
+  |-- help icon ------------> Get Help (flow 9)
+```
+
+States: 18 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row links to it. Screen stories use the real app screen with no network (fixtures answer every call); a proposed state is composed from design-system parts and is not in the app.
+
+## Steps and states
+
+### Home
+
+<StateMatrix rows={[
+  {
+    "state": "Loading",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2871",
+    "story": "flows-2-home-and-discovery-home--loading",
+    "note": "First load: the Home skeleton"
+  },
+  {
+    "state": "Loaded Guest",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2884",
+    "story": "flows-2-home-and-discovery-home--loaded-guest",
+    "note": "Loaded, guest: cards from the harness catalogue"
+  },
+  {
+    "state": "Loaded Eligibility Groups",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:1543",
+    "story": "flows-2-home-and-discovery-home--loaded-eligibility-groups",
+    "note": "Eligibility on: Home regroups into Eligible, Maybe and Ineligible cards"
+  },
+  {
+    "state": "No Match With Closest",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--no-match-with-closest",
+    "note": "Filters match nothing: the \"closest cards\" fallback with a Clear button"
+  },
+  {
+    "state": "Load Error",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2244",
+    "story": "flows-2-home-and-discovery-home--load-error",
+    "note": "Catalogue request fails: ad-hoc text and a retry link"
+  },
+  {
+    "state": "Offline (today)",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:354",
+    "story": "flows-2-home-and-discovery-home--offline-today",
+    "note": "Offline with no cache, today: masthead and filters, but no cards and no message (R6)"
+  },
+  {
+    "state": "Empty Catalogue (today)",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--empty-catalogue-today",
+    "note": "Empty catalogue, no filters, today: an empty list with no message"
+  },
+  {
+    "state": "Offline (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:354",
+    "story": "flows-2-home-and-discovery-home--offline-proposed",
+    "note": "Replica shell: the scrolled masthead bar over a ScreenState. */\nconst Shell = ({ children }: { children: React.ReactNode }) => (\n  <PhoneFrame>\n    <View style={{ flex: 1, backgroundColor: colors.surface.default }}>\n      <HomeHeader scrolled />\n      {children}\n    </View>\n  </PhoneFrame>\n);\n\n/** Proposed: offline with no cache"
+  },
+  {
+    "state": "Empty Catalogue (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--empty-catalogue-proposed",
+    "note": "Proposed: empty catalogue"
+  }
+]} />
+
+### Search
+
+<StateMatrix rows={[
+  {
+    "state": "Popular",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:127",
+    "story": "flows-2-home-and-discovery-search--popular",
+    "note": "Empty query: popular chips and the advisor row"
+  },
+  {
+    "state": "Results",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:417",
+    "story": "flows-2-home-and-discovery-search--results",
+    "note": "A query with matches: bank and card sections"
+  },
+  {
+    "state": "No Results Advisor Row",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:417",
+    "story": "flows-2-home-and-discovery-search--no-results-advisor-row",
+    "note": "No results: the block plus the \"help me pick\" row that opens the advisor (F5)"
+  },
+  {
+    "state": "Catalogue Not Loaded (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/SearchTopSheet.tsx:211",
+    "story": "flows-2-home-and-discovery-search--catalogue-not-loaded-proposed",
+    "note": "Proposed: the catalogue did not load (error or offline)"
+  }
+]} />
+
+### Filters
+
+<StateMatrix rows={[
+  {
+    "state": "Menu Open",
+    "status": "live",
+    "source": "src/organisms/FilterMenu.tsx:267",
+    "story": "flows-2-home-and-discovery-filters--menu-open",
+    "note": "Holds the selection so taps work. `seed` is the first state. */\nfunction Menu({ seed = {} }: { seed?: Partial<FilterMenuProps> }) {\n  const [tab, setTab] = useState(seed.activeCategory ?? 'category');\n  const [tiles, setTiles] = useState(seed.selectedTileIndices ?? []);\n  const [fee, setFee] = useState(seed.selectedAnnualFee ?? []);\n  const [net, setNet] = useState(seed.selectedCardNetwork ?? []);\n  const [type, setType] = useState(seed.selectedCardType ?? []);\n  const [banks, setBanks] = useState(seed.selectedBanks ?? []);\n  const count = tiles.length + fee.length + net.length + type.length + banks.length;\n  const footer = <FooterButtons buttons=\"dual\" size={44} shadow=\"on\" strip=\"caption\" stripTone=\"brand\" stripText={`${count} filter${count === 1 ? '' : 's'} selected`} color=\"second\" primaryLabel=\"Apply Filter\" secondaryLabel=\"Clear\" />;\n  return (\n    <SheetHarness>\n      {(ref) => (\n        <FilterHost ref={ref as never} footer={footer}>\n          <FilterMenu\n            bankOptions={BANKS}\n            activeCategory={tab} onCategoryChange={setTab}\n            selectedTileIndices={tiles} onToggleTile={(i) => setTiles((l) => toggle(l, i))}\n            selectedAnnualFee={fee} onToggleAnnualFee={(i) => setFee((l) => toggle(l, i))}\n            selectedCardNetwork={net} onToggleCardNetwork={(i) => setNet((l) => toggle(l, i))}\n            selectedCardType={type} onToggleCardType={(i) => setType((l) => toggle(l, i))}\n            selectedBanks={banks} onToggleBanks={(i) => setBanks((l) => toggle(l, i))}\n          />\n        </FilterHost>\n      )}\n    </SheetHarness>\n  );\n}\n\nconst meta: Meta = {\n  title: 'Flows/2 Home and discovery/Filters',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'The Filters chip on Home opens a 70% sheet: a left rail (Category, Annual Fee, Card Network, Card Type, Banks) and a right panel. \"Apply Filter\" runs a white-screen transition and then shows the filtered list. The stories render the real FilterMenu in the same host Home uses; taps on the options work.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Menu: Category tab, nothing selected"
+  },
+  {
+    "state": "Applied",
+    "status": "live",
+    "source": "src/organisms/FilterMenu.tsx:267",
+    "story": "flows-2-home-and-discovery-filters--applied",
+    "note": "Applied: selections on three rails (dots on the rail labels, count in the footer)"
+  },
+  {
+    "state": "Transition",
+    "status": "live",
+    "source": "src/organisms/FilterTransitionOverlay.tsx:74",
+    "story": "flows-2-home-and-discovery-filters--transition",
+    "note": "Transition: the white screen with the redirect animation after \"Apply Filter\""
+  }
+]} />
+
+### Eligibility checker
+
+<StateMatrix rows={[
+  {
+    "state": "Empty",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:168",
+    "story": "flows-2-home-and-discovery-eligibility-checker--empty",
+    "note": "Empty form"
+  },
+  {
+    "state": "Validation Errors",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:292",
+    "story": "flows-2-home-and-discovery-eligibility-checker--validation-errors",
+    "note": "Check tapped with an empty form: PIN and income errors show"
+  },
+  {
+    "state": "Checking",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:383",
+    "story": "flows-2-home-and-discovery-eligibility-checker--checking",
+    "note": "Checking: the API never answers, the button shows its spinner"
+  },
+  {
+    "state": "Api Error",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:448",
+    "story": "flows-2-home-and-discovery-eligibility-checker--api-error",
+    "note": "API failed: an error banner, no verdict"
+  }
+]} />
+
+### Notifications
+
+<StateMatrix rows={[
+  {
+    "state": "Always Empty",
+    "status": "live",
+    "source": "src/screens/NotificationsScreen.tsx:110",
+    "story": "flows-2-home-and-discovery-notifications--always-empty",
+    "note": "Always empty: there is no notifications API (R19)"
+  }
+]} />
+
+## Risks
+
+- **R6**: Offline cold start: Home shows the timed skeleton, then no cards and no message. Seen in: Home, offline today.
+- **R19**: Notifications always says "You're all caught up"; the bell suggests a feature that does not exist. Seen in: Notifications.
+
+## Open questions
+
+- Home offline with a cached list: keep showing the stale cards or show the offline state? Owner: product owner.
+- Empty catalogue (200 with 0 cards): a real case, or always a backend fault that should read as an error? Owner: product owner with the BankKaro team.
+- Search with the catalogue not loaded: block the search bar offline, or show a message in the result area? Owner: product owner.
+- Hide the Notifications bell until an API exists? Owner: product owner.
+
+Not storied: Home states that need a long tap path beyond the stories (inline filter questions, NeverMissCashbackNudge on Android). Search stories render the real sheet with props; they do not tap the search bar.

@@ -1,0 +1,311 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/3a Card detail and apply/Overview" />
+
+<PageHeader title="3a Card detail and apply" meta="Flow 3a · 8 steps · 31 states">
+Check a card and go to the bank page with my cashback tracked. Entry: a Home tile, tile "Apply Now", a search result, a carousel, or a store page. The tools, advisor, store page and Cards you can get open this same card detail. Auth: guest, with a login gate at click-out (skippable). Money-sensitive: the click-out sets the affiliate attribution, and the eligibility verdict affects approval rate.
+</PageHeader>
+
+## Flow
+
+```
+ENTRY: Home tile / "Apply Now" / search / carousels / store page
+  v
+Card detail (iOS sheet | Android screen)
+  |-- "View all benefits" --> All card benefits
+  |-- "Learn how it works?" -> How it works sheet
+  |-- share glyph -----------> Share sheet
+  |-- inline checker --------> inline result banner (eligible / maybe / ineligible)
+  |-- sticky Apply
+  v
+Apply gate (Home only, variant "mandatory")
+  |-- no saved details --> Eligibility checker --> closed: Apply dropped (R2)
+  |-- result sheet: Eligible ("Apply Now") | Maybe ("Continue to Apply") | Ineligible --> flow 3b
+  v
+Click-out  [MONEY, AUTH gate]
+  |-- guest ------> Earn login sheet ("Log in to earn" | "Apply without cashback")
+  |-- signed in --> user id resolved --> bank page opens outside the app
+  |-- [not built] redirect step "Taking you to {bank}" (R8)
+  |-- [not built] return state "Back from {bank}?" (R1)
+EXIT: bank page. Back to Home, where the cross-sell rail may open (flow 3c).
+```
+
+States: 26 live, 5 proposed, 0 hidden, 0 demo. Each state is a story; a row links to it. Screen stories use the real app screen with no network (fixtures answer every call); a proposed state is composed from design-system parts and is not in the app.
+
+## Steps and states
+
+### Card detail (iOS sheet)
+
+<StateMatrix rows={[
+  {
+    "state": "Benefits Loading",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:1138",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--benefits-loading",
+    "note": "A card whose list entry has no benefit tiles: the sheet fetches the detail, and shows a skeleton until it lands"
+  },
+  {
+    "state": "Loaded",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:2597",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--loaded",
+    "note": "Loaded: benefit tiles, fees, checker, recommended cards, Apply bar"
+  },
+  {
+    "state": "Inline Eligible",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-eligible",
+    "note": "Inline result: eligible. The user saved details on Home, so the card shows its own result"
+  },
+  {
+    "state": "Inline Maybe",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-maybe",
+    "note": "Inline result: maybe"
+  },
+  {
+    "state": "Inline Ineligible",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-ineligible",
+    "note": "Inline result: ineligible. Story 3b starts from here"
+  },
+  {
+    "state": "Detail Fetch Failed",
+    "status": "live",
+    "source": "src/organisms/CardDetailSheet.tsx:1111",
+    "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--detail-fetch-failed",
+    "note": "Detail fetch failed: benefits fall back silently"
+  }
+]} />
+
+### Card detail (Android screen)
+
+<StateMatrix rows={[
+  {
+    "state": "Benefits Loading",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:304",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--benefits-loading",
+    "note": "A card whose list entry has no benefit tiles: the sheet fetches the detail, and shows a skeleton until it lands"
+  },
+  {
+    "state": "Loaded",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:916",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--loaded",
+    "note": "Loaded: benefit tiles, fees, checker, recommended cards, Apply bar"
+  },
+  {
+    "state": "Inline Eligible",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:288",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--inline-eligible",
+    "note": "Inline result: eligible. The user saved details on Home, so the card shows its own result"
+  },
+  {
+    "state": "Inline Maybe",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:288",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--inline-maybe",
+    "note": "Inline result: maybe"
+  },
+  {
+    "state": "Inline Ineligible",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:288",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--inline-ineligible",
+    "note": "Inline result: ineligible. Story 3b starts from here"
+  },
+  {
+    "state": "Detail Fetch Failed",
+    "status": "live",
+    "source": "src/organisms/CardDetailScreenAndroid.tsx:288",
+    "story": "flows-3a-card-detail-and-apply-card-detail-android-screen--detail-fetch-failed",
+    "note": "Detail fetch failed: benefits fall back silently"
+  }
+]} />
+
+### Apply gate
+
+<StateMatrix rows={[
+  {
+    "state": "Checker Opened By Apply",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:1207",
+    "story": "flows-3a-card-detail-and-apply-apply-gate--checker-opened-by-apply",
+    "note": "Click whatever sits at (x, y): used for the sheet backdrop, which has no label. */\nfunction tapAt(x: number, y: number) {\n  const el = document.elementFromPoint(x, y) as HTMLElement | null;\n  if (!el) return;\n  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {\n    el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));\n  }\n}\n\nconst Gate = ({ dismiss }: { dismiss?: boolean }) => (\n  <>\n    <ScreenHarness name=\"Home\" component={HomeScreen} auth=\"guest\" api={api.ok()} />\n    <Script steps={[[2800, () => clickByText('Apply Now')], ...(dismiss ? ([[1500, () => tapAt(Math.round(window.innerWidth / 2), 40)]] as [number, () => void][]) : [])]} />\n  </>\n);\n\nconst meta: Meta = {\n  title: 'Flows/3a Card detail and apply/Apply gate',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'With no saved eligibility details and the experiment variant \"mandatory\" (the code default, src/experiments/index.ts), the first Apply on Home opens the eligibility checker before any bank page. Variant \"skippable\" goes straight to the click-out. Both stories drive the real Home screen: after it loads they tap the first tile\\'s \"Apply Now\".' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Apply tapped: the checker opens (gate \"mandatory\")"
+  },
+  {
+    "state": "Dismissed Drops Apply",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:1213",
+    "story": "flows-3a-card-detail-and-apply-apply-gate--dismissed-drops-apply",
+    "note": "Checker closed without a result: the Apply is dropped (R2)"
+  }
+]} />
+
+### Result sheets
+
+<StateMatrix rows={[
+  {
+    "state": "Eligible",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2763",
+    "story": "flows-3a-card-detail-and-apply-result-sheets--eligible",
+    "note": "Eligible: confetti off here, hero card, reward headline, \"Apply Now\""
+  },
+  {
+    "state": "Maybe",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2811",
+    "story": "flows-3a-card-detail-and-apply-result-sheets--maybe",
+    "note": "Maybe: carousel of cards to explore, \"Continue to Apply\""
+  },
+  {
+    "state": "Ineligible",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2850",
+    "story": "flows-3a-card-detail-and-apply-result-sheets--ineligible",
+    "note": "Ineligible: reason, three alternatives, \"See all N cards you can get\". Continues in flow 3b"
+  }
+]} />
+
+### Click-out
+
+<StateMatrix rows={[
+  {
+    "state": "Guest Earn Prompt",
+    "status": "live",
+    "source": "src/lib/useClickOut.tsx:89",
+    "story": "flows-3a-card-detail-and-apply-click-out--guest-earn-prompt",
+    "note": "The card page background for the proposed states: art, name, and the part the footer sits under. */\nfunction Page({ children, footer }: { children?: React.ReactNode; footer?: React.ReactNode }) {\n  return (\n    <PhoneFrame>\n      <View style={{ flex: 1, backgroundColor: colors.surface.default }}>\n        <View style={{ padding: spacing[24], alignItems: 'center', gap: spacing[12] }}>\n          <Image source={REGALIA.cardImage} style={ART} resizeMode=\"contain\" />\n          <Text variant=\"heading20SemiBold\" color={colors.text.primary} align=\"center\">{REGALIA.name}</Text>\n        </View>\n        <View style={{ flex: 1, justifyContent: 'center' }}>{children}</View>\n        {footer}\n      </View>\n    </PhoneFrame>\n  );\n}\n\n/** A host for the real useClickOut hook: one Apply button that stands in for the sticky Apply bar. */\nfunction ApplyHost({ url = REGALIA.applyUrl }: { url?: string | null }) {\n  const { openClickOut, clickOutSheets } = useClickOut();\n  return (\n    <View style={{ flex: 1, backgroundColor: colors.surface.default, padding: spacing[24], gap: spacing[16], justifyContent: 'center' }}>\n      <Image source={REGALIA.cardImage} style={[ART, { alignSelf: 'center' }]} resizeMode=\"contain\" />\n      <Text variant=\"heading20SemiBold\" color={colors.text.primary} align=\"center\">{REGALIA.name}</Text>\n      <Button label=\"Apply Now\" variant=\"solid\" tone=\"second\" size={52} fullWidth onPress={() => openClickOut({ kind: 'card', url, itemId: REGALIA.id, itemName: REGALIA.name, source: 'home_detail', alias: REGALIA.filterMeta?.cardAlias })} />\n      {clickOutSheets}\n    </View>\n  );\n}\n\nconst Real = ({ auth, a, url }: { auth: 'guest' | 'signedIn'; a: ApiParams; url?: string }) => (\n  <>\n    <ComponentHarness auth={auth} api={a}><ApplyHost url={url} /></ComponentHarness>\n    <Script steps={[[1500, () => clickByText('Apply Now')]]} />\n  </>\n);\n\nconst meta: Meta = {\n  title: 'Flows/3a Card detail and apply/Click-out',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'The money step. Apply opens the bank page through a CashKaro tracking link (user id and click id). A guest is asked to log in first; a signed-in user goes straight out. The real useClickOut hook runs in the two live stories (hosted on a small page with an Apply button; the sticky Apply bar is not used). Money-sensitive: on production a click-out sets the affiliate attribution. The user-id, empty-link, redirect and return states do not exist in the app, so they are proposals.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Guest: the earn prompt sheet"
+  },
+  {
+    "state": "Signed In",
+    "status": "live",
+    "source": "src/lib/useClickOut.tsx:96",
+    "story": "flows-3a-card-detail-and-apply-click-out--signed-in",
+    "note": "Signed in: the link opens in the browser; the app shows nothing new"
+  },
+  {
+    "state": "Empty Url (today)",
+    "status": "live",
+    "source": "src/lib/useClickOut.tsx:87",
+    "story": "flows-3a-card-detail-and-apply-click-out--empty-url-today",
+    "note": "Empty apply link, as it is today: the tap does nothing (R3)"
+  },
+  {
+    "state": "Resolving User Id (proposed)",
+    "status": "proposed",
+    "source": "src/lib/useClickOut.tsx:96",
+    "story": "flows-3a-card-detail-and-apply-click-out--resolving-user-id-proposed",
+    "note": "Proposed: the user id is being resolved (the tap looks dead today)"
+  },
+  {
+    "state": "User Id Missing (proposed)",
+    "status": "proposed",
+    "source": "src/lib/useClickOut.tsx:106",
+    "story": "flows-3a-card-detail-and-apply-click-out--user-id-missing-proposed",
+    "note": "Proposed: user id could not be resolved"
+  },
+  {
+    "state": "Empty Url (proposed)",
+    "status": "proposed",
+    "source": "src/lib/useClickOut.tsx:87",
+    "story": "flows-3a-card-detail-and-apply-click-out--empty-url-proposed",
+    "note": "Proposed: the card has no apply link"
+  },
+  {
+    "state": "Redirect (proposed)",
+    "status": "proposed",
+    "source": "src/lib/useClickOut.tsx:112",
+    "story": "flows-3a-card-detail-and-apply-click-out--redirect-proposed",
+    "note": "Proposed: the redirect step before the bank page"
+  },
+  {
+    "state": "Return (proposed)",
+    "status": "proposed",
+    "source": "src/lib/useClickOut.tsx:112",
+    "story": "flows-3a-card-detail-and-apply-click-out--return-proposed",
+    "note": "Proposed: back from the bank page"
+  }
+]} />
+
+### All card benefits
+
+<StateMatrix rows={[
+  {
+    "state": "Loading",
+    "status": "live",
+    "source": "src/screens/AllCardBenefitsScreen.tsx:129",
+    "story": "flows-3a-card-detail-and-apply-all-card-benefits--loading",
+    "note": "Loading: a bare spinner (PARTIAL)"
+  },
+  {
+    "state": "Loaded",
+    "status": "live",
+    "source": "src/screens/AllCardBenefitsScreen.tsx:53",
+    "story": "flows-3a-card-detail-and-apply-all-card-benefits--loaded",
+    "note": "Loaded: category tabs and benefit rows"
+  },
+  {
+    "state": "Load Error",
+    "status": "live",
+    "source": "src/screens/AllCardBenefitsScreen.tsx:133",
+    "story": "flows-3a-card-detail-and-apply-all-card-benefits--load-error",
+    "note": "Error: text only, no retry (PARTIAL)"
+  },
+  {
+    "state": "Not Available",
+    "status": "live",
+    "source": "src/screens/AllCardBenefitsScreen.tsx:145",
+    "story": "flows-3a-card-detail-and-apply-all-card-benefits--not-available",
+    "note": "The card has no benefit detail"
+  }
+]} />
+
+### How it works sheet
+
+<StateMatrix rows={[
+  {
+    "state": "Tracking Steps",
+    "status": "live",
+    "source": "src/organisms/HowItWorksSheet.tsx:185",
+    "story": "flows-3a-card-detail-and-apply-how-it-works-sheet--tracking-steps",
+    "note": "Tracking steps and the \"Okay, got it!\" button"
+  }
+]} />
+
+### Share sheet
+
+<StateMatrix rows={[
+  {
+    "state": "Tiles",
+    "status": "live",
+    "source": "src/organisms/ShareSheet.tsx:397",
+    "story": "flows-3a-card-detail-and-apply-share-sheet--tiles",
+    "note": "Preview and tiles"
+  }
+]} />
+
+## Risks
+
+- **R1**: Return from a bank page: the app shows the same screen, with no "what happens next" and no record. Seen in: Click-out, return (proposed).
+- **R2**: Closing the eligibility checker during Apply drops the Apply, with no bank page and no message. Seen in: Apply gate.
+- **R3**: A blocked click-out is silent: an empty URL makes the CTA do nothing, and a missing user id shows a native alert with no event. Seen in: Click-out (proposed states).
+- **R8**: No "Redirecting" step and no terms before the bank page; the tracking timeline sits behind the optional "Learn how it works?" link. Seen in: Click-out, How it works.
+- **R11**: Apply from tools, advisor, Cards you can get and store best cards skips the eligibility gate Home runs. Seen in: Apply gate, Result sheets.
+
+## Open questions
+
+- 1. Home Apply gate: keep "mandatory" eligibility before the first Apply, or ship "skippable"? Owner: product owner (A/B setup: analytics owner).
+- 2. Should Apply from tools, advisor, Cards you can get and store best cards run the same gate as Home? Owner: product owner.
+- 3. When the user closes the checker opened by Apply, drop the Apply (today) or continue to the bank without a verdict? Owner: product owner.
+- 5. What does the user see before and after a click-out (redirect step, terms, a "did you apply" return state), given bank approvals are not visible? Owner: product owner with the CashKaro tracking team.
+- Card detail fetch failure: show "Couldn't load all benefits" with Try again, or keep failing silently? Owner: product owner.
+
+Not storied: the card detail "first-time check opens a result sheet" path beyond the Result sheets step; the Android pager nudge (needs Platform.OS android). The click-out user-id error is a native Alert today and cannot render on web, so it is only shown as a proposal.
