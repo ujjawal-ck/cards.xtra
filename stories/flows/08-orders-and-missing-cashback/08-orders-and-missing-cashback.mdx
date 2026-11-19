@@ -49,6 +49,15 @@ Entry from Earnings and Profile. Six states, plus one proposed fix for a failed 
   { state: "No Orders", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--no-orders", note: "Signed in, no orders: 'No orders yet'. The Filter row is hidden." },
   { state: "Load Error", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--load-error", note: "Every call answers 500. The error shows after the app's own retries (1 to 2 s)." },
   { state: "Next Page Failed", status: "proposed", story: "flows-8-orders-and-missing-cashback-orders-list--next-page-failed", note: "PROPOSED: page 2 fails. Keep the rows and show a footer message." },
+  { state: "Next Page Loading", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--next-page-loading", note: "Page 2 is loading: a spinner under the last row." },
+  { state: "Next Page Failed Live", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--next-page-failed-live", note: "Page 2 fails: the app drops the rows and shows the full-screen error." },
+  { state: "One Order", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--one-order", note: "One order only." },
+  { state: "Null Amount", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--null-amount", note: "The cashback amount is null: the card reads ₹0." },
+  { state: "Unknown Status", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--unknown-status", note: "A status string the app does not know shows as 'Pending'." },
+  { state: "Logo Failed", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--logo-failed", note: "The store logo fails to load: a blank tile." },
+  { state: "Long Store Name 360", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--long-store-name-360", note: "A 60-character store name at 360 dp: one line, cut with an ellipsis." },
+  { state: "Loading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-orders-list--loading-proposed", note: "PROPOSED: three skeleton rows instead of the bare spinner." },
+  { state: "End Of List Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-orders-list--end-of-list-proposed", note: "PROPOSED: a closing line under the last card." },
 ]} />
 
 ## Order detail
@@ -64,6 +73,10 @@ One order, by status. "Need Help" starts a claim without the order (R14).
   { state: "Loading", status: "live", story: "flows-8-orders-and-missing-cashback-order-detail--loading", note: "First load: the app shows a bare spinner." },
   { state: "Load Error", status: "live", story: "flows-8-orders-and-missing-cashback-order-detail--load-error", note: "The order call answers 500: text 'Couldn't load this order.' and a Retry link." },
   { state: "Need Help Without Context", status: "live", story: "flows-8-orders-and-missing-cashback-order-detail--need-help-without-context", note: "R14: 'Need Help' opens the claim flow at store choice. The order's store, date and ID are not passed." },
+  { state: "Not Found", status: "live", story: "flows-8-orders-and-missing-cashback-order-detail--not-found", note: "The order id is unknown: the generic error shows, and 'Retry' cannot help." },
+  { state: "Not Found Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-order-detail--not-found-proposed", note: "PROPOSED: the order is not found." },
+  { state: "Load Error Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-order-detail--load-error-proposed", note: "PROPOSED: the order cannot load, as a screen state." },
+  { state: "Loading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-order-detail--loading-proposed", note: "PROPOSED: a masthead block and three rows instead of the bare spinner." },
 ]} />
 
 ## Claims list
@@ -81,6 +94,9 @@ Three tabs. The four hidden stories are static sample lists in the source, shown
   { state: "Empty Others", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--empty-others", note: "Others tab, no tickets: 'No tickets yet'." },
   { state: "Loading", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--loading", note: "First load: bare spinner." },
   { state: "Load Error", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--load-error", note: "Every call answers 500: 'Couldn't load your claims' with 'Try again'. Wait 1 to 2 s." },
+  { state: "Others Partial Failure", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--others-partial-failure", note: "Others tab: the Pending fetch fails, the Resolved one works. The list shows half, with no notice." },
+  { state: "Session Expired", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--session-expired", note: "The session ended on the claims list: an empty tab behind the login sheet." },
+  { state: "Loading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-claims-list--loading-proposed", note: "PROPOSED: three skeleton rows instead of the bare spinner." },
   { state: "Hidden Ticket List Closed", status: "hidden", story: "flows-8-orders-and-missing-cashback-claims-list--hidden-ticket-list-closed", note: "HIDDEN: Closed sample list (static data)." },
   { state: "Hidden Ticket List Tracked", status: "hidden", story: "flows-8-orders-and-missing-cashback-claims-list--hidden-ticket-list-tracked", note: "HIDDEN: Tracked sample list (static data)." },
   { state: "Hidden Ticket Status Review", status: "hidden", story: "flows-8-orders-and-missing-cashback-claims-list--hidden-ticket-status-review", note: "HIDDEN: Status review sample (static data)." },
@@ -97,6 +113,7 @@ Three tabs. The four hidden stories are static sample lists in the source, shown
   { state: "No Feedback Sheet", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--no-feedback-sheet", note: "No: the 'What Went Wrong?' feedback sheet." },
   { state: "Feedback Appreciated", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--feedback-appreciated", note: "No, one reason ticked and submitted: the 'Your Feedback is Appreciated' sheet." },
   { state: "Lookup Failed", status: "proposed", story: "flows-8-orders-and-missing-cashback-did-you-shop--lookup-failed", note: "PROPOSED: the store-visit lookup failed. Today a native Alert." },
+  { state: "Lookup Failed Alert", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--lookup-failed-alert", note: "The store-visit lookup failed: a native Alert shows, rendered as a dialog on web." },
 ]} />
 
 ## Where did you shop
@@ -128,6 +145,13 @@ Three screens, one claim draft. States that need typing use a play function.
   { state: "Amount Invalid", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--amount-invalid", note: "A non-amount: 'Please enter the amount you paid, e.g. 1299 or 1299.50.' The play function types 'abc' and taps Submit." },
   { state: "Amount Submit Error", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--amount-submit-error", note: "The submit call is refused (duplicate claim): the API message shows under the field." },
   { state: "Amount Submitting", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--amount-submitting", note: "The submit call is running: the Submit button shows its loading state." },
+  { state: "Submit Timeout Then Duplicate", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--submit-timeout-then-duplicate", note: "A claim submit that drops the connection, then a second tap that hits 'already exists'." },
+  { state: "Order Id Checking", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--order-id-checking", note: "The order-ID check is running: Continue shows its loading state." },
+  { state: "Order Id Network Error", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--order-id-network-error", note: "The order-ID check loses the connection: the raw transport text shows under the field." },
+  { state: "Choose Date Offline", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline", note: "Choose date with no connection and no cache: a false 'no recent visits'." },
+  { state: "Huge Amount", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--huge-amount", note: "An amount with no upper bound is accepted: 10,00,00,000." },
+  { state: "Choose Date Offline Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline-proposed", note: "PROPOSED: Choose date offline." },
+  { state: "Submit Unknown Outcome Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--submit-unknown-outcome-proposed", note: "PROPOSED: the claim submit has an unknown outcome (timeout or dropped connection)." },
 ]} />
 
 ## Outcomes
@@ -144,6 +168,12 @@ The submit answer and the store group decide the screen. File too large (R18) is
   { state: "Invoice File Too Large", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--invoice-file-too-large", note: "R18, PROPOSED: the file is above the size limit. Today nothing checks the limit." },
   { state: "Invoice Photo Permission Denied", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--invoice-photo-permission-denied", note: "PROPOSED: photo access denied. Today a native Alert with no way to settings." },
   { state: "Ticket Raised", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--ticket-raised", note: "Ticket raised after the invoice upload." },
+  { state: "New User Check Submit Error", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--new-user-check-submit-error", note: "B1: the update call fails, the raw error text shows." },
+  { state: "Category Select Submit Error", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--category-select-submit-error", note: "C1: the update call fails after a category is picked." },
+  { state: "New User Check Submitting", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--new-user-check-submitting", note: "B1: the update call is running: the button shows its loading state and both answers are disabled." },
+  { state: "Category Select Submitting", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--category-select-submitting", note: "C1: the update call is running: Submit shows its loading state." },
+  { state: "Uploading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--uploading-proposed", note: "PROPOSED: three photos uploading on a slow network." },
+  { state: "Upload Unknown Outcome Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--upload-unknown-outcome-proposed", note: "PROPOSED: the upload timed out and the outcome is unknown." },
 ]} />
 
 ## Risks

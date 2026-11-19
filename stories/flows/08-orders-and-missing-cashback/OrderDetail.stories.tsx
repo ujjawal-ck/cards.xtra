@@ -3,7 +3,12 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { OrdersDetail } from '../../../src/screens/OrdersDetail';
 import { ScreenHarness } from '../../../storybook/harness';
 import { api, orderDetailFixture, reply, clone } from '../../../storybook/fixtures';
+import { View } from 'react-native';
+import { ScreenState } from '../../../src/organisms/ScreenState';
+import { Skeleton } from '../../../src/atoms/Skeleton';
+import { spacing } from '../../../src/tokens';
 import { tap } from './_dom';
+import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
   title: 'Flows/8 Orders and missing cashback/Order detail',
@@ -72,4 +77,49 @@ export const NeedHelpWithoutContext: Story = {
   },
   render: () => show(orderDetailFixture.pending),
   play: async () => { await tap('Need Help'); },
+};
+
+/** The order id is unknown: the generic error shows, and "Retry" cannot help. */
+export const NotFound: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:199`, docs: { description: { story: 'The order call answers 404. The screen shows the same text as for a 500 ("Couldn\'t load this order.") with a Retry link. Wait 1 to 2 s for the retries to end. See the proposed story for a copy that fits.' } } },
+  render: () => show(reply.error(404)),
+};
+
+/** PROPOSED: the order is not found. */
+export const NotFoundProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Open question: where does "Go to orders" lead when the user came from a notification or deep link with no list behind it?' } } },
+  render: () => (
+    <ProposedPage title="Order Details">
+      <ScreenState title="We couldn't find this order" body="It may have been removed. Check your orders list." actionLabel="Go to orders" onAction={() => {}} />
+    </ProposedPage>
+  ),
+};
+
+/** PROPOSED: the order cannot load, as a screen state. */
+export const LoadErrorProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Today the error is an off-pattern text with a link. Copy from ux-states.md flow 7. Open question: none.' } } },
+  render: () => (
+    <ProposedPage title="Order Details">
+      <ScreenState title="Couldn't load this order" body="Check your connection and try again." actionLabel="Try again" onAction={() => {}} />
+    </ProposedPage>
+  ),
+};
+
+/** PROPOSED: a masthead block and three rows instead of the bare spinner. */
+export const LoadingProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Open question: none; the app shows a bare spinner today.' } } },
+  render: () => (
+    <ProposedPage title="Order Details">
+      <View style={{ padding: spacing[16], gap: spacing[12] }}>
+        <Skeleton height={spacing[128]} radius="lg" />
+        <Skeleton height={spacing[48]} radius="lg" />
+        <Skeleton height={spacing[48]} radius="lg" />
+        <Skeleton height={spacing[48]} radius="lg" />
+      </View>
+    </ProposedPage>
+  ),
 };

@@ -53,3 +53,16 @@ export async function typeInto(placeholder: string, value: string, timeoutMs = 1
   await sleep(300);
   return true;
 }
+
+/** Scroll the tallest scrollable element in the frame to its end (fires the app's onScroll, so "near the end" loaders run). */
+export async function scrollToEnd(settleMs = 600) {
+  const scrollers = Array.from(document.querySelectorAll<HTMLElement>('*')).filter((el) => {
+    const oy = getComputedStyle(el).overflowY;
+    return (oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 20;
+  });
+  const el = scrollers.sort((a, b) => b.scrollHeight - a.scrollHeight)[0];
+  if (!el) return false;
+  el.scrollTop = el.scrollHeight;
+  await sleep(settleMs);
+  return true;
+}

@@ -38,6 +38,8 @@ Guest, signed in, and the load problems.
   { state: "Profile Loading", status: "live", story: "flows-9-profile-and-account-profile--profile-loading", note: "Profile still loading: name and contact are empty (no skeleton)." },
   { state: "Profile Failed", status: "live", story: "flows-9-profile-and-account-profile--profile-failed", note: "Profile call failed: nothing tells the user. The screen never reads isError." },
   { state: "Long Name", status: "live", story: "flows-9-profile-and-account-profile--long-name", note: "A very long display name: the name has no line limit." },
+  { state: "Signed In 360", status: "live", story: "flows-9-profile-and-account-profile--signed-in-360", note: "A long display name at 360 dp, signed in." },
+  { state: "Profile Failed Proposed", status: "proposed", story: "flows-9-profile-and-account-profile--profile-failed-proposed", note: "PROPOSED: the profile call failed; say so and keep the menu usable." },
 ]} />
 
 ## Account settings
@@ -82,6 +84,8 @@ HIDDEN (D23, R16): the screens only simulate deletion.
 <StateMatrix rows={[
   { state: "Confirm Sheet", status: "live", story: "flows-9-profile-and-account-logout--confirm-sheet", note: "The confirm sheet on its own: 'Yes' signs out, 'No' closes." },
   { state: "From Profile", status: "live", story: "flows-9-profile-and-account-logout--from-profile", note: "From the Profile tab: a play function taps 'Logout' and the sheet rises over the screen." },
+  { state: "Slow Logout", status: "live", story: "flows-9-profile-and-account-logout--slow-logout", note: "The server logout takes 8 s: the sheet is gone and the screen stays signed in." },
+  { state: "Logging Out Proposed", status: "proposed", story: "flows-9-profile-and-account-logout--logging-out-proposed", note: "PROPOSED: the sheet stays open while the server call runs." },
 ]} />
 
 ## Get help

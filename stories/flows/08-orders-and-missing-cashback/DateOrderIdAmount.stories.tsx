@@ -3,9 +3,16 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { MissingCashbackChooseDate } from '../../../src/screens/MissingCashbackChooseDate';
 import { MissingCashbackEnterOrderId } from '../../../src/screens/MissingCashbackEnterOrderId';
 import { MissingCashbackEnterAmount } from '../../../src/screens/MissingCashbackEnterAmount';
+import { View } from 'react-native';
+import { InlineMessage } from '../../../src/molecules/InlineMessage';
+import { Text } from '../../../src/atoms/Text';
+import { Input } from '../../../src/atoms/Input';
+import { FooterButtons } from '../../../src/organisms/FooterButtons';
+import { colors, spacing } from '../../../src/tokens';
 import { ScreenHarness } from '../../../storybook/harness';
 import { api, reply, mcDraftFixture, mcExitDatesFixture, mcValidateFixture, mcSubmitFixture, MC_SAMPLE_ORDER_ID } from '../../../storybook/fixtures';
 import { sleep, tap, typeInto } from './_dom';
+import { ProposedPage, OfflineState } from './_proposed';
 
 const meta: Meta = {
   title: 'Flows/8 Orders and missing cashback/Date, order ID, amount',
@@ -99,4 +106,79 @@ export const AmountSubmitting: Story = {
   parameters: { source: `${AMOUNT}:142`, docs: { description: { story: 'Reached by typing "1299" and a tap on Submit. The queue call hangs.' } } },
   render: () => amount(api.ok({ mcSubmit: reply.hang() })),
   play: async () => { await typeInto('Enter amount', '1299'); await tap('Submit'); },
+};
+
+/** A claim submit that drops the connection, then a second tap that hits "already exists". */
+export const SubmitTimeoutThenDuplicate: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${AMOUNT}:76`,
+    docs: { description: { story: 'G2b. Reached by typing "1299" and tapping Submit twice. The first POST fails like a dropped connection (the app shows the raw transport text under the field). The second POST answers 400/6001 "already exists", as if the first claim had landed. The POST is not retried by the client, so the user has to guess.' } },
+  },
+  render: () => amount(api.ok({ mcSubmit: reply.sequence(reply.network(), mcSubmitFixture.duplicate) })),
+  play: async () => {
+    await typeInto('Enter amount', '1299');
+    await tap('Submit', { settleMs: 1200 });
+    await sleep(800);
+    await tap('Submit');
+  },
+};
+
+/** The order-ID check is running: Continue shows its loading state. */
+export const OrderIdChecking: Story = {
+  tags: ['live'],
+  parameters: { source: `${ORDER}:169`, docs: { description: { story: 'Reached by typing a well-formed fixture ID and tapping Continue. The validate call hangs, so the button stays in its loading state.' } } },
+  render: () => orderId(api.ok({ mcValidate: reply.hang() })),
+  play: async () => { await sleep(1500); await typeInto('Enter order ID', MC_SAMPLE_ORDER_ID); await tap('Continue'); },
+};
+
+/** The order-ID check loses the connection: the raw transport text shows under the field. */
+export const OrderIdNetworkError: Story = {
+  tags: ['live'],
+  parameters: { source: `${ORDER}:107`, docs: { description: { story: 'G15. Reached by typing a well-formed fixture ID and tapping Continue. The validate call fails like a dropped network, and the screen shows the error message text as it is.' } } },
+  render: () => orderId(api.ok({ mcValidate: reply.network() })),
+  play: async () => { await sleep(1500); await typeInto('Enter order ID', MC_SAMPLE_ORDER_ID); await tap('Continue'); },
+};
+
+/** Choose date with no connection and no cache: a false "no recent visits". */
+export const ChooseDateOffline: Story = {
+  tags: ['live'],
+  parameters: { source: `${DATE}:92`, docs: { description: { story: 'R6 (inferred from code). Offline with no cache, the dates query is paused, so the empty branch shows "We couldn\'t find any recent visits". `api.offline()` reproduces the pause. Fix: see the proposed story below.' } } },
+  render: () => date(api.offline()),
+};
+
+/** An amount with no upper bound is accepted: 10,00,00,000. */
+export const HugeAmount: Story = {
+  tags: ['live'],
+  parameters: { source: `${AMOUNT}:57`, docs: { description: { story: 'Reached by typing 100000000 and tapping Submit. The regex has no upper bound, so the claim posts. The mock answers with the default pending claim. Open question Q8: add a bound or a confirm step?' } } },
+  render: () => amount(api.ok()),
+  play: async () => { await typeInto('Enter amount', '100000000'); await tap('Submit'); },
+};
+
+/** PROPOSED: Choose date offline. */
+export const ChooseDateOfflineProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Fix for R6. Copy reuses the tool screens\' "You\'re offline" / "Check your connection and try again." Open question: no illustration until the "Connection lost" asset exists (DS gap 1).' } } },
+  render: () => <ProposedPage title="Did You Shop?"><OfflineState /></ProposedPage>,
+};
+
+/** PROPOSED: the claim submit has an unknown outcome (timeout or dropped connection). */
+export const SubmitUnknownOutcomeProposed: Story = {
+  tags: ['proposed'],
+  parameters: {
+    docs: { description: { story: 'G2b. Today the catch shows raw transport text and a second tap can hit "already exists". Proposed: a warning that sends the user to the claims list before they submit again. Open question: block Submit until the user has opened the list, or only warn? Copy from the audit, not yet in ux-states.md.' } },
+  },
+  render: () => (
+    <ProposedPage
+      title="Did You Shop?"
+      footer={<View style={{ padding: spacing[16] }}><FooterButtons buttons="single" primaryLabel="Submit" onPrimary={() => {}} /></View>}
+    >
+      <View style={{ padding: spacing[16], gap: spacing[12] }}>
+        <Text variant="body16Bold" color={colors.text.primary}>Almost there! Tell us your order amount</Text>
+        <Text variant="body14Regular" color={colors.text.secondary}>Enter the amount you paid after discounts</Text>
+        <Input size="sm" placeholder="Enter amount" value="1299" onChangeText={() => {}} />
+        <InlineMessage tone="warning" title="We couldn't confirm your claim" message="Check your claims list before you submit again." primaryActionLabel="View claims" onPrimaryAction={() => {}} />
+      </View>
+    </ProposedPage>
+  ),
 };

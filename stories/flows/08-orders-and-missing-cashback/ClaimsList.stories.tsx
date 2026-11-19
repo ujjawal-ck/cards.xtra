@@ -6,8 +6,12 @@ import { MissingCashbackTicketListTracked } from '../../../src/screens/MissingCa
 import { MissingCashbackTicketStatusReview } from '../../../src/screens/MissingCashbackTicketStatusReview';
 import { MissingCashbackTrack } from '../../../src/screens/MissingCashbackTrack';
 import { ScreenHarness } from '../../../storybook/harness';
-import { api, mcQueueFixture, clone } from '../../../storybook/fixtures';
+import { View } from 'react-native';
+import { Skeleton } from '../../../src/atoms/Skeleton';
+import { spacing } from '../../../src/tokens';
+import { api, mcQueueFixture, clone, reply } from '../../../storybook/fixtures';
 import { tap } from './_dom';
+import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
   title: 'Flows/8 Orders and missing cashback/Claims list',
@@ -100,6 +104,39 @@ export const LoadError: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:204` },
   render: () => <ScreenHarness name="MissingCashbackDidYouShop" component={MissingCashbackDidYouShop} auth="signedIn" api={api.error()} />,
+};
+
+/** Others tab: the Pending fetch fails, the Resolved one works. The list shows half, with no notice. */
+export const OthersPartialFailure: Story = {
+  tags: ['live'],
+  parameters: {
+    source: 'src/query/useMissingCashback.ts:111',
+    docs: { description: { story: 'Reached by a tap on Others. Others fetches Pending and Resolved with `allSettled` and keeps whatever succeeds. Here Pending answers 500, so tickets under Pending are missing and nothing says so. The In Review tab, which also needs Pending, shows its error first. Wait 2 to 4 s for the retries.' } },
+  },
+  render: () => list({ mcQueue: (req) => (req.query.get('filter[status]') === 'Pending' ? reply.error(500) : mcQueueFixture.resolved) }),
+  play: async () => { await tap(/^Others/); },
+};
+
+/** The session ended on the claims list: an empty tab behind the login sheet. */
+export const SessionExpired: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/query/useMissingCashback.ts:188', docs: { description: { story: 'Every user call answers 401, so the session ends and the login sheet opens. The claims query is disabled with no token, so the tab reads as empty. Same pattern as the Orders list. Design: see Flow 10, Session expired, "login prompt" (title "Log in to see your claims").' } } },
+  render: () => <ScreenHarness name="MissingCashbackDidYouShop" component={MissingCashbackDidYouShop} auth="sessionExpired" params={{ backTo: 'back' }} api={api.ok()} />,
+};
+
+/** PROPOSED: three skeleton rows instead of the bare spinner. */
+export const LoadingProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Open question: none; the app shows a bare spinner today.' } } },
+  render: () => (
+    <ProposedPage title="Missing Cashback">
+      <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[24], gap: spacing[16] }}>
+        <Skeleton height={spacing[80]} radius="lg" />
+        <Skeleton height={spacing[80]} radius="lg" />
+        <Skeleton height={spacing[80]} radius="lg" />
+      </View>
+    </ProposedPage>
+  ),
 };
 
 // Hidden routes: static sample lists in the source, not wired to the API.

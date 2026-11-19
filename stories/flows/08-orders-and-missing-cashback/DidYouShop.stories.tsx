@@ -7,8 +7,8 @@ import { Button } from '../../../src/atoms/Button';
 import { Text } from '../../../src/atoms/Text';
 import { colors, spacing, radius } from '../../../src/tokens';
 import { ScreenHarness } from '../../../storybook/harness';
-import { api } from '../../../storybook/fixtures';
-import { tap } from './_dom';
+import { api, reply } from '../../../storybook/fixtures';
+import { sleep, tap } from './_dom';
 import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
@@ -66,6 +66,14 @@ export const FeedbackAppreciated: Story = {
     await tap(REASON, { nth: 'last' });
     await tap('Submit Feedback', { nth: 'last', settleMs: 900 });
   },
+};
+
+/** The store-visit lookup failed: a native Alert shows, rendered as a dialog on web. */
+export const LookupFailedAlert: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:60`, docs: { description: { story: 'Reached by a tap on Yes after the lookup has failed. The retailers call answers 500; the play function waits 2 s for the retries, then taps Yes. The native Alert shows as a dialog through the web shim. Design: see "Lookup failed" below.' } } },
+  render: () => screen(api.ok({ mcRetailers: reply.error(500) })),
+  play: async () => { await sleep(2000); await tap('Yes'); },
 };
 
 /** PROPOSED: the store-visit lookup failed. Today a native Alert. */

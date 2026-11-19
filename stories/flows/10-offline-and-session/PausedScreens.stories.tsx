@@ -14,8 +14,9 @@ import { Skeleton } from '../../../src/atoms/Skeleton';
 import { Text } from '../../../src/atoms/Text';
 import { colors, spacing } from '../../../src/tokens';
 import { ScreenHarness } from '../../../storybook/harness';
-import { api } from '../../../storybook/fixtures';
-import { tap } from './_dom';
+import { onlineManager } from '@tanstack/react-query';
+import { api, earningsFixture } from '../../../storybook/fixtures';
+import { sleep, tap } from './_dom';
 import { ProposedPage, OfflineState } from './_proposed';
 
 const meta: Meta = {
@@ -85,6 +86,17 @@ export const ProfileOffline: Story = {
   tags: ['live'],
   parameters: { source: 'src/screens/ProfileScreen.tsx:64', docs: { description: { story: R6 } } },
   render: () => off('Profile', ProfileScreen),
+};
+
+/** Back online: the paused query resumes and Earnings goes from ₹0 to the real figures. */
+export const ReconnectResumes: Story = {
+  tags: ['live'],
+  parameters: {
+    source: 'src/lib/network.ts:23',
+    docs: { description: { story: R6 + 'Here the play function waits 1 s, then sets `onlineManager` online. React Query resumes the paused earnings call and the cards fill in. The offline strip reads NetInfo, so it stays (harness limit). The headline counter renders "0" on web (harness limit).' } },
+  },
+  render: () => <ScreenHarness name="Earnings" component={EarningsScreen} auth="signedIn" api={api.offline({ earnings: earningsFixture.typical })} />,
+  play: async () => { await sleep(1000); onlineManager.setOnline(true); },
 };
 
 // ── Proposed fixes: the standard offline state from ux-states.md ─────────────

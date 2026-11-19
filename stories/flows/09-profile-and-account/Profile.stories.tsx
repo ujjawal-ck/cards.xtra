@@ -2,7 +2,14 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { ProfileScreen } from '../../../src/screens/ProfileScreen';
 import { ScreenHarness } from '../../../storybook/harness';
+import { View } from 'react-native';
+import { Masthead } from '../../../src/organisms/Masthead';
+import { InlineMessage } from '../../../src/molecules/InlineMessage';
+import { ListRow } from '../../../src/molecules/ListRow';
+import { Divider } from '../../../src/atoms/Divider';
+import { colors, spacing, radius } from '../../../src/tokens';
 import { api, reply, profileFixture, clone } from '../../../storybook/fixtures';
+import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
   title: 'Flows/9 Profile and account/Profile',
@@ -59,4 +66,33 @@ export const LongName: Story = {
   tags: ['live'],
   parameters: { source: 'src/organisms/Masthead.tsx:341', docs: { description: { story: 'The name has no `numberOfLines`; the contact line has one. ux-states.md proposes one line with a tail ellipsis.' } } },
   render: () => profile({ auth: 'signedIn', displayName: 'Test User With A Very Long Name That Keeps Going Past One Line' }),
+};
+
+/** A long display name at 360 dp, signed in. */
+export const SignedIn360: Story = {
+  tags: ['live'],
+  globals: { viewport: { value: 'android360', isRotated: false } },
+  parameters: { source: `${SRC}:57`, docs: { description: { story: 'Pinned to the Android 360 dp viewport. The name has no `numberOfLines`, so it wraps (see "Long name").' } } },
+  render: () => profile({ auth: 'signedIn', displayName: 'Test User With A Very Long Name That Keeps Going Past One Line', width: 360 }),
+};
+
+/** PROPOSED: the profile call failed; say so and keep the menu usable. */
+export const ProfileFailedProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Copy from ux-states.md flow 8. Today the screen never reads `isError`, so the masthead stays empty with no message. Open question: same message for a failed and an offline profile call, or two copies (see Flow 10, Profile offline fix)?' } } },
+  render: () => (
+    <ProposedPage title="Profile" background={colors.background.muted}>
+      <View style={{ padding: spacing[16], gap: spacing[16] }}>
+        <Masthead variant="profile" name="" contact="" avatarInitial="" onEditProfile={() => {}} />
+        <InlineMessage tone="warning" message="Couldn't load your details." primaryActionLabel="Try again" onPrimaryAction={() => {}} />
+        <View style={{ backgroundColor: colors.surface.default, borderRadius: radius.xl, paddingVertical: spacing[16], paddingHorizontal: spacing[12], gap: spacing[12] }}>
+          <ListRow type="menu-option" icon="feat-savings-outline" title="My Earnings" onPress={() => {}} />
+          <Divider style="solid" />
+          <ListRow type="menu-option" icon="wallet-outline" title="Withdraw Cashback" onPress={() => {}} />
+          <Divider style="solid" />
+          <ListRow type="menu-option" icon="clipboard-search-outline" title="Missing Cashback" onPress={() => {}} />
+        </View>
+      </View>
+    </ProposedPage>
+  ),
 };
