@@ -6,7 +6,7 @@
  * from the prefix state of its own answer, so a later answer, an eligibility
  * result or "I have this" never changes the text of an earlier message.
  */
-import { NOTE_SAME, buildReveal, nextQuestion } from './engine';
+import { NOTE_SAME, buildReveal, nextQuestion, slotsToFilters } from './engine';
 import type {
   AdvisorTranscript,
   AdvisorAvatarState,
@@ -75,6 +75,17 @@ function answerText(question: AdvisorQuestion, answer: string): string {
 }
 
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
+
+/**
+ * True when this answer set or changed a filter that the engine then set aside.
+ * Its acknowledgement would disagree with the reveal note, so it is not shown.
+ * A filter set aside by an earlier answer does not silence later answers.
+ */
+function ownFilterDropped(before: AdvisorSlots, after: AdvisorSlots, reveal: AdvisorReveal): boolean {
+  const was = slotsToFilters(before);
+  const now = slotsToFilters(after);
+  return reveal.dropped.some((dim) => was[dim].join() !== now[dim].join());
+}
 const topIds = (r: AdvisorReveal) => r.top.map((t) => t.card.id);
 
 export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript {
@@ -157,7 +168,7 @@ export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript 
           ? '1 card fits your income and pincode.'
           : `${reveal.total} cards fit your income and pincode.`;
       }
-    } else if (reveal.dropped.length === 0) {
+    } else if (!ownFilterDropped(item.before, slots, reveal)) {
       const raw = question.options.find((o) => o.id === answer)?.ack;
       ackText = typeof raw === 'function' ? raw({ slots, reveal, changed }) : raw;
     }

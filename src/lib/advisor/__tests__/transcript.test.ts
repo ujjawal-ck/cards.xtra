@@ -315,6 +315,19 @@ describe('acknowledgements', () => {
     expect(idsOf(t)).not.toContain('k:fee');
   });
 
+  it('a filter set aside by an earlier answer does not silence a later answer', () => {
+    const cards = [
+      card({ cat: [FUEL], annualFee: 500 }),
+      card({ cat: [FUEL], annualFee: 600 }),
+      card({ cat: [SHOPPING], isFree: true }),
+    ];
+    const t = build(st({ opener: 'specific', need: 'fuel', fee: 'free', eligBridge: 'no' }), cards);
+    expect(t.reveal!.dropped.length).toBeGreaterThan(0);
+    expect(idsOf(t)).toContain('a:eligBridge');
+    expect(idsOf(t)).not.toContain('k:fee');
+    expect(idsOf(t)).toContain('k:eligBridge');
+  });
+
   it('the same-cards line n:<id> shows only when the option has no ack', () => {
     const cards = catalogue();
     // "No history" keeps the first-card filter, so the cards stay the same.

@@ -14,7 +14,8 @@ The owner said the answer chips looked scattered, and asked for better copy, an 
 What changed:
 - The reply tray shows the answers as one stack of full-width rows (`AdvisorOptionRow`). "Not sure" is the last row, drawn quieter. The tray takes at most 46% of the window height and scrolls after that.
 - An answer can have one acknowledgement line (`ack` on the option in `src/lib/advisor/config.ts`, message id `k:<question id>`). It says what the advisor understood and what it does next. "Not sure" gets `notSureAck`. The pincode gets a count line only when the eligibility result is "likely" and no note is on the reveal.
-- An acknowledgement is skipped when the answer made the engine relax a filter. The reveal note explains that case, and two lines would disagree.
+- An acknowledgement is skipped when the answer set a filter that the engine then set aside. The reveal note explains that case, and two lines would disagree. A filter set aside by an earlier answer does not silence later answers.
+- Known limit: an acknowledgement reads the cards as they are now. "I have this", or an eligibility result for saved details, can change or remove an earlier acknowledgement. The state holds only the answers and the held cards, so the cards at the time of an answer are not known. A true line was chosen over a stable line.
 - A quick tip (`tips` in the config, message id `t:<tip id>`, kind `agent-tip`) is one fact at one place in the journey. A tip id shows once in a chat. Five tips: pay the full bill (first card), monthly cashback caps, lifetime free against first year free, the check does not touch the credit report, wait after a rejection.
 - New event `advisor_tip_view` (param `tip_id`), once for each tip in a chat.
 - The "same cards" line shows only when the answer has no acknowledgement.
@@ -23,9 +24,9 @@ Evidence, and its limit: the owner asked for user research on Reddit before the 
 
 Copy rules that hold: an acknowledgement must not promise the final result ("I'll start with free cards", not "I'll keep it free"), because a later answer can relax a filter. A tip must state only what the app does: the eligibility check sends job type, income and pincode, and no PAN or phone number.
 
-Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the first-card path from the opener to the eligibility result. Seen: every question as a stack; the acknowledgements after the opener, history, need, food type, UPI, the bridge and income; the `payfull` tip after history and the `softcheck` tip before the bridge; no acknowledgement after the pincode because the reveal had a relax note; the closing line. Type check clean, 590 Jest tests pass.
+Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the first-card path from the opener to the eligibility result. Seen: every question as a stack; the acknowledgements after the opener, history, need, food type, UPI, the bridge and income; the `payfull` tip after history and the `softcheck` tip before the bridge; no acknowledgement after the pincode because the reveal had a relax note; the closing line. That run ended on cards with a joining fee of ₹499 and ₹500, after the advisor had said it would look for free cards: no card that matched the answers passed the UAT eligibility check, and the reveal note said so. Type check clean, 591 Jest tests pass.
 
-Not checked: the `caps`, `ltf` and `wait` tips on a device (unit tests only), "Not sure" on a device, the other three paths, the tray scroll on a 360 dp screen, 130% font, Android, a screen reader, and the two copy lines changed after the run (text only).
+Not checked: the `caps`, `ltf` and `wait` tips on a device (unit tests only), "Not sure" on a device, the other three paths, the tray scroll on a 360 dp screen, 130% font, Android, a screen reader, the two copy lines changed after the run (text only), and the acknowledgement skip rule changed after the run (unit test only).
 
 ## D29. The card advisor is a chat, with a mascot
 2026-11-19 · branch `claude/advisor` (`a6761dd`)

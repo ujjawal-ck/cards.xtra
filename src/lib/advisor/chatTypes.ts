@@ -12,6 +12,10 @@
  *   - History does not rewrite itself: a later answer, an eligibility result or
  *     "I have this" never changes the TEXT of an earlier message. Only the last
  *     reveal carries cards; every earlier reveal is one collapsed line.
+ *     One exception: an acknowledgement (`k:<question id>`) reads the cards as
+ *     they are now. "I have this", or an eligibility result for saved details,
+ *     can change or remove an earlier acknowledgement. A line that is true now
+ *     is better than a line that is stable and wrong.
  *   - Changing an earlier answer is a rewind: that answer and every later one go.
  */
 import type { CardModel } from '../../molecules';
