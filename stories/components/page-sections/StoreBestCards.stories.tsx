@@ -3,6 +3,7 @@ import { Image } from 'react-native';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { StoreBestCards } from '../../../src/organisms/StoreBestCards';
 import { ComponentHarness } from '../../../storybook/harness';
+import { api as apiPresets } from '../../../storybook/fixtures';
 import { images } from '../../../src/assets/images';
 import { Labeled, Stack } from './_chrome';
 
@@ -19,7 +20,8 @@ const CARD_ROWS = [
   bk(3, 'SBI Cashback Credit Card', images.cards.sbiCashback, '1200', 2, 'Shopping'),
   bk(4, 'ICICI Coral Credit Card', images.cards.iciciCoral, '1000', 12, 'Travel'),
 ];
-const api = { mode: 'ok' as const, routes: [{ match: '/cardgenius/cards', body: { data: CARD_ROWS } }] };
+const okPreset = apiPresets.ok();
+const api = { ...okPreset, routes: [{ match: '/cardgenius/cards', body: { data: CARD_ROWS } }, ...(okPreset.routes ?? [])] };
 
 const Wrapped = (props: React.ComponentProps<typeof StoreBestCards> & { mode?: 'ok' | 'loading' | 'error' }) => {
   const { mode = 'ok', ...rest } = props;

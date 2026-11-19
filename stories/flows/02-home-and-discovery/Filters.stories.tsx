@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { FilterMenu, type FilterMenuProps } from '../../../src/organisms/FilterMenu';
 import { FooterButtons } from '../../../src/organisms/FooterButtons';
 import { FilterTransitionOverlay } from '../../../src/organisms/FilterTransitionOverlay';
-import { PhoneFrame, SheetHarness } from '../../../storybook/harness';
+import { PhoneFrame, SheetHarness, ComponentHarness } from '../../../storybook/harness';
 import { FilterHost } from '../01-launch-and-login/_hosts';
 
 const toggle = (list: number[], i: number) => (list.includes(i) ? list.filter((x) => x !== i) : [...list, i]);
@@ -71,10 +71,10 @@ export const Transition: Story = {
   tags: ['live'],
   parameters: { source: 'src/organisms/FilterTransitionOverlay.tsx:74', docs: { description: { story: 'The overlay holds for about 2 seconds, then fades out. Storybook stubs the Rive animation, so the animation area is blank. The story starts the transition once on mount; reload to see it again.' } } },
   render: () => (
-    <PhoneFrame>
+    <ComponentHarness>
       <View style={{ flex: 1 }}>
         <FilterTransitionOverlay visible onCovered={() => {}} onHidden={() => {}} />
       </View>
-    </PhoneFrame>
+    </ComponentHarness>
   ),
 };

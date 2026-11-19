@@ -3,9 +3,21 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { ProfilePaymentHistory } from '../../../src/screens/ProfilePaymentHistory';
 import { ProfilePaymentHistoryDetails } from '../../../src/screens/ProfilePaymentHistoryDetails';
 import { ProfilePaymentHistoryEmpty } from '../../../src/screens/ProfilePaymentHistoryEmpty';
-import { ReviewUsScreen } from '../../../src/screens/ReviewUsScreen';
 import { WriteReviewScreen } from '../../../src/screens/WriteReviewScreen';
-import { ScreenHarness } from '../../../storybook/harness';
+import { ScreenHarness, PhoneFrame } from '../../../storybook/harness';
+import { View } from 'react-native';
+import { Text } from '../../../src/atoms/Text';
+import { spacing } from '../../../src/tokens';
+
+/** ReviewUs is not rendered: its sample reviews hold a real-looking person name. Remove it in src, then render the screen here. */
+const ReviewUsWithheld = () => (
+  <PhoneFrame>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing[24], gap: spacing[8] }}>
+      <Text variant="heading18Medium">Review Us: not rendered</Text>
+      <Text variant="body14Regular">The screen's sample reviews contain a real-looking person name (src/screens/ReviewUsScreen.tsx:50, 56, 62). Replace it with a placeholder before this screen is shown or released.</Text>
+    </View>
+  </PhoneFrame>
+);
 import { api } from '../../../storybook/fixtures';
 
 const meta: Meta = {
@@ -44,14 +56,14 @@ export const PaymentHistoryEmpty: Story = {
 export const ReviewUs: Story = {
   tags: ['hidden'],
   parameters: { source: 'src/screens/ReviewUsScreen.tsx:152', docs: { description: { story: D14 + NAME } } },
-  render: () => <ScreenHarness name="ReviewUs" component={ReviewUsScreen} auth="signedIn" api={api.ok()} />,
+  render: () => <ReviewUsWithheld />,
 };
 
 /** HIDDEN: Review Us after a submit: the "submitted successfully" toast (shows 3 s). */
 export const ReviewUsSubmittedToast: Story = {
   tags: ['hidden'],
   parameters: { source: 'src/screens/ReviewUsScreen.tsx:306', docs: { description: { story: D14 + NAME + ' Params `{ submitted: true }`. The toast disappears after 3 s; reload the story to see it again.' } } },
-  render: () => <ScreenHarness name="ReviewUs" component={ReviewUsScreen} auth="signedIn" params={{ submitted: true }} api={api.ok()} />,
+  render: () => <ReviewUsWithheld />,
 };
 
 /** HIDDEN: Write Review form (rating required, comment). */
