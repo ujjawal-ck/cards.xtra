@@ -204,9 +204,14 @@ export function nextQuestion(
     // A category that is already set is not offered again. The tag this
     // question replaces stays ("Food delivery" keeps the food tag).
     const setCats = (slots.categoryTagIds ?? []).filter((t) => t !== q.replacesCategory);
-    const current = applyFilters(pool, slotsToFilters(slots)).length;
+    // Categories are OR-ed, so a count after the answer is never 0 once a
+    // category is set. Test the option's category ALONE with the other filters.
+    const filters = slotsToFilters(slots);
+    const hasCards = (tag: number) => applyFilters(pool, { ...filters, categoryTagIds: [tag] }).length > 0;
+    const current = applyFilters(pool, filters).length;
     const counted: StepOption[] = visible
       .filter((o) => o.set.categoryTagId === undefined || !setCats.includes(o.set.categoryTagId))
+      .filter((o) => o.set.categoryTagId === undefined || hasCards(o.set.categoryTagId))
       .map((o) => ({
         ...o,
         count: applyFilters(pool, slotsToFilters(applyAnswer(slots, q, o.id).slots)).length,

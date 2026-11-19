@@ -88,7 +88,7 @@ export function AdvisorEligibilityForm({
         </>
       ) : null}
       <Text variant="body12Regular" color={colors.text.secondary}>
-        Used only for this check. Not saved, not shared.
+        Used only for this check. The app does not save it.
       </Text>
     </View>
   );

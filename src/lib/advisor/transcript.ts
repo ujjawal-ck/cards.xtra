@@ -28,7 +28,7 @@ import {
   type TipContext,
 } from './types';
 
-const HELLO = "Hi, I'm Swipey. I'll help you pick a credit card. A few taps, no forms.";
+const HELLO = "Hi, I'm Swipey. I'll help you pick a credit card. It takes a few taps.";
 const CLOSING_LIKELY = 'Apply for one card at a time. Each application is recorded on your credit report.';
 const CLOSING_OTHER = 'That is my shortlist for now. Pick what to do next.';
 

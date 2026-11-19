@@ -4,7 +4,7 @@
  * wording or order change needs no engine change. Contract: types.ts.
  */
 import { cardNetworks } from '../../data/filterOptions';
-import type { AdvisorConfig } from './types';
+import type { AckContext, AdvisorConfig } from './types';
 
 // BankKaro category tag ids (CATEGORY_OPTIONS in data/filterOptions).
 const TAG = {
@@ -19,9 +19,20 @@ const TAG = {
 
 const none = (list: number[] | undefined) => (list ?? []).length === 0;
 
-/** "{A} and {B}. ..." or "{A}, {B} and {C}. ...". Labels as written on the pills. */
-const strongInMore = (labels: string[]) =>
-  `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}. Cards strong in more than one come first.`;
+/** A label after the first starts in lower case, unless it is an acronym ("UPI"). */
+const lowerFirst = (label: string) =>
+  label.length > 1 && label[1] === label[1].toUpperCase() && label[1] !== label[1].toLowerCase()
+    ? label
+    : label.charAt(0).toLowerCase() + label.slice(1);
+
+/** "{A} and {B}." or "{A}, {B} and {C}.". The ranking line shows only with 2 or more categories. */
+const strongInMore = (labels: string[], ctx: AckContext) => {
+  const [first, ...rest] = labels;
+  const tail = rest.map(lowerFirst);
+  const list = tail.length === 0 ? first : `${[first, ...tail.slice(0, -1)].join(', ')} and ${tail[tail.length - 1]}`;
+  const many = (ctx.slots.categoryTagIds ?? []).length >= 2;
+  return many ? `${list}. Cards strong in more than one come first.` : `${list}.`;
+};
 
 export const ADVISOR_CONFIG: AdvisorConfig = {
   version: 2,
@@ -114,7 +125,7 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       why: "The best next card covers what your current one doesn't.",
       ask: 'What do you wish your card did better? Pick up to 3.',
       multi: { max: 3 },
-      multiAck: (labels) => strongInMore(labels),
+      multiAck: strongInMore,
       options: [
         { id: 'daily', label: 'More back on daily spends', pill: 'Daily spends', set: { askNeed: true }, ack: "Daily spends. Let's find where most of it goes." },
         { id: 'travel', label: 'Travel perks', set: { categoryTagId: TAG.travel }, ack: 'Travel perks. These are strong on travel.' },
@@ -154,7 +165,7 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       whyFirst: 'A card pays back most where you already spend.',
       askFirst: 'Where does most of your monthly spend go? Pick up to 3.',
       multi: { max: 3 },
-      multiAck: (labels) => strongInMore(labels),
+      multiAck: strongInMore,
       options: [
         { id: 'shopping', label: 'Online shopping', set: { categoryTagId: TAG.shopping }, ack: 'Online shopping. These pay back the most there.' },
         { id: 'food', label: 'Food and groceries', pill: 'Food', set: { categoryTagId: TAG.foodOrdering }, ack: 'Food and groceries. One more question narrows it.' },
@@ -183,7 +194,7 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       ask: 'Which of these do you spend on? Pick one or more.',
       multi: { max: 3 },
       replacesCategory: TAG.foodOrdering,
-      multiAck: (labels) => strongInMore(labels),
+      multiAck: strongInMore,
       options: [
         { id: 'delivery', label: 'Food delivery', set: { categoryTagId: TAG.foodOrdering }, ack: 'Food delivery. These pay back the most on delivery apps.' },
         { id: 'dining', label: 'Eating out', set: { categoryTagId: TAG.dining }, ack: 'Eating out. These pay back the most at restaurants.' },

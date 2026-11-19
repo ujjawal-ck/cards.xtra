@@ -14,8 +14,10 @@
  *     reveal carries cards; every earlier reveal is one collapsed line.
  *     One exception: an acknowledgement (`k:<question id>`) reads the cards as
  *     they are now. "I have this", or an eligibility result for saved details,
- *     can change or remove an earlier acknowledgement. A line that is true now
- *     is better than a line that is stable and wrong.
+ *     can change or remove an earlier acknowledgement. The acknowledgement of
+ *     the eligibility form can change once, from the self-employed line (or
+ *     nothing) to the count line, when the check result arrives. A line that
+ *     is true now is better than a line that is stable and wrong.
  *   - Changing an earlier answer is a rewind: that answer and every later one go.
  */
 import type { CardModel } from '../../molecules';

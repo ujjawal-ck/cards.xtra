@@ -113,7 +113,7 @@ describe('buildTranscript', () => {
   it('before any answer: hello and the opener, no reveal', () => {
     const t = build(st({}), catalogue());
     expect(t.messages.map((m) => m.id)).toEqual(['hello', 'q:opener']);
-    expect(t.messages[0]).toMatchObject({ kind: 'agent-text', text: "Hi, I'm Swipey. I'll help you pick a credit card. A few taps, no forms." });
+    expect(t.messages[0]).toMatchObject({ kind: 'agent-text', text: "Hi, I'm Swipey. I'll help you pick a credit card. It takes a few taps." });
     expect(t.messages[1]).toMatchObject({ kind: 'agent-question', questionId: 'opener', current: true });
     expect(t.reveal).toBeNull();
     expect(t.step?.question.id).toBe('opener');
@@ -395,15 +395,25 @@ describe('acknowledgements', () => {
   it('multi answer: multiAck for 2 picks, the option ack for 1 pick', () => {
     const cards = [card({ cat: [SHOPPING] }), card({ cat: [FUEL] }), card({ cat: [SHOPPING, FUEL] })];
     const two = build(st({ opener: 'specific', need: 'shopping,fuel' }), cards);
-    expect(textById(two, 'k:need')).toBe('Online shopping and Fuel. Cards strong in more than one come first.');
+    expect(textById(two, 'k:need')).toBe('Online shopping and fuel. Cards strong in more than one come first.');
     const one = build(st({ opener: 'specific', need: 'fuel' }), cards);
     expect(textById(one, 'k:need')).toBe('Fuel. These pay back the most at the pump.');
   });
 
   it('multiAck for 3 picks', () => {
-    expect(C.questions.need.multiAck?.(['Online shopping', 'Fuel', 'Travel'], {} as never)).toBe(
-      'Online shopping, Fuel and Travel. Cards strong in more than one come first.',
+    const ctx = { slots: { categoryTagIds: [SHOPPING, FUEL, 12] } } as never;
+    expect(C.questions.need.multiAck?.(['Online shopping', 'Fuel', 'Travel'], ctx)).toBe(
+      'Online shopping, fuel and travel. Cards strong in more than one come first.',
     );
+  });
+
+  it('multiAck: the ranking line only with 2+ categories; lower case unless an acronym', () => {
+    const cards = [card({ cat: [FUEL], isFree: true, network: 'RuPay' }), card({ cat: [14], isFree: true }), card({ cat: [SHOPPING] })];
+    expect(textById(build(st({ opener: 'specific', need: 'fuel,nofees' }), cards), 'k:need')).toBe('Fuel and no fees.');
+    expect(textById(build(st({ opener: 'specific', need: 'fuel,upi' }), cards), 'k:need')).toBe('Fuel and UPI.');
+    expect(textById(build(st({ opener: 'specific', need: 'bills,nofees' }), cards), 'k:need')).toBe('Bills and no fees.');
+    const one = { slots: { categoryTagIds: [FUEL] } } as never;
+    expect(C.questions.need.multiAck?.(['Online shopping', 'UPI', 'No fees'], one)).toBe('Online shopping, UPI and no fees.');
   });
 
   it('the skip rule holds for a multi answer whose categories were set aside', () => {

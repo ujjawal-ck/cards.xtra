@@ -676,3 +676,25 @@ describe('multi-select reveal', () => {
     expect(ids(r.all)).toEqual([b.id]);
   });
 });
+
+describe('options whose category alone has no card', () => {
+  it('need after missing daily + travel does not offer fuel when no fuel card exists', () => {
+    const cards = [card({ cat: [TRAVEL] }), card({ cat: [SHOPPING] })];
+    const step = nextQuestion(st({ opener: 'better', missing: 'daily,travel' }), C, cards, known);
+    expect(step?.question.id).toBe('need');
+    const optionIds = step!.options.map((o) => o.id);
+    expect(optionIds).not.toContain('fuel');
+    expect(optionIds).not.toContain('bills');
+    // (c) an option with cards still shows
+    expect(optionIds).toContain('shopping');
+  });
+
+  it('foodType after need food + fuel does not offer "Eating out" when no dining card exists', () => {
+    const cards = [card({ cat: [FOOD] }), card({ cat: [FOOD, GROCERY] }), card({ cat: [FUEL] })];
+    const step = nextQuestion(st({ opener: 'specific', need: 'food,fuel' }), C, cards, known);
+    expect(step?.question.id).toBe('foodType');
+    const optionIds = step!.options.map((o) => o.id);
+    expect(optionIds).not.toContain('dining');
+    expect(optionIds).toEqual(expect.arrayContaining(['delivery', 'grocery']));
+  });
+});
