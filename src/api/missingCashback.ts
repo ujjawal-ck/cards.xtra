@@ -20,6 +20,7 @@
 import { CK } from '../config/env';
 import { ck } from './cashkaro';
 import * as Schemas from './schemas';
+import { isApiError } from './http/errors';
 
 // ── JSON:API shapes (confirmed against the web prototype's interfaces) ───────
 
@@ -233,6 +234,25 @@ export async function updateQueue(
 }
 
 /**
+ * Deadline for the invoice upload. Several photos in one POST can take well
+ * over the default 15 s on a slow network, so the ticket could never be raised.
+ * The POST is not idempotent, so it is never retried: a retry could create a
+ * second ticket.
+ */
+export const INVOICE_UPLOAD_TIMEOUT_MS = 60_000;
+
+/**
+ * True when an invoice upload that was sent ended without a clear answer:
+ * timeout, dropped connection, or a 502/503/504 from the gateway. The ticket may
+ * exist, so the screen must not invite a blind resubmit.
+ */
+export function isUnconfirmedUpload(e: unknown): boolean {
+  if (!isApiError(e)) return false;
+  if (e.kind === 'timeout' || e.kind === 'network') return true;
+  return e.kind === 'http' && (e.status === 502 || e.status === 503 || e.status === 504);
+}
+
+/**
  * Raise a ticket with invoice attachments (C1-"Other" / C2). Sends multipart
  * form-data: text fields + each file as `ticket_attachment`, `ticket_attachment1`…
  * When `files` is empty, falls back to a JSON:API body (no attachments).
@@ -265,7 +285,7 @@ export async function raiseTicket(
       // RN FormData file descriptor.
       fd.append(field, { uri: f.uri, name: f.name, type: f.type } as any);
     });
-    return ck(path, { method: 'POST', auth: { userToken }, body: fd });
+    return ck(path, { method: 'POST', auth: { userToken }, body: fd, timeoutMs: INVOICE_UPLOAD_TIMEOUT_MS });
   }
 
   // No files — JSON:API body.

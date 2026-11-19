@@ -32,6 +32,8 @@ import {
   FeedbackAppreciatedSheet,
 } from '../organisms';
 import { useRetailers } from '../query/useMissingCashback';
+import { isPausedWithoutData } from '../query/paused';
+import { resolveDidYouShopYes, handleDidYouShopYes } from '../query/missingCashbackStates';
 import { colors, spacing, radius, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
@@ -46,32 +48,43 @@ export function MissingCashbackHelp() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
 
-  // Drives the Yes branch — empty/error retailer list ⇒ the Oops screen.
-  const { data: retailers, isLoading, isError, refetch } = useRetailers();
+  // Drives the Yes branch: an empty list goes to the Oops screen; offline or
+  // a failed lookup shows an alert with "Try again".
+  const retailersQuery = useRetailers();
+  const { data: retailers, isLoading, isError, refetch } = retailersQuery;
+  // Offline before the first answer: paused, so neither loading nor error.
+  const isOffline = isPausedWithoutData(retailersQuery);
 
   const feedbackRef = useRef<BottomSheetModalRef>(null);
   const successRef = useRef<BottomSheetModalRef>(null);
 
   const onYes = () => {
-    if (isLoading) return; // button shows a spinner; wait for the query
-    // A failed lookup is not "no visits": it used to send people to the Oops
-    // screen saying they hadn't shopped via CashKaro in 30 days.
-    if (isError) {
-      Alert.alert('Couldn’t check your store visits', 'Check your connection and try again.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Try again', onPress: () => refetch() },
-      ]);
-      return;
-    }
-    const hasVisits = (retailers?.length ?? 0) > 0;
-    analytics.track(Events.MISSING_CASHBACK_STEP, {
-      step: 'did_you_shop',
-      answer: 'yes',
-      has_visits: hasVisits,
+    // A failed or offline lookup is not "no visits": it used to send people to
+    // the Oops screen saying they hadn't shopped via CashKaro in 30 days.
+    const outcome = resolveDidYouShopYes({
+      isLoading, // button shows a spinner; wait for the query
+      isError,
+      isOffline,
+      retailerCount: retailers?.length ?? 0,
     });
-    navigation.navigate(
-      hasVisits ? 'MissingCashbackWhereDidYouShop' : 'MissingCashbackOops'
-    );
+    handleDidYouShopYes(outcome, {
+      alert: (kind) =>
+        Alert.alert(
+          kind === 'offline' ? 'You’re offline' : 'Couldn’t check your store visits',
+          kind === 'offline' ? 'Connect to the internet and try again.' : 'Check your connection and try again.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Try again', onPress: () => refetch() },
+          ],
+        ),
+      trackHasVisits: (hasVisits) =>
+        analytics.track(Events.MISSING_CASHBACK_STEP, {
+          step: 'did_you_shop',
+          answer: 'yes',
+          has_visits: hasVisits,
+        }),
+      navigate: (route) => navigation.navigate(route),
+    });
   };
 
   const onNo = () => {
