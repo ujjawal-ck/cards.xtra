@@ -1,0 +1,54 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Tables/Overview" />
+
+<PageHeader title="Tables" meta="2 components · molecules">
+Two parts that put numbers side by side. `CompareTable` lines up many cards across many attributes. `BreakdownTable` lines up two cards across a few money lines and ends with a net total.
+Both came in with the design system additions batch (see `docs/ds-additions.md`). Neither has a pick table: pick by the number of cards. Many cards, many attributes: `CompareTable`. Two cards, money lines: `BreakdownTable`.
+</PageHeader>
+
+## Anatomy: CompareTable
+
+<Anatomy parts={[
+  { part: 'Outer frame', token: 'radius.xl · borderWidth.hairline · colors.border.subtle2 · elevation.light.sm', note: 'Fill is colors.background.lavender. The frame clips its content.' },
+  { part: 'Pinned hero column', token: 'COMPARE_TABLE.heroW (146) · colors.surface.default', note: 'One hero cell per row, 172 high. The caller fills it (tag, art, name, button).' },
+  { part: 'Corner cell', token: 'COMPARE_TABLE.headerH (52) · caption10Medium · colors.text.secondary', note: 'Top left. Empty when there is no cornerLabel.' },
+  { part: 'Header cell', token: 'COMPARE_TABLE.valueW (88) · caption10Medium · chevron-down iconSize[12]', note: 'Pressable. Selected: colors.text.link on colors.background.lavender.' },
+  { part: 'Value cell', token: 'caption10Medium · colors.text.secondary · spacing[8] padding', note: 'Centred text. A missing value shows a dash.' },
+  { part: 'Cell borders', token: 'borderWidth.thin · colors.border.subtle2', note: 'Right and bottom edge of every cell.' },
+]} />
+
+## Anatomy: BreakdownTable
+
+<Anatomy parts={[
+  { part: 'Frame', token: 'radius.xl · borderWidth.thin · colors.border.subtle2 · colors.surface.default', note: 'Bottom padding spacing[16], gap spacing[16].' },
+  { part: 'Header row', token: 'caption10Medium · colors.background.lavender · spacing[16] by spacing[12]', note: 'Defaults: Breakdown, Your pick, Our pick.' },
+  { part: 'Line row', token: 'body12Medium · colors.text.secondary · value columns 80 wide, right aligned', note: 'Values go through formatINR (Indian grouping).' },
+  { part: 'Divider', token: 'borderWidth.thin · colors.border.subtle3', note: 'Above the total.' },
+  { part: 'Total row', token: 'body14Medium label · body12SemiBold values', note: 'Winner in colors.feedback.success.text, with the word "Better".' },
+]} />
+
+## Composition
+
+- `CompareTable` takes `selectedColumnId` and `onSelectColumn` from the screen. Tapping the selected header clears it. Without `onSelectColumn` the headers do not respond.
+- The hero cell is a slot. The table gives it a fixed 146 by 172 box and does not pad it, so the content sets its own padding.
+- Row height follows the hero height, so a value cell is 172 high and not the Figma 88. This was inferred, not read from the file.
+- `BreakdownTable` sums the rows in paise. Pass `total` only when the screen has its own net rule.
+- Negative values are costs. Show a fee as a negative number and the total stays correct.
+- Higher total wins unless `lowerIsBetter`. Use `lowerIsBetter` for fee only tables.
+
+<DoDont
+  dos={[
+    'Keep column headers to two lines or fewer. They are 88 wide.',
+    'Put the same unit in a whole column (all rupees, or all counts).',
+    'Show a dash for "not offered" so the row still lines up.',
+    'Name the two sides in `headers` when they are not "your pick" and "our pick".',
+  ]}
+  donts={[
+    'Do not expect `CompareTable` to scroll up and down inside itself. Only the value columns scroll, sideways.',
+    'Do not use `BreakdownTable` for more than two cards. It has two value columns.',
+    'Do not rely on colour alone for the winner. The "Better" word must stay.',
+    'Do not pass a hard coded cashback rate. Use "X%" until the rate is verified.',
+  ]}
+/>

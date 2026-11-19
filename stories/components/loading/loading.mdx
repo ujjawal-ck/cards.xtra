@@ -1,0 +1,52 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Loading/Overview" />
+
+<PageHeader title="Loading" meta="4 components · atoms, organism">
+Pulsing placeholders that show "content is arriving" instead of a blank screen or a spinner. Pick by how much of the screen is loading: one block, one amount, or the whole layout.
+</PageHeader>
+
+<PickTable
+  rule="Ask: a generic block, an amount, or a whole layout?"
+  rows={[
+    { building: 'Any placeholder of your own width, height and radius', use: 'Skeleton', tier: 'atom', story: 'components-loading-skeleton--docs' },
+    { building: 'A rupee amount that has not arrived (never show ₹0 while loading)', use: 'AmountSkeleton', tier: 'atom', story: 'components-loading-amountskeleton--docs' },
+    { building: 'The whole Home screen on first open', use: 'HomeSkeleton', tier: 'organism', story: 'components-loading-homeskeleton--docs' },
+    { building: 'A run of card-tile rows while a category loads', use: 'CardListSkeleton', tier: 'organism', story: 'components-loading-homeskeleton--docs' },
+  ]}
+/>
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'Pulse', token: 'opacity opacity[16] to opacity[40], half cycle motion.duration.pulse (Skeleton) or 650 ms (AmountSkeleton, HomeSkeleton)', note: 'Eased with motion.easing.standard (Skeleton) or an in-out quad curve.' },
+  { part: 'Skeleton fill', token: 'colors.border.subtle (default), colors.surface.default (onDark)', note: 'Default radius is sm. radius takes any key of the radius tokens.' },
+  { part: 'AmountSkeleton fill', token: 'primitives.slate[300] (default), primitives.slate[50] (onDark), radius.sm', note: 'Default 88 by 16. Match the width and height of the amount it replaces.' },
+  { part: 'HomeSkeleton hero', token: 'primitives.cobalt[100], height HOME_MASTHEAD_COMPACT_H plus the top inset', note: 'The tools row block uses TOOLS_ROW_FIT_H, so the layout does not jump on load.' },
+  { part: 'HomeSkeleton blocks', token: 'primitives.slate[300], radius.md, card rows 96 high, gap spacing[12]', note: 'The chips row is 32 high, 96 and 80 wide.' },
+  { part: 'CardListSkeleton row', token: 'radius.lg, borderWidth.thin, colors.border.default, padding spacing[12]', note: 'Image block 120 by 80 and three text bars (65%, 90%, 45%).' },
+]} />
+
+## Composition
+
+- `Skeleton`, `AmountSkeleton` and `HomeSkeleton` each run their own copy of the same pulse. `AmountSkeleton` and `HomeSkeleton` were not moved onto `Skeleton`.
+- `HomeSkeleton` needs a SafeArea provider for the top inset. It also sets dark status bar icons while it shows. The Storybook preview already provides both.
+- `FilterTransitionOverlay` draws `HomeSkeleton` behind the cat animation, so the page reads as reloading underneath.
+- Pattern rule: skeleton first, a wait line for long calls (tools), and no spinner on money values.
+- Open question: with no network `useCards` never resolves, so `HomeSkeleton` stays up. A timeout and a retry belong to the screen, not to the skeleton.
+
+<DoDont
+  dos={[
+    'Match the size of what is loading so the screen does not jump.',
+    'Use AmountSkeleton for any rupee figure that comes from the API.',
+    'Swap the skeleton out as soon as the data arrives or the call fails.',
+    'Use tone onDark on dark surfaces.',
+  ]}
+  donts={[
+    'Do not show ₹0 or a dash as a stand-in for a loading amount.',
+    'Do not put a spinner on a money value.',
+    'Do not leave a skeleton up for an error. Show ScreenState with Try again.',
+    'Do not build a one-off pulse. Use Skeleton.',
+  ]}
+/>

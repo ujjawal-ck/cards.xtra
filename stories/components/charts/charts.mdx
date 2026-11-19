@@ -1,0 +1,54 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Charts/Overview" />
+
+<PageHeader title="Charts" meta="3 components · molecules">
+Three small charts built from plain Views, with no chart library. Every bar has its label and rupee value written out, so colour is never the only cue. Pick by the question the chart answers.
+</PageHeader>
+
+<PickTable
+  rule="Ask: ranked items, parts of one total, or two cards head to head?"
+  rows={[
+    { building: 'Spends or earnings ranked by category, each with its rupee value', use: 'BarBreakdown', tier: 'molecule', story: 'components-charts-barbreakdown--docs' },
+    { building: 'One total split into parts (confirmed, pending, cancelled)', use: 'StackedBar', tier: 'molecule', story: 'components-charts-stackedbar--docs' },
+    { building: 'Two cards compared on one value, with a winner', use: 'PodiumCompare', tier: 'molecule', story: 'components-charts-podiumcompare--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The anatomy is for `BarBreakdown`, the base bar.
+
+<Anatomy parts={[
+  { part: 'Row', token: 'gap spacing[12] between rows, spacing[4] inside a row', note: 'One accessible element: "label: ₹value, note".' },
+  { part: 'Label', token: 'body12Regular, colors.text.secondary', note: 'Optional icon before it: iconSize[16], colors.icon.features.' },
+  { part: 'Value', token: 'body14SemiBold, colors.text.primary', note: 'formatINR: Indian grouping, for example ₹10,00,000.' },
+  { part: 'Track', token: 'height spacing[8], radius.full, colors.data.track', note: 'Full width.' },
+  { part: 'Bar', token: 'colors.data.series1, radius.full', note: 'Width from barWidths() in src/lib/chartMath.ts. Scale is max, else the largest value.' },
+  { part: 'StackedBar segments', token: 'colors.data.series1 / series2 / series3 / positive / negative / muted', note: 'A spacing[2] gap in colors.surface.default separates segments.' },
+  { part: 'PodiumCompare bars', token: 'winner colors.data.positive, other colors.tones.gray.bg', note: 'Heights from podiumHeights(), 24 to 88. The winner also says "Best" in words.' },
+]} />
+
+## Composition
+
+- None of the three uses a chart library. They are Views with computed widths from `src/lib/chartMath.ts` and `src/lib/podium.ts`.
+- `StackedBar` keeps a gap between segments because neighbouring series colours are under 3:1 contrast against each other. Every segment is in the legend.
+- `PodiumCompare` reserves the card art overhang above each bar so the art never covers the value. It declares no winner on a tie or when both values are 0 or less.
+- `BarBreakdown` and `StackedBar` appear only in the DS additions gallery today. Only `PodiumCompare` is on a screen (Beat my card result).
+- The ranked list does not sort by value in `PodiumCompare`. The caller decides which card is A and which is B.
+
+<DoDont
+  dos={[
+    'Show the rupee value for every bar or segment.',
+    'Use formatINR for every amount so the grouping is Indian.',
+    'Pass max when two charts must share one scale.',
+    'Say the winner in words as well as by colour.',
+  ]}
+  donts={[
+    'Do not use colour as the only way to tell segments apart.',
+    'Do not add more segments than there are series colours (six).',
+    'Do not use PodiumCompare for more than two cards.',
+    'Do not show a chart for an amount that is still loading. Use AmountSkeleton.',
+  ]}
+/>

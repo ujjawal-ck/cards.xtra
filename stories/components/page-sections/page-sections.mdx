@@ -1,0 +1,71 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Page sections/Overview" />
+
+<PageHeader title="Page sections" meta="14 components · organisms">
+Large blocks that fill a page: the card detail sheet, the floors of a store page, and the Never Miss Cashback prompts. Each one owns a whole section and is mounted by a screen, not nested inside another part. These parts are not in the reference design system.
+</PageHeader>
+
+<PickTable
+  rule="Pick by the page you are building, then by the section."
+  rows={[
+    { building: 'Card detail on iOS (partial then full sheet)', use: 'CardDetailSheet', tier: 'organism', story: 'components-page-sections-carddetailsheet--docs' },
+    { building: 'Card detail on Android (full screen, D18)', use: 'CardDetailScreenAndroid', tier: 'organism', story: 'components-page-sections-carddetailscreenandroid--docs' },
+    { building: 'Brand logo and blurb at the top of a store page', use: 'StoreAboutBrand', tier: 'organism', story: 'components-page-sections-storeaboutbrand--docs' },
+    { building: 'Headline cashback rate, with an optional bonus offer and timer', use: 'StoreCashbackDetails', tier: 'organism', story: 'components-page-sections-storecashbackdetails--docs' },
+    { building: 'Offers and promo code with Copy Code', use: 'StoreOfferDetails', tier: 'organism', story: 'components-page-sections-storeofferdetails--docs' },
+    { building: 'Numbered cashback benefits list', use: 'StoreBenefitDetails', tier: 'organism', story: 'components-page-sections-storebenefitdetails--docs' },
+    { building: 'The How to get this offer card inside a store block', use: 'HowToGetOfferCard', tier: 'organism', story: 'components-page-sections-howtogetoffercard--docs' },
+    { building: 'Tracks in and confirms in tiles', use: 'StoreCashbackTimelines', tier: 'organism', story: 'components-page-sections-storecashbacktimelines--docs' },
+    { building: 'Terms and conditions as cards or a list', use: 'StoreTermsConditions', tier: 'organism', story: 'components-page-sections-storetermsconditions--docs' },
+    { building: 'Credit cards that pay well at this store', use: 'StoreBestCards', tier: 'organism', story: 'components-page-sections-storebestcards--docs' },
+    { building: 'Three or six related stores', use: 'StoreSimilarStore', tier: 'organism', story: 'components-page-sections-storesimilarstore--docs' },
+    { building: 'Store FAQ', use: 'StoreFaq', tier: 'organism', story: 'components-page-sections-storefaq--docs' },
+    { building: 'Home card that asks to turn on Never Miss Cashback (Android)', use: 'NeverMissCashbackNudge', tier: 'organism', story: 'components-page-sections-nevermisscashbacknudge--docs' },
+    { building: 'Floating draggable prompt on Orders (Android)', use: 'CashbackPip', tier: 'organism', story: 'components-page-sections-cashbackpip--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The main store part is `StoreCashbackDetails`. Tokens come from its source header.
+
+<Anatomy parts={[
+  { part: 'Root, bonus off', token: 'spacing[16] side padding, spacing[20] gap', note: 'Width sizing.containerMobile (360).' },
+  { part: 'Headline row', token: 'typography.display32Bold, spacing[10] gap', note: 'Flat in text.primary, rate in action.primary.default, Cashback in action.secondary.text.' },
+  { part: 'Old rate (boost)', token: 'borderWidth.heavy strike bar', note: 'Drawn as a bar because line-through is too faint at this size.' },
+  { part: 'Subtitle', token: 'typography.body12Regular, colors.text.secondary' },
+  { part: 'View Cashback Rates link', token: 'typography.body12Medium, colors.text.link, spacing[2] gap' },
+  { part: 'Bonus card', token: 'colors.promotional.fernBg, dashed top border borderWidth.thin / feedback.info.border', note: 'Side padding spacing[16], vertical padding spacing[24].' },
+  { part: 'Bonus title and value', token: 'typography.body16Bold, typography.heading26Bold, colors.action.secondary.text' },
+  { part: 'Plus badge', token: 'iconSize[24] circle, radius.full, surface.default, borderWidth.thin', note: 'Offset BADGE_OFFSET (-18) so it sits on the dashed border.' },
+  { part: 'Timer', token: 'Timer atom, error tone' },
+]} />
+
+## Composition
+
+- Every store block is 360 wide with `spacing[16]` side padding. The screen stacks the blocks and adds the dividers.
+- `StoreOfferDetails` and `StoreBenefitDetails` both end with one shared `HowToGetOfferCard`. Do not copy the card into a block.
+- `StoreCashbackTimelines` and `StoreSimilarStore` reuse the `Grid` organism (`cashback-timelines` and `brand-1x3` variants). `StoreTermsConditions` reuses the `HowItWorks` carousel and `DiscBulletList`. `StoreFaq` reuses `Accordion` and `Divider`.
+- `StoreBestCards` mounts `CardDetailSheet` itself and opens it on a card tap, as Home does. It needs the card catalog query, navigation, and the sheet provider.
+- `CardDetailSheet` is a platform dispatcher. iOS gets the two-stage sheet. Android gets `CardDetailScreenAndroid` (decision D18, card detail stays full screen on Android). Both keep the same ref contract: `present()` and `dismiss()`.
+- Several blocks hide themselves when they have no data: `StoreFaq` and `StoreTermsConditions` with an empty list, `StoreBestCards` while the catalog loads.
+- `NeverMissCashbackNudge` and `CashbackPip` render only on Android. In Storybook on web they are blank.
+
+<DoDont
+  dos={[
+    'Mount a store block only when the store has data for it, or let it hide itself.',
+    'Pass real store copy: the title, offer text, code and benefits come from the offers API.',
+    'Show cashback rates exactly as the API sends them.',
+    'Use the shared HowToGetOfferCard for the How to get this offer row.',
+    'Present CardDetailSheet through a ref, after the selected card is in state.',
+  ]}
+  donts={[
+    'Do not hardcode a cashback rate in a store block.',
+    'Do not nest one page section inside another. Compose them in the screen.',
+    'Do not render NeverMissCashbackNudge or CashbackPip on iOS.',
+    'Do not call useNavigation inside a sheet body. Sheet bodies mount outside the navigation tree.',
+    'Do not fork CardDetailScreenAndroid for iOS fixes. Change the platform branch that needs it.',
+  ]}
+/>

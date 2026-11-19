@@ -1,0 +1,57 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Lists/Overview" />
+
+<PageHeader title="Lists" meta="4 components · molecules, organisms">
+Rows and lists of copy and money. A menu row, an amount with an action button, a plain bullet list and an order row each do a different job. Pick by what the user does with the row.
+</PageHeader>
+
+<PickTable
+  rule="Menu row, amount with a CTA, bullet copy or an order?"
+  rows={[
+    { building: 'A settings or menu row with an icon, a title and a chevron', use: 'ListRow (menu-option)', tier: 'molecule', story: 'components-lists-listrow--docs' },
+    { building: 'A key and value line, an amount with a status, or a numbered or bulleted step', use: 'ListRow (other 11 types)', tier: 'molecule', story: 'components-lists-listrow--docs' },
+    { building: 'An amount card with an icon and a button on the right (Withdraw, Know Why?)', use: 'AmountActionRow', tier: 'molecule', story: 'components-lists-amountactionrow--docs' },
+    { building: 'Terms or notes as plain bullet copy', use: 'DiscBulletList', tier: 'molecule', story: 'components-lists-discbulletlist--docs' },
+    { building: 'One order in the orders list, with store logo, status and cashback', use: 'OrderRow', tier: 'organism', story: 'components-lists-orderrow--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The main part is `ListRow`. Tokens are read from `src/molecules/ListRow.tsx`.
+
+<Anatomy parts={[
+  { part: 'Row', token: 'width 100%', note: 'Fills the parent. The parent sets the side padding' },
+  { part: 'number-bullet disc', token: 'colors.text.primary fill, caption10SemiBold in colors.surface.default', note: '20 px round' },
+  { part: 'bullet icons', token: 'feat-dot-filled in colors.status.delayed.dot (icon-definition) or colors.action.accent.default (bullet-point)', note: 'iconSize[16]' },
+  { part: 'menu-option icon', token: 'colors.icon.features, iconSize[24]', note: 'Title is body14Medium' },
+  { part: 'Amount (amount-status)', token: 'heading16ExtraBold, colors.text.primary', note: 'Biline is body12Regular in colors.text.secondary' },
+  { part: 'Status badge', token: 'StatusBadge size pill', note: 'Seven statuses from colors.status' },
+  { part: 'CTA (caption-cta)', token: 'body14Medium in colors.text.link', note: 'Chevron in the same colour' },
+  { part: 'Thumbnail (thumbnail-key-chevron)', token: 'radius.sm, 48 px', note: 'Text is body15Medium' },
+]} />
+
+## Composition
+
+- `ListRow` has twelve types in one component. Add a type there. Do not build a new row for a single screen.
+- `AmountActionRow` is a card (surface.default, radius.lg, elevation.light.xs). No `ListRow` type has the 48 px icon slot with a trailing button, so it is its own molecule. The button is the `Button` atom.
+- `OrderRow` is a flat row with a bottom border, not a card. It reuses `LogoContainer`, `StatusBadge` and `Tag`.
+- `DiscBulletList` is used in Store terms and conditions and in the Amazon terms bottom sheet.
+- Haptics fire on press for `ListRow` and `OrderRow`. They do nothing on web.
+
+<DoDont
+  dos={[
+    'Use ListRow menu-option for settings and help menus.',
+    'Use AmountActionRow when one amount has one clear action.',
+    'Write money with Indian grouping: ₹1,25,000.',
+    'Give OrderRow a status pill for cashback and a tag for bonus or referral.',
+  ]}
+  donts={[
+    'Do not use OrderRow for anything that is not an order.',
+    'Do not put two buttons in AmountActionRow. It has one slot.',
+    'Do not use DiscBulletList for steps. Use ProcessSteps or ListRow number-bullet.',
+    'Do not hardcode a cashback rate in a row. Write X% until it is verified.',
+  ]}
+/>

@@ -1,0 +1,56 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Grids/Overview" />
+
+<PageHeader title="Grids" meta="1 component · organism">
+One grid component with five variants. Each variant lays out tiles of one kind in rows. The variant sets the tile, the column count and the item type.
+</PageHeader>
+
+## Variants
+
+| Variant | Item type | Layout | Used for |
+|---|---|---|---|
+| `features` | `FeatureItem` (icon, label) | 2 columns by default, loading skeleton | Card benefits on card detail |
+| `filters` | `FilterTileItem` (image, label, selected) | 2 per row, controlled by `onToggle` | Category filter squares |
+| `brand-1x3` | `BrandOfferItem` (logo, badgeText, ctaLabel, timer) | One row of 3 | Brand offers strip |
+| `brand-1x2` | `OfferCardItem` (image, ctaLabel) | Rows of 2 | Offers screen brand tiles |
+| `cashback-timelines` | `TimelineStatItem` (label, metric, unit) | Rows of 2 | Store cashback timing stats |
+
+## Anatomy
+
+The `features` tile, from `src/organisms/Grid.tsx`.
+
+<Anatomy parts={[
+  { part: 'Tile', token: 'radius.xl, surface.default fill, border.subtle2 hairline', note: 'Min height spacing[96] so three label lines fit' },
+  { part: 'Tile padding', token: 'spacing[8] vertical, spacing[12] horizontal, gap spacing[4]', note: 'Icon above the label' },
+  { part: 'Icon', token: 'feat-*-outline, iconSize[24]', note: 'Any registered feat-*-outline name' },
+  { part: 'Label', token: 'body12Regular, text.primary', note: 'Up to three lines' },
+  { part: 'Rows', token: 'gap spacing[12]', note: 'brand variants use gap spacing[8]' },
+  { part: 'Stat metric (cashback-timelines)', token: 'display32Bold, text.link', note: 'Card radius.lg, elevation.light.sm' },
+  { part: 'Selected filter square', token: 'background.lavender, border.focussed (borderWidth.heavy)', note: 'Unselected: background.sunken, border.subtle3' },
+  { part: 'CTA bar (brand-1x2)', token: 'action.accent.default, caption10SemiBold in action.accent.text', note: 'Card height 186' },
+]} />
+
+## Composition
+
+- `Grid` is a discriminated union: the type of `items` follows `variant`. A wrong item shape fails to compile.
+- The outer width is not fixed. Put the grid in any container. Tiles share the row width equally. A trailing single tile keeps the column width.
+- `filters` does not keep its own selection. The parent holds it and passes `selected` back from `onToggle`.
+- `StoreCashbackTimelines` builds on the `cashback-timelines` variant. `CardDetailSheet` uses `features`. `OffersScreen` uses `brand-1x2`.
+- Only `features` has a loading mode. Items from remote data need an image source the story cannot reach, so the stories here use local assets.
+
+<DoDont
+  dos={[
+    'Use feat-*-outline icons for features. They are registered in the Icon atom.',
+    'Use features loading while the card benefits are fetched.',
+    'Hold the filters selection in the parent and pass selected back.',
+    'Keep labels short. Three lines is the limit in a features tile.',
+  ]}
+  donts={[
+    'Do not set a fixed width on the grid. Size the container.',
+    'Do not mix item shapes from two variants.',
+    'Do not draw a custom grid for a screen when a variant fits.',
+    'Do not hardcode a cashback rate in a tile. Write X% until it is verified.',
+  ]}
+/>

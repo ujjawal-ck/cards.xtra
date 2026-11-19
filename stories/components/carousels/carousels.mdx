@@ -1,0 +1,64 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Carousels/Overview" />
+
+<PageHeader title="Carousels" meta="11 components · atom, molecule, organism">
+Sideways rows and banners. Seven of them come from one file (`organisms/Carousels`) and fill the Home screen. The rest are the recovery rail under a Home tile, the tools entry row, an unused category circle, and the Indicator that shows position.
+</PageHeader>
+
+<PickTable
+  rule="Ask: is it a content rail, a recovery rail, or a tools entry?"
+  rows={[
+    { building: 'A row of card art with a cashback badge', use: 'CreditCardOffer', tier: 'organism', story: 'components-carousels-creditcardoffer--docs' },
+    { building: 'A saffron section of category tiles that filters Home', use: 'CategoryTiles', tier: 'organism', story: 'components-carousels-categorytiles--docs' },
+    { building: 'A row of step cards (text and icon)', use: 'HowItWorks', tier: 'organism', story: 'components-carousels-howitworks--docs' },
+    { building: 'A row of full-bleed image cards with the stat baked in', use: 'MilestoneStat', tier: 'organism', story: 'components-carousels-milestonestat--docs' },
+    { building: 'A hero banner, one image or a paging set', use: 'PromoBanner', tier: 'organism', story: 'components-carousels-promobanner--docs' },
+    { building: 'A row of full card tiles with a View all link', use: 'CardCarousel', tier: 'organism', story: 'components-carousels-cardcarousel--docs' },
+    { building: 'A strip of spend categories inside a card', use: 'BestForSpending', tier: 'organism', story: 'components-carousels-bestforspending--docs' },
+    { building: 'Alternatives to a card the user just closed (recovery rail)', use: 'CrossSellRail', tier: 'organism', story: 'components-carousels-crosssellrail--docs' },
+    { building: 'Four card-tool entry tiles under the masthead', use: 'ToolsRow', tier: 'organism', story: 'components-carousels-toolsrow--docs' },
+    { building: 'Round category buttons (not used by any screen today)', use: 'CategoryCircle', tier: 'molecule', story: 'components-carousels-categorycircle--docs' },
+    { building: 'Position dots, scroll thumb or story bars under a row', use: 'Indicator', tier: 'atom', story: 'components-carousels-indicator--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The anatomy is for `CreditCardOffer`, the plainest rail. Other rails keep the same frame: a horizontal ScrollView with 16 of side padding.
+
+<Anatomy parts={[
+  { part: 'Scroll row', token: 'spacing[16] side, spacing[12] top and bottom, gap spacing[24]', note: 'No scroll bar. Any item count fits.' },
+  { part: 'Card art frame', token: 'width 150 (file const CARD_OFFER_W), height spacing[96], radius.md', note: 'Clipped, so the art keeps its corners.' },
+  { part: 'Frame border', token: 'borderWidth.thin, colors.surface.default', note: 'Fill is colors.surface.sunken while the image loads.' },
+  { part: 'Name', token: 'Text, colors.text.primary', note: 'Sits between the art and the badge.' },
+  { part: 'Cashback badge', token: 'CashbackBadge atom', note: 'Text comes from the data, for example "Upto" plus the amount.' },
+  { part: 'Section band (CategoryTiles)', token: 'colors.background.emphasis', note: 'Saffron 50. The selected tile uses borderWidth.heavy in colors.action.primary.default.' },
+  { part: 'Hero banner (PromoBanner)', token: 'radius.xl, aspect 360:252, colors.surface.sunken', note: 'Indicator sits at the bottom, 16 above the edge.' },
+]} />
+
+## Composition
+
+- All seven `Carousels` exports use a horizontal ScrollView, so any item count fits without truncation.
+- `PromoBanner` and `BestForSpending` own an `Indicator`. `PromoBanner` shows it only with two or more slides. `BestForSpending` feeds the scroll variant from the live scroll position.
+- `CardCarousel` wraps the organism `CardTile`. The Cards family page explains which card tile to pick.
+- `CrossSellRail` is presentation only. The engine and the open rules are in `src/lib/crossSell.ts` and `src/screens/useCrossSellRail.ts`. Each pick is a `CompareCard` molecule, not a `CardTile`, because a `CardTile` cannot compare two cards.
+- `ToolsRow` rotates two words on one shared timer. It runs only while the screen has focus and stops under reduced motion. `HomeSkeleton` reserves its height with `TOOLS_ROW_FIT_H`.
+- `CategoryCircle` has no user today. Do not start a new row with it before design says which category visual wins.
+- Dimensions that are not on the spacing scale (150, 92, 108, 326, 72, 258, 166) are named file constants in `Carousels.tsx`.
+
+<DoDont
+  dos={[
+    'Pass the data your row needs and let the row scroll. Do not cut the list to fit.',
+    'Hide a rail when it has nothing to show. The components render an empty row, not a message.',
+    'Give PromoBanner two or more images before you expect an Indicator.',
+    'Keep the cashback text in the data as "Upto" plus an amount. Write "X%" for a rate that is not verified.',
+  ]}
+  donts={[
+    'Do not nest a rail inside another horizontal ScrollView.',
+    'Do not use CrossSellRail as a generic related-items row. It needs an engine result.',
+    'Do not put a rate you have not verified in a rail title or in item text.',
+    'Do not add a second position indicator next to the built-in one.',
+  ]}
+/>

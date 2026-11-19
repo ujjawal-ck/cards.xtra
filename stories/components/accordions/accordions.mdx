@@ -1,0 +1,41 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Accordions/Overview" />
+
+<PageHeader title="Accordions" meta="1 component · molecule">
+One part: `Accordion`. A row that shows a title and opens to a body. Use it for FAQ lists and for sections the reader may skip.
+There is one component here, so there is no pick table.
+</PageHeader>
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'Container (default)', token: 'colors.surface.default', note: 'Padding spacing[16] on all sides.' },
+  { part: 'Container (highlight)', token: 'colors.action.secondary.default', note: 'Pale cobalt fill. Same padding as default.' },
+  { part: 'Container (bare)', token: 'no fill', note: 'Padding spacing[16] top and bottom, 0 left and right. For rows inside a card.' },
+  { part: 'Title', token: 'body16Medium · colors.text.primary', note: 'Wraps to more lines. It is not cut.' },
+  { part: 'Body', token: 'body14Regular · colors.text.secondary', note: 'Shown only when expanded and a body is given.' },
+  { part: 'Leading icon (optional)', token: 'iconSize[24] · colors.text.primary', note: 'Gap to the title grows from spacing[4] to spacing[12].' },
+  { part: 'Trailing chevron', token: 'chevron-down · iconSize[24] · colors.icon.actions', note: 'Turns 180 degrees in 200 ms when it opens.' },
+]} />
+
+## Composition
+
+- The whole header is one pressable. A tap calls `onToggle(!expanded)`. The part does not keep its own state, so the screen owns `expanded`.
+- Stack rows in a plain column. The part has no divider, so add a `Divider` between rows or use `state="bare"` inside a bordered card.
+- `highlight` marks one row (for example the open question). Do not highlight more than one row in a list.
+- The part is `width: 100%`. Give its parent a width.
+
+<DoDont
+  dos={[
+    'Keep titles as questions or short labels that make sense when the body is hidden.',
+    'Keep `expanded` in the screen state so a deep link or a search can open a row.',
+    'Use `bare` when the rows sit inside a card that already has a border.',
+  ]}
+  donts={[
+    'Do not hide a required step (a fee, a consent) inside a collapsed body.',
+    'Do not put a button or a form field in the body without testing the tap target against the header.',
+    'Do not mix `default` and `bare` rows in one list.',
+  ]}
+/>

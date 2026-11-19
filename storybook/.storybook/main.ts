@@ -18,7 +18,8 @@ const svgAsRnComponent = {
     const xml = (await fs.readFile(id, 'utf8')).replace(/#262626/g, 'currentColor');
     return `import React from 'react'; import { SvgXml } from 'react-native-svg';
 const xml = ${JSON.stringify(xml)};
-export default function Svg(props) { return React.createElement(SvgXml, { xml, ...props }); }`;
+export default function Svg(props) { return React.createElement(SvgXml, { xml, ...props }); }
+Svg.default = Svg;`;
   },
 };
 
@@ -29,10 +30,10 @@ const requireAssetsToImports = {
   enforce: 'pre' as const,
   transform(code: string, id: string) {
     if (!/\/(src|stories|@expo-google-fonts)\//.test(id) || !code.includes('require(')) return null;
-    const re = /require\(\s*(['"])((?:\.{1,2}\/|@)[^'"]+\.(?:png|jpe?g|webp|gif|svg|ttf|otf|riv|lottie|json|mp4))\1\s*\)/g;
+    const re = /require\(\s*(['"])((?:\.{1,2}\/|@)[^'"]+\.(?:png|jpe?g|webp|gif|svg|ttf|otf|riv|lottie|json|mp4))\1\s*\)(\.default)?/g;
     const imports: string[] = [];
     const seen = new Map<string, string>();
-    const out = code.replace(re, (_m, _q, spec) => {
+    const out = code.replace(re, (_m, _q, spec, _dflt) => {
       let name = seen.get(spec);
       if (!name) { name = `__sbAsset${seen.size}`; seen.set(spec, name); imports.push(`import ${name} from ${JSON.stringify(spec)};`); }
       return name;
@@ -62,6 +63,7 @@ const config: StorybookConfig = {
   stories: process.env.SB_STORIES
     ? process.env.SB_STORIES.split(',')
     : ['../../stories/**/*.mdx', '../../stories/**/*.stories.@(ts|tsx)'],
+  staticDirs: ['../public'],
   addons: [{ name: '@storybook/addon-docs', options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } } }],
   framework: {
     name: '@storybook/react-native-web-vite',
