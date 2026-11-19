@@ -2,6 +2,7 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { SearchTopSheet, type SearchTopSheetProps } from '../../../src/organisms/SearchTopSheet';
 import { InlineMessage } from '../../../src/molecules';
+import { Skeleton } from '../../../src/atoms';
 import { PhoneFrame } from '../../../storybook/harness';
 import { View } from 'react-native';
 import { colors, spacing } from '../../../src/tokens';
@@ -62,6 +63,26 @@ export const CatalogueNotLoadedProposed: Story = {
     <PhoneFrame>
       <View style={{ flex: 1, backgroundColor: colors.surface.default, padding: spacing[16], gap: spacing[16] }}>
         <InlineMessage tone="warning" message="Search needs a connection. Check your internet and try again." action="single" primaryActionLabel="Try again" />
+      </View>
+    </PhoneFrame>
+  ),
+};
+
+/** A long query that matches nothing. */
+export const LongQuery: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/SearchTopSheet.tsx:417', docs: { description: { story: 'Edge case. A 55-character query in the search field, no results. Check that the field and the no-results block hold the long text without overflow.' } } },
+  render: () => <Sheet value="hdfc regalia gold credit card lifetime free lounge" sections={[]} onAdvisorPress={() => {}} />,
+};
+
+/** Proposed: the catalogue is still loading when the user types. */
+export const CatalogueLoadingProposed: Story = {
+  tags: ['proposed'],
+  parameters: { source: 'src/organisms/SearchTopSheet.tsx:211', docs: { description: { story: 'MISSING today: while the cards query is pending, a typed query shows "No results" because only loaded sections count. Proposal: three Skeleton rows in the results area. Open question: show the skeleton only after the catalogue has been pending for a moment, to avoid a flash on a fast network?' } } },
+  render: () => (
+    <PhoneFrame>
+      <View style={{ flex: 1, backgroundColor: colors.surface.default, padding: spacing[16], gap: spacing[12] }}>
+        {[0, 1, 2].map((i) => <Skeleton key={i} height={spacing[48]} radius="lg" />)}
       </View>
     </PhoneFrame>
   ),

@@ -79,3 +79,10 @@ export const ZeroPicksProposed: Story = {
     </PhoneFrame>
   ),
 };
+
+/** One alternative only: the block shrinks to a single pick. */
+export const OnePick: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/IneligibleSheet.tsx:130', docs: { description: { story: 'Edge case. Only the first pick (the closest card) is passed. The "See all N cards" button still shows with the full count. Check that one pick reads as an intent, not as a half-empty list.' } } },
+  render: () => <Rejected reasons={REJECTION.reasonIncome.lines} picks={REJECTION.picks.slice(0, 1)} />,
+};

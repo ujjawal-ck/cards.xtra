@@ -1,8 +1,8 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { SplashScreen } from '../../../src/screens/SplashScreen';
-import { ScreenHarness } from '../../../storybook/harness';
-import { api } from '../../../storybook/fixtures';
+import { ScreenHarness, STORAGE_KEYS } from '../../../storybook/harness';
+import { api, reply } from '../../../storybook/fixtures';
 
 const meta: Meta = {
   title: 'Flows/1 Launch and login/Splash',
@@ -36,4 +36,23 @@ export const OfflineWithSavedSession: Story = {
   tags: ['live'],
   parameters: { source: 'src/auth/AuthContext.tsx:127', docs: { description: { story: 'A network failure while the app restores the session does not log the user out. The splash behaves as with a good network.' } } },
   render: () => <ScreenHarness name="Splash" component={SplashScreen} auth="signedIn" api={api.offline()} />,
+};
+
+/** A three-part token with an `exp` in the past (2020). Opaque tokens never count as expiring, so the app would not try a refresh. No personal data. */
+const b64url = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const EXPIRED_JWT = `${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64url({ sub: 'storybook', exp: 1577836800 })}.storybook-signature`;
+
+/** Saved session whose refresh token is rejected: the user is logged out without a word (A10, Q3). */
+export const RefreshRejectedAtLaunch: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/auth/AuthContext.tsx:136', docs: { description: { story: 'Edge case. The saved access token is expired (a test token with a past exp), so the app asks for a new one and the API answers 401 / 2004. The app clears the session and sets no "session expired" marker, so no login sheet opens and nothing explains it. The splash plays out as for a guest, then goes to Onboarding after 7 seconds (stub page "→ Onboarding"). Open question Q3: tell the user ("You were logged out") or stay silent?' } } },
+  render: () => (
+    <ScreenHarness
+      name="Splash"
+      component={SplashScreen}
+      auth="signedIn"
+      storage={{ [STORAGE_KEYS.accessToken]: EXPIRED_JWT }}
+      api={api.ok({ refreshToken: reply.code(401, '2004', 'Session expired') })}
+    />
+  ),
 };

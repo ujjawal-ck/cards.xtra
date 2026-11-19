@@ -41,3 +41,13 @@ export const LongName: Story = {
   parameters: { source: 'src/screens/GreetingScreen.tsx:184', docs: { description: { story: 'Edge case (PARTIAL). The name renders in a 40 px display style with no line limit, and the backend does not cap the name. Proposal from the UX audit: one line with a tail ellipsis. Open question: cap the signup name field instead?' } } },
   render: () => <Greeting name="Testuserwithaverylongfirstnamethatkeepsgoing Test" />,
 };
+
+/** The same long name on the small Android viewport (360 dp). */
+export const LongName360: Story = {
+  tags: ['live'],
+  globals: { viewport: { value: 'android360', isRotated: false } },
+  parameters: { source: 'src/screens/GreetingScreen.tsx:184', docs: { description: { story: 'Edge case at 360 dp. Pinned to the Android small viewport (360 x 800). The 40 px name has no line limit, so a long first name wraps over several lines in the narrower frame. Open question: cap the signup name field, or truncate here?' } } },
+  render: () => (
+    <ScreenHarness name="Greeting" component={GreetingScreen} auth="signedIn" api={api.ok()} width={360} height={800} params={routeParams('Greeting', { name: 'Testuserwithaverylongfirstnamethatkeepsgoing Test' })} />
+  ),
+};

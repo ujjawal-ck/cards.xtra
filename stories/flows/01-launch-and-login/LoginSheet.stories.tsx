@@ -9,7 +9,7 @@ import { Text, Button, Input } from '../../../src/atoms';
 import { InlineMessage } from '../../../src/molecules';
 import { BottomSheetHeader } from '../../../src/organisms/BottomSheetHeader';
 import { colors, spacing, radius } from '../../../src/tokens';
-import { OpenLogin, Script, clickByText, typeInto, type Step } from './_flow';
+import { OpenLogin, Script, clickByText, clickByPart, typeInto, type Step } from './_flow';
 
 const SRC = 'src/auth/LoginSheetProvider.tsx';
 const PHONE = '9800000010';
@@ -127,6 +127,34 @@ export const NewNumberNameMissing: Story = {
   render: () => <Login api={api.ok({ loginOtp: authFixture.notRegistered })} steps={[typePhone, tapGetOtp, typeOtp]} />,
 };
 
+/** Offline when requesting the OTP, as it is today: transport text, no offline wording (A12). */
+export const PhoneOfflineToday: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:231`, docs: { description: { story: 'Edge case (A12). The OTP call fails like a dropped network. The sheet shows the transport text under the button, not an offline message.' } } },
+  render: () => <Login api={api.ok({ loginOtp: reply.network() })} steps={[typePhone, tapGetOtp]} />,
+};
+
+/** The OTP call never answers: after 15 seconds the sheet shows the timeout line. */
+export const PhoneTimeoutToday: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:263`, docs: { description: { story: 'Slow story: wait about 17 seconds. Login OTP calls are not retried, so there is one 15 s attempt (G1), then "Request timed out. Check your connection and try again." Until then the button shows its spinner and nothing else.' } } },
+  render: () => <Login api={api.ok({ loginOtp: reply.hang() })} steps={[typePhone, tapGetOtp]} />,
+};
+
+/** Verify tapped but the login call is lost: the OTP step shows an error and the code stays. */
+export const OtpVerifyDropped: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:319`, docs: { description: { story: 'Edge case. The story gets to the OTP step with a good network, types 123456 and taps "Verify & log in" while the login call fails like a dropped network. The sheet shows the transport text under the boxes (A12).' } } },
+  render: () => <Login api={api.ok({ login: reply.network() })} steps={[typePhone, tapGetOtp, typeOtp, [500, () => clickByText('Verify & log in')]]} />,
+};
+
+/** Resend fails: the second OTP request answers 500. */
+export const ResendFailed: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:520`, docs: { description: { story: 'Slow story: wait about 36 seconds. The first OTP request works; the resend timer runs out after 30 s, and the story taps "Resend OTP", which answers 500. The sheet shows the API error text.' } } },
+  render: () => <Login api={api.ok({ loginOtp: reply.sequence(authFixture.otpSent, reply.error(500)) })} steps={[typePhone, tapGetOtp, [31000, () => clickByPart('Resend')]]} />,
+};
+
 // ── Success: driven from Onboarding, because the app navigates only there ──────
 
 function OnboardingLoginFlow({ a, steps }: { a: ApiParams; steps: Step[] }) {
@@ -150,6 +178,13 @@ export const SuccessNewNumber: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:567`, docs: { description: { story: 'Driven from Onboarding with a number that is new to CashKaro: the story also types a name, taps "Verify & create account", and the app goes to Greeting (harness stub page "→ Greeting" with the name). Money-sensitive: on production this creates a real account with a generated placeholder email (D16, R9).' } } },
   render: () => <OnboardingLoginFlow a={api.ok({ loginOtp: authFixture.notRegistered })} steps={[typePhone, tapGetOtp, typeOtp, [300, () => typeInto(2, 'Test User')], [500, () => clickByText('Verify & create account')]]} />,
+};
+
+/** New number, signup call fails: the sheet stays on the OTP step with an error. */
+export const SignupFailed: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:567`, docs: { description: { story: 'Edge case. Same steps as "Success, new number", but the signup call answers 500. The user typed a valid OTP and a name and gets an error under the button; no account is created and the app stays on the sheet. Driven from Onboarding.' } } },
+  render: () => <OnboardingLoginFlow a={api.ok({ loginOtp: authFixture.notRegistered, signup: reply.error(500) })} steps={[typePhone, tapGetOtp, typeOtp, [300, () => typeInto(2, 'Test User')], [500, () => clickByText('Verify & create account')]]} />,
 };
 
 // ── Proposed: composed from DS parts, never imports the real sheet ────────────
@@ -195,4 +230,18 @@ export const RateLimitProposed: Story = {
   tags: ['proposed'],
   parameters: { source: `${SRC}:466`, docs: { description: { story: 'Not built (R20). Proposal: InlineMessage, tone warning, "Too many OTP requests. Try again in 10 minutes." Open question: the 429 body carries no retry-after, so the 10 minutes is a fixed window from the readiness doc. Product decides whether to show a fixed number or a generic "later".' } } },
   render: () => <PhonePanelReplica title="Log in or sign up" body="Enter your mobile number. We will text you a 6-digit OTP." message="Too many OTP requests. Try again in 10 minutes." />,
+};
+
+/** Proposed: the OTP request failed on the server. */
+export const ServerErrorProposed: Story = {
+  tags: ['proposed'],
+  parameters: { source: `${SRC}:231`, docs: { description: { story: 'Today the sheet prints the raw API text or "Could not send OTP. Please try again." Proposal: InlineMessage, tone error, "We couldn\'t send your OTP. Try again in a minute." Open question: does a retry hint of "a minute" match the real rate limit window (R20)?' } } },
+  render: () => <PhonePanelReplica title="Log in or sign up" body="Enter your mobile number. We will text you a 6-digit OTP." message="We couldn't send your OTP. Try again in a minute." tone="error" />,
+};
+
+/** Proposed: the OTP request is slow. */
+export const RequestingOtpSlowProposed: Story = {
+  tags: ['proposed'],
+  parameters: { source: `${SRC}:461`, docs: { description: { story: 'MISSING today: the button spinner is the only sign for up to 15 s (G1, G2). Proposal: InlineMessage, tone info, "Still sending your OTP. This can take a few seconds." Open question: after how many seconds does the line appear (5 s is a guess)?' } } },
+  render: () => <PhonePanelReplica title="Log in or sign up" body="Enter your mobile number. We will text you a 6-digit OTP." message="Still sending your OTP. This can take a few seconds." tone="info" />,
 };

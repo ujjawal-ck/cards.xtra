@@ -2,7 +2,9 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { CardDetailSheet, type CardDetailSheetProps } from '../../../src/organisms/CardDetailSheet';
 import { SheetHarness } from '../../../storybook/harness';
-import { api, reply } from '../../../storybook/fixtures';
+import { api, reply, BK_CARDS } from '../../../storybook/fixtures';
+import { mapBkCardToCardModel } from '../../../src/api/cardMapper';
+import { Script, clickByText } from '../01-launch-and-login/_flow';
 import type { ApiParams } from '../../../storybook/harness';
 import { MODELS, REGALIA, NO_TILES, RECOMMENDED, INCOME } from './_data';
 
@@ -66,4 +68,46 @@ export const DetailFetchFailed: Story = {
   tags: ['live'],
   parameters: { source: 'src/organisms/CardDetailSheet.tsx:1111', docs: { description: { story: 'PARTIAL. Only isPending is read: on error the benefits block shows nothing and no message, so the user decides on incomplete benefits. Proposal from the UX audit: InlineMessage, tone warning, "Couldn\'t load all benefits for this card.", action "Try again". Open question: show it, or keep failing silently?' } } },
   render: () => <Detail a={api.ok({ cardDetail: reply.error(500) })} card={NO_TILES} cards={[NO_TILES]} initialCardId={NO_TILES.id} />,
+};
+
+// ── Edge cases and loaders (audit edge-flows-1-3) ────────────────────────────
+
+/** A card with no benefit tiles, offline with no cache: the skeleton holds and nothing says why (A13). */
+export const BenefitsOffline: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:1138', docs: { description: { story: 'Edge case (A13, G4). The detail query is paused offline, so the sheet keeps the benefits skeleton with no message and no way to retry. Compare "Benefits loading" (same look, but the call is in flight).' } } },
+  render: () => <Detail a={api.offline()} card={NO_TILES} cards={[NO_TILES]} initialCardId={NO_TILES.id} />,
+};
+
+/** Fees the list does not expect: no annual fee text, a joining fee in words. */
+export const OddFees: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:979', docs: { description: { story: 'Edge case. The card comes from the app mapper with annual_fee_text null and joining_fee_text "Contact bank". Check the fee block, the fee strip and the waiver line for empty values or a broken amount.' } } },
+  render: () => {
+    const raw = BK_CARDS.find((c) => c.card_alias === 'hdfc-regalia-gold');
+    const odd = mapBkCardToCardModel({ ...raw!, annual_fee_text: null as never, joining_fee_text: 'Contact bank' });
+    return <Detail a={api.ok()} card={odd} cards={[odd]} initialCardId={odd.id} />;
+  },
+};
+
+/** Card art that fails to load. */
+export const BrokenArt: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:979', docs: { description: { story: 'Edge case. The card image address does not load. Check the hero art slot and the strip: they should keep their size and not collapse.' } } },
+  render: () => {
+    const broken = { ...REGALIA, cardImage: { uri: 'https://storybook.invalid/none.png' } };
+    return <Detail a={api.ok()} card={broken} cards={[broken]} initialCardId={broken.id} />;
+  },
+};
+
+/** The inline eligibility check fails: an error banner and no verdict. */
+export const InlineCheckError: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:673', docs: { description: { story: 'Edge case (A7). Details are saved (PIN 110001, income ₹75,000) and the story taps "Check Eligibility" in the card\'s own checker while the API answers 500. The card shows its error line and no verdict. A bad PIN would show the same line (A7).' } } },
+  render: () => (
+    <>
+      <Detail a={api.ok({ eligibility: reply.error(500) })} index={1} eligibilityDefaults={{ pincode: '110001', income: '₹75,000', incomeType: 'salaried' }} />
+      <Script steps={[[2600, () => clickByText('Check Eligibility')]]} />
+    </>
+  ),
 };

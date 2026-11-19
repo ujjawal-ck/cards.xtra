@@ -1,7 +1,12 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { AllCardBenefitsScreen } from '../../../src/screens/AllCardBenefitsScreen';
-import { ScreenHarness, routeParams } from '../../../storybook/harness';
+import { View } from 'react-native';
+import { ScreenHarness, PhoneFrame, routeParams } from '../../../storybook/harness';
+import { Header } from '../../../src/organisms/Header';
+import { ScreenState } from '../../../src/organisms/ScreenState';
+import { FooterButtons } from '../../../src/organisms/FooterButtons';
+import { colors } from '../../../src/tokens';
 import { api, cardDetailFixture, reply } from '../../../storybook/fixtures';
 import type { ApiParams } from '../../../storybook/harness';
 import { REGALIA } from './_data';
@@ -44,4 +49,46 @@ export const NotAvailable: Story = {
   tags: ['live'],
   parameters: { source: 'src/screens/AllCardBenefitsScreen.tsx:145' },
   render: () => <Page a={api.ok({ cardDetail: cardDetailFixture.empty })} />,
+};
+
+// ── Edge cases and loaders (audit edge-flows-1-3) ────────────────────────────
+
+/** Offline with no cache, today: the benefits are called "not available" (A6). */
+export const OfflineToday: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/screens/AllCardBenefitsScreen.tsx:129', docs: { description: { story: 'Edge case (A6, G3, G4). The detail query is paused offline, so the screen has neither loading nor error and falls to its "not available" copy. The user is told the card has no benefits when the real fault is the connection. Every offline cold start lands here (no persisted cache).' } } },
+  render: () => <Page a={api.offline()} />,
+};
+
+/** Replica of the screen: header, a state in the body, a footer. */
+const Shell = ({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) => (
+  <PhoneFrame>
+    <View style={{ flex: 1, backgroundColor: colors.surface.default }}>
+      <Header leading="back" title="All Card Benefits" />
+      <View style={{ flex: 1, justifyContent: 'center' }}>{children}</View>
+      {footer}
+    </View>
+  </PhoneFrame>
+);
+
+/** Proposed: the standard offline state. */
+export const OfflineProposed: Story = {
+  tags: ['proposed'],
+  parameters: { source: 'src/screens/AllCardBenefitsScreen.tsx:129', docs: { description: { story: 'Proposal for A6. The standard offline ScreenState ("You\'re offline", "Check your connection and try again.", "Try again") with a footer button "Go back to card details". Needs the shared helper that maps a paused query with no data to an offline flag. Open question: should the footer button stay, since the header already goes back?' } } },
+  render: () => (
+    <Shell footer={<FooterButtons buttons="single" size={52} primaryLabel="Go back to card details" />}>
+      <ScreenState title="You're offline" body="Check your connection and try again." actionLabel="Try again" />
+    </Shell>
+  ),
+};
+
+/** Proposed: a load error with a retry. */
+export const LoadErrorProposed: Story = {
+  tags: ['proposed'],
+  parameters: { source: 'src/screens/AllCardBenefitsScreen.tsx:133', docs: { description: { story: 'Proposal for A15. Today the error is plain text with no retry. ScreenState "Couldn\'t load benefits", "Check your connection and try again.", action "Try again". DS gap: ScreenState has one action and no error illustration (A17).' } } },
+  render: () => (
+    <Shell>
+      <ScreenState title="Couldn't load benefits" body="Check your connection and try again." actionLabel="Try again" />
+    </Shell>
+  ),
 };

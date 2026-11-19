@@ -51,3 +51,19 @@ export const Ineligible: Story = {
     </Host>
   ),
 };
+
+// ── Edge cases (audit edge-flows-1-3) ────────────────────────────────────────
+
+/** Eligible sheet with no reward headline: the default rupee figure shows (A4, P0, rare). */
+export const EligibleNoRewardToday: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/EligibleSheet.tsx:135', docs: { description: { story: 'Edge case (A4). Home passes undefined for the headline when the card has no reward value. The sheet then falls back to its built-in "Flat ₹1400 Rewards", a figure that is not this card\'s. Rare, but it is a wrong money claim on the sheet that leads to Apply.' } } },
+  render: () => <Host><EligibleSheet showConfetti={false} cardImage={REGALIA.cardImage} rewardHeadline={undefined} amount="₹1.5L" {...details} onApply={() => {}} onEditPress={() => {}} /></Host>,
+};
+
+/** The multi-card Home result with exactly one eligible card. */
+export const EligibleCardsModeOne: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/screens/HomeScreen.tsx:2763', docs: { description: { story: 'Edge case. The Home toggle path with one eligible card: no reward block, one card image, "Congrats! You\'re eligible for 1 card" and "Great, Show Cards". Check the singular wording and the single-card hero (the stack needs two or more images).' } } },
+  render: () => <Host><EligibleSheet showConfetti={false} hideReward cardImages={[REGALIA.cardImage]} message={"Congrats!\nYou're eligible for 1 card"} ctaLabel="Great, Show Cards" amount="₹1.5L" {...details} onApply={() => {}} onEditPress={() => {}} /></Host>,
+};

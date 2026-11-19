@@ -2,7 +2,7 @@ import React from 'react';
 import { Image, View } from 'react-native';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { ComponentHarness, PhoneFrame } from '../../../storybook/harness';
-import { api } from '../../../storybook/fixtures';
+import { api, profileFixture, reply } from '../../../storybook/fixtures';
 import type { ApiParams } from '../../../storybook/harness';
 import { Text, Button } from '../../../src/atoms';
 import { InlineMessage, Toast } from '../../../src/molecules';
@@ -12,7 +12,8 @@ import { images } from '../../../src/assets/images';
 import { useClickOut } from '../../../src/lib/useClickOut';
 import { colors, spacing } from '../../../src/tokens';
 import { REGALIA, NO_URL } from './_data';
-import { Script, clickByText } from '../01-launch-and-login/_flow';
+import { Script, clickByText, typeInto, type Step } from '../01-launch-and-login/_flow';
+import { useBottomSheetModal } from '@gorhom/bottom-sheet';
 
 // Card art at the CardTile art ratio (132:84), 2 x spacing[128] wide.
 const ART = { width: spacing[128] * 2, height: Math.round((spacing[128] * 2 * 84) / 132) };
@@ -46,12 +47,36 @@ function ApplyHost({ url = REGALIA.applyUrl }: { url?: string | null }) {
   );
 }
 
-const Real = ({ auth, a, url }: { auth: 'guest' | 'signedIn'; a: ApiParams; url?: string }) => (
+/** Closes every open sheet, like a swipe down. Runs once after `after` ms. Renders nothing. */
+function DismissAll({ after }: { after: number }) {
+  const { dismissAll } = useBottomSheetModal();
+  React.useEffect(() => {
+    const t = setTimeout(() => dismissAll(), after);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+/** `extra` steps run after the first Apply tap (each delay is from the step before). `dismissAfter` closes all sheets that many ms after mount. */
+const Real = ({ auth, a, url, extra = [], dismissAfter }: { auth: 'guest' | 'signedIn'; a: ApiParams; url?: string; extra?: Step[]; dismissAfter?: number }) => (
   <>
-    <ComponentHarness auth={auth} api={a}><ApplyHost url={url} /></ComponentHarness>
-    <Script steps={[[1500, () => clickByText('Apply Now')]]} />
+    <ComponentHarness auth={auth} api={a}>
+      <ApplyHost url={url} />
+      {dismissAfter != null ? <DismissAll after={dismissAfter} /> : null}
+    </ComponentHarness>
+    <Script steps={[[1500, () => clickByText('Apply Now')], ...extra]} />
   </>
 );
+
+const SLOW_PROFILE = reply.delay(8000, profileFixture.default);
+const PHONE = '9800000010';
+/** Guest path: tap "Log in to earn cashback", type the number, get the OTP. */
+const guestLoginSteps: Step[] = [
+  [1200, () => clickByText('Log in to earn cashback')],
+  [1800, () => typeInto(0, PHONE)],
+  [400, () => clickByText('Get OTP')],
+];
 
 const meta: Meta = {
   title: 'Flows/3a Card detail and apply/Click-out',
@@ -144,4 +169,53 @@ export const ReturnProposed: Story = {
       </View>
     </Page>
   ),
+};
+
+// ── Edge cases and loaders (audit edge-flows-1-3) ────────────────────────────
+
+/** Apply while the user id is still loading: the tap looks dead (A1, P0). */
+export const ResolvingSlowToday: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:96', docs: { description: { story: 'Slow story: wait about 10 seconds. Signed-in user; the profile call answers after 8 seconds and the story taps Apply at about 1.5 s. The hook waits for the profile with no spinner, no message and no disabled state, so the button looks dead. After the profile lands, the click-out goes out by itself (console line "[storybook] click-out"). On a real slow network the wait can reach about 46 s (G1). Open question Q1: block the button with a spinner, or open the link unattributed after N seconds?' } } },
+  render: () => <Real auth="signedIn" a={api.ok({ profile: SLOW_PROFILE })} />,
+};
+
+/** A second tap while the first waits: two click ids for one Apply (A1, P0). */
+export const DoubleTapToday: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:85', docs: { description: { story: 'Slow story: wait about 10 seconds. Same setup as "Resolving slow", and the story taps Apply a second time 1 second after the first. There is no in-flight guard, so when the profile lands the app sends two click-outs, each with its own click id and its own click_out event. Check the console: two "[storybook] click-out" lines with different click ids. Money-sensitive: attribution (A1, Q1).' } } },
+  render: () => <Real auth="signedIn" a={api.ok({ profile: SLOW_PROFILE })} extra={[[1000, () => clickByText('Apply Now')]]} />,
+};
+
+/** The user id cannot be resolved: a native Alert, no retry (A3). */
+export const UserIdMissingToday: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:106', docs: { description: { story: 'Edge case (A3, P0). Signed-in user, the profile call answers 500. After the app\'s retries (about 2 seconds) the hook shows a native Alert, "Couldn\'t open this right now" (drawn as a DOM dialog in Storybook). It has OK only: no retry, no event. No link opens. On web the Alert is the only sign; on a device it is the OS dialog.' } } },
+  render: () => <Real auth="signedIn" a={api.ok({ profile: reply.error(500) })} />,
+};
+
+/** The session expires at the Apply tap: login sheet plus Alert (verify). Not seen in a browser. */
+export const SessionExpiresAtApply: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:96', docs: { description: { story: 'Edge case (inferred from code, not seen in a browser). The first profile load (3 attempts) drops like a network failure, so the hook has no user id at the Apply tap. The refetch at the tap answers 401 and the refresh token is rejected (401 / 2004). The app drops to guest and opens the login sheet, and the hook also shows the "Couldn\'t open this right now" Alert. Two prompts for one tap, and the Apply is lost. Check the console for the call order.' } } },
+  render: () => (
+    <Real
+      auth="signedIn"
+      a={api.ok({ profile: reply.sequence(reply.network(), reply.network(), reply.network(), reply.error(401)), refreshToken: reply.code(401, '2004', 'Session expired') })}
+    />
+  ),
+};
+
+/** Guest logs in from the earn prompt: the Apply continues by itself. */
+export const GuestLoginContinues: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:117', docs: { description: { story: 'Edge case, long path (about 15 seconds). The story taps Apply as a guest, taps "Log in to earn cashback", types a number and taps Get OTP on the real login sheet. The story stops at the OTP step; after a verified OTP the hook resolves the new user id with the fresh token and opens the link attributed (launchAfterLogin). Money-sensitive: on production a verified OTP signs in a real account.' } } },
+  render: () => <Real auth="guest" a={api.ok()} extra={guestLoginSteps} />,
+};
+
+/** Guest opens the login sheet, then closes it: the Apply is dropped (Q2). */
+export const GuestLoginCancelled: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:89', docs: { description: { story: 'Edge case (Q2). The story taps Apply as a guest, taps "Log in to earn cashback", then closes the login sheet (all sheets dismissed, like a swipe down, at about 6 seconds). The pending Apply is dropped: no link, no message, the user is back on the card page. Open question Q2: drop the Apply (today), or offer "Apply without cashback" again?' } } },
+  render: () => <Real auth="guest" a={api.ok()} extra={[[1200, () => clickByText('Log in to earn cashback')]]} dismissAfter={6000} />,
 };
