@@ -17,7 +17,7 @@ function Otp({ initial, ...rest }: { initial: string } & Partial<React.Component
 
 export const Entry: Story = {
   tags: ['live'],
-  parameters: { source: 'src/auth/LoginSheetProvider.tsx:510', docs: { description: { story: 'Empty, then partly filled. The resend link counts down (`resend="timer"`).' } } },
+  parameters: { source: 'src/auth/LoginSheetProvider.tsx:511', docs: { description: { story: 'Empty, then partly filled. The resend link counts down (`resend="timer"`).' } } },
   render: () => (
     <Board><Phone>
       <Labelled label="Empty, resend timer"><Otp initial="" resend="timer" seconds={24} onResend={noop} /></Labelled>

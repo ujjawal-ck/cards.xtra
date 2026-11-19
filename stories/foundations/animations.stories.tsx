@@ -48,7 +48,7 @@ function Demo() {
 }
 
 export const Durations: Story = {
-  parameters: { source: 'src/tokens/motion.ts:11', docs: { description: { story: 'Press Play. Each dot moves the same distance with `motion.easing.standard`, in the token duration. fast, base and slow are the three UI speeds.' } } },
+  parameters: { source: 'src/tokens/motion.ts:23', docs: { description: { story: 'Press Play. Each dot moves the same distance with `motion.easing.standard`, in the token duration. fast, base and slow are the three UI speeds.' } } },
   render: () => <Demo />,
 };
 

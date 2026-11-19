@@ -20,7 +20,7 @@ type Story = StoryObj;
 /** Guest on a fresh install: after the intro the app goes to Onboarding. */
 export const Default: Story = {
   tags: ['live'],
-  parameters: { source: 'src/screens/SplashScreen.tsx:35' },
+  parameters: { source: 'src/screens/SplashScreen.tsx:63' },
   render: () => <ScreenHarness name="Splash" component={SplashScreen} auth="guest" api={api.ok()} />,
 };
 

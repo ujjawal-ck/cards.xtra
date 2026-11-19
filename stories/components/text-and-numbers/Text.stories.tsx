@@ -2,7 +2,7 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { View } from 'react-native';
 import { Text } from '../../../src/atoms/Text';
-import { colors, spacing, typography } from '../../../src/tokens';
+import { colors, spacing, typography, borderWidth } from '../../../src/tokens';
 
 const VARIANTS = Object.keys(typography) as (keyof typeof typography)[];
 
@@ -21,7 +21,7 @@ const meta = {
     numberOfLines: { control: { type: 'number', min: 0, max: 5 } },
     children: { control: 'text' },
   },
-  args: { variant: 'body16Regular', color: colors.text.primary, align: 'left', children: 'HDFC Millennia earns 5% cashback on Amazon and Flipkart.' },
+  args: { variant: 'body16Regular', color: colors.text.primary, align: 'left', children: 'HDFC Millennia earns X% cashback on Amazon and Flipkart.' },
 } satisfies Meta<typeof Text>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -68,10 +68,10 @@ export const States: Story = {
           <Text align="right">Right aligned</Text>
         </View>
       </Cell>
-      <Cell label="long text, wrapped"><Text variant="body14Regular">Get up to 5% cashback on Amazon, Flipkart and Myntra with the SBI Cashback card. Offer valid on select categories, terms apply.</Text></Cell>
-      <Cell label="long text, numberOfLines 1"><Text variant="body14Regular" numberOfLines={1}>Get up to 5% cashback on Amazon, Flipkart and Myntra with the SBI Cashback card.</Text></Cell>
+      <Cell label="long text, wrapped"><Text variant="body14Regular">Get up to X% cashback on Amazon, Flipkart and Myntra with the SBI Cashback card. Offer valid on select categories, terms apply.</Text></Cell>
+      <Cell label="long text, numberOfLines 1"><Text variant="body14Regular" numberOfLines={1}>Get up to X% cashback on Amazon, Flipkart and Myntra with the SBI Cashback card.</Text></Cell>
       <Cell label="rupee amounts"><Text variant="heading24Bold">₹1,00,000 · ₹12,34,567 · ₹775.60</Text></Cell>
-      <Cell label="empty string"><View style={{ borderWidth: 1, borderColor: colors.border.default, minWidth: 80, minHeight: 20 }}><Text>{''}</Text></View></Cell>
+      <Cell label="empty string"><View style={{ borderWidth: borderWidth.thin, borderColor: colors.border.default, minWidth: 80, minHeight: 20 }}><Text>{''}</Text></View></Cell>
     </View>
   ),
 };

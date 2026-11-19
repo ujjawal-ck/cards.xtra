@@ -47,7 +47,7 @@ import * as S from './session-expiry.stories';
 ## State matrix
 
 <StateMatrix rows={[
-  { state: 'Sheet opens by itself on expiry', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:125', story: 'patterns-session-expiry--today-sheet' },
+  { state: 'Sheet opens by itself on expiry', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:125', story: 'flows-10-offline-and-session-session-expired--orders-list-session-expired' },
   { state: 'Fixed title "Log in or sign up"', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:427', note: 'PARTIAL in the audit: the user does not know why.' },
   { state: 'Per-reason title and body', status: 'proposed', source: 'ux-states.md section 1', story: 'patterns-session-expiry--per-reason-title-proposed', note: 'Open question: DS gap, a title and body slot per source.' },
   { state: 'Withdraw verify: OTP session expired', status: 'proposed', source: 'ux-states.md section 6', note: 'Reuse the screen\'s existing expired state (WithdrawVerifyOTP.tsx:214) in place of the Alert (:111). No new copy.' },

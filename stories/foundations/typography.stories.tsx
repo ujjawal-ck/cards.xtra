@@ -51,7 +51,7 @@ export const Weights: Story = {
       <Wrap>
         {Object.entries(fontFamily).map(([w, ff]) => (
           <Frame key={w} width={200}>
-            <Text style={{ fontFamily: ff, fontSize: 32, lineHeight: 40 }}>Aa ₹1,234</Text>
+            <Text style={{ fontFamily: ff, fontSize: fontSize[32], lineHeight: 40 }}>Aa ₹1,234</Text>
             <Label>{w}</Label>
             <Caption>{ff}</Caption>
           </Frame>
@@ -69,7 +69,7 @@ export const RawScales: Story = {
         <Wrap gap={spacing[16]}>{Object.values(fontSize).map((n) => <View key={n} style={{ alignItems: 'center', gap: spacing[2] }}><Text style={{ fontFamily: fontFamily.semiBold, fontSize: n, lineHeight: n + 8 }}>Ag</Text><Caption>{n}</Caption></View>)}</Wrap>
       </Group>
       <Group title="letterSpacing">
-        <Wrap>{Object.entries(letterSpacing).map(([k, v]) => <Frame key={k} width={160}><Text style={{ fontFamily: fontFamily.semiBold, fontSize: 20, letterSpacing: v }}>Cashback</Text><Caption>{k}: {v}</Caption></Frame>)}</Wrap>
+        <Wrap>{Object.entries(letterSpacing).map(([k, v]) => <Frame key={k} width={160}><Text style={{ fontFamily: fontFamily.semiBold, fontSize: fontSize[20], letterSpacing: v }}>Cashback</Text><Caption>{k}: {v}</Caption></Frame>)}</Wrap>
       </Group>
     </Page>
   ),

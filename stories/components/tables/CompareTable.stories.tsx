@@ -36,7 +36,7 @@ const columns: CompareTableColumn[] = [
 ];
 const rows: CompareTableRow[] = [
   { id: 'regalia', hero: <Hero i={0} tag="Best match" />, values: ['₹2,500', '₹2,500', '4 points per ₹150', '12 a year', 'Upto ₹2,500'] },
-  { id: 'swiggy', hero: <Hero i={1} />, values: ['Free', 'Free', '10% on Swiggy', '4 a year', 'Upto ₹1,200'] },
+  { id: 'swiggy', hero: <Hero i={1} />, values: ['Free', 'Free', 'X% on Swiggy', '4 a year', 'Upto ₹1,200'] },
   { id: 'sbi', hero: <Hero i={2} />, values: ['₹999', '₹999', '5% online', '–', 'Flat ₹2,000'] },
 ];
 

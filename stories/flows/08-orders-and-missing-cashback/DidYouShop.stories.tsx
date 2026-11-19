@@ -68,7 +68,7 @@ export const FeedbackAppreciated: Story = {
   },
 };
 
-/** PROPOSED: the store-visit lookup failed. Today a native Alert (a no-op on web), so nothing shows here. */
+/** PROPOSED: the store-visit lookup failed. Today a native Alert. */
 export const LookupFailed: Story = {
   tags: ['proposed'],
   parameters: {

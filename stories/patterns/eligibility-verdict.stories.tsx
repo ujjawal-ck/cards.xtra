@@ -7,7 +7,7 @@ import { IneligibleSheet } from '../../src/organisms/IneligibleSheet';
 import { InlineMessage } from '../../src/molecules/InlineMessage';
 import { Button } from '../../src/atoms/Button';
 import { images } from '../../src/assets/images';
-import { spacing, colors } from '../../src/tokens';
+import { spacing, colors, radius } from '../../src/tokens';
 import { Board, noop } from './_shared';
 
 const meta: Meta = {
@@ -19,7 +19,7 @@ type Story = StoryObj;
 
 const details = { pincode: '110001', amount: '₹1,50,000', occupation: 'Salaried' };
 const Frame = ({ children }: { children: React.ReactNode }) => (
-  <View style={{ width: 390, backgroundColor: colors.surface.dark, overflow: 'hidden', borderRadius: 24 }}>{children}</View>
+  <View style={{ width: 390, backgroundColor: colors.surface.dark, overflow: 'hidden', borderRadius: radius['2xl'] }}>{children}</View>
 );
 
 export const Eligible: Story = {

@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { OfflineBanner } from '../../../src/molecules/OfflineBanner';
 import { ComponentHarness } from '../../../storybook/harness';
 import { Text } from '../../../src/atoms';
-import { colors, spacing } from '../../../src/tokens';
+import { colors, spacing, borderWidth } from '../../../src/tokens';
 
 const meta = {
   title: 'Components/Messages and tooltips/OfflineBanner',
@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>;
 /** Static replica with the same tokens as the component, so the offline look is always visible. */
 function Replica() {
   return (
-    <View style={{ paddingTop: spacing[4], paddingBottom: spacing[4], paddingHorizontal: spacing[16], backgroundColor: colors.feedback.warning.subtle, borderBottomWidth: 1, borderBottomColor: colors.feedback.warning.border, alignItems: 'center' }}>
+    <View style={{ paddingTop: spacing[4], paddingBottom: spacing[4], paddingHorizontal: spacing[16], backgroundColor: colors.feedback.warning.subtle, borderBottomWidth: borderWidth.thin, borderBottomColor: colors.feedback.warning.border, alignItems: 'center' }}>
       <Text variant="body12SemiBold" color={colors.feedback.warning.text} align="center">You're offline. We'll refresh when you're back online.</Text>
     </View>
   );
@@ -54,7 +54,8 @@ export const Playground: Story = {
 };
 
 export const States: Story = {
-  parameters: { docs: { description: { story: 'Replica of the offline strip (same tokens, copy and layout, without the top safe-area inset). Online state: the component renders nothing.' } } },
+  tags: ['!live', 'proposed'],
+  parameters: { docs: { description: { story: 'Replica, not the real component: a static copy of the offline strip (same tokens, copy and layout, without the top safe-area inset). Online state: the component renders nothing.' } } },
   render: () => (
     <View style={{ width: 390, gap: spacing[16] }}>
       <Text variant="body12Medium">Offline (replica)</Text>
@@ -65,4 +66,4 @@ export const States: Story = {
   ),
 };
 
-export const Variants: Story = { ...States, name: 'Variants (one look)', parameters: { docs: { description: { story: 'OfflineBanner has no variants: one strip, one message.' } } } };
+export const Variants: Story = { ...States, tags: ['!live', 'proposed'], name: 'Variants (one look)', parameters: { docs: { description: { story: 'OfflineBanner has no variants: one strip, one message. Replica, not the real component.' } } } };

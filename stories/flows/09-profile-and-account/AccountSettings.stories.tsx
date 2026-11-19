@@ -31,7 +31,7 @@ export const EmailChanged: Story = {
 export const MobileChanged: Story = {
   tags: ['demo'],
   parameters: { source: `${SRC}:187`, docs: { description: { story: DEMO } } },
-  render: () => screen({ updated: 'mobile', newValue: '9800000011' }),
+  render: () => screen({ updated: 'mobile', newValue: '9800000010' }),
 };
 
 /** Profile still loading: the email and mobile fields read empty (no skeleton). */

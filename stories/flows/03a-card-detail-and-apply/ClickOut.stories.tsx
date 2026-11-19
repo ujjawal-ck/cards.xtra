@@ -97,7 +97,7 @@ export const ResolvingUserIdProposed: Story = {
 /** Proposed: user id could not be resolved. */
 export const UserIdMissingProposed: Story = {
   tags: ['proposed'],
-  parameters: { source: 'src/lib/useClickOut.tsx:106', docs: { description: { story: 'Today (PARTIAL) a native Alert "Couldn\'t open this right now" shows, and it logs nothing; it cannot render on web. Proposal: a Toast, tone error. DS gap: there is no app-level toast host, each screen mounts its own. Open question: should the failure fire an analytics event (clickout_blocked is defined but its hook has no caller, R3)?' } } },
+  parameters: { source: 'src/lib/useClickOut.tsx:106', docs: { description: { story: 'Today (PARTIAL) a native Alert "Couldn\'t open this right now" shows, and it logs nothing. Proposal: a Toast, tone error. DS gap: there is no app-level toast host, each screen mounts its own. Open question: should the failure fire an analytics event (clickout_blocked is defined but its hook has no caller, R3)?' } } },
   render: () => (
     <Page footer={<FooterButtons buttons="single" size={52} primaryLabel="Apply Now" />}>
       <View style={{ paddingHorizontal: spacing[16] }}>

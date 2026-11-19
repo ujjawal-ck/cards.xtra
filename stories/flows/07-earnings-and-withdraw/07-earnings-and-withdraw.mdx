@@ -42,7 +42,7 @@ Hidden: Payment history (D4), no route links to it
 
 `$` marks a money step. Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
 
-Stories that type or tap run a small DOM interaction after mount (a play function). They drive the real screen: no timers are patched and no state is faked. The native `Alert.alert` calls do nothing on react-native-web, so the live stories for those states show the screen after the failure but not the dialog. The alert text is written to the browser console. A `proposed` twin shows each failure as inline UI.
+Stories that type or tap run a small DOM interaction after mount (a play function). They drive the real screen: no timers are patched and no state is faked. The native `Alert.alert` calls are drawn by the preview as a plain dialog (a web shim), so the live stories show the real title, message and buttons. A `proposed` story shows the inline or full-screen design from `audit/ux-states.md` for each failure.
 
 ## 1. Earnings
 
@@ -66,7 +66,7 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Payout settling", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--settling', note: "Withdraw tapped after mount. Payment info 400 / 5002." },
   { state: "Nothing to withdraw", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--nothing-to-withdraw', note: "Only pending earnings." },
   { state: "Below minimum", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--below-minimum', note: "₹120 against ₹250 (400 / 5003)." },
-  { state: "Balance error", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error', note: "Native Alert, not rendered on web." },
+  { state: "Balance error", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error', note: "Native Alert (drawn as a plain dialog)." },
   { state: "Balance error, proposed Toast", status: 'proposed', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error-proposed', note: "Error Toast with Try again." },
 ]} />
 
@@ -88,7 +88,7 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "UPI, invalid", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-invalid', note: "Types, ticks, taps Get Paid." },
   { state: "UPI, consent given", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-consent', note: "Get Paid on." },
   { state: "UPI, sending OTP", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-sending-otp', note: "Send call hangs." },
-  { state: "UPI, OTP send error", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-failed', note: "Native Alert, not rendered on web." },
+  { state: "UPI, OTP send error", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-failed', note: "Native Alert (drawn as a plain dialog)." },
   { state: "UPI, OTP send error, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-failed-proposed', note: "Inline error above the footer." },
   { state: "Amazon, empty", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-empty', note: "Two mobile fields." },
   { state: "Amazon, invalid mobile", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-invalid', note: "Short number, field left." },
@@ -119,9 +119,9 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Verifying and paying", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--verifying', note: "Types the code. Payout POST hangs." },
   { state: "Resend ready", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-ready', note: "Wait 30 s, nothing is patched." },
   { state: "Rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--rate-limited', note: "HTTP 429 reads as a wrong code (app bug)." },
-  { state: "Connection problem", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--connection-problem', note: "Native Alert, not rendered on web." },
-  { state: "Payment failed", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed', note: "Native Alert, not rendered on web." },
-  { state: "Unknown outcome", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--unknown-outcome', note: "Native Alert, not rendered on web. Second submit blocked." },
+  { state: "Connection problem", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--connection-problem', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "Payment failed", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "Unknown outcome", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--unknown-outcome', note: "Native Alert (drawn as a plain dialog). Second submit blocked." },
   { state: "Session expired (R17)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-expired', note: "Login sheet opens; Alert on submit." },
   { state: "Connection problem, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--connection-problem-proposed', note: "Inline warning." },
   { state: "Payment failed, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed', note: "Inline error with Try again." },

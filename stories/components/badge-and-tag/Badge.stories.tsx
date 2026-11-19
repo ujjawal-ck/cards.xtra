@@ -68,7 +68,7 @@ export const States: Story = {
   parameters: { docs: { description: { story: 'Badge has no disabled, loading or error state. Long text is not truncated: the badge grows, and a very long label wraps inside its row. The close icon (desc-cross) has a baked red stroke and does not tint to the badge colour: a component issue, not fixed here.' } } },
   render: () => (
     <View style={{ gap: spacing[16], width: 300 }}>
-      <Cell label="long text"><Badge label="HDFC Millennia lifetime free card with 5% cashback on Amazon and Flipkart" size="sm" /></Cell>
+      <Cell label="long text"><Badge label="HDFC Millennia lifetime free card with X% cashback on Amazon and Flipkart" size="sm" /></Cell>
       <Cell label="rupee amount"><Badge label="Save ₹1,00,000" size="md" pill /></Cell>
       <Cell label="close (baked red cross)"><Badge label="SBI Cashback" icon="close" onClose={() => {}} /></Cell>
     </View>

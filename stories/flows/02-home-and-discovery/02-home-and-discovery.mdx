@@ -84,7 +84,7 @@ States: 18 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "proposed",
     "source": "src/screens/HomeScreen.tsx:354",
     "story": "flows-2-home-and-discovery-home--offline-proposed",
-    "note": "Replica shell: the scrolled masthead bar over a ScreenState. */\nconst Shell = ({ children }: { children: React.ReactNode }) => (\n  <PhoneFrame>\n    <View style={{ flex: 1, backgroundColor: colors.surface.default }}>\n      <HomeHeader scrolled />\n      {children}\n    </View>\n  </PhoneFrame>\n);\n\n/** Proposed: offline with no cache"
+    "note": "Proposed: offline with no cache"
   },
   {
     "state": "Empty Catalogue (proposed)",
@@ -136,7 +136,7 @@ States: 18 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "live",
     "source": "src/organisms/FilterMenu.tsx:267",
     "story": "flows-2-home-and-discovery-filters--menu-open",
-    "note": "Holds the selection so taps work. `seed` is the first state. */\nfunction Menu({ seed = {} }: { seed?: Partial<FilterMenuProps> }) {\n  const [tab, setTab] = useState(seed.activeCategory ?? 'category');\n  const [tiles, setTiles] = useState(seed.selectedTileIndices ?? []);\n  const [fee, setFee] = useState(seed.selectedAnnualFee ?? []);\n  const [net, setNet] = useState(seed.selectedCardNetwork ?? []);\n  const [type, setType] = useState(seed.selectedCardType ?? []);\n  const [banks, setBanks] = useState(seed.selectedBanks ?? []);\n  const count = tiles.length + fee.length + net.length + type.length + banks.length;\n  const footer = <FooterButtons buttons=\"dual\" size={44} shadow=\"on\" strip=\"caption\" stripTone=\"brand\" stripText={`${count} filter${count === 1 ? '' : 's'} selected`} color=\"second\" primaryLabel=\"Apply Filter\" secondaryLabel=\"Clear\" />;\n  return (\n    <SheetHarness>\n      {(ref) => (\n        <FilterHost ref={ref as never} footer={footer}>\n          <FilterMenu\n            bankOptions={BANKS}\n            activeCategory={tab} onCategoryChange={setTab}\n            selectedTileIndices={tiles} onToggleTile={(i) => setTiles((l) => toggle(l, i))}\n            selectedAnnualFee={fee} onToggleAnnualFee={(i) => setFee((l) => toggle(l, i))}\n            selectedCardNetwork={net} onToggleCardNetwork={(i) => setNet((l) => toggle(l, i))}\n            selectedCardType={type} onToggleCardType={(i) => setType((l) => toggle(l, i))}\n            selectedBanks={banks} onToggleBanks={(i) => setBanks((l) => toggle(l, i))}\n          />\n        </FilterHost>\n      )}\n    </SheetHarness>\n  );\n}\n\nconst meta: Meta = {\n  title: 'Flows/2 Home and discovery/Filters',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'The Filters chip on Home opens a 70% sheet: a left rail (Category, Annual Fee, Card Network, Card Type, Banks) and a right panel. \"Apply Filter\" runs a white-screen transition and then shows the filtered list. The stories render the real FilterMenu in the same host Home uses; taps on the options work.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Menu: Category tab, nothing selected"
+    "note": "Menu: Category tab, nothing selected"
   },
   {
     "state": "Applied",

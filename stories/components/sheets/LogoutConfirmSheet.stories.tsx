@@ -9,7 +9,7 @@ const meta: Meta<LogoutConfirmSheetProps> = {
   tags: ['autodocs', 'live'],
   parameters: {
     layout: 'fullscreen',
-    source: 'src/organisms/LogoutConfirmSheet.tsx:41',
+    source: 'src/organisms/LogoutConfirmSheet.tsx:42',
     docs: { description: { component: 'Asks "Log out?" with Yes and No. Yes dismisses the sheet, then runs onConfirm. The profile screen opens it.' } },
   },
   argTypes: { onConfirm: { action: 'confirmed' } },

@@ -89,7 +89,7 @@ export const UpiSendingOtp: Story = {
   },
 };
 
-/** OTP send failed (HTTP 500 on sendotp). The app calls a native Alert "Could not send OTP". The Alert is not rendered on web (see console), so the screen looks like the consent state. Same code on the Amazon and Flipkart forms. */
+/** OTP send failed (HTTP 500 on sendotp). The app calls a native Alert "Could not send OTP". The preview draws the Alert as a plain dialog over the consent state. Same code on the Amazon and Flipkart forms. */
 export const UpiSendOtpFailed: Story = {
   tags: ['live'],
   parameters: { source: `${UPI_SRC}:75` },
@@ -153,14 +153,14 @@ export const AmazonInvalid: Story = {
   },
 };
 
-/** Numbers do not match: first 9800000010, second 9800000011. Red second field, "Mobile numbers do not match". */
+/** Numbers do not match: first 9800000010, second starts 98000001 (8 digits). Red second field, "Mobile numbers do not match". */
 export const AmazonMismatch: Story = {
   tags: ['live'],
   parameters: { source: `${AMZ_SRC}:79` },
   render: () => <Amazon />,
   play: async ({ canvasElement }: Ctx) => {
     await typeInto(canvasElement, 0, '9800000010');
-    await typeInto(canvasElement, 1, '9800000011');
+    await typeInto(canvasElement, 1, '98000001');
   },
 };
 
@@ -196,14 +196,14 @@ export const FlipkartInvalid: Story = {
   },
 };
 
-/** Emails do not match: user@example.com then user@example.org. Red second field. */
+/** Emails do not match: user@example.com then other@example.com. Red second field. */
 export const FlipkartMismatch: Story = {
   tags: ['live'],
   parameters: { source: `${FLK_SRC}:72` },
   render: () => <Flipkart />,
   play: async ({ canvasElement }: Ctx) => {
     await typeInto(canvasElement, 0, 'user@example.com');
-    await typeInto(canvasElement, 1, 'user@example.org');
+    await typeInto(canvasElement, 1, 'other@example.com');
   },
 };
 

@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { BottomSheetHeader } from '../../src/organisms/BottomSheetHeader';
 import { Text } from '../../src/atoms/Text';
 import { Button } from '../../src/atoms/Button';
-import { colors, spacing, radius } from '../../src/tokens';
+import { colors, spacing, radius, borderWidth } from '../../src/tokens';
 import { Board, Labelled, noop } from './_shared';
 
 const meta: Meta = {
@@ -16,22 +16,22 @@ type Story = StoryObj;
 
 function Sheet({ title, body }: { title: string; body: string }) {
   return (
-    <View style={{ width: 390, backgroundColor: colors.surface.default, borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], borderWidth: 1, borderColor: colors.border.subtle3, overflow: 'hidden' }}>
+    <View style={{ width: 390, backgroundColor: colors.surface.default, borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], borderWidth: borderWidth.thin, borderColor: colors.border.subtle3, overflow: 'hidden' }}>
       <BottomSheetHeader showStroke={false} />
       <View style={{ paddingHorizontal: spacing[16], paddingBottom: spacing[24], gap: spacing[16] }}>
         <View style={{ alignItems: 'center', gap: spacing[4] }}>
           <Text variant="heading24SemiBold" align="center">{title}</Text>
           <Text variant="body14Regular" color={colors.text.secondary} align="center">{body}</Text>
         </View>
-        <Button label="Get OTP" variant="solid" tone="main" size={44} fullWidth onPress={noop} />
+        <Button label="Get OTP" variant="solid" tone="second" size={52} fullWidth onPress={noop} />
       </View>
     </View>
   );
 }
 
 export const TodaySheet: Story = {
-  tags: ['live'],
-  parameters: { source: 'src/auth/LoginSheetProvider.tsx:427', docs: { description: { story: 'The sheet for every source: the title and body are fixed (`src/auth/LoginSheetProvider.tsx:427`). A user whose session ended sees the same text as a new user. Frame shows the real copy, drawn from the sheet parts (the real sheet needs the login provider and its OTP state).' } } },
+  tags: ['proposed'],
+  parameters: { source: 'src/auth/LoginSheetProvider.tsx:427', docs: { description: { story: 'The sheet for every source: the title and body are fixed (`src/auth/LoginSheetProvider.tsx:427`). A user whose session ended sees the same text as a new user. Replica, not the real sheet: the real copy drawn from the sheet parts (the real sheet needs the login provider and its OTP state). The real sheet is in Flows/1 Launch and login/Login sheet.' } } },
   render: () => <Board><Sheet title="Log in or sign up" body="Enter your mobile number. We will text you a 6-digit OTP." /></Board>,
 };
 

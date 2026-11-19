@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { PartnerCard, type PartnerModel } from '../../../src/molecules/PartnerCard';
 import { SAMPLE_PARTNERS } from '../../../src/data/partners';
 import { Frame, Label } from './_shared';
+import { spacing } from '../../../src/tokens';
 
 const p = SAMPLE_PARTNERS[0];
 const COLORS = ['saffron', 'cobalt', 'fern', 'violet', 'sky', 'rose'] as const;
@@ -38,9 +39,9 @@ export const Variants: Story = {
   parameters: { docs: { description: { story: 'One tile per placeholderColor key: saffron, cobalt, fern, violet, sky, rose. The rates here come from the fixture file.' } } },
   decorators: [(Story) => <View style={{ width: 360 }}><Story /></View>],
   render: () => (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[12] }}>
       {SAMPLE_PARTNERS.map((m, i) => (
-        <View key={m.id} style={{ width: 168, gap: 4 }}>
+        <View key={m.id} style={{ width: 168, gap: spacing[4] }}>
           <Label>{`placeholderColor="${COLORS[i]}"`}</Label>
           <PartnerCard partner={m} onPress={() => {}} />
         </View>

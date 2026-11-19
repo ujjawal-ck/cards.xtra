@@ -5,7 +5,7 @@ import { WithdrawSuccess } from '../../../src/screens/withdraw/WithdrawSuccess';
 import { Text, Icon } from '../../../src/atoms';
 import { ListRow } from '../../../src/molecules';
 import { Header, FooterButtons } from '../../../src/organisms';
-import { colors, spacing, radius } from '../../../src/tokens';
+import { colors, spacing, radius, borderWidth } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness, routeParams } from '../../../storybook/harness';
 import { api } from '../../../storybook/fixtures';
 import { AMOUNT } from './_shared';
@@ -57,7 +57,7 @@ export const PayoutRecordProposed: Story = {
             <Icon name="check-circle-filled" size={48} color={colors.feedback.success.default} />
           </View>
           <Text variant="heading24Bold" color={colors.text.primary} align="center">{'₹1,240\nwithdrawn Successfully!'}</Text>
-          <View style={{ alignSelf: 'stretch', backgroundColor: colors.surface.default, borderRadius: radius.xl, paddingHorizontal: spacing[16], paddingVertical: spacing[8], borderWidth: 1, borderColor: colors.border.default }}>
+          <View style={{ alignSelf: 'stretch', backgroundColor: colors.surface.default, borderRadius: radius.xl, paddingHorizontal: spacing[16], paddingVertical: spacing[8], borderWidth: borderWidth.thin, borderColor: colors.border.default }}>
             <ListRow type="menu-option" title="Method: UPI (user@upi)" />
             <ListRow type="menu-option" title="Status: Processing, up to 72 hours" />
             <ListRow type="menu-option" title="Request: CKPAY0001" />

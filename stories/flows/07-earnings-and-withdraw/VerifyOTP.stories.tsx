@@ -15,9 +15,9 @@ import { CODE, verifyParams } from './_shared';
  * Typing the 6th digit submits by itself (verify, then paymentV1).
  * Stories marked "types the code" run a small DOM interaction after mount
  * (play function): they write the digits into the real OTP input.
- * Six outcomes are native `Alert.alert` calls in the app. react-native-web
- * renders no Alert, so those live stories show the screen after the failure
- * but not the dialog. The text is written to the console.
+ * Several outcomes are native `Alert.alert` calls in the app. The preview draws
+ * them as a plain dialog over the screen (web shim in .storybook/preview.tsx),
+ * so the live stories show the real title, message and buttons.
  */
 const meta: Meta = {
   title: 'Flows/7 Earnings and withdraw/Verify OTP',
@@ -75,7 +75,7 @@ export const RateLimited: Story = {
   play: typeCode,
 };
 
-/** Connection problem while verifying (no network on /users/verify). The app calls a native Alert "Connection problem"; the boxes stay as typed and are not marked wrong. The Alert is not rendered on web (see console). Types the code. */
+/** Connection problem while verifying (no network on /users/verify). The app calls a native Alert "Connection problem"; the boxes stay as typed and are not marked wrong. The preview draws the Alert as a plain dialog. Types the code. */
 export const ConnectionProblem: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:134` },
@@ -83,7 +83,7 @@ export const ConnectionProblem: Story = {
   play: typeCode,
 };
 
-/** Payout rejected by CashKaro (HTTP 400 on paymentV1). The app calls a native Alert "Payment failed"; the screen returns to the entry state. The Alert is not rendered on web (see console). Types the code. */
+/** Payout rejected by CashKaro (HTTP 400 on paymentV1). The app calls a native Alert "Payment failed"; the screen returns to the entry state. The preview draws the Alert as a plain dialog. Types the code. */
 export const PaymentFailed: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:177` },
@@ -91,25 +91,25 @@ export const PaymentFailed: Story = {
   play: typeCode,
 };
 
-/** Unknown outcome: the payout POST drops after it was sent and the re-check gives no answer. The app calls a native Alert "Couldn't confirm your withdrawal" (Go to Earnings / OK) and blocks a second submit of the same code. Not rendered on web (see console). Types the code. */
+/** Unknown outcome: the payout POST drops after it was sent and the re-check gives no answer. The app calls a native Alert "Couldn't confirm your withdrawal" (Go to Earnings / OK) and blocks a second submit of the same code. The preview draws the Alert as a plain dialog. Types the code. */
 export const UnknownOutcome: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:88` },
+  parameters: { source: `${SRC}:89` },
   render: () => <Screen a={api.ok({ payment: reply.network() })} />,
   play: typeCode,
 };
 
-/** R17. The session is already dead when the user types (401 on user and payment calls, refresh 401). The login sheet opens on its own over the step. With no token, typing the code calls a native Alert "Session expired" (not rendered on web, see console). Today nothing returns the user to this step after login. A different case, the OTP timing out by itself, is not reachable: the countdown only enables Resend. Types the code. */
+/** R17. The session is already dead when the user types (401 on user and payment calls, refresh 401). The login sheet opens on its own over the step. With no token, typing the code calls a native Alert "Session expired" (drawn by the preview as a plain dialog). Today nothing returns the user to this step after login. A different case, the OTP timing out by itself, is not reachable: the countdown only enables Resend. Types the code. */
 export const SessionExpired: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:110` },
+  parameters: { source: `${SRC}:111` },
   render: () => <Screen auth="sessionExpired" />,
   play: typeCode,
 };
 
 // ── Proposed: the same failures as inline UI (copy from audit/ux-states.md, flow 6) ──
 
-const OPEN_Q = 'Open question: native alerts are not themed, not testable and invisible in this Storybook. Inline message or full screen? Owner: product owner.';
+const OPEN_Q = 'Open question: native alerts are not themed and vanish on tap. Inline message or full screen? Owner: product owner.';
 
 /** PROPOSED. Connection problem as an inline warning over the footer; the code stays in the boxes. */
 export const ConnectionProblemProposed: Story = {
@@ -132,7 +132,7 @@ export const PaymentFailedProposed: Story = {
 /** PROPOSED. Unknown outcome as its own screen: a money state with no certain result needs a place to read it. */
 export const UnknownOutcomeProposed: Story = {
   tags: ['proposed'],
-  parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:88. Open question: should "Go to Earnings" also show the payout as pending (R4)? ${OPEN_Q}` } } },
+  parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:89. Open question: should "Go to Earnings" also show the payout as pending (R4)? ${OPEN_Q}` } } },
   render: () => (
     <ProposedOtp
       cta="Go to Earnings"

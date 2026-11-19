@@ -114,7 +114,7 @@ export const StartOverConfirm: Story = {
     docs: {
       description: {
         story:
-          'Proposed. Today "Start over" opens a native Alert (`AdvisorScreen.tsx:269`), which does not render on web and does not match the app. This draws the same choice as a bottom sheet in the style of LogoutConfirmSheet. Open question: is a native Alert acceptable for a destructive confirm, or do all confirms use the sheet? The chat behind the sheet is not drawn.',
+          'Proposed. Today "Start over" opens a native Alert (`AdvisorScreen.tsx:269`), which does not match the app style. This draws the same choice as a bottom sheet in the style of LogoutConfirmSheet. Open question: is a native Alert acceptable for a destructive confirm, or do all confirms use the sheet? The chat behind the sheet is not drawn.',
       },
     },
   },

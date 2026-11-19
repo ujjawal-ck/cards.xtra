@@ -47,7 +47,7 @@ export const FieldError: Story = {
   parameters: { source: 'src/atoms/Input.tsx:71', docs: { description: { story: 'Inline field error: `state="error"` and a `hint` that says how to fix it. The error stays next to the field.' } } },
   render: () => (
     <Board><Phone>
-      <Input label="UPI ID" value="anmol@" state="error" hint="Enter a valid UPI ID, like name@bank." onChangeText={noop} />
+      <Input label="UPI ID" value="user@" state="error" hint="Enter a valid UPI ID, like name@bank." onChangeText={noop} />
     </Phone></Board>
   ),
 };

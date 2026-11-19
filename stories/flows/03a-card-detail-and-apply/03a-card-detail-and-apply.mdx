@@ -55,21 +55,21 @@ States: 26 live, 5 proposed, 0 hidden, 0 demo. Each state is a story; a row link
   {
     "state": "Inline Eligible",
     "status": "live",
-    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "source": "src/organisms/CardDetailSheet.tsx:521",
     "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-eligible",
     "note": "Inline result: eligible. The user saved details on Home, so the card shows its own result"
   },
   {
     "state": "Inline Maybe",
     "status": "live",
-    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "source": "src/organisms/CardDetailSheet.tsx:540",
     "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-maybe",
     "note": "Inline result: maybe"
   },
   {
     "state": "Inline Ineligible",
     "status": "live",
-    "source": "src/organisms/CardDetailSheet.tsx:499",
+    "source": "src/organisms/CardDetailSheet.tsx:530",
     "story": "flows-3a-card-detail-and-apply-card-detail-ios-sheet--inline-ineligible",
     "note": "Inline result: ineligible. Story 3b starts from here"
   },
@@ -137,7 +137,7 @@ States: 26 live, 5 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "live",
     "source": "src/screens/HomeScreen.tsx:1207",
     "story": "flows-3a-card-detail-and-apply-apply-gate--checker-opened-by-apply",
-    "note": "Click whatever sits at (x, y): used for the sheet backdrop, which has no label. */\nfunction tapAt(x: number, y: number) {\n  const el = document.elementFromPoint(x, y) as HTMLElement | null;\n  if (!el) return;\n  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {\n    el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));\n  }\n}\n\nconst Gate = ({ dismiss }: { dismiss?: boolean }) => (\n  <>\n    <ScreenHarness name=\"Home\" component={HomeScreen} auth=\"guest\" api={api.ok()} />\n    <Script steps={[[2800, () => clickByText('Apply Now')], ...(dismiss ? ([[1500, () => tapAt(Math.round(window.innerWidth / 2), 40)]] as [number, () => void][]) : [])]} />\n  </>\n);\n\nconst meta: Meta = {\n  title: 'Flows/3a Card detail and apply/Apply gate',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'With no saved eligibility details and the experiment variant \"mandatory\" (the code default, src/experiments/index.ts), the first Apply on Home opens the eligibility checker before any bank page. Variant \"skippable\" goes straight to the click-out. Both stories drive the real Home screen: after it loads they tap the first tile\\'s \"Apply Now\".' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Apply tapped: the checker opens (gate \"mandatory\")"
+    "note": "Apply tapped: the checker opens (gate \"mandatory\")"
   },
   {
     "state": "Dismissed Drops Apply",
@@ -182,7 +182,7 @@ States: 26 live, 5 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "live",
     "source": "src/lib/useClickOut.tsx:89",
     "story": "flows-3a-card-detail-and-apply-click-out--guest-earn-prompt",
-    "note": "The card page background for the proposed states: art, name, and the part the footer sits under. */\nfunction Page({ children, footer }: { children?: React.ReactNode; footer?: React.ReactNode }) {\n  return (\n    <PhoneFrame>\n      <View style={{ flex: 1, backgroundColor: colors.surface.default }}>\n        <View style={{ padding: spacing[24], alignItems: 'center', gap: spacing[12] }}>\n          <Image source={REGALIA.cardImage} style={ART} resizeMode=\"contain\" />\n          <Text variant=\"heading20SemiBold\" color={colors.text.primary} align=\"center\">{REGALIA.name}</Text>\n        </View>\n        <View style={{ flex: 1, justifyContent: 'center' }}>{children}</View>\n        {footer}\n      </View>\n    </PhoneFrame>\n  );\n}\n\n/** A host for the real useClickOut hook: one Apply button that stands in for the sticky Apply bar. */\nfunction ApplyHost({ url = REGALIA.applyUrl }: { url?: string | null }) {\n  const { openClickOut, clickOutSheets } = useClickOut();\n  return (\n    <View style={{ flex: 1, backgroundColor: colors.surface.default, padding: spacing[24], gap: spacing[16], justifyContent: 'center' }}>\n      <Image source={REGALIA.cardImage} style={[ART, { alignSelf: 'center' }]} resizeMode=\"contain\" />\n      <Text variant=\"heading20SemiBold\" color={colors.text.primary} align=\"center\">{REGALIA.name}</Text>\n      <Button label=\"Apply Now\" variant=\"solid\" tone=\"second\" size={52} fullWidth onPress={() => openClickOut({ kind: 'card', url, itemId: REGALIA.id, itemName: REGALIA.name, source: 'home_detail', alias: REGALIA.filterMeta?.cardAlias })} />\n      {clickOutSheets}\n    </View>\n  );\n}\n\nconst Real = ({ auth, a, url }: { auth: 'guest' | 'signedIn'; a: ApiParams; url?: string }) => (\n  <>\n    <ComponentHarness auth={auth} api={a}><ApplyHost url={url} /></ComponentHarness>\n    <Script steps={[[1500, () => clickByText('Apply Now')]]} />\n  </>\n);\n\nconst meta: Meta = {\n  title: 'Flows/3a Card detail and apply/Click-out',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'The money step. Apply opens the bank page through a CashKaro tracking link (user id and click id). A guest is asked to log in first; a signed-in user goes straight out. The real useClickOut hook runs in the two live stories (hosted on a small page with an Apply button; the sticky Apply bar is not used). Money-sensitive: on production a click-out sets the affiliate attribution. The user-id, empty-link, redirect and return states do not exist in the app, so they are proposals.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Guest: the earn prompt sheet"
+    "note": "Guest: the earn prompt sheet"
   },
   {
     "state": "Signed In",
@@ -308,4 +308,4 @@ States: 26 live, 5 proposed, 0 hidden, 0 demo. Each state is a story; a row link
 - 5. What does the user see before and after a click-out (redirect step, terms, a "did you apply" return state), given bank approvals are not visible? Owner: product owner with the CashKaro tracking team.
 - Card detail fetch failure: show "Couldn't load all benefits" with Try again, or keep failing silently? Owner: product owner.
 
-Not storied: the card detail "first-time check opens a result sheet" path beyond the Result sheets step; the Android pager nudge (needs Platform.OS android). The click-out user-id error is a native Alert today and cannot render on web, so it is only shown as a proposal.
+Not storied: the card detail "first-time check opens a result sheet" path beyond the Result sheets step; the Android pager nudge (needs Platform.OS android). The click-out user-id error is a native Alert today; it is shown here only as a proposal.

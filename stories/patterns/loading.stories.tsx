@@ -89,8 +89,8 @@ export const WholeScreen: Story = {
 };
 
 export const WaitLine: Story = {
-  tags: ['live'],
-  parameters: { source: 'src/screens/tools/ToolResultsScreen.tsx:522', docs: { description: { story: 'For a call that can take a long time, the tools show one line that says why, above the skeleton rows. Same parts and copy as the screen.' } } },
+  tags: ['proposed'],
+  parameters: { source: 'src/screens/tools/ToolResultsScreen.tsx:522', docs: { description: { story: 'For a call that can take a long time, the tools show one line that says why, above the skeleton rows. Replica, not the real screen: the real copy and Text atom, with hand-built skeleton rows (the screen keeps its row local). The real state is in Flows/4 Shared result/League table, Loading.' } } },
   render: () => (
     <Board>
       <Phone>

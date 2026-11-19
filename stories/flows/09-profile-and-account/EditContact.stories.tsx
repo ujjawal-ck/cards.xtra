@@ -49,7 +49,7 @@ export const EnterNewInvalid: Story = {
 export const VerifyNewEmail: Story = { tags: ['demo'], parameters: { source: 'src/screens/EditContactVerifyNewScreen.tsx:45', docs: { description: { story: DEMO } } }, render: () => step3('email', 'new.user@example.com') };
 
 /** Step 3, mobile. */
-export const VerifyNewMobile: Story = { tags: ['demo'], parameters: { source: 'src/screens/EditContactVerifyNewScreen.tsx:45', docs: { description: { story: DEMO } } }, render: () => step3('mobile', '9800000011') };
+export const VerifyNewMobile: Story = { tags: ['demo'], parameters: { source: 'src/screens/EditContactVerifyNewScreen.tsx:45', docs: { description: { story: DEMO } } }, render: () => step3('mobile', '9800000010') };
 
 /** PROPOSED: the new email is already linked to another account. No server check exists today. */
 export const EnterNewAlreadyRegistered: Story = {

@@ -6,7 +6,7 @@ import { Group, Stack } from './_kit';
 
 const SECTIONS: SearchResultSection[] = [
   { header: 'Cards', rows: [
-    { logo: images.brands.amazon, title: 'HDFC Millennia', subtitle: 'Credit card · 5% on Amazon' },
+    { logo: images.brands.amazon, title: 'HDFC Millennia', subtitle: 'Credit card · X% on Amazon' },
     { logo: images.brands.flipkart, title: 'SBI Cashback', subtitle: 'Credit card · Annual fee ₹999' },
   ] },
   { header: 'Stores', rows: [

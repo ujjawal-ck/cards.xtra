@@ -29,7 +29,7 @@ export const StoreListAllGroups: Story = {
 /** Tap a store: the claim starts and moves to "Choose date" (stub page here, with the draft params). */
 export const StoreTapped: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:67`, docs: { description: { story: 'Reached by a tap on Flipkart. The harness shows the next route as a stub page with its params.' } } },
+  parameters: { source: `${SRC}:68`, docs: { description: { story: 'Reached by a tap on Flipkart. The harness shows the next route as a stub page with its params.' } } },
   render: () => where(api.ok()),
   play: async () => { await tap('Flipkart'); },
 };

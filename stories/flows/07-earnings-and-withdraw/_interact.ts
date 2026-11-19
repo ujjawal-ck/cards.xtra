@@ -60,9 +60,8 @@ export async function tickTerms(root: HTMLElement) {
 }
 
 /**
- * react-native-web's Alert.alert is an empty function: the app's native alerts
- * show nothing in the browser. Log them so the main session can see them in the
- * console. Nothing is rendered.
+ * Log the app's native alerts to the console as well. The preview shim
+ * (.storybook/preview.tsx) draws them as a plain dialog.
  */
 export function logNativeAlerts() {
   const g = globalThis as { __sbAlertLogged?: boolean };
@@ -70,7 +69,7 @@ export function logNativeAlerts() {
   g.__sbAlertLogged = true;
   const original = Alert.alert.bind(Alert);
   Alert.alert = (title, message, buttons, options) => {
-    console.log(`[storybook] native Alert (not rendered on web): "${title}" / "${message ?? ''}"`);
+    console.log(`[storybook] native Alert: "${title}" / "${message ?? ''}"`);
     original(title, message, buttons, options);
   };
 }

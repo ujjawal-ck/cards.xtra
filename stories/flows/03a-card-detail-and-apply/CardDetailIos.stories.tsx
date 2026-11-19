@@ -43,21 +43,21 @@ export const Loaded: Story = {
 /** Inline result: eligible. The user saved details on Home, so the card shows its own result. */
 export const InlineEligible: Story = {
   tags: ['live'],
-  parameters: { source: 'src/organisms/CardDetailSheet.tsx:499', docs: { description: { story: 'Details saved (PIN 110001, income ₹1,50,000), and the card is in the eligible set: green banner and a result strip above Apply. A first-time check from this card opens the colored result sheets instead (see Result sheets).' } } },
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:521', docs: { description: { story: 'Details saved (PIN 110001, income ₹1,50,000), and the card is in the eligible set: green banner and a result strip above Apply. A first-time check from this card opens the colored result sheets instead (see Result sheets).' } } },
   render: () => <Detail a={api.ok()} index={1} eligibilityDefaults={{ pincode: '110001', income: INCOME.eligible, incomeType: 'salaried' }} eligibleAliases={[alias]} />,
 };
 
 /** Inline result: maybe. */
 export const InlineMaybe: Story = {
   tags: ['live'],
-  parameters: { source: 'src/organisms/CardDetailSheet.tsx:499', docs: { description: { story: 'The API rejected the card but income ₹90,000 is within 20% of the card\'s bar (₹1,00,000): amber banner "You might qualify".' } } },
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:540', docs: { description: { story: 'The API rejected the card but income ₹90,000 is within 20% of the card\'s bar (₹1,00,000): amber banner "You might qualify".' } } },
   render: () => <Detail a={api.ok()} index={1} eligibilityDefaults={{ pincode: '110001', income: INCOME.maybe, incomeType: 'salaried' }} eligibleAliases={[]} />,
 };
 
 /** Inline result: ineligible. Story 3b starts from here. */
 export const InlineIneligible: Story = {
   tags: ['live'],
-  parameters: { source: 'src/organisms/CardDetailSheet.tsx:499', docs: { description: { story: 'The API rejected the card and income ₹30,000 is far under the bar: red banner "We\'re sorry! You\'re ineligible". Apply then opens the rejection sheet (flow 3b).' } } },
+  parameters: { source: 'src/organisms/CardDetailSheet.tsx:530', docs: { description: { story: 'The API rejected the card and income ₹30,000 is far under the bar: red banner "We\'re sorry! You\'re ineligible". Apply then opens the rejection sheet (flow 3b).' } } },
   render: () => <Detail a={api.ok()} index={1} eligibilityDefaults={{ pincode: '110001', income: INCOME.ineligible, incomeType: 'salaried' }} eligibleAliases={[]} />,
 };
 

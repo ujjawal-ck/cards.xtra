@@ -55,7 +55,7 @@ export const BelowMinimum: Story = {
   play: tapWithdraw,
 };
 
-/** Balance error: the payment info call fails (HTTP 500) so the gate cannot decide. The app calls a native Alert "Couldn't load your balance" and does not open any sheet. The Alert is not rendered on web (see console), so the screen looks unchanged. Shows after the app's own retries. */
+/** Balance error: the payment info call fails (HTTP 500) so the gate cannot decide. The app calls a native Alert "Couldn't load your balance" and does not open any sheet. The preview draws the Alert as a plain dialog; no sheet opens. Shows after the app's own retries. */
 export const BalanceError: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:72` },

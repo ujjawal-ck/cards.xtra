@@ -41,7 +41,7 @@ States: 23 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row link
   {
     "state": "Default",
     "status": "live",
-    "source": "src/screens/SplashScreen.tsx:35",
+    "source": "src/screens/SplashScreen.tsx:63",
     "story": "flows-1-launch-and-login-splash--default",
     "note": "Guest on a fresh install: after the intro the app goes to Onboarding"
   },
@@ -95,7 +95,7 @@ States: 23 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "live",
     "source": "src/auth/LoginSheetProvider.tsx:462",
     "story": "flows-1-launch-and-login-login-sheet--phone-empty",
-    "note": "* The real login sheet (LoginSheetProvider) opened over an empty app page, then driven by the story:\n * it types into the real inputs and taps the real buttons. The harness fetch mock answers the OTP calls.\n */\nfunction Login({ api: a, steps = [] }: { api: ApiParams; steps?: Step[] }) {\n  return (\n    <ComponentHarness api={a} auth=\"guest\">\n      <OpenLogin steps={steps} />\n    </ComponentHarness>\n  );\n}\n\nconst typePhone: Step = [300, () => typeInto(0, PHONE)];\nconst tapGetOtp: Step = [400, () => clickByText('Get OTP')];\nconst typeOtp: Step = [900, () => typeInto(1, '123456')];\n\nconst meta: Meta = {\n  title: 'Flows/1 Launch and login/Login sheet',\n  parameters: {\n    layout: 'fullscreen',\n    docs: {\n      story: { inline: false },\n      description: { component: 'One app-wide sheet: phone step, then OTP step. A number that is new to CashKaro also gets a name field on the OTP step. Stories type and tap through the real sheet after it opens; wait about two seconds.' },\n    },\n  },\n};\nexport default meta;\ntype Story = StoryObj;\n\n/** Phone step, nothing typed: \"Get OTP\" disabled"
+    "note": "Phone step, nothing typed: \"Get OTP\" disabled"
   },
   {
     "state": "Phone Invalid",
@@ -193,7 +193,7 @@ States: 23 live, 3 proposed, 0 hidden, 0 demo. Each state is a story; a row link
     "status": "proposed",
     "source": "src/auth/LoginSheetProvider.tsx:427",
     "story": "flows-1-launch-and-login-login-sheet--session-expired-proposed",
-    "note": "The phone panel of the sheet, rebuilt from atoms. Shape copies LoginSheetProvider panel 1. */\nfunction PhonePanelReplica({ title, body, message, tone }: { title: string; body: string; message?: string; tone?: 'warning' | 'info' | 'error' }) {\n  return (\n    <PhoneFrame>\n      <View style={{ flex: 1, backgroundColor: colors.background.default, justifyContent: 'flex-end' }}>\n        <View style={{ backgroundColor: colors.surface.default, borderTopLeftRadius: radius['2xl'], borderTopRightRadius: radius['2xl'], paddingBottom: spacing[20] }}>\n          <BottomSheetHeader showStroke={false} />\n          <View style={{ padding: spacing[20], gap: spacing[24] }}>\n            <View style={{ alignItems: 'center', gap: spacing[4] }}>\n              <Text variant=\"heading24SemiBold\" color={colors.text.primary} align=\"center\">{title}</Text>\n              <Text variant=\"body14Regular\" color={colors.text.secondary} align=\"center\">{body}</Text>\n            </View>\n            {message ? <InlineMessage tone={tone ?? 'warning'} message={message} /> : null}\n            <Input label=\"Mobile Number\" value={PHONE} onChangeText={() => {}} keyboardType=\"number-pad\" />\n            <Button label=\"Get OTP\" variant=\"solid\" tone=\"second\" size={52} fullWidth />\n          </View>\n        </View>\n      </View>\n    </PhoneFrame>\n  );\n}\n\n/** Proposed: session expired. Same sheet, title and body say why"
+    "note": "Proposed: session expired. Same sheet, title and body say why"
   },
   {
     "state": "Offline (proposed)",
