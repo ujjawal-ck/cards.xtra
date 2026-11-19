@@ -34,4 +34,4 @@ Every story has one tag: `live` (in the app today), `proposed` (designed here, n
 - `public/scan.js`: loads every story in a hidden frame and lists crashes. In the browser console on `/iframe.html`: `await import('/scan.js'); await window.__scan()`.
 
 ## Known limits on web
-Rive and Lottie animations are empty boxes. `RollingAmount` and `GradientText` (masked view) can render wrong. RN `Modal` sheets cover the whole canvas, not the phone frame. Android-only parts render nothing. Sheets animate only when the tab is visible. Native `Alert` is drawn by a small web shim in `preview.tsx`.
+Rive and Lottie animations are empty boxes. `RollingAmount` and `GradientText` (masked view) can render wrong. RN `Modal` sheets cover the whole canvas, not the phone frame. Android-only parts render nothing. Sheets animate only when the tab is visible. Sheets and the login panel size to the browser window, not the 390 phone frame, so they look wider than the phone. Native `Alert` is drawn by a small web shim in `preview.tsx`.
