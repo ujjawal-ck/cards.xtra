@@ -9,7 +9,7 @@ import { Text, Input } from '../../../src/atoms';
 import { Header, Masthead, FooterButtons } from '../../../src/organisms';
 import { colors, spacing } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness, routeParams } from '../../../storybook/harness';
-import { api, reply } from '../../../storybook/fixtures';
+import { api, reply, sendOtpFixture } from '../../../storybook/fixtures';
 import { View } from 'react-native';
 import { logNativeAlerts, nthInput, sleep, tapText, tickTerms, typeInto } from './_interact';
 import { AMOUNT } from './_shared';
@@ -32,8 +32,8 @@ const UPI_SRC = 'src/screens/withdraw/WithdrawEnterUPI.tsx';
 const AMZ_SRC = 'src/screens/withdraw/WithdrawAmazon.tsx';
 const FLK_SRC = 'src/screens/withdraw/WithdrawFlipkart.tsx';
 
-const Upi = ({ a = api.ok() }: { a?: ReturnType<typeof api.ok> }) => (
-  <ScreenHarness name="WithdrawEnterUPI" component={WithdrawEnterUPI} auth="signedIn" params={routeParams('WithdrawEnterUPI', P)} api={a} />
+const Upi = ({ a = api.ok(), auth = 'signedIn' as const }: { a?: ReturnType<typeof api.ok>; auth?: 'signedIn' | 'sessionExpired' }) => (
+  <ScreenHarness name="WithdrawEnterUPI" component={WithdrawEnterUPI} auth={auth} params={routeParams('WithdrawEnterUPI', P)} api={a} />
 );
 const Amazon = () => (
   <ScreenHarness name="WithdrawAmazon" component={WithdrawAmazon} auth="signedIn" params={routeParams('WithdrawAmazon', P)} api={api.ok()} />
@@ -125,6 +125,73 @@ export const UpiSendOtpFailedProposed: Story = {
         </View>
         <FooterButtons
           buttons="single" size={52} color="second" strip="tnc" primaryLabel="Get Paid"
+          stripText="I agree to the terms & conditions governing payment transfer request listed here."
+          tncChecked stripLinkLabels={['here']}
+        />
+      </View>
+    </PhoneFrame>
+  ),
+};
+
+// ── UPI edge cases (audit/edge-flows-7-10.md, 7.4) ──
+
+const fillAndGetPaid = async ({ canvasElement }: Ctx) => {
+  logNativeAlerts();
+  await typeInto(canvasElement, 0, 'user@upi');
+  await tickTerms(canvasElement);
+  await sleep(200);
+  await tapText(canvasElement, 'Get Paid');
+};
+
+/** The OTP send drops the connection (no network on sendotp). The same native Alert "Could not send OTP", with a transport message. Same code on the Amazon and Flipkart forms. Types, ticks and taps after mount. */
+export const UpiSendOtpOffline: Story = {
+  tags: ['live'],
+  parameters: { source: `${UPI_SRC}:75` },
+  render: () => <Upi a={api.ok({ sendOtp: reply.network() })} />,
+  play: fillAndGetPaid,
+};
+
+/** The OTP send hits the rate limit (HTTP 429). The native Alert "Could not send OTP" shows the raw server text, with no wait time (open question Q5). Same code on the Amazon and Flipkart forms. Types, ticks and taps after mount. */
+export const UpiSendOtpRateLimited: Story = {
+  tags: ['live'],
+  parameters: { source: `${UPI_SRC}:75` },
+  render: () => <Upi a={api.ok({ sendOtp: sendOtpFixture.rateLimited })} />,
+  play: fillAndGetPaid,
+};
+
+/** The session ended while the user filled the form (every user call answers 401, refresh 401). Get Paid does nothing: the handler returns at once when there is no token, so no message shows. The login sheet opens on its own. Waits 2.5 s, then types, ticks and taps. Design twin: Mid-flow return, "withdraw otp session ended". */
+export const UpiSessionEnded: Story = {
+  tags: ['live'],
+  parameters: { source: `${UPI_SRC}:59` },
+  render: () => <Upi auth="sessionExpired" />,
+  play: async (ctx: Ctx) => {
+    await sleep(2500);
+    await fillAndGetPaid(ctx);
+  },
+};
+
+/** PROPOSED. OTP send rate limited as an inline warning above the footer, with Get Paid off until the user can retry. */
+export const UpiSendOtpRateLimitedProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Replaces the native Alert at ${UPI_SRC}:75 for HTTP 429. Open question Q5: the API gives no wait time, so the copy says "a few minutes". Should Get Paid stay off for a fixed time? Owner: product owner.` } } },
+  render: () => (
+    <PhoneFrame>
+      <View style={{ flex: 1, backgroundColor: colors.background.default }}>
+        <View style={{ gap: spacing[24], flex: 1 }}>
+          <Header leading="back" title="Withdraw Cashback" />
+          <Masthead variant="payment" amount="₹1,240" subtitle="Cashback Available For Payment" />
+          <View style={{ gap: spacing[40] }}>
+            <Text variant="body16SemiBold" color={colors.text.primary} style={{ paddingHorizontal: spacing[16] }}>Enter Your UPI ID</Text>
+            <View style={{ paddingHorizontal: spacing[16] }}>
+              <Input label="Enter UPI ID" size="sm" value="user@upi" onChangeText={() => undefined} />
+            </View>
+          </View>
+        </View>
+        <View style={{ paddingHorizontal: spacing[16], paddingBottom: spacing[12] }}>
+          <InlineMessage tone="warning" message="Too many OTP requests. Please try again in a few minutes." />
+        </View>
+        <FooterButtons
+          buttons="single" size={52} color="second" strip="tnc" primaryLabel="Get Paid" primaryDisabled
           stripText="I agree to the terms & conditions governing payment transfer request listed here."
           tncChecked stripLinkLabels={['here']}
         />

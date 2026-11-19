@@ -8,7 +8,7 @@ import { Header, FooterButtons } from '../../../src/organisms';
 import { colors, spacing, radius, borderWidth } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness, routeParams } from '../../../storybook/harness';
 import { api } from '../../../storybook/fixtures';
-import { AMOUNT } from './_shared';
+import { AMOUNT, ANDROID_360 } from './_shared';
 
 /**
  * Flow 7, step 6. MONEY STEP. The payout was accepted. The Verify OTP step replaces the whole withdraw stack with this screen,
@@ -22,8 +22,8 @@ export default meta;
 type Story = StoryObj;
 
 const SRC = 'src/screens/withdraw/WithdrawSuccess.tsx';
-const Success = ({ method }: { method: 'upi' | 'amazon' | 'flipkart' }) => (
-  <ScreenHarness name="WithdrawSuccess" component={WithdrawSuccess} auth="signedIn" params={routeParams('WithdrawSuccess', { amount: AMOUNT, method })} api={api.ok()} />
+const Success = ({ method, amount = AMOUNT, width }: { method: 'upi' | 'amazon' | 'flipkart'; amount?: number; width?: number }) => (
+  <ScreenHarness name="WithdrawSuccess" component={WithdrawSuccess} auth="signedIn" params={routeParams('WithdrawSuccess', { amount, method })} api={api.ok()} width={width} />
 );
 
 /** UPI: "₹1,240 withdrawn Successfully!" and the 72 hour note. */
@@ -67,4 +67,12 @@ export const PayoutRecordProposed: Story = {
       </View>
     </PhoneFrame>
   ),
+};
+
+/** 360 dp Android width with a very large payout (₹10,00,000): the title is built from the amount, so this checks how it wraps in the narrow frame. Same screen after a re-check (Verify OTP, "Recheck found payout"). */
+export const LargeAmount360: Story = {
+  tags: ['live'],
+  globals: ANDROID_360,
+  parameters: { source: `${SRC}:118` },
+  render: () => <Success method="upi" amount={1000000} width={360} />,
 };

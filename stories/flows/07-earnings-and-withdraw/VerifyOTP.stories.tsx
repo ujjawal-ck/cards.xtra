@@ -5,10 +5,10 @@ import { InlineMessage } from '../../../src/molecules';
 import { ScreenState } from '../../../src/organisms';
 import { images } from '../../../src/assets/images';
 import { ScreenHarness } from '../../../storybook/harness';
-import { api, reply, verifyOtpFixture, sendOtpFixture } from '../../../storybook/fixtures';
+import { api, reply, verifyOtpFixture, sendOtpFixture, paymentFixture, paymentInfoFixture } from '../../../storybook/fixtures';
 import { ProposedOtp } from './_ProposedOtp';
-import { logNativeAlerts, typeInto } from './_interact';
-import { CODE, verifyParams } from './_shared';
+import { logNativeAlerts, sleep, tapText, typeInto } from './_interact';
+import { ANDROID_360, CODE, verifyParams } from './_shared';
 
 /**
  * Flow 7, step 5. MONEY STEP: the 6 digit OTP, then the payout POST.
@@ -28,8 +28,8 @@ type Story = StoryObj;
 
 const SRC = 'src/screens/withdraw/WithdrawVerifyOTP.tsx';
 
-const Screen = ({ a = api.ok(), auth = 'signedIn' as const }: { a?: ReturnType<typeof api.ok>; auth?: 'signedIn' | 'sessionExpired' }) => (
-  <ScreenHarness name="WithdrawVerifyOTP" component={WithdrawVerifyOTP} auth={auth} params={verifyParams()} api={a} />
+const Screen = ({ a = api.ok(), auth = 'signedIn' as const, width }: { a?: ReturnType<typeof api.ok>; auth?: 'signedIn' | 'sessionExpired'; width?: number }) => (
+  <ScreenHarness name="WithdrawVerifyOTP" component={WithdrawVerifyOTP} auth={auth} params={verifyParams()} api={a} width={width} />
 );
 
 const typeCode = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
@@ -107,6 +107,102 @@ export const SessionExpired: Story = {
   play: typeCode,
 };
 
+// ── Edge cases (audit/edge-flows-7-10.md, 7.6) ──
+
+const SESSION_DEAD = reply.code(401, '2004', 'Session expired');
+
+/** MONEY. The payout POST answers HTTP 504 (gateway timeout). APP BUG (G2, P0): only a dropped connection counts as "unknown"; a 5xx is shown as a final "Payment failed" Alert and invites a retry, while the payout may have landed. Types the code. */
+export const PayoutGateway504: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:177` },
+  render: () => <Screen a={api.ok({ payment: reply.error(504) })} />,
+  play: typeCode,
+};
+
+/** MONEY. The payout POST drops, then the re-check (payment info) answers 400 / 5002: the payout did land. The app treats it as submitted and replaces the stack with Success (the stub "→ WithdrawSuccess" shows). Types the code. */
+export const RecheckFoundPayout: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:162` },
+  render: () => <Screen a={api.ok({ payment: reply.network(), paymentInfo: paymentInfoFixture.inProcess })} />,
+  play: typeCode,
+};
+
+/** MONEY. The payout POST is refused with 5002 "already pending". The app reads 400 as final, so the user sees the native Alert "Payment failed" with the server text, while a payout is in fact pending. Types the code. */
+export const PayoutAlreadyPending: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:177` },
+  render: () => <Screen a={api.ok({ payment: paymentFixture.alreadyPending })} />,
+  play: typeCode,
+};
+
+/** The code check answers HTTP 500. APP BUG (B1): every non-network error becomes "Enter a valid OTP", so a server fault reads as a wrong code. Types the code. */
+export const VerifyServerError: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:133` },
+  render: () => <Screen a={api.ok({ verifyOtp: reply.error(500) })} />,
+  play: typeCode,
+};
+
+/** The session dies at the code check (token alive at mount; verify answers 401 and the refresh answers 401). APP BUG (B1): the boxes say "Enter a valid OTP" while the login sheet opens. Differs from Session expired, which has no token at mount. Types the code. */
+export const SessionEndsOnVerify: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:136` },
+  render: () => <Screen a={api.ok({ verifyOtp: reply.error(401), refreshToken: SESSION_DEAD })} />,
+  play: typeCode,
+};
+
+/** MONEY. The session dies at the payout POST (401, refresh 401). The outcome is known (401 means not accepted). The app calls the native Alert "Payment failed" with the session text; the login sheet opens too. Types the code. */
+export const SessionEndsOnPayout: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:177` },
+  render: () => <Screen a={api.ok({ payment: reply.error(401), refreshToken: SESSION_DEAD })} />,
+  play: typeCode,
+};
+
+/** MONEY. Open question Q1. After an unknown outcome the double-submit guard is per OTP guid, and Resend sets a fresh guid, so the same draft can be paid again. Only the server 5002 rule stops a second payout. Types the code, taps OK on the dialog, waits for Resend (30 s timer), taps it, types again. Watch the console for a second POST /payment/paymentV1. */
+export const ResendAfterUnknownOutcome: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:114` },
+  render: () => <Screen a={api.ok({ payment: reply.network(), sendOtp: sendOtpFixture.default })} />,
+  play: async ({ canvasElement }) => {
+    await typeCode({ canvasElement });
+    await tapText(canvasElement, 'OK', 20000);
+    await tapText(canvasElement, 'Resend OTP', 45000);
+    await sleep(500);
+    await typeInto(canvasElement, 0, '713958');
+  },
+};
+
+/** Resend fails with HTTP 500. The app calls the native Alert "Could not resend OTP" with the server text. Waits for the 30 s timer, then taps Resend. */
+export const ResendFailed: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:204` },
+  render: () => <Screen a={api.ok({ sendOtp: reply.error(500) })} />,
+  play: async ({ canvasElement }) => {
+    logNativeAlerts();
+    await tapText(canvasElement, 'Resend OTP', 45000);
+  },
+};
+
+/** Resend hits the rate limit (HTTP 429). The native Alert "Could not resend OTP" shows the raw server text, with no wait time. Waits for the 30 s timer, then taps Resend. */
+export const ResendRateLimited: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:204` },
+  render: () => <Screen a={api.ok({ sendOtp: sendOtpFixture.rateLimited })} />,
+  play: async ({ canvasElement }) => {
+    logNativeAlerts();
+    await tapText(canvasElement, 'Resend OTP', 45000);
+  },
+};
+
+/** 360 dp Android width: six OTP boxes and the "OTP sent to ... / Edit details" row in the narrow frame. */
+export const Narrow360: Story = {
+  tags: ['live'],
+  globals: ANDROID_360,
+  parameters: { source: `${SRC}:247` },
+  render: () => <Screen width={360} />,
+};
+
 // ── Proposed: the same failures as inline UI (copy from audit/ux-states.md, flow 6) ──
 
 const OPEN_Q = 'Open question: native alerts are not themed and vanish on tap. Inline message or full screen? Owner: product owner.';
@@ -152,4 +248,40 @@ export const SessionExpiredProposed: Story = {
   tags: ['proposed'],
   parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:111. Reuses the hint at ${SRC}:215, which no code path sets today. Open question: after login, return to this step with the draft kept, or restart from the method list (R17)?` } } },
   render: () => <ProposedOtp otpError otpHint="OTP is expired" resend="ready" />,
+};
+
+// ── Edge cases, proposed ──
+
+/** PROPOSED. Payout refused because one is already pending (5002), as its own state in place of "Payment failed". */
+export const PayoutAlreadyPendingProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:177 for code 5002. Copy from audit/edge-flows-7-10.md 7.6. Open question: should the screen also show the pending amount and start time (needs requested_earnings and a date from the API)? Owner: product owner.` } } },
+  render: () => (
+    <ProposedOtp
+      footer={false}
+      body={
+        <ScreenState
+          image={images.screenstate.tracking}
+          title="A withdrawal is already in progress"
+          body="You can request a new one after it settles."
+          actionLabel="Go to Earnings"
+          onAction={() => undefined}
+        />
+      }
+    />
+  ),
+};
+
+/** PROPOSED. Slow payout: while the 30 s payout runs, an info line after 5 s. Today nothing says anything. */
+export const SlowPayoutProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Adds a line to ${SRC}:297, shown after 5 s of waiting. Open question: should the line also appear on the unknown-outcome path, and is "go back" blocked by the overlay only, or also by Android back (G9)? Owner: product owner.` } } },
+  render: () => <ProposedOtp busy notice={<InlineMessage tone="info" message="Still working on it. Please don't close the app or go back." />} />,
+};
+
+/** PROPOSED. Resend failed as an inline warning with the Resend link ready again, in place of the native Alert. */
+export const ResendFailedProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:204. ${OPEN_Q} Open question: for a 429, show a wait time? The API gives none (Q5).` } } },
+  render: () => <ProposedOtp resend="ready" notice={<InlineMessage tone="warning" message="We couldn't send a new OTP. Please try again." />} />,
 };

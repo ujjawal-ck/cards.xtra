@@ -58,6 +58,12 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Know Why? sheet", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--pending-sheet', note: "Button tapped after mount." },
   { state: "Offline, shows ₹0 (R6)", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--offline-shows-zero', note: "Inferred from code: Confirmed ₹0 and Pending ₹0." },
   { state: "Offline, proposed fix (R6)", status: 'proposed', story: 'flows-7-earnings-and-withdraw-earnings--offline-proposed', note: "Never show ₹0 for unknown." },
+  { state: "Offline with cached balance", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--offline-with-cache', note: "Stale balance, no last-updated cue; transactions read empty (Q3)." },
+  { state: "Missing amount fields", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--missing-amount-fields', note: "Null fields read ₹0 (G6)." },
+  { state: "Breakup sheet", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--breakup-sheet', note: "Cashback card tapped." },
+  { state: "Breakup sheet while loading", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--breakup-sheet-while-loading', note: "Sheet shows ₹0 for unknown (G6)." },
+  { state: "Large amounts at 360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--large-amounts-360', note: "Android small viewport." },
+  { state: "Forbidden 403", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--forbidden-403', note: "Generic error; retry cannot help (Q12)." },
 ]} />
 
 ## 2. Withdraw gate
@@ -68,6 +74,11 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Below minimum", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--below-minimum', note: "₹120 against ₹250 (400 / 5003)." },
   { state: "Balance error", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error', note: "Native Alert (drawn as a plain dialog)." },
   { state: "Balance error, proposed Toast", status: 'proposed', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error-proposed', note: "Error Toast with Try again." },
+  { state: "Settling, no amount", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--settling-no-amount', note: "Sheet shows ₹0 (G6)." },
+  { state: "Exactly the minimum", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--exactly-minimum', note: "₹250 passes." },
+  { state: "Payment info says below threshold", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--payment-info-says-below-threshold', note: "Gate lets the user through (G3, P1)." },
+  { state: "Slow balance", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--slow-balance', note: "8 s wait, no feedback." },
+  { state: "Slow balance, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-withdraw-gate--checking-balance-proposed', note: "Info Toast while checking." },
 ]} />
 
 ## 3. Method select
@@ -79,6 +90,10 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Cashback and rewards", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--cashback-and-rewards', note: "Two sections." },
   { state: "Bank Transfer, Coming soon (R12)", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--bank-transfer-coming-soon', note: "Row tapped, nothing happens." },
   { state: "Tooltip open", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--tooltip-open', note: "Info circle tapped." },
+  { state: "360 dp, large amount", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--narrow-360-large-amount', note: "Confirmed ₹10,00,000." },
+  { state: "Tap while loading", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--tap-while-loading', note: "Draft amount ₹0 (G4, P2)." },
+  { state: "Earnings error", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--earnings-error', note: "₹0 amounts and live rows." },
+  { state: "Earnings error, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-method-select--earnings-error-proposed', note: "Error state, rows hidden." },
 ]} />
 
 ## 4. Details
@@ -100,6 +115,10 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Flipkart, consent given", status: 'live', story: 'flows-7-earnings-and-withdraw-details--flipkart-consent', note: "Get Paid on." },
   { state: "Gift card chooser", status: 'live', story: 'flows-7-earnings-and-withdraw-details--gift-card-chooser', note: "Amazon Pay or Flipkart." },
   { state: "Gift card chooser, combined", status: 'live', story: 'flows-7-earnings-and-withdraw-details--gift-card-chooser-combined', note: "Cashback + rewards." },
+  { state: "UPI, OTP send offline", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-offline', note: "Native Alert, transport message." },
+  { state: "UPI, OTP send rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-rate-limited', note: "Native Alert, raw server text." },
+  { state: "UPI, OTP send rate limited, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-rate-limited-proposed', note: "Inline warning, Get Paid off (Q5)." },
+  { state: "UPI, session ended", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-session-ended', note: "Get Paid does nothing, no message." },
 ]} />
 
 ## 4b. Terms
@@ -127,6 +146,19 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Payment failed, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed', note: "Inline error with Try again." },
   { state: "Unknown outcome, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--unknown-outcome-proposed', note: "Full screen state." },
   { state: "Session expired, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--session-expired-proposed', note: "Screen's own expired state." },
+  { state: "Payout gateway 504 (G2, P0)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-gateway-504', note: "Shown as final failure; payout may have landed." },
+  { state: "Recheck found payout", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--recheck-found-payout', note: "Timeout, then 5002: goes to Success." },
+  { state: "Payout already pending", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending', note: "Reads as Payment failed." },
+  { state: "Payout already pending, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending-proposed', note: "Own state with Go to Earnings." },
+  { state: "Verify server error (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--verify-server-error', note: "500 reads as Enter a valid OTP." },
+  { state: "Session ends on verify (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-ends-on-verify', note: "401 reads as Enter a valid OTP." },
+  { state: "Session ends on payout", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-ends-on-payout', note: "Alert Payment failed; login sheet." },
+  { state: "Resend after unknown outcome (Q1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-after-unknown-outcome', note: "Fresh guid lets the draft be paid again. Waits 30 s." },
+  { state: "Slow payout, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--slow-payout-proposed', note: "Info line after 5 s." },
+  { state: "Resend failed", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-failed', note: "Alert. Waits 30 s." },
+  { state: "Resend rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-rate-limited', note: "Alert, raw text. Waits 30 s." },
+  { state: "Resend failed, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-failed-proposed', note: "Inline warning." },
+  { state: "360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--narrow-360', note: "Android small viewport." },
 ]} />
 
 ## 6. Success
@@ -136,6 +168,7 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Amazon", status: 'live', story: 'flows-7-earnings-and-withdraw-success--amazon', note: "Payment initiated." },
   { state: "Flipkart", status: 'live', story: 'flows-7-earnings-and-withdraw-success--flipkart', note: "Payment initiated." },
   { state: "Payout record (R4)", status: 'proposed', story: 'flows-7-earnings-and-withdraw-success--payout-record-proposed', note: "Receipt card and View in Earnings." },
+  { state: "Large amount at 360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-success--large-amount-360', note: "₹10,00,000, Android small viewport." },
 ]} />
 
 ## 7. Payment history

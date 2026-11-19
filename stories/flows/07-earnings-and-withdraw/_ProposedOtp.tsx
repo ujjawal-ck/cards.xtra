@@ -18,6 +18,8 @@ export function ProposedOtp({
   otpHint,
   resend = 'timer',
   cta = 'Verify OTP',
+  busy,
+  footer = true,
 }: {
   notice?: React.ReactNode;
   body?: React.ReactNode;
@@ -25,6 +27,10 @@ export function ProposedOtp({
   otpHint?: string;
   resend?: 'timer' | 'ready' | 'hidden';
   cta?: string;
+  /** Verify button spins (payout in flight). */
+  busy?: boolean;
+  /** false: no footer (the body carries its own action). */
+  footer?: boolean;
 }) {
   return (
     <PhoneFrame>
@@ -55,7 +61,7 @@ export function ProposedOtp({
           )}
         </View>
         {notice ? <View style={{ paddingHorizontal: spacing[16], paddingBottom: spacing[12] }}>{notice}</View> : null}
-        <FooterButtons buttons="single" size={52} color="second" primaryLabel={cta} />
+        {footer ? <FooterButtons buttons="single" size={52} color="second" primaryLabel={cta} primaryLoading={busy} /> : null}
       </View>
     </PhoneFrame>
   );

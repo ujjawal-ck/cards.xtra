@@ -8,6 +8,10 @@ import { colors, spacing } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness } from '../../../storybook/harness';
 import { api, earningsFixture, ordersFixture, reply } from '../../../storybook/fixtures';
 import { sleep, tapText } from './_interact';
+import { ANDROID_360, earningsWith } from './_shared';
+import { queryClient } from '../../../src/query/queryClient';
+import { qk } from '../../../src/query/keys';
+import { mapEarnings } from '../../../src/api/earningsMapper';
 
 /**
  * Flow 7, step 1. The Earnings tab: totals, Confirmed (Withdraw), Pending ("Know Why?"), transactions.
@@ -21,8 +25,8 @@ export default meta;
 type Story = StoryObj;
 
 const SRC = 'src/screens/EarningsScreen.tsx';
-const Earnings = ({ a, auth = 'signedIn' as const }: { a: ReturnType<typeof api.ok>; auth?: 'guest' | 'signedIn' }) => (
-  <ScreenHarness name="Earnings" component={EarningsScreen} auth={auth} api={a} />
+const Earnings = ({ a, auth = 'signedIn' as const, width, beforeMount }: { a: ReturnType<typeof api.ok>; auth?: 'guest' | 'signedIn'; width?: number; beforeMount?: () => void }) => (
+  <ScreenHarness name="Earnings" component={EarningsScreen} auth={auth} api={a} width={width} beforeMount={beforeMount} />
 );
 
 /** Signed out: "See every rupee you earn" with a Log in button. No money figures. */
@@ -115,4 +119,67 @@ export const OfflineProposed: Story = {
       </ScrollView>
     </PhoneFrame>
   ),
+};
+
+// ── Edge cases (audit/edge-flows-7-10.md, 7.1) ──
+
+const tapCashbackCard = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  await sleep(1500);
+  await tapText(canvasElement, 'Cashback');
+};
+
+/** Offline with a cached balance (R6 variant). The balance was loaded earlier, then the connection dropped. The cached amounts show with no "last updated" cue, and the transactions list shows its empty line because orders were never cached: a second false empty. Open question Q3: show the age of the balance? */
+export const OfflineWithCache: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:96` },
+  render: () => (
+    <Earnings
+      a={api.offline()}
+      beforeMount={() => {
+        queryClient.setQueryData(qk.user.earnings(), mapEarnings(earningsFixture.typical));
+      }}
+    />
+  ),
+};
+
+/** Partial response: the earnings call answers 200 but the confirmed and pending fields are null. The mapper reads each missing field as ₹0, so the user sees ₹0 for an unknown value (gap G6, never ₹0 for unknown). */
+export const MissingAmountFields: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/api/earningsMapper.ts:91' },
+  render: () => (
+    <Earnings
+      a={api.ok({ earnings: earningsWith(earningsFixture.typical, { confirmed_cashback: null, pending_cashback: null, confirmed_rewards: null, pending_rewards: null }) })}
+    />
+  ),
+};
+
+/** The Cashback breakup sheet opened while the amounts still load (every call hangs). Gap G6: the sheet defaults every amount to ₹0, so Confirmed, Pending and Paid read ₹0. Taps the Cashback card after mount. */
+export const BreakupSheetWhileLoading: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/organisms/EarningsBreakupSheet.tsx:174' },
+  render: () => <Earnings a={api.loading()} />,
+  play: tapCashbackCard,
+};
+
+/** The Cashback breakup sheet with loaded data: Confirmed, Pending and Paid cashback. Taps the Cashback card after mount. */
+export const BreakupSheet: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:447` },
+  render: () => <Earnings a={api.ok()} />,
+  play: tapCashbackCard,
+};
+
+/** 360 dp Android width with very large amounts (doc fixture, about ₹14.5 lakh). Checks the rows and cards below the headline; the headline (RollingAmount) renders "0" on web. */
+export const LargeAmounts360: Story = {
+  tags: ['live'],
+  globals: ANDROID_360,
+  parameters: { source: `${SRC}:83` },
+  render: () => <Earnings width={360} a={api.ok({ earnings: earningsFixture.rich })} />,
+};
+
+/** The earnings call answers HTTP 403 (gateway or bad key). Only 401 triggers a refresh, so the screen shows its generic "Couldn't load your earnings" and a retry cannot help. Open question Q12. Shows after the app's own retries (1 to 2 s). */
+export const Forbidden403: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:199` },
+  render: () => <Earnings a={api.ok({ earnings: reply.error(403) })} />,
 };

@@ -1,9 +1,14 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
+import { View } from 'react-native';
 import { WithdrawScreen } from '../../../src/screens/WithdrawScreen';
-import { ScreenHarness } from '../../../storybook/harness';
-import { api, earningsFixture } from '../../../storybook/fixtures';
+import { ScreenState, Header } from '../../../src/organisms';
+import { images } from '../../../src/assets/images';
+import { colors, spacing } from '../../../src/tokens';
+import { PhoneFrame, ScreenHarness } from '../../../storybook/harness';
+import { api, earningsFixture, reply } from '../../../storybook/fixtures';
 import { sleep, tapText, waitFor } from './_interact';
+import { ANDROID_360, earningsWith } from './_shared';
 
 /**
  * Flow 7, step 3. MONEY STEP. Where the money goes: UPI, Bank Transfer (not built), or an Amazon / Flipkart gift card.
@@ -18,8 +23,8 @@ export default meta;
 type Story = StoryObj;
 
 const SRC = 'src/screens/WithdrawScreen.tsx';
-const Methods = ({ a }: { a: ReturnType<typeof api.ok> }) => (
-  <ScreenHarness name="WithdrawMethodSelect" component={WithdrawScreen} auth="signedIn" api={a} />
+const Methods = ({ a, width }: { a: ReturnType<typeof api.ok>; width?: number }) => (
+  <ScreenHarness name="WithdrawMethodSelect" component={WithdrawScreen} auth="signedIn" api={a} width={width} />
 );
 
 /** Amount still loading: the headline and section amounts read "—". */
@@ -71,4 +76,59 @@ export const TooltipOpen: Story = {
     const info = await waitFor(() => canvasElement.querySelector<HTMLElement>('[aria-label="Cashback info"]'), 12000, 'info circle');
     info.click();
   },
+};
+
+// ── Edge cases (audit/edge-flows-7-10.md, 7.3) ──
+
+/** 360 dp Android width with a very large balance: confirmed cashback ₹10,00,000. Checks the section amounts and the masthead in the narrow frame. */
+export const Narrow360LargeAmount: Story = {
+  tags: ['live'],
+  globals: ANDROID_360,
+  parameters: { source: `${SRC}:208` },
+  render: () => (
+    <Methods
+      width={360}
+      a={api.ok({ earnings: earningsWith(earningsFixture.cashbackOnly, { total_earned: '1000600.00', total_cashback_earned: '1000600.00', confirmed_cashback: '1000000.00' }) })}
+    />
+  ),
+};
+
+/** Gap G4, P2. The earnings call never answers, and the user taps "UPI payments" while the amount reads a dash. The next step opens with a draft amount of ₹0 (the stub "→ WithdrawEnterUPI" shows amount 0). The payout POST sends no amount, so this is a display and analytics error, not a ₹0 payout. Low reach: the entries pass the gate first. Taps after mount. */
+export const TapWhileLoading: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:224` },
+  render: () => <Methods a={api.ok({ earnings: reply.hang() })} />,
+  play: async ({ canvasElement }) => {
+    await sleep(800);
+    await tapText(canvasElement, 'UPI payments');
+  },
+};
+
+/** The earnings call fails (HTTP 500, no cache). The screen reads only isLoading, so it shows ₹0 amounts and live rows, as if the user had no money. Reachable after a session expiry clears the cache, or a focus refetch that fails with no data. Shows after the app's own retries (1 to 2 s). */
+export const EarningsError: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:184` },
+  render: () => <Methods a={api.ok({ earnings: reply.error(500) })} />,
+};
+
+/** PROPOSED. Earnings error as a state: no ₹0 amounts and no payout rows when the balance is unknown. */
+export const EarningsErrorProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Replaces the ₹0 layout at ${SRC}:184. Copy from audit/edge-flows-7-10.md 7.3. Open question: hide the rows (assumed), or keep them and block the tap? Owner: product owner.` } } },
+  render: () => (
+    <PhoneFrame>
+      <View style={{ flex: 1, backgroundColor: colors.background.default }}>
+        <Header leading="back" title="Withdraw Cashback" />
+        <View style={{ paddingTop: spacing[40] }}>
+          <ScreenState
+            image={images.screenstate.tracking}
+            title="Couldn't load your balance"
+            body="Check your connection and try again."
+            actionLabel="Try again"
+            onAction={() => undefined}
+          />
+        </View>
+      </View>
+    </PhoneFrame>
+  ),
 };

@@ -20,3 +20,13 @@ export const verifyParams = (method: WithdrawDraft['method'] = 'upi') =>
 
 /** A wrong or right 6 digit code. Any digits do: the fixture decides the outcome. */
 export const CODE = '482913';
+
+/** A copy of an earnings fixture body with some attributes replaced (use null for a missing field). */
+export const earningsWith = (base: unknown, patch: Record<string, string | null>) => {
+  const body = JSON.parse(JSON.stringify(base)) as { data: { attributes: Record<string, unknown> }[] };
+  Object.assign(body.data[0].attributes, patch);
+  return body;
+};
+
+/** Pin a story to the 360 dp Android viewport. */
+export const ANDROID_360 = { viewport: { value: 'android360', isRotated: false } } as const;

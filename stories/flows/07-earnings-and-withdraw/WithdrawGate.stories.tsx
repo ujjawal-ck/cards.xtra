@@ -6,6 +6,7 @@ import { Toast } from '../../../src/molecules';
 import { PhoneFrame, ScreenHarness } from '../../../storybook/harness';
 import { api, earningsFixture, paymentInfoFixture, reply } from '../../../storybook/fixtures';
 import { logNativeAlerts, sleep, tapText } from './_interact';
+import { earningsWith } from './_shared';
 import { colors, spacing } from '../../../src/tokens';
 
 /**
@@ -71,6 +72,53 @@ export const BalanceErrorProposed: Story = {
     <PhoneFrame background={colors.background.muted}>
       <View style={{ flex: 1, justifyContent: 'flex-end', padding: spacing[16] }}>
         <Toast tone="error" message="Couldn't load your balance. Check your connection and try again." action="single" actionLabel="Try again" />
+      </View>
+    </PhoneFrame>
+  ),
+};
+
+// ── Edge cases (audit/edge-flows-7-10.md, 7.2) ──
+
+/** MONEY. Payment info says 5002 (a payout is settling) but the answer has no requested amount. The app reads it as ₹0 and the "Payment Is Processing" sheet shows ₹0 (gap G6). Taps Withdraw after mount. */
+export const SettlingNoAmount: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:128` },
+  render: () => <Gate a={api.ok({ paymentInfo: reply.code(400, '5002', 'A payment request from you is already pending.') })} />,
+  play: tapWithdraw,
+};
+
+/** Exactly the minimum: confirmed cashback ₹250 and rewards ₹0 against a ₹250 minimum. The gate compares with "less than", so ₹250 passes and the method list opens (the stub "→ WithdrawMethodSelect" shows). Taps Withdraw after mount. */
+export const ExactlyMinimum: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:106` },
+  render: () => <Gate a={api.ok({ earnings: earningsWith(earningsFixture.belowThreshold, { total_earned: '690.00', total_cashback_earned: '690.00', confirmed_cashback: '250.00' }) })} />,
+  play: tapWithdraw,
+};
+
+/** MONEY. Gap G3, P1. Earnings say ₹1,590 is confirmed, but payment info answers 400 / 5003 (below threshold). Nothing reads that flag, so the gate lets the user through and the failure comes after the OTP. The method list opens (stub). Taps Withdraw after mount. */
+export const PaymentInfoSaysBelowThreshold: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:92` },
+  render: () => <Gate a={api.ok({ paymentInfo: paymentInfoFixture.belowThreshold })} />,
+  play: tapWithdraw,
+};
+
+/** Slow balance: the payment info call takes 8 s. The user taps Withdraw at 0.8 s and gets no feedback until it answers (the tap waits for the refetch, up to 3 tries of 15 s). After 8 s the method list opens. */
+export const SlowBalance: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:59` },
+  render: () => <Gate a={api.ok({ paymentInfo: reply.delay(8000, paymentInfoFixture.default) })} />,
+  play: tapWithdraw,
+};
+
+/** PROPOSED. Slow balance: an info Toast while the balance check runs, in place of silence. Needs DS gap G1 (action loading on the row) or a Toast host. */
+export const CheckingBalanceProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: `Adds feedback to the wait at ${SRC}:59. Copy from audit/edge-flows-7-10.md 7.2. Open question: Toast (needs an app-level host) or a loading state on the Withdraw button (needs DS gap G1)? Owner: product owner.` } } },
+  render: () => (
+    <PhoneFrame background={colors.background.muted}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', padding: spacing[16] }}>
+        <Toast tone="info" message="Checking your balance…" />
       </View>
     </PhoneFrame>
   ),
