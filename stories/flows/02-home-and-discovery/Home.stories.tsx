@@ -8,7 +8,7 @@ import { CardTile } from '../../../src/organisms/CardTile';
 import { ScreenState } from '../../../src/organisms/ScreenState';
 import { InlineMessage } from '../../../src/molecules';
 import { Text } from '../../../src/atoms';
-import { ScreenHarness, PhoneFrame } from '../../../storybook/harness';
+import { ComponentHarness, ScreenHarness, PhoneFrame } from '../../../storybook/harness';
 import { api, cardsFixture, eligibilityFixture, initBundleFixture, BK_CARDS, reply } from '../../../storybook/fixtures';
 import type { ApiParams } from '../../../storybook/harness';
 import { Script, clickByText, clickByPart, typeInto } from '../01-launch-and-login/_flow';
@@ -161,14 +161,14 @@ export const SlowCatalogueProposed: Story = {
   tags: ['proposed'],
   parameters: { source: 'src/screens/HomeScreen.tsx:2871', docs: { description: { story: 'MISSING today (A5). Proposal: keep the skeleton and add an InlineMessage, tone info, "Still loading cards. Your connection seems slow." Open questions: after how many seconds does it appear? Q7: should the catalogue call use a shorter timeout and fewer retries instead?' } } },
   render: () => (
-    <PhoneFrame>
+    <ComponentHarness>
       <View style={{ flex: 1, backgroundColor: colors.surface.default }}>
         <View style={{ padding: spacing[16] }}>
           <InlineMessage tone="info" message="Still loading cards. Your connection seems slow." />
         </View>
         <HomeSkeleton />
       </View>
-    </PhoneFrame>
+    </ComponentHarness>
   ),
 };
 
