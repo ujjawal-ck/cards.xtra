@@ -453,13 +453,30 @@ describe('tips', () => {
   });
 
   it('ltf sits right before the fee question, current and answered', () => {
-    const current = build(st({ opener: 'specific', need: 'shopping' }), catalogue());
+    const current = build(st({ opener: 'specific', need: 'everything' }), catalogue());
     const ids = idsOf(current);
     expect(ids[ids.length - 2]).toBe('t:ltf');
     expect(ids[ids.length - 1]).toBe('q:fee');
-    const answered = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any' }), catalogue()));
+    const answered = idsOf(build(st({ opener: 'specific', need: 'everything', fee: 'any' }), catalogue()));
     expect(answered[answered.indexOf('q:fee') - 1]).toBe('t:ltf');
     expect(answered.filter((id) => id === 't:ltf')).toHaveLength(1);
+  });
+
+  it('never shows two tips in a row: the earlier tip of config.tips stays', () => {
+    // caps (after need) and ltf (before fee) meet: caps is earlier in config.tips.
+    const t = build(st({ opener: 'specific', need: 'shopping' }), catalogue());
+    expect(tipIds(t)).toContain('t:caps');
+    expect(tipIds(t)).not.toContain('t:ltf');
+    for (const state of [
+      st({ opener: 'specific', need: 'shopping' }),
+      st({ opener: 'specific', need: 'shopping', fee: 'any' }),
+      st({ opener: 'better', missing: 'shopping' }),
+      st({ opener: 'first', history: 'no', need: 'shopping' }),
+      st({ opener: 'explore', matters: 'approved' }),
+    ]) {
+      const kinds = build(state, catalogue()).messages.map((m) => m.kind);
+      kinds.forEach((k, i) => expect(k === 'agent-tip' && kinds[i - 1] === 'agent-tip').toBe(false));
+    }
   });
 
   it('softcheck before the bridge, and before the form on the explore approved path, never twice', () => {

@@ -37,7 +37,18 @@ const strongInMore = (labels: string[], ctx: AckContext) => {
 export const ADVISOR_CONFIG: AdvisorConfig = {
   version: 2,
   notSureAck: "No problem. I'll skip that.",
+  // The order is the priority: when two tips would stand in a row, the earlier one stays.
   tips: [
+    {
+      id: 'softcheck',
+      before: 'eligBridge',
+      text: 'This check uses only how you earn, your income and your pincode. It does not touch your credit report.',
+    },
+    {
+      id: 'softcheck',
+      before: 'eligForm',
+      text: 'This check uses only how you earn, your income and your pincode. It does not touch your credit report.',
+    },
     {
       id: 'payfull',
       after: 'history',
@@ -60,16 +71,6 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       id: 'ltf',
       before: 'fee',
       text: 'Lifetime free means no joining fee and no annual fee. First year free is not the same.',
-    },
-    {
-      id: 'softcheck',
-      before: 'eligBridge',
-      text: 'This check uses only how you earn, your income and your pincode. It does not touch your credit report.',
-    },
-    {
-      id: 'softcheck',
-      before: 'eligForm',
-      text: 'This check uses only how you earn, your income and your pincode. It does not touch your credit report.',
     },
     {
       id: 'wait',

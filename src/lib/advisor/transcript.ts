@@ -76,13 +76,22 @@ export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript 
 
   /** Push the tips for one place. The first tip of an id that applies wins; an id shows once. */
   const pushTips = (place: { after: QuestionId } | { before: QuestionId }, ctx: TipContext) => {
-    for (const tip of config.tips as AdvisorTip[]) {
-      const here = 'after' in place ? tip.after === place.after : tip.before === place.before;
-      if (!here || shownTips.has(tip.id)) continue;
-      if (tip.when && !tip.when(ctx)) continue;
-      shownTips.add(tip.id);
-      messages.push({ id: `t:${tip.id}`, kind: 'agent-tip', text: tip.text });
+    const tip = (config.tips as AdvisorTip[]).find((t) => {
+      const here = 'after' in place ? t.after === place.after : t.before === place.before;
+      return here && !shownTips.has(t.id) && (!t.when || t.when(ctx));
+    });
+    if (!tip) return;
+    // Never two tips in a row. When two meet, the one that comes first in config.tips stays.
+    const last = messages[messages.length - 1];
+    if (last?.kind === 'agent-tip') {
+      const lastId = last.id.slice(2);
+      const rank = (id: string) => config.tips.findIndex((t) => t.id === id);
+      if (rank(lastId) <= rank(tip.id)) return;
+      shownTips.delete(lastId);
+      messages.pop();
     }
+    shownTips.add(tip.id);
+    messages.push({ id: `t:${tip.id}`, kind: 'agent-tip', text: tip.text });
   };
 
   let prefix: AdvisorState = { answers: {}, held: state.held };

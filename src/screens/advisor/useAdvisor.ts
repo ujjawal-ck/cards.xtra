@@ -21,6 +21,7 @@ import { fetchEligibility } from '../../api/eligibility';
 import { loadSavedProfile } from '../../lib/savedProfile';
 import { analytics, Events } from '../../analytics';
 import { ADVISOR_CONFIG } from '../../lib/advisor/config';
+import { decodeChoice } from '../../lib/advisor/answers';
 import { deriveSlots } from '../../lib/advisor/engine';
 import {
   answeredList,
@@ -315,7 +316,7 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     const question = ADVISOR_CONFIG.questions[id];
     analytics.track(Events.ADVISOR_ANSWER, answerEventParams(question, value));
     if (id === 'eligBridge') {
-      const wants = question.options.find((o) => o.id === value)?.set.wantsEligibility === true;
+      const wants = decodeChoice(question, value)[0]?.set.wantsEligibility === true;
       analytics.track(Events.ADVISOR_ELIGIBILITY_BRIDGE, { outcome: wants ? 'accepted' : 'declined' });
     }
     setState((s) => ({ ...s, answers: { ...s.answers, [id]: value } }));
@@ -360,6 +361,8 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   /** Clear the answers and the held cards. The intro mascot and the saved-details choice stay. */
   const restart = useCallback(() => {
     analytics.track(Events.ADVISOR_REWIND, { via: 'start_over', answers_lost: answerCount(state) });
+    // "This clears all your answers": the typed income and pincode go too.
+    getAdvisorSession().formDraft = null;
     setState({ answers: {}, held: [] });
   }, [state]);
 

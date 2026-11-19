@@ -148,6 +148,9 @@ export function AdvisorReplyTray({
   return (
     <View
       style={{
+        // When the keyboard leaves little room, the tray gives way and its scroll area shrinks,
+        // so the footer button stays on screen.
+        flexShrink: 1,
         gap: spacing[8],
         paddingTop: spacing[12],
         paddingHorizontal: spacing[16],
@@ -200,7 +203,11 @@ export function AdvisorReplyTray({
       ) : null}
       <ScrollView
         ref={scrollRef}
-        style={{ flexGrow: 0, maxHeight: height * (footer ? TRAY_MAX_RATIO_WITH_FOOTER : TRAY_MAX_RATIO) }}
+        style={{
+          flexGrow: 0,
+          flexShrink: 1,
+          maxHeight: height * (footer ? TRAY_MAX_RATIO_WITH_FOOTER : TRAY_MAX_RATIO),
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
         persistentScrollbar

@@ -24,7 +24,7 @@ export interface AdvisorSession {
    *  In memory only. */
   saved: SavedInputs | null;
   /** What the user typed in the eligibility form, kept for the app session so the form comes back
-   *  filled. "Start over" keeps it; resetAdvisorSession clears it. In memory only. */
+   *  filled. "Start over" and resetAdvisorSession clear it. In memory only. */
   formDraft: { job: EligJob | null; income: string; pincode: string } | null;
   /** The large intro mascot was shown and the user has answered once. */
   introDone: boolean;
