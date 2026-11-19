@@ -29,7 +29,7 @@ import { colors, spacing, radius, borderWidth, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { useMissingCashbackActions } from '../query/useMissingCashback';
 import type { McTicketFile } from '../api/missingCashback';
-import { ApiError } from '../api/client';
+import { isUnconfirmedUpload } from '../api/missingCashback';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackInvoiceUpload'>;
@@ -130,10 +130,12 @@ export function MissingCashbackInvoiceUpload() {
       const ticketId = response?.data?.id || response?.data?.attributes?.ticket_id;
       navigation.navigate('MissingCashbackTicketSuccess', { ticketId: ticketId ? String(ticketId) : undefined });
     } catch (e) {
-      // An upload timeout does not mean the ticket failed: the server may have it.
+      // After the upload was sent, a timeout, a dropped connection or a gateway
+      // error (the BFF cuts slow uploads with a 504) does not mean the ticket
+      // failed: the server may have it. Say so instead of inviting a duplicate.
       setError(
-        uploadSent && e instanceof ApiError && e.kind === 'timeout'
-          ? 'We couldn’t confirm the upload. Check My Claims before you try again.'
+        uploadSent && isUnconfirmedUpload(e)
+          ? 'We couldn’t confirm the upload. Check Missing Cashback, Others tab, before you try again.'
           : (e as Error)?.message || 'Failed to upload the invoice. Please try again.',
       );
     } finally {

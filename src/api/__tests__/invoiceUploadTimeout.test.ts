@@ -39,3 +39,18 @@ describe('raiseTicket deadline', () => {
     expect(optsOf(1).timeoutMs).toBeUndefined();
   });
 });
+
+describe('isUnconfirmedUpload', () => {
+  const { isUnconfirmedUpload } = require('../missingCashback');
+  const { ApiError } = require('../http/errors');
+  it('treats timeout, network and gateway 502/503/504 as unconfirmed', () => {
+    expect(isUnconfirmedUpload(new ApiError('t', 0, undefined, { kind: 'timeout' }))).toBe(true);
+    expect(isUnconfirmedUpload(new ApiError('n', 0))).toBe(true);
+    for (const s of [502, 503, 504]) expect(isUnconfirmedUpload(new ApiError('g', s))).toBe(true);
+  });
+  it('treats a real answer as final', () => {
+    expect(isUnconfirmedUpload(new ApiError('bad', 400))).toBe(false);
+    expect(isUnconfirmedUpload(new ApiError('err', 500))).toBe(false);
+    expect(isUnconfirmedUpload(new Error('x'))).toBe(false);
+  });
+});

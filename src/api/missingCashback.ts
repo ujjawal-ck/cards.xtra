@@ -20,6 +20,7 @@
 import { CK } from '../config/env';
 import { ck } from './cashkaro';
 import * as Schemas from './schemas';
+import { isApiError } from './http/errors';
 
 // ── JSON:API shapes (confirmed against the web prototype's interfaces) ───────
 
@@ -239,6 +240,17 @@ export async function updateQueue(
  * second ticket.
  */
 export const INVOICE_UPLOAD_TIMEOUT_MS = 60_000;
+
+/**
+ * True when an invoice upload that was sent ended without a clear answer:
+ * timeout, dropped connection, or a 502/503/504 from the gateway. The ticket may
+ * exist, so the screen must not invite a blind resubmit.
+ */
+export function isUnconfirmedUpload(e: unknown): boolean {
+  if (!isApiError(e)) return false;
+  if (e.kind === 'timeout' || e.kind === 'network') return true;
+  return e.kind === 'http' && (e.status === 502 || e.status === 503 || e.status === 504);
+}
 
 /**
  * Raise a ticket with invoice attachments (C1-"Other" / C2). Sends multipart
