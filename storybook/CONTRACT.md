@@ -15,7 +15,7 @@ The colours, type and spacing come from `src/tokens` only. Do not use gc-ds colo
 
 ## 3. Hard rules
 1. No network. Screens render only through `ScreenHarness` (`storybook/harness`). Never call `fetch` yourself. Never set a real host.
-2. No personal data. No real phone, email, name or order id. Use `98XXXXXX10`, `user@example.com`, `Test User`, `CKORDER0001`.
+2. No personal data. No real phone, email, name or order id. Use `9800000010` (masks as ...0010), `user@example.com`, `Test User`, `CKORDER0001`.
 3. Write cashback rates as "X%" in copy you invent. Real values that come from a fixture file can stay.
 4. Do not edit any file in `src/`, `App.js`, `package.json` (root), `tsconfig.json` (root) or `bff/`. If a component needs a change to render, write it in your report. Do not fix it.
 5. Do not edit `storybook/.storybook/*`, `storybook/harness/*`, `storybook/blocks/*`, `storybook/fixtures/*`, `storybook/mocks/*` or this file. Only the harness agent owns `harness/` and `fixtures/`.
@@ -90,6 +90,10 @@ import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/block
 A PickTable is required for the families marked PICK in `pm-flows.md` 3.3 and 3.4.
 
 ## 9. Flow overview page (MDX)
+Screen stories mount `ScreenHarness`, which resets the shared store, cache and fetch mock. So:
+- Flow story files do NOT use the `autodocs` tag, and set `parameters: { layout: 'fullscreen', docs: { story: { inline: false } } }` in meta.
+- The flow MDX page links to the step stories (StateMatrix `story` ids). It does not embed screen stories with `<Canvas>`.
+- Read `storybook/harness/README.md` for `ScreenHarness`, `SheetHarness`, `PhoneFrame`, `routeParams`, auth states and the `api` presets in `storybook/fixtures`.
 `PageHeader`, then the ordered steps as an ASCII flow in a code block, then one `StateMatrix` per step (rows link to the stories), then "Open questions" from `pm-flows.md` section 4 and the risks for this flow.
 
 ## 10. Done check for every writer
