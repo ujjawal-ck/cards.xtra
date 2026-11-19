@@ -60,10 +60,17 @@ function ProposedRibbon({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Removes a shimmed Alert left over from the previous story. */
+function ClearAlert() {
+  React.useEffect(() => { document.getElementById('sb-alert')?.remove(); }, []);
+  return null;
+}
+
 const preview: Preview = {
   decorators: [
     (Story, ctx) => (
-      <Providers>
+      <Providers key={ctx.id}>
+        <ClearAlert />
         {ctx.tags.includes('proposed') ? <ProposedRibbon><Story /></ProposedRibbon> : <Story />}
       </Providers>
     ),

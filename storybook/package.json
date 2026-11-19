@@ -6,7 +6,8 @@
     "storybook": "storybook dev -p 6006 -c .storybook",
     "build": "storybook build -c .storybook -o dist",
     "typecheck": "tsc -p tsconfig.json",
-    "postinstall": "rm -rf node_modules/react node_modules/react-dom"
+    "postinstall": "rm -rf node_modules/react node_modules/react-dom",
+    "serve": "python3 -m http.server 6107 --directory dist"
   },
   "devDependencies": {
     "@storybook/addon-docs": "10.0.8",

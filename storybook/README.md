@@ -1,16 +1,18 @@
 # Cards.xtra Storybook
 
-The design system and every user flow of the app, rendered from the real app code on the web. No request leaves the browser.
+The design system and every user flow of the app, rendered from the real app code on the web. No API request leaves the browser (fonts and remote card art still load).
 
 ## Run
 ```bash
 cd storybook
-npm install          # once; uses the app's node_modules for React and React Native
-npm run storybook    # dev server on :6006
-npm run build        # static site in storybook/dist
+npm install          # once (.npmrc sets legacy-peer-deps, so React is not installed twice)
+npm run build        # static site in storybook/dist (about 2 minutes)
+npm run serve        # open http://localhost:6107
 npm run typecheck    # types of stories, harness, fixtures
 ```
 The app's `node_modules` must exist at the repo root (`npm install` there first).
+
+`npm run storybook` (dev server) does NOT work yet: Vite pre-bundles reanimated and worklets, and they fail on web ("Failed to create a worklet"). The static build is the verified path. Build one folder fast with `SB_STORIES='../../stories/flows/07-earnings-and-withdraw/**/*.stories.tsx' npm run build`.
 
 ## What is inside
 | Group | Content |

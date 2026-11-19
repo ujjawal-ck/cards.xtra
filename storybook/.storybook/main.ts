@@ -80,7 +80,8 @@ const config: StorybookConfig = {
     },
   },
   async viteFinal(cfg) {
-    cfg.cacheDir = path.resolve(here, '../.vite-cache');
+    // Keep Vite's default cache in node_modules/.vite: the framework's commonjs plugin skips that path.
+    // A cache outside node_modules gets rewritten twice and breaks dev mode ("Duplicate export of 'default'").
     cfg.plugins = [reanimatedWebUtils, svgAsRnComponent, requireAssetsToImports, ...(cfg.plugins ?? [])];
     cfg.resolve = cfg.resolve ?? {};
     const alias = [
