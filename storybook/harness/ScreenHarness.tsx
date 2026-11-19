@@ -13,7 +13,7 @@ import { AuthProvider } from '../../src/auth/AuthContext';
 import { LoginSheetProvider } from '../../src/auth/LoginSheetProvider';
 import { installApiMock, type ApiParams } from './apiMock';
 
-const Stack = createNativeStackNavigator<any>();
+const Stack = createNativeStackNavigator();
 
 export interface ScreenHarnessProps {
   name: string;
@@ -35,7 +35,7 @@ export function ScreenHarness({ name, component, params, api, width = 390 }: Scr
             <NavigationContainer ref={navRef}>
               <LoginSheetProvider navigationRef={navRef}>
                 <Stack.Navigator screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name={name} component={component} initialParams={params} />
+                  <Stack.Screen name={name} component={component} initialParams={params as any} />
                 </Stack.Navigator>
               </LoginSheetProvider>
             </NavigationContainer>
