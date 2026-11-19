@@ -24,9 +24,9 @@ Builder choices, open for the owner:
 - A rewind fires no analytics event. No event exists for it.
 - No text to speech and no microphone. The app has neither, and one would need a new dependency. `audioLevel` is a plain prop; the mouth runs its own loop without it.
 
-Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the chat from the first question to "How do you earn?", with the card rail and the auto-scroll; the mascot demo in idle, listening, speaking, success and error at 48, 96, 160 and 300.
+Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19, after the merge of `Anmol--changes`, `6f1f03c`): the first-card path in the chat from the first question to the eligibility result ("Likely to qualify" on the tile, then the closing line); the card rail and the auto-scroll; a rewind (a tap on the income answer removed it and the pincode, and the income question came back); "I have this" on a rail tile (the card left the rail, the next card moved up, earlier lines did not change); the one-line form of an earlier reveal. The mascot demo, before the merge: idle, listening, speaking, success and error at 48, 96, 160 and 300.
 
-Not checked: the income, pincode and eligibility steps in the chat layout, the rewind, "I have this" on a tile, the thinking state, Android, a 360 dp screen, 130% font, a screen reader.
+Not checked: the pincode tray above the on-screen keyboard (the simulator used a hardware keyboard, so no keyboard showed), the other three paths in the chat layout, the eligibility error state, saved eligibility details, the thinking state of the mascot, the Apply click-out, Android, a 360 dp screen, 130% font, a screen reader.
 
 ## D28. Card advisor: a guided card finder, opened from search
 2026-11-19 · branch `claude/advisor`
