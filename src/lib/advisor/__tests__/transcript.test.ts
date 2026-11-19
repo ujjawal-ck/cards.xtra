@@ -13,6 +13,7 @@ import {
   lastAnswered,
   rewindAnswers,
 } from '../transcript';
+import { encodeEligForm } from '../answers';
 import { NOT_SURE, type AdvisorEligibility, type AdvisorState, type QuestionId } from '../types';
 
 let n = 0;
@@ -67,11 +68,9 @@ const FULL_FIRST = {
   need: 'shopping',
   upi: 'daily',
   eligBridge: 'yes',
-  job: 'salaried',
-  income: '40to75',
-  pincode: '110001',
+  eligForm: encodeEligForm({ job: 'salaried', incomeMonthly: 40000, pincode: '110001' }),
 };
-const ORDER: QuestionId[] = ['opener', 'history', 'need', 'upi', 'eligBridge', 'job', 'income', 'pincode'];
+const ORDER: QuestionId[] = ['opener', 'history', 'need', 'upi', 'eligBridge', 'eligForm'];
 const prefixOf = (k: number): AdvisorState => {
   const answers: Partial<Record<QuestionId, string>> = {};
   ORDER.slice(0, k).forEach((id) => {
@@ -124,11 +123,11 @@ describe('buildTranscript', () => {
     const t = build(st({ opener: 'first', history: 'no', need: 'shopping' }), catalogue());
     const q = (id: string) => t.messages.find((m) => m.id === id) as Extract<ChatMessage, { kind: 'agent-question' }>;
     expect(q('q:opener').ask).toBe('What brings you here today?');
-    expect(q('q:need').ask).toBe('Where does most of your monthly spend go?');
+    expect(q('q:need').ask).toBe('Where does most of your monthly spend go? Pick up to 3.');
     expect(q('q:need').why).toBe('A card pays back most where you already spend.');
   });
 
-  it('answer texts: option label, Not sure, PIN and unknown option id', () => {
+  it('answer texts: option label, Not sure, the form and unknown option id', () => {
     const cards = catalogue();
     const t = build(st({ opener: 'first', history: NOT_SURE, need: 'shopping', upi: 'unknown-id' }), cards);
     const a = (id: string) => (t.messages.find((m) => m.id === id) as Extract<ChatMessage, { kind: 'user-answer' }>).text;
@@ -137,8 +136,8 @@ describe('buildTranscript', () => {
     expect(a('a:need')).toBe('Online shopping');
     expect(a('a:upi')).toBe('unknown-id');
     const full = build(st(FULL_FIRST), cards);
-    const pin = full.messages.find((m) => m.id === 'a:pincode') as Extract<ChatMessage, { kind: 'user-answer' }>;
-    expect(pin.text).toBe('PIN 110001');
+    const form = full.messages.find((m) => m.id === 'a:eligForm') as Extract<ChatMessage, { kind: 'user-answer' }>;
+    expect(form.text).toBe('Salaried · ₹40,000 · 110001');
   });
 
   it('ids are unique at every prefix of a full run', () => {
@@ -150,24 +149,22 @@ describe('buildTranscript', () => {
     }
   });
 
-  it('full run of journey first: order of kinds; bridge, job and income add no reveal or note', () => {
+  it('full run of journey first: order of kinds; the bridge adds no reveal or note', () => {
     const cards = catalogue();
     const t = build(st(FULL_FIRST), cards, eligibleFor(cards, [0]));
     const ids = t.messages.map((m) => m.id);
-    for (const id of ['r:eligBridge', 'n:eligBridge', 'r:job', 'n:job', 'r:income', 'n:income']) {
+    for (const id of ['r:eligBridge', 'n:eligBridge']) {
       expect(ids).not.toContain(id);
     }
     // hello, then (question, answer, reveal?) per answer, then the tail.
     expect(ids.slice(0, 3)).toEqual(['hello', 'q:opener', 'a:opener']);
     expect(ids.slice(3, 5)).toEqual(['k:opener', 'r:opener']);
     expect(ids.indexOf('a:eligBridge')).toBe(ids.indexOf('q:eligBridge') + 1);
-    expect(ids.indexOf('q:job')).toBe(ids.indexOf('a:eligBridge') + 2); // k:eligBridge between
-    expect(ids.indexOf('q:income')).toBe(ids.indexOf('a:job') + 1);
-    expect(ids.indexOf('q:pincode')).toBe(ids.indexOf('a:income') + 2); // k:income between
-    expect(ids.indexOf('a:pincode')).toBe(ids.indexOf('q:pincode') + 1);
-    expect(ids[ids.indexOf('a:pincode') + 1]).toBe('k:pincode');
-    expect(ids[ids.indexOf('a:pincode') + 2]).toBe('r:pincode');
-    expect(kinds(t.messages).filter((k) => k === 'user-answer')).toHaveLength(8);
+    expect(ids.indexOf('q:eligForm')).toBe(ids.indexOf('a:eligBridge') + 2); // k:eligBridge between
+    expect(ids.indexOf('a:eligForm')).toBe(ids.indexOf('q:eligForm') + 1);
+    expect(ids[ids.indexOf('a:eligForm') + 1]).toBe('k:eligForm');
+    expect(ids[ids.indexOf('a:eligForm') + 2]).toBe('r:eligForm');
+    expect(kinds(t.messages).filter((k) => k === 'user-answer')).toHaveLength(6);
     expect(t.step).toBeNull();
     expect(t.messages[t.messages.length - 1].id).toBe('closing');
   });
@@ -217,7 +214,7 @@ describe('buildTranscript', () => {
     }
   });
 
-  it('an eligibility result arriving changes no earlier text; it adds only k:pincode, r:pincode and the tail', () => {
+  it('an eligibility result arriving changes no earlier text; it adds only k:eligForm, r:eligForm and the tail', () => {
     const cards = catalogue();
     const before = build(st(FULL_FIRST), cards, null);
     const after = build(st(FULL_FIRST), cards, eligibleFor(cards, [0, 1]));
@@ -227,7 +224,7 @@ describe('buildTranscript', () => {
     }
     const beforeIds = new Set(before.messages.map((m) => m.id));
     const added = after.messages.filter((m) => !beforeIds.has(m.id) && m.id !== 'closing');
-    expect(added.map((m) => m.id)).toEqual(['k:pincode', 'r:pincode']);
+    expect(added.map((m) => m.id)).toEqual(['k:eligForm', 'r:eligForm']);
     expect(added[1].kind).toBe('agent-reveal');
     expect(before.reveal!.proof).not.toBe('likely');
     expect(after.reveal!.proof).toBe('likely');
@@ -242,7 +239,7 @@ describe('buildTranscript', () => {
       card({ cat: [SHOPPING], isFree: true }),
     ];
     const t = buildTranscript({
-      state: st({ opener: 'specific', need: 'fuel', fee: 'free', eligBridge: 'yes', job: 'salaried' }),
+      state: st({ opener: 'specific', need: 'fuel', fee: 'free', eligBridge: 'yes', eligForm: FULL_FIRST.eligForm }),
       config: C,
       cards,
       eligibility: null,
@@ -261,7 +258,7 @@ describe('buildTranscript', () => {
       id: 'closing',
       text: 'Apply for one card at a time. Each application is recorded on your credit report.',
     });
-    const none = build(st({ ...FULL_FIRST, eligBridge: 'no', job: undefined, income: undefined, pincode: undefined }), cards, null);
+    const none = build(st({ ...FULL_FIRST, eligBridge: 'no', eligForm: undefined }), cards, null);
     expect(none.messages[none.messages.length - 1]).toMatchObject({
       id: 'closing',
       text: 'That is my shortlist for now. Pick what to do next.',
@@ -276,7 +273,7 @@ describe('buildTranscript', () => {
     expect(first).toBeDefined();
     expect(first.header.startsWith('Cards you are likely to get')).toBe(true);
     const ids = t.messages.map((m) => m.id);
-    for (const id of ['q:eligBridge', 'q:job', 'q:income', 'q:pincode']) expect(ids).not.toContain(id);
+    for (const id of ['q:eligBridge', 'q:eligForm']) expect(ids).not.toContain(id);
     expect(t.step).toBeNull();
     expect(t.reveal!.proof).toBe('likely');
     expect(t.messages[t.messages.length - 1].id).toBe('closing');
@@ -370,17 +367,51 @@ describe('acknowledgements', () => {
     expect(textById(t, 'k:upi')).toBe('None of these link to UPI, so the order stays.');
   });
 
-  it('pincode: none without a result, count lines with a likely result, none with a note or not likely', () => {
+  it('eligForm: none without a result, count lines with a likely result, none with a note or not likely', () => {
     const cards = catalogue();
-    expect(idsOf(build(st(FULL_FIRST), cards, null))).not.toContain('k:pincode');
-    expect(textById(build(st(FULL_FIRST), cards, eligibleFor(cards, [0])), 'k:pincode')).toBe('1 card fits your income and pincode.');
+    expect(idsOf(build(st(FULL_FIRST), cards, null))).not.toContain('k:eligForm');
+    expect(textById(build(st(FULL_FIRST), cards, eligibleFor(cards, [0])), 'k:eligForm')).toBe('1 card fits your income and pincode.');
     const many = build(st(FULL_FIRST), cards, eligibleFor(cards, [0, 1, 2]));
-    expect(textById(many, 'k:pincode')).toBe(`${many.reveal!.total} cards fit your income and pincode.`);
+    expect(textById(many, 'k:eligForm')).toBe(`${many.reveal!.total} cards fit your income and pincode.`);
     expect(many.reveal!.total).toBeGreaterThan(1);
     // Result that matches no card: the reveal has a note and is not likely.
     const none = build(st(FULL_FIRST), cards, { eligibleAliases: ['nope'], incomeMonthly: 40000 });
     expect(none.reveal!.proof).not.toBe('likely');
-    expect(idsOf(none)).not.toContain('k:pincode');
+    expect(idsOf(none)).not.toContain('k:eligForm');
+  });
+
+  it('eligForm: the self-employed line without a likely result; the count line wins with one; no ack when not earning', () => {
+    const cards = catalogue();
+    const self = st({ ...FULL_FIRST, eligForm: encodeEligForm({ job: 'self', incomeMonthly: 120000, pincode: '400001' }) });
+    expect(textById(build(self, cards, null), 'k:eligForm')).toBe(
+      'Self-employed. Banks use a different income rule, and I check against that one.',
+    );
+    expect(textById(build(self, cards, eligibleFor(cards, [0])), 'k:eligForm')).toBe('1 card fits your income and pincode.');
+    const none = st({ ...FULL_FIRST, eligForm: encodeEligForm({ job: 'none' }) });
+    expect(idsOf(build(none, cards, eligibleFor(cards, [0])))).not.toContain('k:eligForm');
+    expect(build(none, cards, eligibleFor(cards, [0])).reveal!.proof).not.toBe('likely');
+  });
+
+  it('multi answer: multiAck for 2 picks, the option ack for 1 pick', () => {
+    const cards = [card({ cat: [SHOPPING] }), card({ cat: [FUEL] }), card({ cat: [SHOPPING, FUEL] })];
+    const two = build(st({ opener: 'specific', need: 'shopping,fuel' }), cards);
+    expect(textById(two, 'k:need')).toBe('Online shopping and Fuel. Cards strong in more than one come first.');
+    const one = build(st({ opener: 'specific', need: 'fuel' }), cards);
+    expect(textById(one, 'k:need')).toBe('Fuel. These pay back the most at the pump.');
+  });
+
+  it('multiAck for 3 picks', () => {
+    expect(C.questions.need.multiAck?.(['Online shopping', 'Fuel', 'Travel'], {} as never)).toBe(
+      'Online shopping, Fuel and Travel. Cards strong in more than one come first.',
+    );
+  });
+
+  it('the skip rule holds for a multi answer whose categories were set aside', () => {
+    const cards = [card({ cat: [SHOPPING] }), card({ cat: [SHOPPING] })];
+    const t = build(st({ opener: 'specific', need: 'fuel,travel' }), cards);
+    expect(t.reveal!.dropped).toContain('categoryTagIds');
+    expect(idsOf(t)).toContain('a:need');
+    expect(idsOf(t)).not.toContain('k:need');
   });
 });
 
@@ -421,13 +452,13 @@ describe('tips', () => {
     expect(answered.filter((id) => id === 't:ltf')).toHaveLength(1);
   });
 
-  it('softcheck before the bridge, and before job on the explore approved path, never twice', () => {
+  it('softcheck before the bridge, and before the form on the explore approved path, never twice', () => {
     const bridge = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any' }), catalogue()));
     expect(bridge[bridge.length - 2]).toBe('t:softcheck');
     expect(bridge[bridge.length - 1]).toBe('q:eligBridge');
     const approved = idsOf(build(st({ opener: 'explore', matters: 'approved' }), catalogue()));
     expect(approved[approved.length - 2]).toBe('t:softcheck');
-    expect(approved[approved.length - 1]).toBe('q:job');
+    expect(approved[approved.length - 1]).toBe('q:eligForm');
     const both = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any', eligBridge: 'yes' }), catalogue()));
     expect(both.filter((id) => id === 't:softcheck')).toHaveLength(1);
     expect(both[both.indexOf('q:eligBridge') - 1]).toBe('t:softcheck');
@@ -440,7 +471,8 @@ describe('tips', () => {
     const none = build(st(FULL_FIRST), cards, { eligibleAliases: ['nope'], incomeMonthly: 40000 });
     expect(tipIds(none)).toContain('t:wait');
     const ids = idsOf(none);
-    expect(ids.indexOf('t:wait')).toBeGreaterThan(ids.indexOf('a:pincode'));
+    expect(ids.indexOf('t:wait')).toBeGreaterThan(ids.indexOf('a:eligForm'));
+    expect(ids.indexOf('t:wait')).toBeGreaterThan(ids.indexOf('r:eligForm'));
   });
 
   it('ids stay unique at every prefix and history is stable with the new kinds', () => {
@@ -466,6 +498,11 @@ describe('rewindAnswers', () => {
     const r = rewindAnswers(full, C, 'upi');
     expect(r.answers).toEqual({ opener: 'first', history: 'no', need: 'shopping' });
     expect(r.held).toEqual(['h1']);
+  });
+
+  it('rewinding the form removes only the form answer', () => {
+    const r = rewindAnswers(full, C, 'eligForm');
+    expect(r.answers).toEqual({ opener: 'first', history: 'no', need: 'shopping', upi: 'daily', eligBridge: 'yes' });
   });
 
   it('rewinding the opener clears everything including held', () => {
@@ -525,10 +562,24 @@ describe('answeredList, lastAnswered, answersLost', () => {
     expect(list[2].text).toBe('Free cards only');
   });
 
-  it('shows "Not sure" and "PIN ..." as the answer text', () => {
+  it('shows "Not sure" and the form text as the answer text', () => {
     const list = answeredList(st({ ...FULL_FIRST, upi: NOT_SURE }), C);
     expect(list.find((x) => x.questionId === 'upi')?.text).toBe('Not sure');
-    expect(list.find((x) => x.questionId === 'pincode')?.text).toBe('PIN 110001');
+    expect(list.find((x) => x.questionId === 'eligForm')).toEqual({
+      questionId: 'eligForm',
+      ask: C.questions.eligForm.ask,
+      text: 'Salaried · ₹40,000 · 110001',
+    });
+  });
+
+  it('answer text for a multi answer and for the three form shapes', () => {
+    const multi = answeredList(st({ opener: 'specific', need: 'fuel,shopping' }), C);
+    expect(multi.find((x) => x.questionId === 'need')?.text).toBe('Online shopping, Fuel');
+    const text = (form: string) =>
+      answeredList(st({ opener: 'specific', need: 'fuel', fee: 'any', eligBridge: 'yes', eligForm: form }), C).slice(-1)[0].text;
+    expect(text(encodeEligForm({ job: 'salaried', incomeMonthly: 35000, pincode: '110001' }))).toBe('Salaried · ₹35,000 · 110001');
+    expect(text(encodeEligForm({ job: 'self', incomeMonthly: 120000, pincode: '400001' }))).toBe('Self-employed · ₹1,20,000 · 400001');
+    expect(text(encodeEligForm({ job: 'none' }))).toBe('Not earning yet');
   });
 
   it('does not list an answered question that is not active', () => {
@@ -540,7 +591,7 @@ describe('answeredList, lastAnswered, answersLost', () => {
   it('lastAnswered is the last answer in asking order, or null', () => {
     expect(lastAnswered(st({}), C)).toBeNull();
     expect(lastAnswered(prefixOf(1), C)).toBe('opener');
-    expect(lastAnswered(prefixOf(8), C)).toBe('pincode');
+    expect(lastAnswered(prefixOf(6), C)).toBe('eligForm');
     expect(lastAnswered(st({ opener: 'explore', matters: 'travel' }), C)).toBe(
       answeredList(st({ opener: 'explore', matters: 'travel' }), C).slice(-1)[0].questionId,
     );
@@ -562,9 +613,10 @@ describe('answeredList, lastAnswered, answersLost', () => {
 
   it('answersLost counts that answer and every later one; all for the opener; 0 when not answered', () => {
     const full = st(FULL_FIRST);
-    expect(answersLost(full, C, 'pincode')).toBe(1);
-    expect(answersLost(full, C, 'upi')).toBe(5);
-    expect(answersLost(full, C, 'opener')).toBe(8);
+    expect(answersLost(full, C, 'eligForm')).toBe(1);
+    expect(answersLost(full, C, 'eligBridge')).toBe(2);
+    expect(answersLost(full, C, 'upi')).toBe(3);
+    expect(answersLost(full, C, 'opener')).toBe(6);
     expect(answersLost(prefixOf(2), C, 'need')).toBe(0);
   });
 });

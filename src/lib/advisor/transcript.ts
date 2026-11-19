@@ -6,7 +6,9 @@
  * from the prefix state of its own answer, so a later answer, an eligibility
  * result or "I have this" never changes the text of an earlier message.
  */
-import { NOTE_SAME, buildReveal, nextQuestion, slotsToFilters } from './engine';
+import { NOTE_SAME, buildReveal, nextQuestion, slotsToFilters, walkAnswers, type WalkStep } from './engine';
+import { decodeChoice, parseEligForm } from './answers';
+import { formatINR } from '../money';
 import type {
   AdvisorTranscript,
   AdvisorAvatarState,
@@ -26,53 +28,28 @@ import {
   type TipContext,
 } from './types';
 
-const PINCODE_RE = /^[1-9]\d{5}$/;
-
 const HELLO = "Hi, I'm Swipey. I'll help you pick a credit card. A few taps, no forms.";
 const CLOSING_LIKELY = 'Apply for one card at a time. Each application is recorded on your credit report.';
 const CLOSING_OTHER = 'That is my shortlist for now. Pick what to do next.';
 
-// ── The walk (same rule as engine.ts) ──────────────────────────────────────
-
-interface WalkItem {
-  question: AdvisorQuestion;
-  answer: string | undefined;
-  /** Slots filled by the questions before this one. */
-  before: AdvisorSlots;
-  active: boolean;
-}
-
-function walkItems(state: AdvisorState, config: AdvisorConfig): { items: WalkItem[]; slots: AdvisorSlots } {
-  let slots: AdvisorSlots = {};
-  const items: WalkItem[] = [];
-  const visit = (question: AdvisorQuestion) => {
-    const answer = state.answers[question.id];
-    const before = slots;
-    const active = !question.when || question.when(before);
-    items.push({ question, answer, before, active });
-    if (!active || answer === undefined || answer === NOT_SURE) return;
-    if (question.kind === 'pincode') {
-      if (PINCODE_RE.test(answer)) slots = { ...slots, pincode: answer };
-      return;
-    }
-    const option = question.options.find((o) => o.id === answer);
-    if (option) slots = { ...slots, ...option.set };
-  };
-  visit(config.questions.opener);
-  const journey = slots.journey;
-  if (journey) {
-    for (const id of config.journeys[journey]) visit(config.questions[id]);
-  }
-  return { items, slots };
-}
-
 // ── Build the transcript ───────────────────────────────────────────────────
 
+const JOB_TEXT = { salaried: 'Salaried', self: 'Self-employed' } as const;
+
+/** The answer bubble: option labels joined by ', ', or the form in one line. */
 function answerText(question: AdvisorQuestion, answer: string): string {
   if (answer === NOT_SURE) return 'Not sure';
-  if (question.kind === 'pincode') return `PIN ${answer}`;
-  return question.options.find((o) => o.id === answer)?.label ?? answer;
+  if (question.kind === 'eligibility') {
+    const form = parseEligForm(answer);
+    if (!form) return answer;
+    if (form.job === 'none') return 'Not earning yet';
+    return [JOB_TEXT[form.job], formatINR(form.incomeMonthly ?? 0), form.pincode].join(' · ');
+  }
+  const picks = decodeChoice(question, answer);
+  return picks.length > 0 ? picks.map((o) => o.label).join(', ') : answer;
 }
+
+const SELF_EMPLOYED_ACK = 'Self-employed. Banks use a different income rule, and I check against that one.';
 
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((id, i) => id === b[i]);
 
@@ -90,8 +67,8 @@ const topIds = (r: AdvisorReveal) => r.top.map((t) => t.card.id);
 
 export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript {
   const { state, config, cards, eligibility, eligibilityKnown } = input;
-  const walked = walkItems(state, config);
-  const items = walked.items.filter((w) => w.active && w.answer !== undefined);
+  const walked = walkAnswers(state, config);
+  const items = walked.steps.filter((w) => w.active && w.answer !== undefined);
 
   const messages: ChatMessage[] = [{ id: 'hello', kind: 'agent-text', text: HELLO }];
   const revealIndexes: Array<{ index: number; k: number }> = [];
@@ -136,7 +113,7 @@ export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript 
     messages.push({ id: `a:${question.id}`, kind: 'user-answer', questionId: question.id, text: answerText(question, answer) });
 
     prefix = { answers: { ...prefix.answers, [question.id]: answer }, held: state.held };
-    const { slots } = walkItems(prefix, config);
+    const { slots } = walkAnswers(prefix, config);
     const eligible =
       eligibilityKnown ||
       ((slots.job === 'salaried' || slots.job === 'self-employed') &&
@@ -162,15 +139,24 @@ export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript 
     let ackText: string | undefined;
     if (answer === NOT_SURE) {
       ackText = config.notSureAck;
-    } else if (question.kind === 'pincode') {
+    } else if (question.kind === 'eligibility') {
+      // The count line wins over the self-employed line. Not earning: the reveal note explains.
       if (eligibilityApplied && reveal.proof === 'likely' && reveal.note === undefined) {
         ackText = reveal.total === 1
           ? '1 card fits your income and pincode.'
           : `${reveal.total} cards fit your income and pincode.`;
+      } else if (parseEligForm(answer)?.job === 'self') {
+        ackText = SELF_EMPLOYED_ACK;
       }
     } else if (!ownFilterDropped(item.before, slots, reveal)) {
-      const raw = question.options.find((o) => o.id === answer)?.ack;
-      ackText = typeof raw === 'function' ? raw({ slots, reveal, changed }) : raw;
+      const ctx = { slots, reveal, changed };
+      const { picks } = item;
+      if (picks.length === 1) {
+        const raw = picks[0].ack;
+        ackText = typeof raw === 'function' ? raw(ctx) : raw;
+      } else if (picks.length > 1) {
+        ackText = question.multiAck?.(picks.map((o) => o.pill ?? o.label), ctx);
+      }
     }
     if (ackText) messages.push({ id: `k:${question.id}`, kind: 'agent-text', text: ackText });
 
@@ -230,7 +216,7 @@ export function buildTranscript(input: BuildTranscriptInput): AdvisorTranscript 
 export function rewindAnswers(state: AdvisorState, config: AdvisorConfig, questionId: QuestionId): AdvisorState {
   if (state.answers[questionId] === undefined) return state;
   if (questionId === 'opener') return { answers: {}, held: [] };
-  const { items } = walkItems(state, config);
+  const items = walkAnswers(state, config).steps;
   const at = items.findIndex((w) => w.question.id === questionId);
   const answers: AdvisorState['answers'] = {};
   if (at > 0) {
@@ -248,8 +234,8 @@ export function rewindAnswers(state: AdvisorState, config: AdvisorConfig, questi
 
 // ── Answered questions ─────────────────────────────────────────────────────
 
-const answeredItems = (state: AdvisorState, config: AdvisorConfig) =>
-  walkItems(state, config).items.filter((w) => w.active && w.answer !== undefined);
+const answeredItems = (state: AdvisorState, config: AdvisorConfig): WalkStep[] =>
+  walkAnswers(state, config).steps.filter((w) => w.active && w.answer !== undefined);
 
 const answerCount = (state: AdvisorState) =>
   Object.values(state.answers).filter((v) => v !== undefined).length;

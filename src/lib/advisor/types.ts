@@ -28,9 +28,7 @@ export type QuestionId =
   | 'upi'
   | 'fee'
   | 'eligBridge'
-  | 'job'
-  | 'income'
-  | 'pincode';
+  | 'eligForm';
 
 /** The answer stored when the user taps "Not sure". It sets nothing. */
 export const NOT_SURE = 'not-sure';
@@ -42,8 +40,12 @@ export interface AdvisorSlots {
   journey?: JourneyId;
   /** Journey 'first' only. true removes the first-card filter. */
   hasHistory?: boolean;
-  /** Hard filter: a BankKaro tag id (CATEGORY_OPTIONS in data/filterOptions). */
-  categoryTagId?: number;
+  /** Hard filter: BankKaro tag ids (CATEGORY_OPTIONS in data/filterOptions), unique.
+   *  A card passes when it has ANY of them. A card with more of them ranks higher. */
+  categoryTagIds?: number[];
+  /** Ask the need question even when a category is already set (the user picked
+   *  "daily spends" together with a category). */
+  askNeed?: boolean;
   /** Hard filter: set only when the user's stated need is UPI payments. */
   network?: 'RuPay';
   /** Hard filter. */
@@ -59,11 +61,16 @@ export interface AdvisorSlots {
   /** The answer to the eligibility bridge. */
   wantsEligibility?: boolean;
   job?: 'salaried' | 'self-employed' | 'not-earning';
-  /** Monthly in-hand income in rupees: the BOTTOM of the band the user picked. */
+  /** Monthly in-hand income in rupees, as the user typed it in the eligibility form. */
   incomeMonthly?: number;
   /** Six digits. */
   pincode?: string;
 }
+
+/** What one option adds to the slots. An option names ONE category
+ *  (`categoryTagId`); the engine merges the picked options into
+ *  `slots.categoryTagIds` (see applyAnswer in engine.ts). */
+export type AdvisorOptionSet = Partial<Omit<AdvisorSlots, 'categoryTagIds'>> & { categoryTagId?: number };
 
 export interface AdvisorOption {
   id: string;
@@ -71,7 +78,10 @@ export interface AdvisorOption {
   /** Short text for the answer pill. Falls back to `label`. An empty string
    *  means the answer shows no pill. */
   pill?: string;
-  set: Partial<AdvisorSlots>;
+  set: AdvisorOptionSet;
+  /** Multi-select questions only: this option cannot be combined. A tap on it
+   *  answers the question with this option alone. */
+  exclusive?: boolean;
   /** Hide the option when this returns true for the slots filled so far. */
   hideWhen?: (slots: AdvisorSlots) => boolean;
   /** One short line the advisor says right after this answer. It uses the
@@ -115,8 +125,19 @@ export interface TipContext {
 
 export interface AdvisorQuestion {
   id: QuestionId;
-  /** 'pincode' shows a six-digit input. Its answer is the pincode text. */
-  kind: 'choice' | 'pincode';
+  /** 'eligibility' shows one form: how the user earns, the monthly income and
+   *  the pincode. Its answer is the text built by encodeEligForm (answers.ts). */
+  kind: 'choice' | 'eligibility';
+  /** Present on a multi-select question: the user picks 1 to `max` options, then
+   *  taps "Done". The answer is built by encodeMulti (answers.ts). */
+  multi?: { max: number };
+  /** The picked categories of this question REPLACE this tag in
+   *  `slots.categoryTagIds`, at its position (the food type question replaces
+   *  the food tag). Absent: the picked categories are added. */
+  replacesCategory?: number;
+  /** The acknowledgement when two or more options are picked. `labels` are the
+   *  pill (or label) of each pick, in option order. One pick uses that option's `ack`. */
+  multiAck?: (labels: string[], ctx: AckContext) => string | undefined;
   /** The question, under 15 words. */
   ask: string;
   /** One expert line shown above the question, under 20 words. */
@@ -148,7 +169,8 @@ export interface AdvisorConfig {
 
 /** The whole session state. */
 export interface AdvisorState {
-  /** Question id to option id, NOT_SURE, or the pincode text. */
+  /** Question id to its answer text: an option id, option ids joined by ','
+   *  (multi-select), NOT_SURE, or the eligibility form text. See answers.ts. */
   answers: Partial<Record<QuestionId, string>>;
   /** CardModel.id of each card the user marked "I have this". */
   held: string[];
@@ -222,7 +244,7 @@ export interface AnswerPill {
 
 export interface NextQuestionOptions {
   /** True when an eligibility result (or saved inputs) already exists. The
-   *  bridge, job, income and pincode questions are then not asked. */
+   *  bridge and the eligibility form are then not asked. */
   eligibilityKnown: boolean;
 }
 
@@ -239,6 +261,8 @@ export interface BuildRevealInput {
 /**
  * The engine (src/lib/advisor/engine.ts) exports exactly these functions:
  *
+ *   applyAnswer(slots, question, answer): AppliedAnswer   (the ONE place an answer becomes slots)
+ *   walkAnswers(state, config): { slots: AdvisorSlots; steps: WalkStep[] }
  *   deriveSlots(state, config): AdvisorSlots
  *   slotsToFilters(slots): AppliedFilters
  *   nextQuestion(state, config, cards, opts: NextQuestionOptions): AdvisorStep | null

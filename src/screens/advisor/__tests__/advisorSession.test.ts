@@ -9,6 +9,7 @@ describe('advisorSession', () => {
       state: { answers: {}, held: [] },
       useSaved: null,
       saved: null,
+      formDraft: null,
       introDone: false,
       started: false,
       revealCount: 0,
@@ -29,11 +30,13 @@ describe('advisorSession', () => {
     const held = getAdvisorSession();
     held.state = { answers: { opener: 'first' }, held: [] };
     held.useSaved = false;
+    held.formDraft = { job: 'self', income: '35000', pincode: '110001' };
     held.seenTipIds.push('t:x');
     resetAdvisorSession();
     expect(getAdvisorSession()).toBe(held);
     expect(held.state).toEqual({ answers: {}, held: [] });
     expect(held.useSaved).toBeNull();
+    expect(held.formDraft).toBeNull();
     expect(held.seenTipIds).toEqual([]);
   });
 });

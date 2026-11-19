@@ -1,28 +1,33 @@
 /**
  * AdvisorReplyTray: the reply area pinned under the chat.
  *
- *   choice question  one full-width option row per answer, stacked in the given order, with a
- *                    quieter "Not sure" row last. The rows scroll inside the tray when they are
- *                    taller than TRAY_MAX_RATIO of the window (the need question has up to 9).
- *   pincode question the six-digit input and "Check cards".
- *   no question      the end menu from the screen, as the same stacked rows.
+ *   choice question       one full-width option row per answer, stacked in the given order, with a
+ *                         quieter "Not sure" row last. The rows scroll inside the tray when they are
+ *                         taller than TRAY_MAX_RATIO of the window (the need question has up to 9).
+ *   multi choice question the rows toggle. "Done" answers with the picks. An exclusive row and
+ *                         "Not sure" answer at once.
+ *   eligibility question  the form (AdvisorEligibilityForm) and "Check cards" or "Continue".
+ *   no question           the end menu from the screen, as the same stacked rows.
  *
- * Above the scroll area, outside it: "Back" (when an answer exists) and "Using your saved details".
+ * Top to bottom: "Back" (when an answer exists), "Using your saved details" and, for a multi
+ * question, "Pick up to N": all fixed. Then the scroll area. Then the fixed footer button.
  * The screen keeps this tray above the keyboard (useKeyboardPadding on the wrapper).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Button, Input, Icon } from '../../atoms';
+import { Text, Button, Icon } from '../../atoms';
 import { colors, spacing, borderWidth, sizing, iconSize } from '../../tokens';
 import { AdvisorOptionRow } from './AdvisorOptionRow';
+import { AdvisorEligibilityForm, useEligForm } from './AdvisorEligibilityForm';
+import { encodeEligForm, encodeMulti } from '../../lib/advisor/answers';
 import { NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorStep, QuestionId } from '../../lib/advisor/types';
+import { eligFormValue, type SavedInputs } from './advisorSession';
 
 /** The tray never takes more than this share of the window height; its content scrolls instead.
  *  A layout ratio, not a token value. */
 const TRAY_MAX_RATIO = 0.46;
-const PINCODE = /^[1-9]\d{5}$/;
 
 /** One row of the end menu. */
 export interface TrayMenuItem {
@@ -33,15 +38,6 @@ export interface TrayMenuItem {
   onPress: () => void;
 }
 
-/** Keep only digits, at most six. A Hindi keyboard can send Devanagari digits
- *  (०-९): they become 0-9, so the pincode check and the API get plain digits. */
-function toPincodeText(text: string): string {
-  return text
-    .replace(/[०-९]/g, (d) => String(d.charCodeAt(0) - 0x0966))
-    .replace(/\D/g, '')
-    .slice(0, 6);
-}
-
 export function AdvisorReplyTray({
   step,
   menu,
@@ -49,6 +45,7 @@ export function AdvisorReplyTray({
   onAnswer,
   onBack,
   onChangeSaved,
+  savedForForm,
 }: {
   step: AdvisorStep | null;
   /** The rows shown when no question is left. */
@@ -58,23 +55,35 @@ export function AdvisorReplyTray({
   /** Removes the last answer. Absent when nothing is answered: no Back row. */
   onBack?: () => void;
   onChangeSaved: () => void;
+  /** The saved details, when the user tapped "Change": they prefill the form. */
+  savedForForm?: SavedInputs | null;
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
-  const [pin, setPin] = useState('');
+  const [picks, setPicks] = useState<string[]>([]);
+  const { form, setForm, reset } = useEligForm(savedForForm ?? null);
 
-  // A new question starts empty (pincode) and at the top of the list (options). The scroll
-  // indicator flashes once, so a long list shows that more rows sit below.
+  // A new question starts with no picks, the form from its draft, and the list at the top. The
+  // scroll indicator flashes once, so a long list shows that more rows sit below.
   const scrollRef = useRef<ScrollView>(null);
   const questionId = step?.question.id;
   useEffect(() => {
-    setPin('');
+    setPicks([]);
+    reset();
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     scrollRef.current?.flashScrollIndicators();
+    // reset reads the props of this render: run only when the question changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionId]);
 
+  const question = step?.question;
+  const multi = question?.kind === 'choice' ? question.multi : undefined;
+  const atMax = !!multi && picks.length >= multi.max;
+  const formValue = eligFormValue(form);
+
   let content: React.ReactNode;
-  if (!step) {
+  let footer: React.ReactNode = null;
+  if (!step || !question) {
     content = (
       <View style={{ gap: spacing[8] }}>
         {menu.map((item) => (
@@ -82,42 +91,54 @@ export function AdvisorReplyTray({
         ))}
       </View>
     );
-  } else if (step.question.kind === 'choice') {
+  } else if (question.kind === 'choice') {
+    const toggle = (id: string) => setPicks((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
     content = (
       <View style={{ gap: spacing[8] }}>
-        {step.options.map((o) => (
-          <AdvisorOptionRow key={o.id} label={o.label} onPress={() => onAnswer(step.question.id, o.id)} />
-        ))}
-        {step.question.notSure ? (
-          <AdvisorOptionRow label="Not sure" quiet onPress={() => onAnswer(step.question.id, NOT_SURE)} />
+        {step.options.map((o) => {
+          // An exclusive row answers at once, so it is no checkbox and the cap does not block it.
+          const toggles = !!multi && !o.exclusive;
+          const on = picks.includes(o.id);
+          return (
+            <AdvisorOptionRow
+              key={o.id}
+              label={o.label}
+              selected={toggles ? on : undefined}
+              disabled={toggles && atMax && !on}
+              onPress={() => (toggles ? toggle(o.id) : onAnswer(question.id, o.id))}
+            />
+          );
+        })}
+        {question.notSure ? (
+          <AdvisorOptionRow label="Not sure" quiet onPress={() => onAnswer(question.id, NOT_SURE)} />
         ) : null}
       </View>
     );
-  } else {
-    const pinValid = PINCODE.test(pin);
-    const pinWrong = pin.length === 6 && !pinValid;
-    content = (
-      <View style={{ gap: spacing[8] }}>
-        <Input
-          value={pin}
-          onChangeText={(t: string) => setPin(toPincodeText(t))}
-          keyboardType="number-pad"
-          maxLength={6}
-          placeholder="6-digit PIN code"
-          accessibilityLabel={step.ask}
-          hint={pinWrong ? 'Enter your 6-digit PIN code' : undefined}
-          state={pinWrong ? 'error' : undefined}
-        />
+    if (multi) {
+      footer = (
         <Button
-          label="Check cards"
+          label={picks.length >= 2 ? `Done (${picks.length})` : 'Done'}
           variant="solid"
           tone="main"
           size={44}
           fullWidth
-          disabled={!pinValid}
-          onPress={() => onAnswer('pincode', pin)}
+          disabled={picks.length === 0}
+          onPress={() => onAnswer(question.id, encodeMulti(question, picks))}
         />
-      </View>
+      );
+    }
+  } else {
+    content = <AdvisorEligibilityForm form={form} onChange={setForm} />;
+    footer = (
+      <Button
+        label={form.job === 'none' ? 'Continue' : 'Check cards'}
+        variant="solid"
+        tone="main"
+        size={44}
+        fullWidth
+        disabled={!formValue}
+        onPress={() => formValue && onAnswer('eligForm', encodeEligForm(formValue))}
+      />
     );
   }
 
@@ -167,6 +188,11 @@ export function AdvisorReplyTray({
           </Pressable>
         </View>
       ) : null}
+      {multi ? (
+        <Text variant="body12Regular" color={colors.text.secondary}>
+          {`Pick up to ${multi.max}`}
+        </Text>
+      ) : null}
       <ScrollView
         ref={scrollRef}
         style={{ flexGrow: 0, maxHeight: height * TRAY_MAX_RATIO }}
@@ -176,6 +202,7 @@ export function AdvisorReplyTray({
       >
         {content}
       </ScrollView>
+      {footer}
     </View>
   );
 }

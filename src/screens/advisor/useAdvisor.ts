@@ -33,7 +33,7 @@ import {
 import { NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorEligibility, AdvisorState, QuestionId } from '../../lib/advisor/types';
 import type { ChatMessage } from '../../lib/advisor/chatTypes';
-import { getAdvisorSession, type SavedInputs } from './advisorSession';
+import { answerEventParams, getAdvisorSession, type SavedInputs } from './advisorSession';
 
 export type AdvisorSource = 'search' | 'search_no_results';
 
@@ -313,11 +313,7 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   // ---- Actions ----
   const answer = useCallback((id: QuestionId, value: string) => {
     const question = ADVISOR_CONFIG.questions[id];
-    analytics.track(Events.ADVISOR_ANSWER, {
-      question_id: id,
-      option: question?.kind === 'pincode' ? 'entered' : value,
-      not_sure: value === NOT_SURE,
-    });
+    analytics.track(Events.ADVISOR_ANSWER, answerEventParams(question, value));
     if (id === 'eligBridge') {
       const wants = question.options.find((o) => o.id === value)?.set.wantsEligibility === true;
       analytics.track(Events.ADVISOR_ELIGIBILITY_BRIDGE, { outcome: wants ? 'accepted' : 'declined' });
@@ -383,6 +379,8 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     arrivingId,
     markArrivalDone,
     usingSaved: eligibilityKnown,
+    /** The saved details after the user tapped "Change": they prefill the eligibility form. */
+    savedForForm: !useSaved ? saved : null,
     /** The user has answered at least once in this app session. The large intro mascot is gone for good. */
     introDone,
     /** The answered questions, for "Change an answer". */

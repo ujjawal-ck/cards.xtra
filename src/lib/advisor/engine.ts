@@ -20,7 +20,6 @@ import {
 import { closestCards, fallbackCopy, type FilterDim } from '../filterFallback';
 import { classifyCardEligibility } from '../../api/eligibility';
 import {
-  NOT_SURE,
   type AdvisorConfig,
   type AdvisorOption,
   type AdvisorQuestion,
@@ -36,52 +35,99 @@ import {
   type RevealCard,
   type StepOption,
 } from './types';
+import { decodeChoice, parseEligForm, type EligJob } from './answers';
 
-const PINCODE_RE = /^[1-9]\d{5}$/;
-const ELIGIBILITY_QUESTIONS: QuestionId[] = ['eligBridge', 'job', 'income', 'pincode'];
+const ELIGIBILITY_QUESTIONS: QuestionId[] = ['eligBridge', 'eligForm'];
+
+// ── One answer to slots ────────────────────────────────────────────────────
+
+export interface AppliedAnswer {
+  /** The slots after this answer. The same object as the input when the answer sets nothing. */
+  slots: AdvisorSlots;
+  /** True when the answer changed the slots (a valid pick or a valid form). */
+  used: boolean;
+  /** The picked options of a choice question, in option order. Empty otherwise. */
+  picks: AdvisorOption[];
+}
+
+const JOB_OF: Record<EligJob, NonNullable<AdvisorSlots['job']>> = {
+  salaried: 'salaried',
+  self: 'self-employed',
+  none: 'not-earning',
+};
+
+const unique = (list: number[]) => list.filter((v, i) => list.indexOf(v) === i);
+
+/**
+ * The ONE place an answer becomes slots. Merge rules for the picks:
+ *   - categories: added after the ones already set (unique). With
+ *     `question.replacesCategory`, they take the place of that tag.
+ *   - skipNeed: set only when a pick has it; true only when EVERY pick sets it true.
+ *   - every other key: the later pick wins.
+ */
+export function applyAnswer(slots: AdvisorSlots, question: AdvisorQuestion, answer: string | undefined): AppliedAnswer {
+  if (question.kind === 'eligibility') {
+    const form = parseEligForm(answer);
+    if (!form) return { slots, used: false, picks: [] };
+    const next: AdvisorSlots = { ...slots, job: JOB_OF[form.job] };
+    if (form.incomeMonthly !== undefined) next.incomeMonthly = form.incomeMonthly;
+    if (form.pincode !== undefined) next.pincode = form.pincode;
+    return { slots: next, used: true, picks: [] };
+  }
+  const picks = decodeChoice(question, answer);
+  if (picks.length === 0) return { slots, used: false, picks };
+
+  let next: AdvisorSlots = { ...slots };
+  const cats: number[] = [];
+  let anySkip = false;
+  for (const pick of picks) {
+    const { categoryTagId, skipNeed, ...rest } = pick.set;
+    if (categoryTagId !== undefined) cats.push(categoryTagId);
+    if (skipNeed !== undefined) anySkip = true;
+    next = { ...next, ...rest };
+  }
+  if (anySkip) next.skipNeed = picks.every((p) => p.set.skipNeed === true);
+  if (cats.length > 0) {
+    const base = slots.categoryTagIds ?? [];
+    const at = question.replacesCategory !== undefined ? base.indexOf(question.replacesCategory) : -1;
+    next.categoryTagIds =
+      at >= 0
+        ? unique([...base.slice(0, at), ...cats, ...base.slice(at + 1)])
+        : unique([...base, ...cats]);
+  }
+  return { slots: next, used: true, picks };
+}
 
 // ── The walk ───────────────────────────────────────────────────────────────
 
-interface WalkStep {
+export interface WalkStep {
   question: AdvisorQuestion;
   answer: string | undefined;
   /** Slots filled by the questions before this one. */
   before: AdvisorSlots;
   /** `when` passes for `before` (always true for a question without `when`). */
   active: boolean;
-  /** The option the answer picked, when it picked one and the question is active. */
-  option?: AdvisorOption;
-  /** True when the answer changed the slots (active, defined, not NOT_SURE, valid). */
+  /** The options the answer picked, when the question is active. Empty otherwise. */
+  picks: AdvisorOption[];
+  /** True when the answer changed the slots (active, a valid pick or a valid form). */
   used: boolean;
 }
 
-interface Walk {
-  slots: AdvisorSlots;
-  steps: WalkStep[];
-}
-
-function walk(state: AdvisorState, config: AdvisorConfig): Walk {
+/** The answers in asking order: the opener, then the journey. Each answer applies to the slots before it. */
+export function walkAnswers(state: AdvisorState, config: AdvisorConfig): { slots: AdvisorSlots; steps: WalkStep[] } {
   let slots: AdvisorSlots = {};
   const steps: WalkStep[] = [];
   const visit = (question: AdvisorQuestion) => {
     const answer = state.answers[question.id];
     const before = slots;
     const active = !question.when || question.when(before);
-    const step: WalkStep = { question, answer, before, active, used: false };
-    steps.push(step);
-    if (!active || answer === undefined || answer === NOT_SURE) return;
-    if (question.kind === 'pincode') {
-      if (PINCODE_RE.test(answer)) {
-        slots = { ...slots, pincode: answer };
-        step.used = true;
-      }
+    if (!active) {
+      steps.push({ question, answer, before, active, picks: [], used: false });
       return;
     }
-    const option = question.options.find((o) => o.id === answer);
-    if (!option) return;
-    step.option = option;
-    step.used = true;
-    slots = { ...slots, ...option.set };
+    const applied = applyAnswer(before, question, answer);
+    steps.push({ question, answer, before, active, picks: applied.picks, used: applied.used });
+    slots = applied.slots;
   };
   visit(config.questions.opener);
   const journey = slots.journey;
@@ -94,7 +140,7 @@ function walk(state: AdvisorState, config: AdvisorConfig): Walk {
 // ── Slots and filters ──────────────────────────────────────────────────────
 
 export function deriveSlots(state: AdvisorState, config: AdvisorConfig): AdvisorSlots {
-  return walk(state, config).slots;
+  return walkAnswers(state, config).slots;
 }
 
 const FEE_BUCKETS: Record<string, number[]> = {
@@ -105,7 +151,7 @@ const FEE_BUCKETS: Record<string, number[]> = {
 
 export function slotsToFilters(slots: AdvisorSlots): AppliedFilters {
   return {
-    categoryTagIds: slots.categoryTagId !== undefined ? [slots.categoryTagId] : [],
+    categoryTagIds: [...(slots.categoryTagIds ?? [])],
     bankNames: [],
     networks: slots.network ? ['RuPay'] : [],
     feeBucketIndices: slots.fee ? [...(FEE_BUCKETS[slots.fee] ?? [])] : [],
@@ -141,7 +187,7 @@ export function nextQuestion(
   cards: CardModel[],
   opts: NextQuestionOptions,
 ): AdvisorStep | null {
-  const { slots, steps } = walk(state, config);
+  const { slots, steps } = walkAnswers(state, config);
   const opener = config.questions.opener;
   if (state.answers.opener === undefined || !slots.journey) {
     return toStep(opener, slots, [...opener.options], state);
@@ -155,11 +201,15 @@ export function nextQuestion(
     const visible = q.options.filter((o) => !o.hideWhen || !o.hideWhen(slots));
     if (!q.filters) return toStep(q, slots, visible, state);
 
+    // A category that is already set is not offered again. The tag this
+    // question replaces stays ("Food delivery" keeps the food tag).
+    const setCats = (slots.categoryTagIds ?? []).filter((t) => t !== q.replacesCategory);
     const current = applyFilters(pool, slotsToFilters(slots)).length;
     const counted: StepOption[] = visible
+      .filter((o) => o.set.categoryTagId === undefined || !setCats.includes(o.set.categoryTagId))
       .map((o) => ({
         ...o,
-        count: applyFilters(pool, slotsToFilters({ ...slots, ...o.set })).length,
+        count: applyFilters(pool, slotsToFilters(applyAnswer(slots, q, o.id).slots)).length,
       }))
       .filter((o) => o.count > 0);
     const changes = counted.some((o) => Object.keys(o.set).length > 0 && o.count !== current);
@@ -185,22 +235,39 @@ const isRuPay = (card: CardModel) => cardNetworks(card.filterMeta?.network).incl
 const isFree = (card: CardModel) => card.filterMeta?.isFree === true;
 const byLowestFee = (list: CardModel[]) => sortCards([...list], 'annualFeeAsc');
 
-/** Rank a list without changing it: fee sort, then RuPay first for UPI users. */
+/** How many of the picked categories a card has. */
+const catHits = (card: CardModel, cats: number[]) =>
+  cats.filter((t) => (card.filterMeta?.categoryIds ?? []).includes(t)).length;
+
+/** Rank a list without changing it: fee sort, then (2+ categories) cards with
+ *  more of them first, then RuPay first for UPI users. Each step keeps the order of ties. */
 function rank(list: CardModel[], slots: AdvisorSlots): CardModel[] {
-  const base = slots.sortByFee ? byLowestFee(list) : [...list];
+  let base = slots.sortByFee ? byLowestFee(list) : [...list];
+  const cats = slots.categoryTagIds ?? [];
+  if (cats.length >= 2) {
+    base = base
+      .map((card, i) => ({ card, i, hits: catHits(card, cats) }))
+      .sort((a, b) => b.hits - a.hits || a.i - b.i)
+      .map((x) => x.card);
+  }
   if (slots.upi !== 'daily' && slots.upi !== 'sometimes') return base;
   return [...base.filter(isRuPay), ...base.filter((c) => !isRuPay(c))];
 }
 
-function categoryLabel(tagId: number | undefined): string | null {
-  if (tagId === undefined) return null;
-  return CATEGORY_OPTIONS.find((o) => o.tagId === tagId)?.label.toLowerCase() ?? null;
+/** "fuel", "fuel and travel", "fuel, travel and shopping". null for no category. */
+function categoryLabel(tagIds: number[]): string | null {
+  const labels = tagIds
+    .map((id) => CATEGORY_OPTIONS.find((o) => o.tagId === id)?.label.toLowerCase())
+    .filter((l): l is string => !!l);
+  if (labels.length === 0) return null;
+  if (labels.length === 1) return labels[0];
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
 }
 
 const capitalize = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 function buildHeader(f: AppliedFilters, likely: boolean): string {
-  const cat = categoryLabel(f.categoryTagIds[0]);
+  const cat = categoryLabel(f.categoryTagIds);
   const forCat = cat ? ` for ${cat}` : '';
   if (likely) return `Cards you are likely to get${forCat}`;
   if (!hasActiveFilters(f)) return 'Popular cards';
@@ -221,47 +288,54 @@ function buildHeader(f: AppliedFilters, likely: boolean): string {
 
 type ReasonTemplate = 'firstTime' | 'upi' | 'category' | 'none';
 
-/** True when an answer set a filter or a rank preference. The eligibility
- *  bridge, job, income and pincode answers cannot change the list by themselves. */
-function canChangeList(set: Partial<AdvisorSlots> | undefined): boolean {
-  if (!set) return false;
-  return (
-    set.categoryTagId !== undefined ||
-    set.network !== undefined ||
-    set.fee !== undefined ||
-    set.hasHistory !== undefined ||
-    set.upi !== undefined ||
-    set.sortByFee !== undefined
+/** True when a pick set a filter or a rank preference. The eligibility
+ *  bridge and the eligibility form cannot change the list by themselves. */
+function canChangeList(picks: AdvisorOption[]): boolean {
+  return picks.some(
+    ({ set }) =>
+      set.categoryTagId !== undefined ||
+      set.network !== undefined ||
+      set.fee !== undefined ||
+      set.hasHistory !== undefined ||
+      set.upi !== undefined ||
+      set.sortByFee !== undefined,
   );
 }
 
+const hasCategory = (slots: AdvisorSlots) => (slots.categoryTagIds ?? []).length > 0;
+
 /** The template for the last answer that could change the list. So the reason
- *  does not flip when the user answers the bridge, the job or the income.
- *  A fee answer has no template: the card row always shows the fee line. */
+ *  does not flip when the user answers the bridge or the form.
+ *  A fee answer has no template: the card row always shows the fee line.
+ *  With several picks: first time, then UPI, then category. */
 function reasonTemplate(steps: WalkStep[], slots: AdvisorSlots): ReasonTemplate {
-  const set = [...steps].reverse().find((s) => s.used && canChangeList(s.option?.set))?.option?.set;
-  if (!set) return slots.categoryTagId !== undefined ? 'category' : 'none';
-  if (set.hasHistory !== undefined) return 'firstTime';
-  if (set.network || set.upi === 'daily' || set.upi === 'sometimes') return 'upi';
-  if (set.categoryTagId !== undefined || slots.categoryTagId !== undefined) return 'category';
+  const picks = [...steps].reverse().find((s) => s.used && canChangeList(s.picks))?.picks;
+  if (!picks) return hasCategory(slots) ? 'category' : 'none';
+  if (picks.some((p) => p.set.hasHistory !== undefined)) return 'firstTime';
+  if (picks.some((p) => p.set.network || p.set.upi === 'daily' || p.set.upi === 'sometimes')) return 'upi';
+  if (picks.some((p) => p.set.categoryTagId !== undefined) || hasCategory(slots)) return 'category';
   return 'none';
 }
 
 /** True when the LAST answer set a filter or a rank preference. */
 function lastAnswerCanChangeList(steps: WalkStep[]): boolean {
-  return canChangeList([...steps].reverse().find((s) => s.used)?.option?.set);
+  return canChangeList([...steps].reverse().find((s) => s.used)?.picks ?? []);
 }
 
 const clean = (s: string | undefined | null) => (s ?? '').trim();
 
-function categoryBenefit(card: CardModel, tagId: number | undefined): string {
-  if (tagId === undefined) return '';
-  return clean(card.tileBenefits?.find((b) => b.tagId === tagId)?.title);
+/** The benefit title of the first picked category (in slot order) that the card has a benefit for. */
+function categoryBenefit(card: CardModel, tagIds: number[] | undefined): string {
+  for (const tagId of tagIds ?? []) {
+    const title = clean(card.tileBenefits?.find((b) => b.tagId === tagId)?.title);
+    if (title) return title;
+  }
+  return '';
 }
 
 function fallbackReason(card: CardModel, slots: AdvisorSlots): string {
   const candidates = [
-    categoryBenefit(card, slots.categoryTagId),
+    categoryBenefit(card, slots.categoryTagIds),
     clean(card.tileBenefits?.[0]?.title),
     clean((card.tags ?? []).map(clean).filter(Boolean).join(' · ')),
     clean(card.cashback),
@@ -280,7 +354,7 @@ function reasonFor(card: CardModel, proof: ProofLevel, template: ReasonTemplate,
       line = isRuPay(card) ? 'Can be linked to UPI' : '';
       break;
     case 'category':
-      line = categoryBenefit(card, slots.categoryTagId);
+      line = categoryBenefit(card, slots.categoryTagIds);
       break;
     default:
       break;
@@ -292,7 +366,7 @@ const PROOF_RANK: Record<ProofLevel, number> = { none: 0, matches: 1, likely: 2 
 
 export function buildReveal(input: BuildRevealInput): AdvisorReveal {
   const { state, config, cards, eligibility, previousTop } = input;
-  const { slots, steps } = walk(state, config);
+  const { slots, steps } = walkAnswers(state, config);
   const requested = slotsToFilters(slots);
   const pool = withoutHeld(cards, state.held);
   const closest = closestCards(pool, requested);
@@ -422,15 +496,18 @@ export function buildReveal(input: BuildRevealInput): AdvisorReveal {
 
 export function answerPills(state: AdvisorState, config: AdvisorConfig): AnswerPill[] {
   const pills: AnswerPill[] = [];
-  for (const step of walk(state, config).steps) {
+  for (const step of walkAnswers(state, config).steps) {
     if (!step.used) continue;
     const questionId = step.question.id;
-    if (step.question.kind === 'pincode') {
-      pills.push({ questionId, label: `PIN ${step.answer}` });
+    if (step.question.kind === 'eligibility') {
+      const form = parseEligForm(step.answer);
+      if (form?.pincode) pills.push({ questionId, label: `PIN ${form.pincode}` });
       continue;
     }
-    const label = step.option ? step.option.pill ?? step.option.label : '';
-    if (label !== '') pills.push({ questionId, label });
+    for (const pick of step.picks) {
+      const label = pick.pill ?? pick.label;
+      if (label !== '') pills.push({ questionId, label });
+    }
   }
   return pills;
 }

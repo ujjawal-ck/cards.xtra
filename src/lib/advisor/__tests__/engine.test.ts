@@ -3,7 +3,9 @@ jest.mock('../../../api/bankkaro', () => ({ checkEligibility: jest.fn() }));
 
 import type { CardModel } from '../../../molecules/CardTile';
 import { ADVISOR_CONFIG } from '../config';
-import { answerPills, buildReveal, deriveSlots, nextQuestion, slotsToFilters } from '../engine';
+import { answerPills, applyAnswer, buildReveal, deriveSlots, nextQuestion, slotsToFilters } from '../engine';
+import { encodeEligForm } from '../answers';
+import { applyFilters } from '../../../data/filterOptions';
 import { NOT_SURE, type AdvisorState, type QuestionId } from '../types';
 
 let n = 0;
@@ -48,6 +50,8 @@ const ids = (cards: CardModel[]) => cards.map((c) => c.id);
 const st = (answers: Partial<Record<QuestionId, string>>, held: string[] = []): AdvisorState => ({ answers, held });
 const C = ADVISOR_CONFIG;
 const known = { eligibilityKnown: false };
+const salariedForm = (incomeMonthly = 40000, pincode = '560001') => encodeEligForm({ job: 'salaried', incomeMonthly, pincode });
+const NOT_EARNING = encodeEligForm({ job: 'none' });
 
 const SHOPPING = 2;
 const FUEL = 1;
@@ -55,6 +59,7 @@ const FOOD = 5;
 const DINING = 6;
 const GROCERY = 7;
 const TRAVEL = 12;
+const BILLS = 14;
 
 describe('nextQuestion', () => {
   it('asks the opener first', () => {
@@ -69,7 +74,7 @@ describe('nextQuestion', () => {
     const cards = [card({ cat: [SHOPPING], isFree: true, newToCredit: true }), card({ cat: [FUEL], isFree: true, newToCredit: true })];
     const step = nextQuestion(st({ opener: 'first', history: 'no' }), C, cards, known);
     expect(step?.question.id).toBe('need');
-    expect(step?.ask).toBe('Where does most of your monthly spend go?');
+    expect(step?.ask).toBe('Where does most of your monthly spend go? Pick up to 3.');
     expect(step?.why).toBe('A card pays back most where you already spend.');
     expect(step?.stepNumber).toBe(3);
   });
@@ -103,22 +108,22 @@ describe('nextQuestion', () => {
     expect(specific?.options.map((o) => o.id)).toContain('nofees');
   });
 
-  it('skips the four eligibility questions when eligibility is known', () => {
+  it('skips the two eligibility questions when eligibility is known', () => {
     const cards = [card({ cat: [SHOPPING] })];
     const answers = { opener: 'specific', need: 'shopping', fee: 'any' };
     expect(nextQuestion(st(answers), C, cards, known)?.question.id).toBe('eligBridge');
     expect(nextQuestion(st(answers), C, cards, { eligibilityKnown: true })).toBeNull();
   });
 
-  it('walks the eligibility chain: bridge, job, income, pincode, then done', () => {
+  it('walks the eligibility chain: bridge, then the form, then done', () => {
     const cards = [card({ cat: [SHOPPING] })];
     const base = { opener: 'specific', need: 'shopping', fee: 'any' };
-    expect(nextQuestion(st({ ...base, eligBridge: 'yes' }), C, cards, known)?.question.id).toBe('job');
-    expect(nextQuestion(st({ ...base, eligBridge: 'yes', job: 'salaried' }), C, cards, known)?.question.id).toBe('income');
-    const pin = nextQuestion(st({ ...base, eligBridge: 'yes', job: 'salaried', income: '40to75' }), C, cards, known);
-    expect(pin?.question.kind).toBe('pincode');
-    expect(nextQuestion(st({ ...base, eligBridge: 'yes', job: 'salaried', income: '40to75', pincode: '560001' }), C, cards, known)).toBeNull();
-    expect(nextQuestion(st({ ...base, eligBridge: 'yes', job: 'none' }), C, cards, known)).toBeNull();
+    const form = nextQuestion(st({ ...base, eligBridge: 'yes' }), C, cards, known);
+    expect(form?.question.id).toBe('eligForm');
+    expect(form?.question.kind).toBe('eligibility');
+    expect(form?.options).toEqual([]);
+    expect(nextQuestion(st({ ...base, eligBridge: 'yes', eligForm: salariedForm() }), C, cards, known)).toBeNull();
+    expect(nextQuestion(st({ ...base, eligBridge: 'yes', eligForm: NOT_EARNING }), C, cards, known)).toBeNull();
     expect(nextQuestion(st({ ...base, eligBridge: 'no' }), C, cards, known)).toBeNull();
   });
 
@@ -148,28 +153,38 @@ describe('deriveSlots and slotsToFilters', () => {
     expect(slotsToFilters({ fee: 'upto5000' }).feeBucketIndices).toEqual([0, 1, 2, 3]);
     expect(slotsToFilters({ fee: 'any' }).feeBucketIndices).toEqual([]);
     expect(slotsToFilters({ network: 'RuPay' }).networks).toEqual(['RuPay']);
-    expect(slotsToFilters({ categoryTagId: TRAVEL }).categoryTagIds).toEqual([TRAVEL]);
+    expect(slotsToFilters({ categoryTagIds: [TRAVEL, FUEL] }).categoryTagIds).toEqual([TRAVEL, FUEL]);
   });
 
   it('a "Not sure" answer does not stop later answers from applying', () => {
     const s = deriveSlots(st({ opener: 'specific', need: NOT_SURE, fee: 'upto1000' }), C);
-    expect(s.categoryTagId).toBeUndefined();
+    expect(s.categoryTagIds).toBeUndefined();
     expect(s.fee).toBe('upto1000');
   });
 
   it('ignores an answer whose when no longer passes', () => {
     const dining = deriveSlots(st({ opener: 'specific', need: 'food', foodType: 'dining' }), C);
-    expect(dining.categoryTagId).toBe(DINING);
+    expect(dining.categoryTagIds).toEqual([DINING]);
     const fuel = deriveSlots(st({ opener: 'specific', need: 'fuel', foodType: 'dining' }), C);
-    expect(fuel.categoryTagId).toBe(FUEL);
+    expect(fuel.categoryTagIds).toEqual([FUEL]);
   });
 
-  it('an invalid pincode sets nothing', () => {
-    const base = { opener: 'specific', fee: 'any', eligBridge: 'yes', job: 'salaried', income: '20to40' };
-    expect(deriveSlots(st({ ...base, pincode: '012345' }), C).pincode).toBeUndefined();
-    expect(deriveSlots(st({ ...base, pincode: '5600' }), C).pincode).toBeUndefined();
-    expect(deriveSlots(st({ ...base, pincode: '560001' }), C).pincode).toBe('560001');
-    expect(deriveSlots(st({ ...base, pincode: '560001' }), C).incomeMonthly).toBe(20000);
+  it('an invalid form sets nothing; a valid one sets the job, the exact income and the pincode', () => {
+    const base = { opener: 'specific', fee: 'any', eligBridge: 'yes' };
+    for (const bad of ['salaried|35000|012345', 'salaried|35000|5600', 'salaried|0|560001', 'boss|35000|560001', 'salaried|35000']) {
+      const s = deriveSlots(st({ ...base, eligForm: bad }), C);
+      expect(s.pincode).toBeUndefined();
+      expect(s.job).toBeUndefined();
+      expect(s.incomeMonthly).toBeUndefined();
+    }
+    const ok = deriveSlots(st({ ...base, eligForm: salariedForm(35000, '560001') }), C);
+    expect(ok).toMatchObject({ job: 'salaried', incomeMonthly: 35000, pincode: '560001' });
+    const self = deriveSlots(st({ ...base, eligForm: encodeEligForm({ job: 'self', incomeMonthly: 120000, pincode: '400001' }) }), C);
+    expect(self).toMatchObject({ job: 'self-employed', incomeMonthly: 120000, pincode: '400001' });
+    const none = deriveSlots(st({ ...base, eligForm: NOT_EARNING }), C);
+    expect(none.job).toBe('not-earning');
+    expect(none.incomeMonthly).toBeUndefined();
+    expect(none.pincode).toBeUndefined();
   });
 });
 
@@ -285,11 +300,11 @@ describe('buildReveal', () => {
       expect(r.top.every((t) => t.proof === 'none')).toBe(true);
     });
 
-    it('not earning: no eligibility applied, lowest fee first, income-proof note', () => {
+    it('not earning (via the form): no eligibility applied, lowest fee first, income-proof note', () => {
       const pricey = card({ annualFee: 4000 });
       const cheap = card({ annualFee: 300 });
       const r = buildReveal({
-        state: st({ opener: 'specific', need: NOT_SURE, fee: 'any', eligBridge: 'yes', job: 'none' }),
+        state: st({ opener: 'specific', need: NOT_SURE, fee: 'any', eligBridge: 'yes', eligForm: NOT_EARNING }),
         config: C,
         cards: [pricey, cheap],
         eligibility: { eligibleAliases: [pricey.filterMeta!.cardAlias!], incomeMonthly },
@@ -363,8 +378,8 @@ describe('buildReveal', () => {
       const a = card();
       const b = card();
       const c = card();
-      // The last answers are the bridge and the job: neither filters nor ranks.
-      const state = st({ opener: 'specific', need: NOT_SURE, fee: 'any', eligBridge: 'yes', job: 'salaried' });
+      // The last answers are the bridge and the form: neither filters nor ranks.
+      const state = st({ opener: 'specific', need: NOT_SURE, fee: 'any', eligBridge: 'yes', eligForm: salariedForm() });
       const r = buildReveal({ state, config: C, cards: [a, b, c], previousTop: [a.id, b.id, c.id] });
       expect(r.top.map((t) => t.card.id)).toEqual([a.id, b.id, c.id]);
       expect(r.note).toBeUndefined();
@@ -405,12 +420,12 @@ describe('buildReveal', () => {
       expect(r.top[0].reason).toBe('Lounge access');
     });
 
-    it('the reason does not flip after the bridge, job or income answers', () => {
+    it('the reason does not flip after the bridge or the form', () => {
       const rupay = card({ isFree: true, newToCredit: true, network: 'RuPay', benefits: [{ title: 'Some benefit' }] });
       const before = buildReveal({ state: st({ opener: 'first', history: 'no', need: NOT_SURE, upi: 'daily' }), config: C, cards: [rupay] });
       expect(before.top[0].reason).toBe('Can be linked to UPI');
       const after = buildReveal({
-        state: st({ opener: 'first', history: 'no', need: NOT_SURE, upi: 'daily', eligBridge: 'yes', job: 'salaried', income: '40to75' }),
+        state: st({ opener: 'first', history: 'no', need: NOT_SURE, upi: 'daily', eligBridge: 'yes', eligForm: salariedForm() }),
         config: C,
         cards: [rupay],
       });
@@ -445,29 +460,34 @@ describe('buildReveal', () => {
 });
 
 describe('answerPills', () => {
-  it('uses the pill, falls back to the label, skips the bridge and shows a valid pincode', () => {
+  it('uses the pill, falls back to the label, skips the bridge and shows the form pincode', () => {
     const state = st({
       opener: 'specific',
       need: 'bills',
       upi: 'daily',
       fee: 'upto1000',
       eligBridge: 'yes',
-      job: 'self',
-      income: '40to75',
-      pincode: '560001',
+      eligForm: encodeEligForm({ job: 'self', incomeMonthly: 60000, pincode: '560001' }),
     });
     expect(answerPills(state, C)).toEqual([
       { questionId: 'opener', label: 'Something specific' },
       { questionId: 'need', label: 'Bills' },
       { questionId: 'upi', label: 'UPI daily' },
       { questionId: 'fee', label: 'Up to ₹1,000 a year' },
-      { questionId: 'job', label: 'Self-employed' },
-      { questionId: 'income', label: '₹40,000 to ₹75,000' },
-      { questionId: 'pincode', label: 'PIN 560001' },
+      { questionId: 'eligForm', label: 'PIN 560001' },
     ]);
   });
 
-  it('skips "Not sure", inactive answers and an invalid pincode', () => {
+  it('one pill per pick of a multi answer', () => {
+    const state = st({ opener: 'specific', need: 'shopping,fuel' });
+    expect(answerPills(state, C)).toEqual([
+      { questionId: 'opener', label: 'Something specific' },
+      { questionId: 'need', label: 'Online shopping' },
+      { questionId: 'need', label: 'Fuel' },
+    ]);
+  });
+
+  it('skips "Not sure", inactive answers, an invalid form and a not-earning form', () => {
     const state = st({
       opener: 'specific',
       need: 'fuel',
@@ -475,10 +495,184 @@ describe('answerPills', () => {
       upi: 'daily',
       fee: NOT_SURE,
       eligBridge: 'yes',
-      job: 'salaried',
-      income: 'u20',
-      pincode: '12ab56',
+      eligForm: 'salaried|35000|12ab56',
     });
-    expect(answerPills(state, C).map((p) => p.label)).toEqual(['Something specific', 'Fuel', 'Salaried', 'Under ₹20,000']);
+    expect(answerPills(state, C).map((p) => p.label)).toEqual(['Something specific', 'Fuel']);
+    const none = st({ opener: 'specific', need: 'fuel', fee: 'any', eligBridge: 'yes', eligForm: NOT_EARNING });
+    expect(answerPills(none, C).map((p) => p.questionId)).not.toContain('eligForm');
+  });
+});
+
+describe('applyAnswer', () => {
+  const need = C.questions.need;
+  it('returns the same slots object when the answer sets nothing', () => {
+    const slots = { journey: 'specific' as const };
+    for (const a of [undefined, NOT_SURE, 'unknown-id']) {
+      const r = applyAnswer(slots, need, a);
+      expect(r.slots).toBe(slots);
+      expect(r.used).toBe(false);
+      expect(r.picks).toEqual([]);
+    }
+  });
+
+  it('an option with an empty set still counts as used', () => {
+    const r = applyAnswer({}, need, 'everything');
+    expect(r.used).toBe(true);
+    expect(r.picks.map((o) => o.id)).toEqual(['everything']);
+    expect(r.slots.categoryTagIds).toBeUndefined();
+  });
+
+  it('never leaves an option key "categoryTagId" in the slots', () => {
+    const r = applyAnswer({}, need, 'shopping,fuel');
+    expect(Object.keys(r.slots)).not.toContain('categoryTagId');
+    expect(r.slots.categoryTagIds).toEqual([SHOPPING, FUEL]);
+  });
+
+  it('replacesCategory puts the picks in place of that tag', () => {
+    const r = applyAnswer({ categoryTagIds: [SHOPPING, FOOD, FUEL] }, C.questions.foodType, 'dining,grocery');
+    expect(r.slots.categoryTagIds).toEqual([SHOPPING, DINING, GROCERY, FUEL]);
+    const delivery = applyAnswer({ categoryTagIds: [FOOD, FUEL] }, C.questions.foodType, 'delivery,dining');
+    expect(delivery.slots.categoryTagIds).toEqual([FOOD, DINING, FUEL]);
+  });
+
+  it('a form answer gives no picks', () => {
+    const r = applyAnswer({}, C.questions.eligForm, salariedForm());
+    expect(r).toMatchObject({ used: true, picks: [] });
+  });
+});
+
+describe('multi-select combinations (contract section 6)', () => {
+  it('need: shopping + fuel gives both categories; cards in both rank first', () => {
+    const s = card({ cat: [SHOPPING] });
+    const f = card({ cat: [FUEL] });
+    const sf = card({ cat: [SHOPPING, FUEL] });
+    const t = card({ cat: [TRAVEL] });
+    const state = st({ opener: 'specific', need: 'shopping,fuel', fee: 'any' });
+    expect(deriveSlots(state, C).categoryTagIds).toEqual([SHOPPING, FUEL]);
+    const r = buildReveal({ state, config: C, cards: [s, f, sf, t] });
+    expect(ids(r.all)).toEqual([sf.id, s.id, f.id]);
+  });
+
+  it('need: food + fuel asks foodType; dining + grocery replace the food tag in place', () => {
+    const cards = [card({ cat: [FOOD, DINING] }), card({ cat: [FOOD, GROCERY] }), card({ cat: [FUEL] })];
+    expect(nextQuestion(st({ opener: 'specific', need: 'food,fuel' }), C, cards, known)?.question.id).toBe('foodType');
+    const slots = deriveSlots(st({ opener: 'specific', need: 'food,fuel', foodType: 'dining,grocery' }), C);
+    expect(slots.categoryTagIds).toEqual([DINING, GROCERY, FUEL]);
+  });
+
+  it('need: food + fuel, foodType "Not sure" keeps [food, fuel]', () => {
+    const slots = deriveSlots(st({ opener: 'specific', need: 'food,fuel', foodType: NOT_SURE }), C);
+    expect(slots.categoryTagIds).toEqual([FOOD, FUEL]);
+  });
+
+  it('need: fuel + no fees is fuel AND fee free', () => {
+    const fuelFree = card({ cat: [FUEL], isFree: true });
+    const fuelPaid = card({ cat: [FUEL], annualFee: 900 });
+    const shopFree = card({ cat: [SHOPPING], isFree: true });
+    const state = st({ opener: 'specific', need: 'fuel,nofees' });
+    const slots = deriveSlots(state, C);
+    expect(slots).toMatchObject({ categoryTagIds: [FUEL], fee: 'free', feeSource: 'user' });
+    expect(ids(buildReveal({ state, config: C, cards: [fuelFree, fuelPaid, shopFree] }).all)).toEqual([fuelFree.id]);
+  });
+
+  it('need: fuel + UPI is fuel AND RuPay, and the upi question is not asked', () => {
+    const fuelRupay = card({ cat: [FUEL], isFree: true, newToCredit: true, network: 'RuPay' });
+    const fuelVisa = card({ cat: [FUEL], isFree: true, newToCredit: true });
+    const shopRupay = card({ cat: [SHOPPING], isFree: true, newToCredit: true, network: 'RuPay' });
+    const cards = [fuelRupay, fuelVisa, shopRupay];
+    // Control: fuel alone in journey first asks the upi question.
+    expect(nextQuestion(st({ opener: 'first', history: 'yes', need: 'fuel' }), C, cards, known)?.question.id).toBe('upi');
+    const state = st({ opener: 'first', history: 'yes', need: 'fuel,upi' });
+    expect(deriveSlots(state, C)).toMatchObject({ categoryTagIds: [FUEL], network: 'RuPay' });
+    expect(nextQuestion(state, C, cards, known)?.question.id).toBe('eligBridge');
+    expect(ids(buildReveal({ state, config: C, cards }).all)).toEqual([fuelRupay.id]);
+  });
+
+  it('need: "A bit of everything" is exclusive: alone it sets no category, with others it is dropped', () => {
+    expect(deriveSlots(st({ opener: 'specific', need: 'everything' }), C).categoryTagIds).toBeUndefined();
+    expect(deriveSlots(st({ opener: 'specific', need: 'fuel,everything' }), C).categoryTagIds).toEqual([FUEL]);
+  });
+
+  it('missing: daily + travel gives [travel] and askNeed; need is asked without its travel option', () => {
+    const t = card({ cat: [TRAVEL] });
+    const sh = card({ cat: [SHOPPING] });
+    const state = st({ opener: 'better', missing: 'daily,travel' });
+    expect(deriveSlots(state, C)).toMatchObject({ categoryTagIds: [TRAVEL], askNeed: true });
+    const step = nextQuestion(state, C, [t, sh], known);
+    expect(step?.question.id).toBe('need');
+    const optionIds = step!.options.map((o) => o.id);
+    expect(optionIds).not.toContain('travel');
+    expect(optionIds).toContain('shopping');
+    // Travel still has a card, so the hide rule (not a zero count) removed it.
+    expect(applyFilters([t, sh], slotsToFilters({ categoryTagIds: [TRAVEL] }))).toHaveLength(1);
+    // Picking shopping adds it: OR across categories.
+    expect(step!.options.find((o) => o.id === 'shopping')?.count).toBe(2);
+  });
+
+  it('missing: daily + lower fees sorts by fee, skipNeed false, need is asked', () => {
+    const cards = [card({ cat: [TRAVEL] }), card({ cat: [SHOPPING] })];
+    const state = st({ opener: 'better', missing: 'daily,lowerFees' });
+    expect(deriveSlots(state, C)).toMatchObject({ sortByFee: true, skipNeed: false, askNeed: true });
+    expect(nextQuestion(state, C, cards, known)?.question.id).toBe('need');
+  });
+
+  it('missing: lower fees alone sets skipNeed, need is not asked', () => {
+    const cards = [card({ cat: [SHOPPING], isFree: true }), card({ cat: [TRAVEL], annualFee: 900 })];
+    const state = st({ opener: 'better', missing: 'lowerFees' });
+    expect(deriveSlots(state, C)).toMatchObject({ sortByFee: true, skipNeed: true });
+    expect(nextQuestion(state, C, cards, known)?.question.id).toBe('fee');
+  });
+
+  it('missing: travel + shopping gives both, need is not asked', () => {
+    const cards = [card({ cat: [SHOPPING], isFree: true }), card({ cat: [TRAVEL], annualFee: 900 }), card({ cat: [FUEL] })];
+    const state = st({ opener: 'better', missing: 'travel,shopping' });
+    expect(deriveSlots(state, C).categoryTagIds).toEqual([TRAVEL, SHOPPING]);
+    expect(nextQuestion(state, C, cards, known)?.question.id).toBe('fee');
+  });
+
+  it('missing: "better ones" is exclusive and sets skipNeed', () => {
+    expect(deriveSlots(st({ opener: 'better', missing: 'better' }), C).skipNeed).toBe(true);
+    const mixed = deriveSlots(st({ opener: 'better', missing: 'better,travel' }), C);
+    expect(mixed.categoryTagIds).toEqual([TRAVEL]);
+    expect(mixed.skipNeed).toBeUndefined();
+  });
+
+  it('4 picks sent: only the first 3 in option order count', () => {
+    const slots = deriveSlots(st({ opener: 'specific', need: 'bills,fuel,food,shopping' }), C);
+    expect(slots.categoryTagIds).toEqual([SHOPPING, FOOD, FUEL]);
+    expect(slots.categoryTagIds).not.toContain(BILLS);
+  });
+});
+
+describe('multi-select reveal', () => {
+  it('headers for 1, 2 and 3 categories, and the range form', () => {
+    const fuel = card({ cat: [FUEL, TRAVEL, SHOPPING], annualFee: 900 });
+    const header = (answers: Partial<Record<QuestionId, string>>) => buildReveal({ state: st(answers), config: C, cards: [fuel] }).header;
+    expect(header({ opener: 'specific', need: 'fuel', fee: 'any' })).toBe('Cards for fuel');
+    expect(header({ opener: 'specific', need: 'fuel,travel', fee: 'any' })).toBe('Cards for fuel and travel');
+    expect(header({ opener: 'specific', need: 'travel,shopping,fuel', fee: 'any' })).toBe('Cards for shopping, fuel and travel');
+    expect(header({ opener: 'specific', need: 'fuel,travel', fee: 'upto1000' })).toBe('Fuel and travel cards up to ₹1,000 a year');
+  });
+
+  it('the reason uses the first picked category the card has a benefit for', () => {
+    const travelOnly = card({ cat: [TRAVEL], benefits: [{ title: 'Lounge access', tagId: TRAVEL }] });
+    const both = card({ cat: [SHOPPING, TRAVEL], benefits: [{ title: 'Lounge access', tagId: TRAVEL }, { title: '5% online', tagId: SHOPPING }] });
+    const r = buildReveal({ state: st({ opener: 'specific', need: 'shopping,travel', fee: 'any' }), config: C, cards: [travelOnly, both] });
+    const reason = Object.fromEntries(r.top.map((t) => [t.card.id, t.reason]));
+    expect(reason[both.id]).toBe('5% online');
+    expect(reason[travelOnly.id]).toBe('Lounge access');
+  });
+
+  it('a valid form with an eligibility result gives proof "likely"', () => {
+    const a = card({ cat: [SHOPPING] });
+    const b = card({ cat: [SHOPPING] });
+    const r = buildReveal({
+      state: st({ opener: 'specific', need: 'shopping', fee: 'any', eligBridge: 'yes', eligForm: salariedForm() }),
+      config: C,
+      cards: [a, b],
+      eligibility: { eligibleAliases: [b.filterMeta!.cardAlias!], incomeMonthly: 40000 },
+    });
+    expect(r.proof).toBe('likely');
+    expect(ids(r.all)).toEqual([b.id]);
   });
 });

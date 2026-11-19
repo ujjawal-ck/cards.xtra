@@ -71,7 +71,7 @@ const SKELETON_BUBBLES = ['64%', '80%', '48%'] as const;
 const CHECKING_TEXT = 'Checking which cards fit your income and pincode.';
 
 /** Pills that never go to the full results page: no income, no pincode. */
-const PRIVATE_PILLS: QuestionId[] = ['eligBridge', 'job', 'income', 'pincode'];
+const PRIVATE_PILLS: QuestionId[] = ['eligBridge', 'eligForm'];
 
 function isUser(m: ChatMessage | undefined): boolean {
   return m?.kind === 'user-answer';
@@ -465,6 +465,7 @@ export function AdvisorScreen() {
           onAnswer={advisor.answer}
           onBack={advisor.answered.length > 0 ? goBackOne : undefined}
           onChangeSaved={advisor.changeSavedDetails}
+          savedForForm={advisor.savedForForm}
         />
       </Animated.View>
     );

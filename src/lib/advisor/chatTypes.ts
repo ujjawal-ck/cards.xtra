@@ -39,8 +39,9 @@ export type ChatMessage =
   /** Left. One question: the expert line (`why`) and the question (`ask`).
    *  `current` is true for the question that waits for an answer now. */
   | { id: string; kind: 'agent-question'; questionId: QuestionId; why: string; ask: string; current: boolean }
-  /** Right. The user's answer, in the words of the option they tapped
-   *  ("Not sure" for NOT_SURE, "PIN 110001" for the pincode). */
+  /** Right. The user's answer, in the words of the options they tapped, joined
+   *  by ', ' for a multi-select answer ("Not sure" for NOT_SURE). The eligibility
+   *  form: "Salaried · ₹35,000 · 110001", or "Not earning yet". */
   | { id: string; kind: 'user-answer'; questionId: QuestionId; text: string }
   /** Left. Cards. `reveal` is present ONLY on the last reveal of the transcript.
    *  An earlier reveal shows one line: `header`. */

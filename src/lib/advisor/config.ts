@@ -4,7 +4,7 @@
  * wording or order change needs no engine change. Contract: types.ts.
  */
 import { cardNetworks } from '../../data/filterOptions';
-import type { AdvisorConfig, AdvisorSlots } from './types';
+import type { AdvisorConfig } from './types';
 
 // BankKaro category tag ids (CATEGORY_OPTIONS in data/filterOptions).
 const TAG = {
@@ -17,10 +17,14 @@ const TAG = {
   bills: 14,
 } as const;
 
-const earns = (s: AdvisorSlots) => s.job === 'salaried' || s.job === 'self-employed';
+const none = (list: number[] | undefined) => (list ?? []).length === 0;
+
+/** "{A} and {B}. ..." or "{A}, {B} and {C}. ...". Labels as written on the pills. */
+const strongInMore = (labels: string[]) =>
+  `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}. Cards strong in more than one come first.`;
 
 export const ADVISOR_CONFIG: AdvisorConfig = {
-  version: 1,
+  version: 2,
   notSureAck: "No problem. I'll skip that.",
   tips: [
     {
@@ -33,13 +37,13 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       id: 'caps',
       after: 'need',
       text: 'Most cards cap cashback each month. Check the cap, not only the percent.',
-      when: ({ slots }) => slots.journey !== 'first' && slots.categoryTagId !== undefined,
+      when: ({ slots }) => slots.journey !== 'first' && !none(slots.categoryTagIds),
     },
     {
       id: 'caps',
       after: 'missing',
       text: 'Most cards cap cashback each month. Check the cap, not only the percent.',
-      when: ({ slots }) => slots.categoryTagId !== undefined,
+      when: ({ slots }) => !none(slots.categoryTagIds),
     },
     {
       id: 'ltf',
@@ -53,21 +57,21 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
     },
     {
       id: 'softcheck',
-      before: 'job',
+      before: 'eligForm',
       text: 'This check uses only how you earn, your income and your pincode. It does not touch your credit report.',
     },
     {
       id: 'wait',
-      after: 'pincode',
+      after: 'eligForm',
       text: 'If a bank says no, wait before you apply again. Many applications close together can lower your score.',
       when: ({ reveal, eligibilityApplied }) => eligibilityApplied && reveal?.proof !== 'likely',
     },
   ],
   journeys: {
-    first: ['history', 'need', 'foodType', 'upi', 'eligBridge', 'job', 'income', 'pincode'],
-    better: ['missing', 'need', 'foodType', 'fee', 'eligBridge', 'job', 'income', 'pincode'],
-    specific: ['need', 'foodType', 'upi', 'fee', 'eligBridge', 'job', 'income', 'pincode'],
-    explore: ['matters', 'need', 'foodType', 'eligBridge', 'job', 'income', 'pincode'],
+    first: ['history', 'need', 'foodType', 'upi', 'eligBridge', 'eligForm'],
+    better: ['missing', 'need', 'foodType', 'fee', 'eligBridge', 'eligForm'],
+    specific: ['need', 'foodType', 'upi', 'fee', 'eligBridge', 'eligForm'],
+    explore: ['matters', 'need', 'foodType', 'eligBridge', 'eligForm'],
   },
   questions: {
     opener: {
@@ -108,13 +112,15 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       notSure: true,
       filters: false,
       why: "The best next card covers what your current one doesn't.",
-      ask: 'What do you wish your card did better?',
+      ask: 'What do you wish your card did better? Pick up to 3.',
+      multi: { max: 3 },
+      multiAck: (labels) => strongInMore(labels),
       options: [
-        { id: 'daily', label: 'More back on daily spends', pill: 'Daily spends', set: {}, ack: "Daily spends. Let's find where most of it goes." },
+        { id: 'daily', label: 'More back on daily spends', pill: 'Daily spends', set: { askNeed: true }, ack: "Daily spends. Let's find where most of it goes." },
         { id: 'travel', label: 'Travel perks', set: { categoryTagId: TAG.travel }, ack: 'Travel perks. These are strong on travel.' },
         { id: 'lowerFees', label: 'Lower fees', set: { sortByFee: true, skipNeed: true }, ack: 'Lower fees. Cheapest cards first.' },
         { id: 'shopping', label: 'More on online shopping', pill: 'Online shopping', set: { categoryTagId: TAG.shopping }, ack: 'Online shopping. These pay back the most there.' },
-        { id: 'better', label: 'Just show me better ones', pill: 'Better cards', set: { skipNeed: true }, ack: 'Showing the most popular cards.' },
+        { id: 'better', label: 'Just show me better ones', pill: 'Better cards', set: { skipNeed: true }, exclusive: true, ack: 'Showing the most popular cards.' },
       ],
     },
     matters: {
@@ -133,7 +139,7 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
           label: 'Getting approved easily',
           pill: 'Easy approval',
           set: { wantsEligibility: true, skipNeed: true },
-          ack: 'Easy approval. Three quick answers and I can check.',
+          ack: 'Easy approval. One short form and I can check.',
         },
         { id: 'browse', label: "I'm just browsing", pill: 'Browsing', set: { skipNeed: true }, ack: 'Browse away. Tap a card to see its details.' },
       ],
@@ -144,9 +150,11 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       notSure: true,
       filters: true,
       why: 'Most cards are strong in one or two areas.',
-      ask: 'What do you want the card for?',
+      ask: 'What do you want the card for? Pick up to 3.',
       whyFirst: 'A card pays back most where you already spend.',
-      askFirst: 'Where does most of your monthly spend go?',
+      askFirst: 'Where does most of your monthly spend go? Pick up to 3.',
+      multi: { max: 3 },
+      multiAck: (labels) => strongInMore(labels),
       options: [
         { id: 'shopping', label: 'Online shopping', set: { categoryTagId: TAG.shopping }, ack: 'Online shopping. These pay back the most there.' },
         { id: 'food', label: 'Food and groceries', pill: 'Food', set: { categoryTagId: TAG.foodOrdering }, ack: 'Food and groceries. One more question narrows it.' },
@@ -162,9 +170,9 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
           hideWhen: (s) => s.fee === 'free',
           ack: 'No fees. Every card here has no joining fee and no annual fee.',
         },
-        { id: 'everything', label: 'A bit of everything', pill: 'Everything', set: {}, ack: "A bit of everything. I'll keep the popular picks." },
+        { id: 'everything', label: 'A bit of everything', pill: 'Everything', set: {}, exclusive: true, ack: "A bit of everything. I'll keep the popular picks." },
       ],
-      when: (s) => s.categoryTagId === undefined && s.network === undefined && !s.skipNeed,
+      when: (s) => (none(s.categoryTagIds) || s.askNeed === true) && s.network === undefined && !s.skipNeed,
     },
     foodType: {
       id: 'foodType',
@@ -172,13 +180,16 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       notSure: true,
       filters: true,
       why: 'Cards treat these three differently.',
-      ask: 'Which is biggest for you?',
+      ask: 'Which of these do you spend on? Pick one or more.',
+      multi: { max: 3 },
+      replacesCategory: TAG.foodOrdering,
+      multiAck: (labels) => strongInMore(labels),
       options: [
         { id: 'delivery', label: 'Food delivery', set: { categoryTagId: TAG.foodOrdering }, ack: 'Food delivery. These pay back the most on delivery apps.' },
         { id: 'dining', label: 'Eating out', set: { categoryTagId: TAG.dining }, ack: 'Eating out. These pay back the most at restaurants.' },
         { id: 'grocery', label: 'Groceries and quick commerce', pill: 'Groceries', set: { categoryTagId: TAG.grocery }, ack: 'Groceries. These pay back the most on grocery and quick commerce.' },
       ],
-      when: (s) => s.categoryTagId === TAG.foodOrdering,
+      when: (s) => s.categoryTagIds?.includes(TAG.foodOrdering) === true,
     },
     upi: {
       id: 'upi',
@@ -202,7 +213,7 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
         },
         { id: 'rarely', label: 'Rarely', pill: 'UPI rarely', set: { upi: 'rarely' }, ack: "Rarely. I'll leave UPI out of it." },
       ],
-      when: (s) => s.network === undefined && (s.journey === 'first' || s.categoryTagId === TAG.bills),
+      when: (s) => s.network === undefined && (s.journey === 'first' || s.categoryTagIds?.includes(TAG.bills) === true),
     },
     fee: {
       id: 'fee',
@@ -228,52 +239,20 @@ export const ADVISOR_CONFIG: AdvisorConfig = {
       ask: 'Want me to keep only the cards you qualify for?',
       askFirst: "Want me to check which of these you're likely to get?",
       options: [
-        { id: 'yes', label: 'Yes, check', pill: '', set: { wantsEligibility: true }, ack: 'Three quick answers: how you earn, your income, your pincode.' },
+        { id: 'yes', label: 'Yes, check', pill: '', set: { wantsEligibility: true }, ack: 'One short form: how you earn, your income and your pincode.' },
         { id: 'no', label: 'Not now', pill: '', set: { wantsEligibility: false }, ack: "No problem. You can check from any card's page later." },
       ],
       when: (s) => s.wantsEligibility === undefined,
     },
-    job: {
-      id: 'job',
-      kind: 'choice',
+    eligForm: {
+      id: 'eligForm',
+      kind: 'eligibility',
       notSure: false,
       filters: false,
-      why: 'Banks set different income rules by how you earn.',
-      ask: 'How do you earn?',
-      options: [
-        { id: 'salaried', label: 'Salaried', set: { job: 'salaried' } },
-        { id: 'self', label: 'Self-employed or business', pill: 'Self-employed', set: { job: 'self-employed' }, ack: 'Self-employed. Banks use a different income rule, and I check against that one.' },
-        { id: 'none', label: 'Student or not earning yet', pill: 'Not earning yet', set: { job: 'not-earning' } },
-      ],
-      when: (s) => s.wantsEligibility === true,
-    },
-    income: {
-      id: 'income',
-      kind: 'choice',
-      notSure: true,
-      filters: false,
-      why: 'Each card has a minimum income set by the bank.',
-      ask: 'What is your monthly in-hand income?',
-      // Each option stores the BOTTOM of its band on purpose: a false
-      // "likely to qualify" is the worst outcome.
-      options: [
-        { id: 'u20', label: 'Under ₹20,000', set: { incomeMonthly: 15000 }, ack: 'Under ₹20,000. I check at ₹15,000.' },
-        { id: '20to40', label: '₹20,000 to ₹40,000', set: { incomeMonthly: 20000 }, ack: '₹20,000 to ₹40,000. I check at ₹20,000 to stay on the safe side.' },
-        { id: '40to75', label: '₹40,000 to ₹75,000', set: { incomeMonthly: 40000 }, ack: '₹40,000 to ₹75,000. I check at ₹40,000 to stay on the safe side.' },
-        { id: '75to150', label: '₹75,000 to ₹1.5 lakh', set: { incomeMonthly: 75000 }, ack: '₹75,000 to ₹1.5 lakh. I check at ₹75,000 to stay on the safe side.' },
-        { id: '150plus', label: 'Above ₹1.5 lakh', set: { incomeMonthly: 150000 }, ack: 'Above ₹1.5 lakh. I check at ₹1.5 lakh.' },
-      ],
-      when: (s) => s.wantsEligibility === true && earns(s),
-    },
-    pincode: {
-      id: 'pincode',
-      kind: 'pincode',
-      notSure: false,
-      filters: false,
-      why: 'Banks deliver to some pincodes and not others.',
-      ask: 'Which pincode should the card come to?',
+      why: 'Banks set income rules by how you earn, and deliver to some pincodes only.',
+      ask: 'Tell me how you earn, your monthly income and your pincode.',
       options: [],
-      when: (s) => s.wantsEligibility === true && earns(s) && s.incomeMonthly !== undefined,
+      when: (s) => s.wantsEligibility === true,
     },
   },
 };

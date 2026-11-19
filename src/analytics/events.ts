@@ -135,11 +135,11 @@ export const Events = {
   BEAT_RESULT_VIEW: 'beat_result_view', // params: verdict (best_wins | mine_wins | equal | not_found), load_ms
 
   // ── card advisor (guided card finder, opened from search) ──
-  // Never send an income amount, a pincode or a card the user owns. An income answer is sent as its band id.
+  // Never send an income amount, a pincode or a card the user owns. The eligibility form answer is sent as 'entered': no job, no income, no pincode.
   ADVISOR_ROW_VIEW: 'advisor_row_view', // the advisor row was shown in the search sheet
   ADVISOR_START: 'advisor_start', // the opener was answered. params: source, journey, config_version
   ADVISOR_QUESTION_VIEW: 'advisor_question_view', // params: question_id, step, journey
-  ADVISOR_ANSWER: 'advisor_answer', // params: question_id, option ('entered' for the pincode), not_sure (bool)
+  ADVISOR_ANSWER: 'advisor_answer', // params: question_id, option (ids joined by ',' for several picks; 'entered' for the eligibility form), picks (count), not_sure (bool)
   ADVISOR_REVEAL: 'advisor_reveal', // params: reveal_number, proof, card_count, relaxed (bool)
   ADVISOR_CARD_TAP: 'advisor_card_tap', // params: item_id, slot (1-based, 0 = from the full list), proof
   ADVISOR_CARD_ACTION: 'advisor_card_action', // params: action (have_this | undo_have_this). No card id.
