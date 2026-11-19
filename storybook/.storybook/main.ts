@@ -1,5 +1,6 @@
 import type { StorybookConfig } from '@storybook/react-native-web-vite';
 import path from 'node:path';
+import remarkGfm from 'remark-gfm';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -56,8 +57,12 @@ export const createReactDOMStyle = _dom; export const createTransformValue = _t;
 };
 
 const config: StorybookConfig = {
-  stories: ['../../stories/**/*.stories.@(ts|tsx)', '../docs/**/*.mdx'],
-  addons: ['@storybook/addon-docs'],
+  // SB_STORIES=comma,separated,globs (relative to this folder) builds only those files.
+  // Writers use it so another agent's half-written file cannot break their build.
+  stories: process.env.SB_STORIES
+    ? process.env.SB_STORIES.split(',')
+    : ['../../stories/**/*.mdx', '../../stories/**/*.stories.@(ts|tsx)'],
+  addons: [{ name: '@storybook/addon-docs', options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } } }],
   framework: {
     name: '@storybook/react-native-web-vite',
     options: {
@@ -81,6 +86,9 @@ const config: StorybookConfig = {
       { find: /^react\/(.*)$/, replacement: nm('react') + '/$1' },
       { find: /^react-dom$/, replacement: nm('react-dom') },
       { find: /^react-dom\/(.*)$/, replacement: nm('react-dom') + '/$1' },
+      // Story files live outside this folder, so point Storybook packages at this folder's node_modules.
+      { find: /^@storybook\/addon-docs\/blocks$/, replacement: path.resolve(here, '../node_modules/@storybook/addon-docs/dist/blocks.js') },
+      { find: /^@mdx-js\/react$/, replacement: path.resolve(here, '../node_modules/@mdx-js/react/index.js') },
       { find: /^expo-asset$/, replacement: nm('expo/node_modules/expo-asset') },
       { find: /^@react-native-firebase\/.*$/, replacement: mock('firebase.ts') },
       { find: /^rive-react-native$/, replacement: mock('rive.tsx') },

@@ -45,3 +45,29 @@ export function ScreenHarness({ name, component, params, api, width = 390 }: Scr
     </View>
   );
 }
+
+/**
+ * ComponentHarness — for a single component that calls useNavigation, useQuery,
+ * useAuth or useLoginSheet. Same providers as ScreenHarness; the children are the
+ * only screen. No phone frame: the story's layout decides the size.
+ */
+export function ComponentHarness({ children, api }: { children: React.ReactNode; api?: ApiParams }) {
+  const navRef = useMemo(() => createNavigationContainerRef<any>(), []);
+  useMemo(() => { queryClient.clear(); installApiMock(api); }, [api]);
+  const Body = useMemo(() => () => <>{children}</>, [children]);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <NavigationIndependentTree>
+          <NavigationContainer ref={navRef}>
+            <LoginSheetProvider navigationRef={navRef as any}>
+              <Stack.Navigator id={undefined as any} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+                <Stack.Screen name="Component" component={Body} />
+              </Stack.Navigator>
+            </LoginSheetProvider>
+          </NavigationContainer>
+        </NavigationIndependentTree>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}

@@ -1,0 +1,26 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateTag, PickTable } from '../storybook/blocks';
+
+<Meta title="Introduction" />
+
+<PageHeader title="Cards.xtra design system" meta="Storybook">
+  Every token, component and user flow of the Cards.xtra mini app, rendered from the real app code with no network.
+  States the app does not have yet are designed here and marked <StateTag status="proposed" />.
+</PageHeader>
+
+## How this book is organised
+
+| Group | What is inside |
+|---|---|
+| Foundations | Tokens: colour, type, spacing, radius, shadow, icons, imagery, motion |
+| Components | Every atom, molecule and organism, grouped by family, each with a playground |
+| Patterns | Cross-cutting rules: loading, empty, error, offline, guest gate, click-out, OTP |
+| Flows | Every screen of every journey, one story for each state |
+
+## State tags
+
+<StateTag status="live" /> renders in the app today. <StateTag status="proposed" /> is designed here and is not built. <StateTag status="hidden" /> is in code but not reachable. <StateTag status="demo" /> is reachable but has no real API behind it.
+
+Use the tag filter at the top of the sidebar to show only one kind.
+
+<PickTable rule="Example of the pick table each family page carries." rows={[{ building: 'A primary action', use: 'Button', tier: 'atom' }]} />
