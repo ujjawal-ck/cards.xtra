@@ -1,0 +1,60 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './toast-and-feedback.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Toast and feedback" meta="Pattern">
+  Short feedback goes in a Toast. Feedback that must stay with the flow goes in an InlineMessage. Both take their colour from a tone.
+</PageHeader>
+
+## The rule
+
+- A `Toast` is one line, with an optional single action and a dismiss. It has no title (`src/molecules/Toast.tsx`).
+- Today each screen mounts its own Toast (`src/screens/ReviewUsScreen.tsx:306`). There is no app-level host. A native `Alert` carries the errors in click-out, withdraw, gate and Help.
+- An `InlineMessage` stays on the page, can have a title and up to two actions. Use it for a state the user must read before moving on (success after a change, a warning above a form).
+- Tones: brand, gray, success, warning, error, info, purple, sky, rose (`colors.tones`). Use success, warning, error and info for feedback.
+- Confirmation after a task ends in a sheet where the app has one: `FeedbackAppreciatedSheet` in the missing-cashback help flow (`src/screens/MissingCashbackHelp.tsx:169`).
+- Haptics fire on press and result (`src/lib/haptics.ts`). They back the visible feedback and never replace it.
+- Do not claim success the app cannot confirm. Edit Profile says "saved" but saves nothing (R5). Review Us shows "submitted" and discards the text (hidden, D14).
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'Toast', id: 'components-messages-and-tooltips-toast--docs', note: 'transient, one line, optional action.' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'stays on the page, title and actions.' },
+  { name: 'StripAlert', id: 'components-messages-and-tooltips-stripalert--docs', note: 'a caption strip attached to a block.' },
+  { name: 'FeedbackAppreciatedSheet', id: 'components-sheets-feedbackappreciatedsheet--docs', note: 'thanks after feedback.' },
+]} />
+
+## Where it appears
+
+- Flow 3a Card detail and apply: click-out errors. Flow 7 Earnings and withdraw: gate, OTP, payout.
+- Flow 8 Orders and missing cashback: store visit lookup, invoice upload, Feedback appreciated.
+- Flow 9 Profile and account: Account settings success, Get Help call, Review Us (hidden).
+
+## Examples
+
+<Canvas of={S.SuccessToast} />
+<Canvas of={S.InlineInfo} />
+<Canvas of={S.BalanceErrorProposed} />
+<Canvas of={S.ClickOutErrorProposed} />
+
+<DoDont
+  dos={['Use a Toast for a short result, an InlineMessage for something the user must read.', 'Use the error tone with a retry action for a recoverable failure.', 'Keep the copy to one sentence in a Toast.']}
+  donts={['Do not use a native Alert for feedback.', 'Do not show a success message for a save the app did not make.', 'Do not put a title in a Toast. Use an InlineMessage.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Toast: success (review submitted)', status: 'live', source: 'src/screens/ReviewUsScreen.tsx:306', story: 'patterns-toast-and-feedback--success-toast', note: 'Hidden screen (D14). The text is discarded.' },
+  { state: 'InlineMessage: info (spend quiz)', status: 'live', source: 'src/screens/tools/SpendQuizScreen.tsx:188', story: 'patterns-toast-and-feedback--inline-info' },
+  { state: 'InlineMessage: success after a contact change', status: 'live', source: 'src/screens/AccountSettingsScreen.tsx:187', note: 'A demo today (R5).' },
+  { state: 'Feedback appreciated sheet', status: 'live', source: 'src/organisms/FeedbackAppreciatedSheet.tsx:84' },
+  { state: 'Withdraw gate: balance could not load', status: 'proposed', source: 'ux-states.md section 6', story: 'patterns-toast-and-feedback--balance-error-proposed', note: 'Native Alert today (useWithdrawGate.tsx:72).' },
+  { state: 'Click-out: user id not resolved', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-toast-and-feedback--click-out-error-proposed', note: 'Native Alert today (useClickOut.tsx:106).' },
+  { state: 'Get Help: call cannot open', status: 'proposed', source: 'ux-states.md section 8', note: 'Toast warning "Couldn\'t start the call. Please call us from your phone app." (GetHelpScreen.tsx:99).' },
+  { state: 'App-level toast host', status: 'proposed', source: 'ux-states.md DS gap 2', note: 'One provider with show({ tone, message, actionLabel, onActionPress }).' },
+]} />

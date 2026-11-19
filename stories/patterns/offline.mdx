@@ -1,0 +1,64 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './offline.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Offline" meta="Pattern">
+  A global strip says the device is offline. That is not enough: a screen with no cache must also say what is missing. Today most screens show a false empty or a false ₹0 instead.
+</PageHeader>
+
+## The rule
+
+- `OfflineBanner` shows a strip at the top while NetInfo reports offline. Loaded data stays on screen (`src/molecules/OfflineBanner.tsx:16`).
+- With no cache, TanStack Query pauses the query: it is pending, not loading and not error. Screens fall through to their empty branch. **Inferred from code, not reproduced on a device** (audit, systemic finding).
+- Only `useCardSavings` handles this (`src/query/useCardSavings.ts:124`). The other screens in the audit table (twelve rows with Home) show "0 cards", "No offers here yet", "No orders yet", or ₹0.
+- The tools already show the right state: "You're offline", "Check your connection and try again.", "Try again" (`src/screens/tools/ToolResultsScreen.tsx:536`). The proposal reuses it everywhere.
+- Never render ₹0 for "unknown". Earnings offline shows the offline state in place of the masthead.
+- Engineering first: one shared helper that turns "paused with no data" into an `isOffline` flag. Not a design-system part.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'OfflineBanner', id: 'components-messages-and-tooltips-offlinebanner--docs', note: 'the global strip. No props.' },
+  { name: 'ScreenState', id: 'components-empty-and-error-screenstate--docs', note: 'the standard offline state: title, body, "Try again".' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'offline inside a form or a partly loaded page.' },
+]} />
+
+## Where it appears
+
+- App shell: the strip on every screen (`App.js:204`).
+- Flow 2 Home and discovery: Home, Offers, Search. Flow 3a: Cards you can get, All card benefits.
+- Flow 4 and 5: tools (done), Advisor, Advisor results. Flow 7: Earnings. Flow 8: Orders, Order detail, Claims, Missing cashback, Choose date. Flow 9: Profile.
+- Flow 10 Offline and session: the strip, paused screens, mid-flow return (not built).
+
+## Examples
+
+<Canvas of={S.Banner} />
+<Canvas of={S.ToolsOffline} />
+<Canvas of={S.StandardOfflineProposed} />
+<Canvas of={S.EarningsOfflineProposed} />
+<Canvas of={S.LoginOfflineProposed} />
+
+The banner story sets the browser online flag to false while it is mounted so the real component renders. If the strip does not show in your browser, switch devtools to Network, Offline.
+
+<DoDont
+  dos={['Show the standard offline state when a query is paused with no data.', 'Keep loaded data on screen and let the strip speak.', 'Reuse the tools copy.']}
+  donts={['Do not fall into the empty branch on a paused query.', 'Do not show ₹0 or "0 cards" while offline.', 'Do not route a paused store-visit lookup to "Oops, no visits" (MissingCashbackHelp.tsx:72).']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'App shell: offline strip', status: 'live', source: 'src/molecules/OfflineBanner.tsx:16', story: 'patterns-offline--banner' },
+  { state: 'Splash offline with a saved session', status: 'live', source: 'src/auth/AuthContext.tsx:127', note: 'Session kept on a network failure.' },
+  { state: 'Tools, Beat my card: offline', status: 'live', source: 'src/screens/tools/ToolResultsScreen.tsx:536', story: 'patterns-offline--tools-offline' },
+  { state: 'Home offline, no cache', status: 'proposed', source: 'ux-states.md section 2', story: 'patterns-offline--standard-offline-proposed', note: 'Empty card list, no message today (HomeScreen.tsx:354).' },
+  { state: 'Earnings offline, no cache', status: 'proposed', source: 'ux-states.md section 6', story: 'patterns-offline--earnings-offline-proposed', note: 'Shows ₹0 today (EarningsScreen.tsx:288). Body: "Your balance will show when you\'re back online."' },
+  { state: 'Login: offline when requesting OTP', status: 'proposed', source: 'ux-states.md section 1', story: 'patterns-offline--login-offline-proposed', note: 'Raw API text today (LoginSheetProvider.tsx:466).' },
+  { state: 'Offers, Orders, Order detail, Claims, Choose date, Cards you can get, Advisor, All card benefits', status: 'proposed', source: 'ux-states.md systemic finding', story: 'patterns-offline--standard-offline-proposed', note: 'Each falls into a false empty today.' },
+  { state: 'Search: catalogue not loaded', status: 'proposed', source: 'ux-states.md section 2', note: 'InlineMessage warning "Search needs a connection. Check your internet and try again." (SearchTopSheet.tsx:211).' },
+  { state: 'Missing cashback: store visit lookup offline', status: 'proposed', source: 'ux-states.md section 7', note: 'InlineMessage warning "You\'re offline. Connect to check your store visits."' },
+  { state: 'Profile offline, no cache', status: 'proposed', source: 'ux-states.md section 8', note: 'Skeletons plus InlineMessage "You\'re offline. Your details will show when you\'re back online."' },
+]} />

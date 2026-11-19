@@ -1,0 +1,36 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Icons from './icons.stories';
+
+<Meta of={Icons} />
+
+<PageHeader title="Icons" meta="Foundations · assets">
+  111 icons: SVG plus five raster brand logos. Pick a `name` from the registry and render it with the `Icon` atom.
+  The component page is Components / Media / Icon.
+</PageHeader>
+
+Source: `src/atoms/Icon.tsx` (registry and `ICON_NAMES`), `src/assets/icons`.
+
+<Anatomy parts={[
+  { part: 'Name prefix', token: 'nav-, feat-, desc-, pay-, social-, help-', note: 'nav: bottom bar. feat: card features. desc: status art. pay: payout methods.' },
+  { part: 'Style suffix', token: '-outline, -filled', note: 'Outline is the resting state, filled is selected or emphasised.' },
+  { part: 'Size', token: 'iconSize[n]', note: 'Default 20.' },
+  { part: 'Colour', token: 'colors.icon.*', note: 'Tints outline and general icons. nav and desc keep baked colours.' },
+]} />
+
+## Registry
+
+<Canvas of={Icons.Registry} />
+
+## Tinting
+
+<Canvas of={Icons.Tinting} />
+
+## Sizes
+
+<Canvas of={Icons.Sizes} />
+
+<DoDont
+  dos={['Pass `name` and a `colors.icon.*` colour.', 'Use `-filled` for the selected state.', 'Use a `desc-*` icon where meaning needs its own colour.']}
+  donts={['Do not import an SVG file directly.', 'Do not tint a `nav-*` or `desc-*` icon. It will not change.', 'Do not add an icon without an entry in the registry.']}
+/>

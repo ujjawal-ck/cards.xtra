@@ -1,0 +1,65 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './empty.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Empty" meta="Pattern">
+  An empty list is a state with a reason. Say what is missing and, where the user can act, give one action.
+</PageHeader>
+
+## The rule
+
+- Use `ScreenState` for every empty and no-results screen. One block, not an ad-hoc line of text (`src/organisms/ScreenState.tsx:23`).
+- The title says what is missing. The body says how it fills, or what to change. One optional action.
+- "No results" because of filters gets "Clear filters". "No results" because of what the user typed gets "Change my details".
+- Empty for a reason the user cannot fix (for example Notifications) has no action.
+- Never use an empty state for "I do not know yet". Offline with no cache and a failed fetch look empty in code today (audit, systemic finding). Show the Offline or Error pattern instead.
+- Only three illustrations exist: `appOrders`, `tracking`, `confirmation`.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'ScreenState', id: 'components-empty-and-error-screenstate--docs', note: 'the one empty, no-results and error block.' },
+  { name: 'GuestPrompt', id: 'components-empty-and-error-guestprompt--docs', note: 'an account-only tab for a guest. See the Guest gate pattern.' },
+  { name: 'Button', id: 'components-buttons-button--docs', note: 'the action inside ScreenState (solid, Saffron).' },
+]} />
+
+## Where it appears
+
+- Flow 2 Home and discovery: Home no match (with closest cards), Offers empty, Search no results.
+- Flow 3a and 3b: Cards you can get (no cards, filters match nothing).
+- Flow 5 Card advisor: Results (no cards fit), catalogue empty.
+- Flow 7 Earnings and withdraw: transactions per filter.
+- Flow 8 Orders and missing cashback: Orders (no orders, no match), Claims per tab.
+- Flow 9 Profile and account: Notifications (always empty).
+
+## Examples
+
+<Canvas of={S.NothingYet} />
+<Canvas of={S.NoMatchingResults} />
+<Canvas of={S.NoCardsForTheseDetails} />
+<Canvas of={S.NoOffers} />
+<Canvas of={S.AllCaughtUp} />
+<Canvas of={S.WithIllustration} />
+
+<DoDont
+  dos={['Use ScreenState, with a title that names what is missing.', 'Offer the one action that gets the user out: Clear filters, Change my details, Explore cards.', 'Pick the illustration that fits: appOrders for orders, tracking for tracked cashback.']}
+  donts={['Do not write a one-line "No data" text.', 'Do not show an empty state while the data is loading or offline.', 'Do not add a second action. ScreenState takes one today (DS gap).']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Orders: no orders yet', status: 'live', source: 'src/screens/OrdersList.tsx:425', story: 'patterns-empty--nothing-yet' },
+  { state: 'Orders: filters match nothing', status: 'live', source: 'src/screens/OrdersList.tsx:417', story: 'patterns-empty--no-matching-results' },
+  { state: 'Cards you can get: no cards', status: 'live', source: 'src/screens/CardsYouCanGetScreen.tsx:291', story: 'patterns-empty--no-cards-for-these-details' },
+  { state: 'Offers: empty (R10)', status: 'live', source: 'src/screens/OffersScreen.tsx:552', story: 'patterns-empty--no-offers', note: 'Maybe the default on production.' },
+  { state: 'Notifications: all caught up (R19)', status: 'live', source: 'src/screens/NotificationsScreen.tsx:172', story: 'patterns-empty--all-caught-up' },
+  { state: 'Claims: empty per tab', status: 'live', source: 'src/screens/MissingCashbackDidYouShop.tsx:212', story: 'patterns-empty--with-illustration' },
+  { state: 'Home: filters match nothing, closest-card fallback', status: 'live', source: 'src/screens/HomeScreen.tsx:2320', note: 'Own text and Pressable, not ScreenState.' },
+  { state: 'Advisor results: no cards fit', status: 'live', source: 'src/screens/advisor/AdvisorResultsScreen.tsx:162' },
+  { state: 'Search: no results', status: 'live', source: 'src/organisms/SearchTopSheet.tsx:417' },
+  { state: 'Orders list: session expired while open', status: 'proposed', source: 'ux-states.md section 7', note: 'GuestPrompt "Log in to see your orders". "No orders yet" shows behind the login sheet today.' },
+]} />

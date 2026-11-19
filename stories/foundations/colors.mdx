@@ -1,0 +1,59 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Colors from './colors.stories';
+
+<Meta of={Colors} />
+
+<PageHeader title="Colors" meta="Foundations · tokens">
+  Nine primitive ramps, a semantic layer on top, and a few named gradients. Components read the semantic layer only.
+  Saffron is the action colour (D17). Cobalt is the accent.
+</PageHeader>
+
+Source: `src/tokens/colors.ts`, `src/tokens/gradients.ts`, `src/theme/gradients.ts`.
+
+## How the layers work
+
+A **primitive** is a raw value: `primitives.saffron[500]`. A **semantic** token is a role that points at a primitive: `colors.action.primary.default`. A component asks for the role and never for the raw value. To re-theme, change the semantic mapping in one place.
+
+<Anatomy parts={[
+  { part: 'Primary action fill', token: 'colors.action.primary.default', note: 'Saffron 500. D17: the only solid button colour.' },
+  { part: 'Accent and links', token: 'colors.action.accent.default, colors.text.link', note: 'Cobalt. Outline and secondary buttons, selected chips, links.' },
+  { part: 'Cashback', token: 'colors.cashback.default', note: 'Saffron 500. Shares a hex with the primary action on purpose.' },
+  { part: 'Feedback', token: 'colors.feedback.{success,warning,error,info}', note: 'Fern, Amber, Ruby, Cobalt.' },
+  { part: 'Text', token: 'colors.text.{primary,secondary,tertiary,disabled}', note: 'Slate 900, 700, 600, 500.' },
+]} />
+
+## Primitives
+
+<Canvas of={Colors.Primitives} />
+
+Two things to know when you read the "semantic" lines. Several steps share a hex: saffron 50 and 100 are both `#fff4eb`, so both swatches list the same semantic names. The transparent ramps repeat the values in `alpha` (opacity.ts).
+
+## Semantic tokens
+
+<Canvas of={Colors.Semantic} />
+
+## Semantic tokens with no primitive
+
+<Canvas of={Colors.NoPrimitive} />
+
+These hold raw hex or rgba: a design system gap. Decide per token: add a primitive, or keep it as a documented one-off.
+
+## Action roles (D17)
+
+<Canvas of={Colors.ActionRoles} />
+
+Decision D17 in `docs/decision.md`: every solid button is Saffron, including the places Figma draws Cobalt. `tone="accent"` is the opt-in Cobalt fill.
+
+## Tones
+
+<Canvas of={Colors.Tones} />
+
+## Gradients
+
+<Canvas of={Colors.Gradients} />
+
+<DoDont
+  dos={['Use `colors.*` in components.', 'Use `colors.action.primary.*` for the one solid action on a screen.', 'Use `colors.tones.*` for feedback surfaces.']}
+  donts={['Do not import `primitives` in a component.', 'Do not type a hex value in a component.', 'Do not fill a button with Cobalt unless it is the opt-in accent.']}
+/>

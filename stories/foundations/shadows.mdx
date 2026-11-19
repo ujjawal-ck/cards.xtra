@@ -1,0 +1,40 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Shadows from './shadows.stories';
+
+<Meta of={Shadows} />
+
+<PageHeader title="Shadows" meta="Foundations · tokens">
+  Elevation tokens from the Figma effect styles. Three families (light, neutral, brand) with the levels xs, sm, md, lg, xl and up. Light also has glow.
+</PageHeader>
+
+Source: `src/tokens/elevation.ts`.
+
+<Anatomy parts={[
+  { part: 'iOS shadow', token: 'shadowColor, shadowOffset, shadowOpacity, shadowRadius', note: 'Figma spread is ignored. iOS has no spread.' },
+  { part: 'Android shadow', token: 'elevation', note: 'One number, set to the blur by default.' },
+  { part: 'Use', token: '[styles.card, elevation.light.md]', note: 'Spread the token into the style array.' },
+]} />
+
+## Light
+
+<Canvas of={Shadows.Light} />
+
+## Neutral
+
+<Canvas of={Shadows.Neutral} />
+
+## Brand
+
+<Canvas of={Shadows.Brand} />
+
+## Platforms
+
+<Canvas of={Shadows.Platforms} />
+
+The storybook runs on react-native-web, so the picture is the iOS look. Check Android `elevation` on a device.
+
+<DoDont
+  dos={['Use `light` by default.', 'Use `up` for a sticky footer that sits above content.', 'Use `brand` only for a saffron-tinted surface.']}
+  donts={['Do not set `shadowOpacity` by hand.', 'Do not stack two elevations on one surface.', 'Do not use `brand.*` on a neutral card.']}
+/>

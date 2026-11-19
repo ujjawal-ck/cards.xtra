@@ -1,0 +1,63 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './click-out.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Click-out" meta="Pattern">
+  Apply Now and Shop & Earn are the revenue paths. Every tap goes through one attributed path (D13), and the user should always know what is happening.
+</PageHeader>
+
+## The rule
+
+- One hook handles every click-out: `src/lib/useClickOut.tsx` (D13). Every click logs `click_out`.
+- Signed out: the "Log in to earn cashback" sheet, with "continue without cashback". A guest is never blocked.
+- Signed in: the app resolves the CashKaro user id first. If it cannot, it does not open an unattributed link.
+- The CTA is a solid Saffron button (D17).
+- Not built, and the biggest gap: no feedback while the id resolves (the tap looks dead), no hand-off step before the bank or store opens (R8), no state when the user returns (R1), and an empty URL does nothing (R3).
+- Attribution is the lifeblood: any change here is a P0 risk by default.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'Button', id: 'components-buttons-button--docs', note: 'the CTA. Solid, Saffron. Has a loading state.' },
+  { name: 'FooterButtons', id: 'components-footers-footerbuttons--docs', note: 'the sticky Apply bar with primaryLoading and primaryDisabled.' },
+  { name: 'EarnLoginSheet', id: 'components-sheets-earnloginsheet--docs', note: 'the guest prompt. See Guest gate.' },
+  { name: 'ScreenState', id: 'components-empty-and-error-screenstate--docs', note: 'the proposed hand-off step.' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'the proposed paused-card message.' },
+  { name: 'Toast', id: 'components-messages-and-tooltips-toast--docs', note: 'the proposed id-not-resolved error.' },
+  { name: 'HowItWorksSheet', id: 'components-sheets-howitworkssheet--docs', note: 'the opt-in tracking steps behind "Learn how it works?".' },
+]} />
+
+## Where it appears
+
+- Flow 3a Card detail and apply: Click-out (guest earn prompt, signed in, user id missing, empty URL, redirect, return).
+- Flow 2 Home and discovery: Home card Apply. Flow 6 Offers: Store page Shop & Earn.
+- Flows 3b, 3c, 4, 5: Apply from rejection, bounce, tools and advisor.
+
+## Examples
+
+<Canvas of={S.Cta} />
+<Canvas of={S.ResolvingProposed} />
+<Canvas of={S.RedirectProposed} />
+<Canvas of={S.NoLinkProposed} />
+
+<DoDont
+  dos={['Route every Apply and Shop & Earn through `useClickOut`.', 'Show a loading state on the CTA while the user id resolves.', 'Tell the user cashback is tracked before the hand-off.']}
+  donts={['Do not open an unattributed link.', 'Do not leave a dead CTA: disable it and say why.', 'Do not use a native Alert for a blocked click-out.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'CTA: Apply Now (solid Saffron)', status: 'live', source: 'src/atoms/Button.tsx', story: 'patterns-click-out--cta' },
+  { state: 'Guest: earn prompt', status: 'live', source: 'src/lib/useClickOut.tsx:89', story: 'patterns-guest-gate--click-out-card' },
+  { state: 'Signed in: link opens with the user id', status: 'live', source: 'src/lib/useClickOut.tsx:112' },
+  { state: 'Resolving the user id', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-click-out--resolving-proposed', note: 'Awaits a refetch with no feedback (useClickOut.tsx:96).' },
+  { state: 'Redirect to bank or store (R8)', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-click-out--redirect-proposed', note: 'Title "Taking you to {bank or store}". DS gap: redirect interstitial.' },
+  { state: 'User id not resolved', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-toast-and-feedback--click-out-error-proposed', note: 'Native Alert today (useClickOut.tsx:106).' },
+  { state: 'Card or store has no URL (R3)', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-click-out--no-link-proposed', note: 'Silent return today (useClickOut.tsx:87).' },
+  { state: 'Return from the bank or store (R1)', status: 'proposed', source: 'pm-flows.md R1', note: 'Open question for the product owner with the tracking team: what does the user see after a click-out? No copy yet.' },
+  { state: 'Terms to accept before the hand-off (R8)', status: 'proposed', source: 'pm-flows.md R8', note: 'Open question: show terms, and which. No copy yet.' },
+]} />

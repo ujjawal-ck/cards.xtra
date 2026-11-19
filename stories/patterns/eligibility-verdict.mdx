@@ -1,0 +1,61 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './eligibility-verdict.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Eligibility verdict" meta="Pattern">
+  One classifier returns one of three results: eligible, maybe, ineligible. Each result has its own sheet, and a rejection is never a hard stop.
+</PageHeader>
+
+## The rule
+
+- Three results, three sheets: `EligibleSheet`, `MaybeSheet`, `IneligibleSheet`. They share `EligibilityMasthead` and show the details the user typed with an Edit link.
+- A rejection shows a reason, up to three alternatives with different jobs (closest, highest Rewards, lifetime free) and "See all N cards you can get" (D22).
+- The reason comes only from the card's own income bar. Otherwise a generic line shows, so a wrong reason never reaches the user (D22).
+- "Continue to Apply" stays on the maybe and ineligible sheets (D22).
+- Closing the checker during Apply drops the Apply, with no bank page and no message (R2).
+- Apply from tools, advisor, Cards you can get and store best cards skips the gate Home runs (R11). Open product question: same gate everywhere?
+- Gap: with zero alternatives (R15) blocks 2 and 3 are left out and the only exits are Edit and Continue.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'EligibleSheet', id: 'components-sheets-eligiblesheet--docs', note: 'the eligible result.' },
+  { name: 'MaybeSheet', id: 'components-sheets-maybesheet--docs', note: 'the maybe result, with a card carousel.' },
+  { name: 'IneligibleSheet', id: 'components-sheets-ineligiblesheet--docs', note: 'the rejection: reason, alternatives, See all.' },
+  { name: 'EligibilityCheckerSheet', id: 'components-sheets-eligibilitycheckersheet--docs', note: 'the form that produces the verdict.' },
+  { name: 'EligibilityMasthead', id: 'components-mastheads-eligibilitymasthead--docs', note: 'the hero for all three.' },
+  { name: 'CompareCard', id: 'components-cards-comparecard--docs', note: 'one alternative on the rejection sheet.' },
+]} />
+
+## Where it appears
+
+- Flow 2 Home and discovery: Eligibility checker (empty, validation errors, checking, error).
+- Flow 3a Card detail and apply: Apply gate, Result sheets (eligible, maybe, ineligible).
+- Flow 3b Rejection: Rejection sheet, Cards you can get.
+- Flow 5 Card advisor: eligibility bridge, form, "likely to qualify", error.
+
+## Examples
+
+The sheets are tall. Open them from the sidebar: Patterns / Eligibility verdict / Eligible, Maybe, Ineligible No Alternatives, and the proposed zero-alternatives story.
+
+<DoDont
+  dos={['Run one classifier and show the matching sheet.', 'Show why a rejection happened only when the data supports it.', 'Keep "Continue to Apply" on the maybe and ineligible sheets.']}
+  donts={['Do not show a guessed reason.', 'Do not drop the Apply when the user closes the checker (R2).', 'Do not leave a rejected user without a next step (R15).']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Eligible', status: 'live', source: 'src/screens/HomeScreen.tsx:2763', story: 'patterns-eligibility-verdict--eligible' },
+  { state: 'Maybe', status: 'live', source: 'src/screens/HomeScreen.tsx:2811', story: 'patterns-eligibility-verdict--maybe' },
+  { state: 'Ineligible, with alternatives', status: 'live', source: 'src/organisms/IneligibleSheet.tsx:130', note: 'Not in this page: it needs card cross-sell data. See the component page.' },
+  { state: 'Ineligible, zero alternatives', status: 'live', source: 'src/organisms/IneligibleSheet.tsx:130', story: 'patterns-eligibility-verdict--ineligible-no-alternatives', note: 'PARTIAL in the audit (R15).' },
+  { state: 'Checker: pincode and income validation', status: 'live', source: 'src/organisms/EligibilityCheckerSheet.tsx:292' },
+  { state: 'Checker: checking', status: 'live', source: 'src/organisms/EligibilityCheckerSheet.tsx:383' },
+  { state: 'Checker: API failed', status: 'live', source: 'src/organisms/EligibilityCheckerSheet.tsx:328' },
+  { state: 'Zero alternatives: a way forward', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-eligibility-verdict--ineligible-zero-alternatives-proposed', note: 'InlineMessage info plus outline "Browse all cards".' },
+  { state: 'Checker closed during Apply (R2)', status: 'proposed', source: 'pm-flows.md R2', note: 'Open question: drop the Apply (today) or continue to the bank without a verdict.' },
+]} />

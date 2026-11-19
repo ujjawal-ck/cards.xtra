@@ -1,0 +1,50 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Imagery from './imagery.stories';
+
+<Meta of={Imagery} />
+
+<PageHeader title="Imagery" meta="Foundations · assets">
+  Raster and SVG art the app ships: card art, store and brand logos, categories, illustrations, backgrounds and the app wordmark.
+  The component pages are under Components / Media.
+</PageHeader>
+
+Source: `src/assets/images/index.ts` (the `images` registry), `src/assets/logos.ts`.
+
+<Anatomy parts={[
+  { part: 'Registry', token: 'images.<group>.<name>', note: 'Every file is listed by hand, because Metro needs a string-literal require().' },
+  { part: 'Card art', token: 'images.cards.*', note: 'Key is the filename without the card- prefix, in camelCase.' },
+  { part: 'Logo height', token: 'mediaSize[n]', note: 'Pick the frame from Components / Media.' },
+  { part: 'Wordmark', token: 'logos.lightSmall, darkSmall, …', note: 'SVG components.' },
+]} />
+
+## Card art
+
+<Canvas of={Imagery.CardArt} />
+
+## Store and brand logos
+
+<Canvas of={Imagery.StoreAndBrandLogos} />
+
+## Categories and filters
+
+<Canvas of={Imagery.Categories} />
+
+## Illustrations
+
+<Canvas of={Imagery.Illustrations} />
+
+Only three illustrations exist for `ScreenState` today: `appOrders`, `tracking`, `confirmation`. Figma has "Connection lost" and "Something didn't go as planned" frames that are not exported yet (a gap, see the Patterns pages).
+
+## Backgrounds
+
+<Canvas of={Imagery.Backgrounds} />
+
+## App wordmark
+
+<Canvas of={Imagery.AppLogo} />
+
+<DoDont
+  dos={['Import from the `images` registry.', 'Use the `light*` logo on dark surfaces and `dark*` on light ones.', 'Add a new file to the registry and the manifest together.']}
+  donts={['Do not `require()` a path in a screen.', 'Do not stretch art. Use `resizeMode="contain"` in a sized box.', 'Do not use a card image as a logo.']}
+/>
