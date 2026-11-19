@@ -127,7 +127,7 @@ export const RecheckFoundPayout: Story = {
   play: typeCode,
 };
 
-/** MONEY. The payout POST is refused with 5002 "already pending". The app reads 400 as final, so the user sees the native Alert "Payment failed" with the server text, while a payout is in fact pending. Types the code. */
+/** Pending is a payout state, not an error (user, 2026-11-19). The withdraw gate shows it with the "Payment Is Processing" sheet before the OTP step. This story is the rare race where the gate passed and the payout POST then answers 5002: today the screen shows it in the generic "Payment failed" dialog. */
 export const PayoutAlreadyPending: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:177` },
@@ -253,7 +253,7 @@ export const SessionExpiredProposed: Story = {
 
 // ── Edge cases, proposed ──
 
-/** PROPOSED. Payout refused because one is already pending (5002), as its own state in place of "Payment failed". */
+/** PROPOSED. A payout is already pending (5002): shown as the pending state, the same as the gate does, in place of the generic "Payment failed" dialog. */
 export const PayoutAlreadyPendingProposed: Story = {
   tags: ['proposed'],
   parameters: { docs: { description: { story: `Replaces the native Alert at ${SRC}:177 for code 5002. Copy from audit/edge-flows-7-10.md 7.6. Open question: should the screen also show the pending amount and start time (needs requested_earnings and a date from the API)? Owner: product owner.` } } },

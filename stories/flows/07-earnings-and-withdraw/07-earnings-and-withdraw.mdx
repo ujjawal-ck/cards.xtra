@@ -148,7 +148,7 @@ Stories that type or tap run a small DOM interaction after mount (a play functio
   { state: "Session expired, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--session-expired-proposed', note: "Screen's own expired state." },
   { state: "Payout gateway 504 (G2, P0)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-gateway-504', note: "Shown as final failure; payout may have landed." },
   { state: "Recheck found payout", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--recheck-found-payout', note: "Timeout, then 5002: goes to Success." },
-  { state: "Payout already pending", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending', note: "Reads as Payment failed." },
+  { state: "Payout already pending", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending', note: "Pending is a state. Rare race after the gate: today shown in the generic Payment failed dialog." },
   { state: "Payout already pending, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending-proposed', note: "Own state with Go to Earnings." },
   { state: "Verify server error (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--verify-server-error', note: "500 reads as Enter a valid OTP." },
   { state: "Session ends on verify (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-ends-on-verify', note: "401 reads as Enter a valid OTP." },

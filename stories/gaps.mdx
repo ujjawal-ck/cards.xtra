@@ -90,7 +90,7 @@ Root cause for N1 to N9 (inferred, not reproduced on a device): queries pause wh
 
 | ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
 |---|---|---|---|---|---|
-| M1 | Only timeout and network count as "unknown outcome". A gateway 5xx, or a 5002 "already pending" on submit, shows "Payment failed" and invites a retry while a payout may have landed. | `query/mutations/withdraw.ts:86`; `screens/withdraw/WithdrawVerifyOTP.tsx:177` | Withdrawers during a backend incident. L | P0 | `flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed`, `--payout-already-pending-proposed`, `patterns-money-confirmation--payout-failed-proposed` |
+| M1 | Only timeout and network count as "unknown outcome". A gateway 5xx on submit shows "Payment failed" and invites a retry while a payout may have landed. Note: pending (5002) is a payout state, not an error (user, 2026-11-19). The withdraw gate already shows it as a state with the "Payment Is Processing" sheet (`screens/withdraw/useWithdrawGate.tsx:9`). | `query/mutations/withdraw.ts:86`; `screens/withdraw/WithdrawVerifyOTP.tsx:177` | Withdrawers during a backend incident. L | P0 | `flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed`, `--payout-already-pending-proposed`, `patterns-money-confirmation--payout-failed-proposed` |
 | M2 | Missing payment method ids fall back to built-in ids and are only reported. On a backend with other ids, a payout can go to the wrong method. | `api/payments.ts:130` to `:132` | Every withdrawer, if the field is missing. L | P0 | None (no visible state) |
 | M3 | Unknown payout outcome (timeout, re-check failed) is a native `Alert`, not a screen. The money is in limbo. | `screens/withdraw/WithdrawVerifyOTP.tsx:88`, `:89` | Withdrawers on a slow network. L | P0 | `flows-7-earnings-and-withdraw-verify-otp--unknown-outcome-proposed`, `patterns-money-confirmation--unknown-outcome-proposed` |
 | M4 | Verify OTP maps every error that is not status 0 (5xx, 401 session end) to "Enter a valid OTP". | `screens/withdraw/WithdrawVerifyOTP.tsx:133` to `:137` | Withdrawers during a fault. M | P1 | None; related `flows-7-earnings-and-withdraw-verify-otp--connection-problem-proposed` |
@@ -250,7 +250,7 @@ Ranked by expected damage (frequency x severity, money and attribution first). A
 1. A2: closing the checker drops the Apply on every first Apply without saved details.
 2. A1: dead Apply tap while the user id resolves, and double click-outs.
 3. N3: Earnings shows ₹0 offline; users think their cashback is gone.
-4. M1: payout 5xx or "already pending" reads "Payment failed" and invites a duplicate request.
+4. M1: a payout 5xx reads "Payment failed" and invites a duplicate request. (Pending is a state, not part of this gap.)
 5. A4: empty URL makes Apply and Shop & Earn a silent dead CTA, invisible in analytics.
 6. A3: click-out logged before the link opens, and failures swallowed.
 7. N1: Missing Cashback offline tells real shoppers they have no claim.

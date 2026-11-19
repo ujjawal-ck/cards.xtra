@@ -1,5 +1,7 @@
 # Edge and loader audit: flows 7 to 10
 
+> Correction (user, 2026-11-19): pending (5002) is a payout state, not an error state. The withdraw gate shows it as a state ("Payment Is Processing" sheet). Rows below that call "already pending" a failure are superseded; see `gaps.md` M1.
+
 Audited 2026-11-19 [claude] on branch `claude/storybook` (worktree `cards.xtra-storybook`). Read-only code audit, PM + UX lens. Nothing was run in a browser or on a device. Line numbers are from this branch.
 
 ## How to read this file
