@@ -90,5 +90,8 @@ export interface AvatarSignals {
  *   buildTranscript(input: BuildTranscriptInput): AdvisorTranscript
  *   rewindAnswers(state: AdvisorState, config: AdvisorConfig, questionId: QuestionId): AdvisorState
  *   avatarStateFor(signals: AvatarSignals): AdvisorAvatarState
+ *   answeredList(state, config): Array<{ questionId: QuestionId; ask: string; text: string }>
+ *   lastAnswered(state, config): QuestionId | null
+ *   answersLost(state, config, questionId): number
  */
 export type { AdvisorAvatarState };

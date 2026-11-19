@@ -5,15 +5,16 @@
  *                    quieter "Not sure" row last. The rows scroll inside the tray when they are
  *                    taller than TRAY_MAX_RATIO of the window (the need question has up to 9).
  *   pincode question the six-digit input and "Check cards".
- *   no question      "Start over".
+ *   no question      the end menu from the screen, as the same stacked rows.
  *
+ * Above the scroll area, outside it: "Back" (when an answer exists) and "Using your saved details".
  * The screen keeps this tray above the keyboard (useKeyboardPadding on the wrapper).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Button, Input } from '../../atoms';
-import { colors, spacing, borderWidth, sizing } from '../../tokens';
+import { Text, Button, Input, Icon } from '../../atoms';
+import { colors, spacing, borderWidth, sizing, iconSize } from '../../tokens';
 import { AdvisorOptionRow } from './AdvisorOptionRow';
 import { NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorStep, QuestionId } from '../../lib/advisor/types';
@@ -22,6 +23,15 @@ import type { AdvisorStep, QuestionId } from '../../lib/advisor/types';
  *  A layout ratio, not a token value. */
 const TRAY_MAX_RATIO = 0.46;
 const PINCODE = /^[1-9]\d{5}$/;
+
+/** One row of the end menu. */
+export interface TrayMenuItem {
+  key: string;
+  label: string;
+  /** Drawn like "Not sure". */
+  quiet?: boolean;
+  onPress: () => void;
+}
 
 /** Keep only digits, at most six. A Hindi keyboard can send Devanagari digits
  *  (०-९): they become 0-9, so the pincode check and the API get plain digits. */
@@ -34,15 +44,19 @@ function toPincodeText(text: string): string {
 
 export function AdvisorReplyTray({
   step,
+  menu,
   usingSaved,
   onAnswer,
-  onRestart,
+  onBack,
   onChangeSaved,
 }: {
   step: AdvisorStep | null;
+  /** The rows shown when no question is left. */
+  menu: TrayMenuItem[];
   usingSaved: boolean;
   onAnswer: (questionId: QuestionId, value: string) => void;
-  onRestart: () => void;
+  /** Removes the last answer. Absent when nothing is answered: no Back row. */
+  onBack?: () => void;
   onChangeSaved: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -61,7 +75,13 @@ export function AdvisorReplyTray({
 
   let content: React.ReactNode;
   if (!step) {
-    content = <Button label="Start over" variant="outline" tone="second" size={44} fullWidth onPress={onRestart} />;
+    content = (
+      <View style={{ gap: spacing[8] }}>
+        {menu.map((item) => (
+          <AdvisorOptionRow key={item.key} label={item.label} quiet={item.quiet} onPress={item.onPress} />
+        ))}
+      </View>
+    );
   } else if (step.question.kind === 'choice') {
     content = (
       <View style={{ gap: spacing[8] }}>
@@ -113,6 +133,23 @@ export function AdvisorReplyTray({
         backgroundColor: colors.surface.default,
       }}
     >
+      {onBack ? (
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back to the last question"
+          hitSlop={spacing[8]}
+          style={{ alignSelf: 'flex-start', minHeight: sizing.touchMin, flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}
+        >
+          {/* The Icon atom has no left chevron: the right one, turned. */}
+          <View style={{ transform: [{ rotate: '180deg' }] }}>
+            <Icon name="chevron-right" size={iconSize[14]} color={colors.text.link} />
+          </View>
+          <Text variant="body12SemiBold" color={colors.text.link}>
+            Back
+          </Text>
+        </Pressable>
+      ) : null}
       {usingSaved ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing[8] }}>
           <Text variant="body12Regular" color={colors.text.secondary}>

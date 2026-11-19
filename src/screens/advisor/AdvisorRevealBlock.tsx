@@ -2,8 +2,9 @@
  * AdvisorRevealBlock: the current cards, as the advisor's message.
  *
  * A left bubble with the header (and the note when something did not match as asked), then ONE
- * horizontal rail with a tile per top card, the "final decision" caption when a card is likely to
- * qualify, and "See all" that opens the rest of the list in place as vertical AdvisorCardRows.
+ * horizontal rail with a tile per top card, the "Undo" line when cards were hidden by "I have this",
+ * the "final decision" caption when a card is likely to qualify, and "See all" that opens the full
+ * list as its own page.
  *
  * The rail bleeds to the screen edges: its first tile starts at the bubbles' left edge and the
  * next tile peeks in from the right. Every tile has the same height (the row stretches them).
@@ -16,7 +17,6 @@ import { colors, spacing, sizing } from '../../tokens';
 import type { CardModel } from '../../molecules';
 import type { AdvisorReveal, ProofLevel } from '../../lib/advisor/types';
 import { AdvisorBubble, CHAT_GUTTER } from './AdvisorChatBubble';
-import { AdvisorCardRow } from './AdvisorCardRow';
 import { AdvisorCardTile } from './AdvisorCardTile';
 import { AdvisorMessageEntrance } from './AdvisorMessageEntrance';
 
@@ -27,19 +27,15 @@ const TILE_MIN_WIDTH = 240;
 const TILE_MAX_WIDTH = 300;
 const TILE_GAP = spacing[12];
 
-function listReason(card: CardModel): string {
-  return card.tileBenefits?.[0]?.title || card.cashback;
-}
-
 export function AdvisorRevealBlock({
   header,
   note,
   reveal,
-  extraCards,
-  showAll,
-  onToggleAll,
+  onSeeAll,
   onOpen,
   onHaveThis,
+  heldCount,
+  onUndoHeld,
   animateTiles,
   tileDelay,
   tileStagger,
@@ -49,13 +45,15 @@ export function AdvisorRevealBlock({
    *  same line already stands in the chat as its own message. */
   note?: string;
   reveal: AdvisorReveal;
-  /** The matching cards that are not in `reveal.top`, in rank order. */
-  extraCards: CardModel[];
-  showAll: boolean;
-  onToggleAll: () => void;
-  /** slot is 1-based for a rail tile, 0 for a card from the full list. */
+  /** Opens the full list page. */
+  onSeeAll: () => void;
+  /** slot is 1-based for a rail tile. */
   onOpen: (card: CardModel, slot: number, proof: ProofLevel) => void;
   onHaveThis: (card: CardModel) => void;
+  /** How many cards "I have this" hid. */
+  heldCount: number;
+  /** Brings back the card hidden last. */
+  onUndoHeld: () => void;
   /** True when the block itself is new and entrances may run (iOS, reduce motion off). */
   animateTiles: boolean;
   /** ms before the first tile starts. */
@@ -65,7 +63,6 @@ export function AdvisorRevealBlock({
 }) {
   const { width } = useWindowDimensions();
   const tileWidth = Math.min(TILE_MAX_WIDTH, Math.max(TILE_MIN_WIDTH, Math.round(width * TILE_WIDTH_RATIO)));
-  const listProof: ProofLevel = reveal.proof === 'likely' ? 'likely' : reveal.proof === 'matches' ? 'matches' : 'none';
 
   return (
     <View style={{ gap: spacing[8] }}>
@@ -110,6 +107,24 @@ export function AdvisorRevealBlock({
         ))}
       </ScrollView>
 
+      {heldCount > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing[12] }}>
+          <Text variant="body12Regular" color={colors.text.secondary} style={{ flexShrink: 1 }}>
+            {heldCount === 1 ? '1 card hidden because you have it.' : `${heldCount} cards hidden because you have them.`}
+          </Text>
+          <Pressable
+            onPress={onUndoHeld}
+            accessibilityRole="button"
+            accessibilityLabel="Undo, show the hidden card again"
+            style={{ minHeight: sizing.touchMin, justifyContent: 'center' }}
+          >
+            <Text variant="body12SemiBold" color={colors.text.link}>
+              Undo
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {reveal.proof === 'likely' || reveal.total > 3 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing[12] }}>
           {reveal.proof === 'likely' ? (
@@ -119,32 +134,17 @@ export function AdvisorRevealBlock({
           ) : null}
           {reveal.total > 3 ? (
             <Pressable
-              onPress={onToggleAll}
+              onPress={onSeeAll}
               accessibilityRole="button"
-              accessibilityState={{ expanded: showAll }}
               style={{ minHeight: sizing.touchMin, justifyContent: 'center' }}
             >
               <Text variant="body12SemiBold" color={colors.text.link}>
-                {showAll ? 'Show fewer cards' : `See all ${reveal.total} cards`}
+                {`See all ${reveal.total} cards`}
               </Text>
             </Pressable>
           ) : null}
         </View>
       ) : null}
-
-      {showAll
-        ? extraCards.map((card) => (
-            <AdvisorCardRow
-              key={card.id}
-              card={card}
-              proof={listProof}
-              reason={listReason(card)}
-              isNew={false}
-              onPress={() => onOpen(card, 0, listProof)}
-              onHaveThis={() => onHaveThis(card)}
-            />
-          ))
-        : null}
     </View>
   );
 }

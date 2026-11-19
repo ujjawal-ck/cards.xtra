@@ -9,6 +9,9 @@
  * The hook also drives the mascot: it derives the avatar state from real screen events.
  * `messageArriving` is true from the moment a new advisor message id appears until the screen
  * calls `markArrivalDone(id)` (the entrance ended, the row unmounted, or no entrance runs).
+ *
+ * The chat lives in memory for the app session (advisorSession.ts): leaving and coming back keeps
+ * the answers, and a remount does not fire the analytics of the restored chat again.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -19,18 +22,20 @@ import { loadSavedProfile } from '../../lib/savedProfile';
 import { analytics, Events } from '../../analytics';
 import { ADVISOR_CONFIG } from '../../lib/advisor/config';
 import { deriveSlots } from '../../lib/advisor/engine';
-import { buildTranscript, rewindAnswers, avatarStateFor } from '../../lib/advisor/transcript';
-import { EMPTY_ADVISOR_STATE, NOT_SURE } from '../../lib/advisor/types';
+import {
+  answeredList,
+  answersLost,
+  avatarStateFor,
+  buildTranscript,
+  lastAnswered,
+  rewindAnswers,
+} from '../../lib/advisor/transcript';
+import { NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorEligibility, AdvisorState, QuestionId } from '../../lib/advisor/types';
 import type { ChatMessage } from '../../lib/advisor/chatTypes';
+import { getAdvisorSession, type SavedInputs } from './advisorSession';
 
 export type AdvisorSource = 'search' | 'search_no_results';
-
-interface SavedInputs {
-  pincode: string;
-  incomeMonthly: number;
-  selfEmployed: boolean;
-}
 
 const TEN_MINUTES = 10 * 60 * 1000;
 const PINCODE = /^[1-9]\d{5}$/;
@@ -38,6 +43,8 @@ const PINCODE = /^[1-9]\d{5}$/;
 const LIKELY_CELEBRATION_MS = 2000;
 /** The id of the eligibility status message. One id for both states. */
 const STATUS_ID = 'elig-status';
+
+const answerCount = (state: AdvisorState) => Object.values(state.answers).filter((v) => v !== undefined).length;
 
 /** The id of the newest message that is not the user's own. */
 function lastAdvisorId(messages: ChatMessage[]): string | null {
@@ -51,20 +58,36 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   const cardsQ = useCards();
   const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
 
-  const [state, setState] = useState<AdvisorState>(EMPTY_ADVISOR_STATE);
-  const [saved, setSaved] = useState<SavedInputs | null>(null);
-  const [useSaved, setUseSaved] = useState(false);
+  // The chat starts from the app session and writes every change back to it.
+  const [state, setState] = useState<AdvisorState>(() => getAdvisorSession().state);
+  const [saved, setSaved] = useState<SavedInputs | null>(() => getAdvisorSession().saved);
+  const [useSaved, setUseSaved] = useState(() => getAdvisorSession().useSaved === true);
+  const [introDone, setIntroDone] = useState(() => getAdvisorSession().introDone);
+  /** True until the restored chat is first on screen: its messages are then marked as seen. */
+  const restorePending = useRef(answerCount(getAdvisorSession().state) > 0);
 
-  // Saved eligibility inputs: read once on mount.
   useEffect(() => {
+    getAdvisorSession().state = state;
+  }, [state]);
+
+  // Saved eligibility inputs: read once in the app session. Coming back keeps the result, so a
+  // "Change" tap is not undone.
+  useEffect(() => {
+    if (getAdvisorSession().useSaved !== null) return;
     let alive = true;
     loadSavedProfile().then((profile) => {
+      if (!alive) return;
+      const session = getAdvisorSession();
       const e = profile.eligibility;
-      if (!alive || !e) return;
-      const income = Number(e.income);
-      if (PINCODE.test(e.pincode) && Number.isFinite(income) && income > 0) {
-        setSaved({ pincode: e.pincode, incomeMonthly: income, selfEmployed: e.incomeType === 'self-employed' });
+      const income = Number(e?.income);
+      if (e && PINCODE.test(e.pincode) && Number.isFinite(income) && income > 0) {
+        const inputs = { pincode: e.pincode, incomeMonthly: income, selfEmployed: e.incomeType === 'self-employed' };
+        session.saved = inputs;
+        session.useSaved = true;
+        setSaved(inputs);
         setUseSaved(true);
+      } else {
+        session.useSaved = false;
       }
     });
     return () => {
@@ -111,6 +134,8 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     [state, cards, eligibility, eligibilityKnown],
   );
   const { step, reveal } = transcript;
+  /** The catalogue is loaded, so the transcript on screen is the real one. Analytics waits for it. */
+  const ready = cards.length > 0;
 
   // The eligibility status goes just before the tail (the current question or the closing line),
   // so the question that waits for an answer stays last, next to the reply tray.
@@ -146,6 +171,12 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   }, [messages]);
   useEffect(() => {
     if (!newestAdvisorId) return;
+    if (restorePending.current) {
+      // A restored chat: every message is already on screen. No arrival.
+      restorePending.current = false;
+      messages.forEach((m) => seenAdvisorIds.current.add(m.id));
+      return;
+    }
     if (seenAdvisorIds.current.has(newestAdvisorId)) {
       // A rewind or a status change can make an older id the newest again. No entrance runs
       // for it, so clear any arrival still pending: the flag can never stick on.
@@ -154,13 +185,15 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     }
     seenAdvisorIds.current.add(newestAdvisorId);
     setArrivingId(newestAdvisorId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newestAdvisorId]);
 
   // ---- Analytics: a quick tip was shown ----
   // Once per tip id per chat. A tip that leaves the transcript (a rewind) is forgotten, so it
-  // counts again if it comes back, like seenAdvisorIds above.
-  const seenTipIds = useRef<Set<string>>(new Set());
+  // counts again if it comes back, like seenAdvisorIds above. Kept in the app session.
+  const seenTipIds = useRef<Set<string>>(new Set(getAdvisorSession().seenTipIds));
   useEffect(() => {
+    if (!ready) return;
     const present = new Set<string>();
     for (const m of messages) {
       if (m.kind !== 'agent-tip') continue;
@@ -172,7 +205,8 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     seenTipIds.current.forEach((id) => {
       if (!present.has(id)) seenTipIds.current.delete(id);
     });
-  }, [messages]);
+    getAdvisorSession().seenTipIds = [...seenTipIds.current];
+  }, [messages, ready]);
 
   /** The screen calls this when the entrance of message `id` has ended (or will not run). */
   const markArrivalDone = useCallback((id: string) => {
@@ -205,8 +239,14 @@ export function useAdvisor(source: AdvisorSource | undefined) {
   });
 
   // ---- Analytics ----
+  // Each event compares with the app session, so a remount does not fire it again.
   const questionId = step?.question.id;
   useEffect(() => {
+    if (!ready) return;
+    const session = getAdvisorSession();
+    const id = questionId ?? null;
+    if (id === session.lastQuestionViewed) return;
+    session.lastQuestionViewed = id;
     if (!step) return;
     analytics.track(Events.ADVISOR_QUESTION_VIEW, {
       question_id: step.question.id,
@@ -218,17 +258,21 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     }
     // Fire when the shown question changes, not on every state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionId]);
+  }, [questionId, ready]);
 
-  const started = useRef(false);
   const opener = state.answers.opener;
   useEffect(() => {
+    const session = getAdvisorSession();
     if (!opener) {
-      started.current = false;
+      session.started = false;
       return;
     }
-    if (started.current) return;
-    started.current = true;
+    if (!introDone) {
+      session.introDone = true;
+      setIntroDone(true);
+    }
+    if (session.started) return;
+    session.started = true;
     analytics.track(Events.ADVISOR_START, {
       source: source ?? 'none',
       journey: slots.journey ?? 'none',
@@ -237,19 +281,26 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opener]);
 
-  const revealCount = useRef(0);
   const revealKey = reveal ? `${reveal.top.map((t) => t.card.id).join(',')}|${reveal.proof}` : '';
   useEffect(() => {
-    if (!reveal) return;
-    revealCount.current += 1;
+    if (!ready) return;
+    const session = getAdvisorSession();
+    // No cards (a start over): forget the key, so the same cards count again when they come back.
+    if (!reveal) {
+      session.lastRevealKey = '';
+      return;
+    }
+    if (revealKey === session.lastRevealKey) return;
+    session.lastRevealKey = revealKey;
+    session.revealCount += 1;
     analytics.track(Events.ADVISOR_REVEAL, {
-      reveal_number: revealCount.current,
+      reveal_number: session.revealCount,
       proof: reveal.proof,
       card_count: reveal.total,
       relaxed: reveal.dropped.length > 0,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [revealKey]);
+  }, [revealKey, ready]);
 
   const lastErrorAt = useRef(0);
   useEffect(() => {
@@ -274,21 +325,49 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     setState((s) => ({ ...s, answers: { ...s.answers, [id]: value } }));
   }, []);
 
-  /** Change an earlier answer: that answer and every later one go. No analytics event fires here:
-   *  no event exists for it, and ADVISOR_ANSWER would count a tap that is not an answer. */
-  const rewind = useCallback((id: QuestionId) => {
-    setState((s) => rewindAnswers(s, ADVISOR_CONFIG, id));
-  }, []);
+  /** Change an earlier answer: that answer and every later one go. */
+  const rewind = useCallback(
+    (id: QuestionId, via: 'bubble' | 'sheet') => {
+      const lost = answersLost(state, ADVISOR_CONFIG, id);
+      if (lost === 0) return;
+      analytics.track(Events.ADVISOR_REWIND, { via, answers_lost: lost });
+      setState(rewindAnswers(state, ADVISOR_CONFIG, id));
+    },
+    [state],
+  );
+
+  /** Remove only the last answer in asking order. */
+  const back = useCallback(() => {
+    const id = lastAnswered(state, ADVISOR_CONFIG);
+    if (!id) return;
+    analytics.track(Events.ADVISOR_REWIND, { via: 'back', answers_lost: answersLost(state, ADVISOR_CONFIG, id) });
+    setState(rewindAnswers(state, ADVISOR_CONFIG, id));
+  }, [state]);
 
   const markHeld = useCallback((cardId: string) => {
     setState((s) => (s.held.includes(cardId) ? s : { ...s, held: [...s.held, cardId] }));
   }, []);
 
-  const changeSavedDetails = useCallback(() => setUseSaved(false), []);
+  /** Bring back the card hidden last by "I have this". */
+  const undoHeld = useCallback(() => {
+    if (state.held.length === 0) return;
+    // No card id: a card the user owns never goes to analytics.
+    analytics.track(Events.ADVISOR_CARD_ACTION, { action: 'undo_have_this' });
+    setState({ ...state, held: state.held.slice(0, -1) });
+  }, [state]);
 
-  const restart = useCallback(() => {
-    setState(EMPTY_ADVISOR_STATE);
+  const changeSavedDetails = useCallback(() => {
+    getAdvisorSession().useSaved = false;
+    setUseSaved(false);
   }, []);
+
+  /** Clear the answers and the held cards. The intro mascot and the saved-details choice stay. */
+  const restart = useCallback(() => {
+    analytics.track(Events.ADVISOR_REWIND, { via: 'start_over', answers_lost: answerCount(state) });
+    setState({ answers: {}, held: [] });
+  }, [state]);
+
+  const answered = useMemo(() => answeredList(state, ADVISOR_CONFIG), [state]);
 
   const retryEligibility = useCallback(() => {
     eligibilityQ.refetch();
@@ -304,6 +383,12 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     arrivingId,
     markArrivalDone,
     usingSaved: eligibilityKnown,
+    /** The user has answered at least once in this app session. The large intro mascot is gone for good. */
+    introDone,
+    /** The answered questions, for "Change an answer". */
+    answered,
+    /** false when the user said "Not now" to the eligibility check. */
+    wantsEligibility: slots.wantsEligibility,
     isCheckingEligibility,
     eligibilityError,
     isLoading: cardsQ.isLoading,
@@ -312,7 +397,9 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     refetch: cardsQ.refetch,
     answer,
     rewind,
+    back,
     markHeld,
+    undoHeld,
     changeSavedDetails,
     restart,
     retryEligibility,

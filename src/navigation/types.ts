@@ -175,6 +175,19 @@ export type RootStackParamList = {
   /** Card advisor: one question at a time, three cards after the first answer.
    *  `source` says where it was opened from (analytics only). */
   Advisor: { source?: 'search' | 'search_no_results' } | undefined;
+  /** The full card list of the advisor ("See all N cards"). Display data only:
+   *  the params never hold an income, a pincode or an eligibility result. */
+  AdvisorResults: {
+    /** CardModel.id of each card, in the advisor's rank order. */
+    cardIds: string[];
+    /** The reveal header, e.g. "Free first cards for food ordering". */
+    header: string;
+    /** The user's answers as short labels. No income, no pincode. */
+    chips: string[];
+    proof: 'none' | 'matches' | 'likely';
+    /** One line when the list is not exactly what the user asked for. */
+    note?: string;
+  };
   /** __DEV__ only: every state and size of the card advisor avatar. */
   AdvisorAvatarDemo: undefined;
   /** Profile → Payment History list (Figma 3396:51078). */

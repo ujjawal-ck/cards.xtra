@@ -5,7 +5,14 @@ import type { CardModel } from '../../../molecules/CardTile';
 import type { AvatarSignals, ChatMessage } from '../chatTypes';
 import type { AdvisorConfig } from '../types';
 import { ADVISOR_CONFIG } from '../config';
-import { avatarStateFor, buildTranscript, rewindAnswers } from '../transcript';
+import {
+  answeredList,
+  answersLost,
+  avatarStateFor,
+  buildTranscript,
+  lastAnswered,
+  rewindAnswers,
+} from '../transcript';
 import { NOT_SURE, type AdvisorEligibility, type AdvisorState, type QuestionId } from '../types';
 
 let n = 0;
@@ -257,7 +264,7 @@ describe('buildTranscript', () => {
     const none = build(st({ ...FULL_FIRST, eligBridge: 'no', job: undefined, income: undefined, pincode: undefined }), cards, null);
     expect(none.messages[none.messages.length - 1]).toMatchObject({
       id: 'closing',
-      text: 'Take your time. Tap one of your answers to change it.',
+      text: 'That is my shortlist for now. Pick what to do next.',
     });
   });
 
@@ -491,6 +498,74 @@ describe('rewindAnswers', () => {
     const rewound = build(rewindAnswers(full, C, 'upi'), cards, null);
     const oldIds = new Set(old.messages.map((m) => m.id));
     for (const m of rewound.messages.filter((x) => !isTail(x))) expect(oldIds.has(m.id)).toBe(true);
+  });
+});
+
+describe('answeredList, lastAnswered, answersLost', () => {
+  const count = (s: AdvisorState) => Object.values(s.answers).filter((v) => v !== undefined).length;
+
+  it('lists the answers in asking order with the journey wording', () => {
+    const list = answeredList(prefixOf(5), C);
+    expect(list.map((x) => x.questionId)).toEqual(['opener', 'history', 'need', 'upi', 'eligBridge']);
+    // Journey 'first' uses askFirst where a question has one.
+    expect(list[4]).toEqual({
+      questionId: 'eligBridge',
+      ask: C.questions.eligBridge.askFirst,
+      text: 'Yes, check',
+    });
+    expect(list[0].ask).toBe(C.questions.opener.ask);
+  });
+
+  it('uses the plain wording outside journey first, and the bubble text', () => {
+    const s = st({ opener: 'specific', need: 'shopping', fee: 'free', eligBridge: 'no' });
+    const list = answeredList(s, C);
+    expect(list.map((x) => x.questionId)).toEqual(['opener', 'need', 'fee', 'eligBridge']);
+    expect(list[3].ask).toBe(C.questions.eligBridge.ask);
+    expect(list[3].text).toBe('Not now');
+    expect(list[2].text).toBe('Free cards only');
+  });
+
+  it('shows "Not sure" and "PIN ..." as the answer text', () => {
+    const list = answeredList(st({ ...FULL_FIRST, upi: NOT_SURE }), C);
+    expect(list.find((x) => x.questionId === 'upi')?.text).toBe('Not sure');
+    expect(list.find((x) => x.questionId === 'pincode')?.text).toBe('PIN 110001');
+  });
+
+  it('does not list an answered question that is not active', () => {
+    const s = st({ opener: 'specific', need: 'shopping', upi: 'daily', fee: 'any' });
+    expect(answeredList(s, C).map((x) => x.questionId)).toEqual(['opener', 'need', 'fee']);
+    expect(lastAnswered(s, C)).toBe('fee');
+  });
+
+  it('lastAnswered is the last answer in asking order, or null', () => {
+    expect(lastAnswered(st({}), C)).toBeNull();
+    expect(lastAnswered(prefixOf(1), C)).toBe('opener');
+    expect(lastAnswered(prefixOf(8), C)).toBe('pincode');
+    expect(lastAnswered(st({ opener: 'explore', matters: 'travel' }), C)).toBe(
+      answeredList(st({ opener: 'explore', matters: 'travel' }), C).slice(-1)[0].questionId,
+    );
+  });
+
+  it('answersLost equals the real drop in answer count after rewindAnswers', () => {
+    const states = [
+      st(FULL_FIRST, ['h1']),
+      prefixOf(4),
+      st({ opener: 'specific', need: 'shopping', upi: 'daily', fee: 'any', eligBridge: 'yes' }),
+      st({ opener: 'better', missing: 'travel' }),
+    ];
+    for (const s of states) {
+      for (const id of Object.keys(C.questions) as QuestionId[]) {
+        expect(answersLost(s, C, id)).toBe(count(s) - count(rewindAnswers(s, C, id)));
+      }
+    }
+  });
+
+  it('answersLost counts that answer and every later one; all for the opener; 0 when not answered', () => {
+    const full = st(FULL_FIRST);
+    expect(answersLost(full, C, 'pincode')).toBe(1);
+    expect(answersLost(full, C, 'upi')).toBe(5);
+    expect(answersLost(full, C, 'opener')).toBe(8);
+    expect(answersLost(prefixOf(2), C, 'need')).toBe(0);
   });
 });
 

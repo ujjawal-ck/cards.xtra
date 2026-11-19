@@ -142,11 +142,17 @@ export const Events = {
   ADVISOR_ANSWER: 'advisor_answer', // params: question_id, option ('entered' for the pincode), not_sure (bool)
   ADVISOR_REVEAL: 'advisor_reveal', // params: reveal_number, proof, card_count, relaxed (bool)
   ADVISOR_CARD_TAP: 'advisor_card_tap', // params: item_id, slot (1-based, 0 = from the full list), proof
-  ADVISOR_CARD_ACTION: 'advisor_card_action', // params: action (have_this). No card id.
+  ADVISOR_CARD_ACTION: 'advisor_card_action', // params: action (have_this | undo_have_this). No card id.
   ADVISOR_ELIGIBILITY_BRIDGE: 'advisor_eligibility_bridge', // params: outcome (shown | accepted | declined)
   ADVISOR_ELIGIBILITY_ERROR: 'advisor_eligibility_error',
   ADVISOR_EXIT: 'advisor_exit', // params: destination (card | apply | list | back), step
   ADVISOR_TIP_VIEW: 'advisor_tip_view', // a quick tip was shown, once per tip in a chat. params: tip_id
+  // Answers were removed. params: via (back | bubble | sheet | start_over), answers_lost (count)
+  ADVISOR_REWIND: 'advisor_rewind',
+  // A row of the menu shown when no question is left. params: action (see_all | check_eligibility | change_answer | start_over)
+  ADVISOR_MENU_TAP: 'advisor_menu_tap',
+  ADVISOR_RESULTS_VIEW: 'advisor_results_view', // the full results page opened. params: card_count, proof
+  ADVISOR_RESULTS_SORT: 'advisor_results_sort', // params: sort (recommended | fee), free_only (bool)
 
   // ── orders ─────────────────────────────────────────────────
   ORDER_SELECT: 'order_select',

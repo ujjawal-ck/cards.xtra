@@ -30,7 +30,7 @@ const PINCODE_RE = /^[1-9]\d{5}$/;
 
 const HELLO = "Hi, I'm Swipey. I'll help you pick a credit card. A few taps, no forms.";
 const CLOSING_LIKELY = 'Apply for one card at a time. Each application is recorded on your credit report.';
-const CLOSING_OTHER = 'Take your time. Tap one of your answers to change it.';
+const CLOSING_OTHER = 'That is my shortlist for now. Pick what to do next.';
 
 // ── The walk (same rule as engine.ts) ──────────────────────────────────────
 
@@ -244,6 +244,37 @@ export function rewindAnswers(state: AdvisorState, config: AdvisorConfig, questi
     }
   }
   return { answers, held: [...state.held] };
+}
+
+// ── Answered questions ─────────────────────────────────────────────────────
+
+const answeredItems = (state: AdvisorState, config: AdvisorConfig) =>
+  walkItems(state, config).items.filter((w) => w.active && w.answer !== undefined);
+
+const answerCount = (state: AdvisorState) =>
+  Object.values(state.answers).filter((v) => v !== undefined).length;
+
+/** The answered, active questions in asking order, with the question text as the user saw it and the answer text. */
+export function answeredList(
+  state: AdvisorState,
+  config: AdvisorConfig,
+): Array<{ questionId: QuestionId; ask: string; text: string }> {
+  return answeredItems(state, config).map(({ question, answer, before }) => ({
+    questionId: question.id,
+    ask: before.journey === 'first' && question.askFirst ? question.askFirst : question.ask,
+    text: answerText(question, answer as string),
+  }));
+}
+
+/** The question id of the last answer in asking order, or null when nothing is answered. */
+export function lastAnswered(state: AdvisorState, config: AdvisorConfig): QuestionId | null {
+  const items = answeredItems(state, config);
+  return items.length > 0 ? items[items.length - 1].question.id : null;
+}
+
+/** How many answers `rewindAnswers(state, config, questionId)` removes: that answer and every later one. 0 when it is not answered. */
+export function answersLost(state: AdvisorState, config: AdvisorConfig, questionId: QuestionId): number {
+  return answerCount(state) - answerCount(rewindAnswers(state, config, questionId));
 }
 
 // ── Avatar ─────────────────────────────────────────────────────────────────

@@ -9,11 +9,15 @@
  *
  * Motion: new advisor messages fade and rise in one after another (iOS only, reduce motion off,
  * ids never shown before). Only one animated mascot is mounted at a time: a large intro mascot
- * before the first answer, then the small one in the header.
+ * before the first answer of the app session, then the small one in the header.
+ *
+ * The chat is kept for the app session (advisorSession.ts). Coming back shows it at once, at the
+ * end, without entrances.
  */
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, Platform, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { View, ScrollView, Platform, Pressable, Alert } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -33,13 +37,17 @@ import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { useReduceMotion } from '../../lib/useReduceMotion';
 import type { ClickOutSource } from '../../lib/useClickOut';
 import { analytics, Events } from '../../analytics';
-import type { ProofLevel } from '../../lib/advisor/types';
+import type { ProofLevel, QuestionId } from '../../lib/advisor/types';
 import type { ChatMessage } from '../../lib/advisor/chatTypes';
+import { ADVISOR_CONFIG } from '../../lib/advisor/config';
+import { NOTE_SAME, answerPills } from '../../lib/advisor/engine';
+import { answersLost } from '../../lib/advisor/transcript';
 import { useAdvisor } from './useAdvisor';
 import { AdvisorChatHeader } from './AdvisorChatHeader';
 import { AdvisorBubble, AdvisorEarlierLine, AdvisorTipBubble, UserAnswerBubble } from './AdvisorChatBubble';
 import { AdvisorRevealBlock } from './AdvisorRevealBlock';
-import { AdvisorReplyTray } from './AdvisorReplyTray';
+import { AdvisorReplyTray, type TrayMenuItem } from './AdvisorReplyTray';
+import { AdvisorChangeAnswerSheet } from './AdvisorChangeAnswerSheet';
 import { AdvisorTypingDots } from './AdvisorTypingDots';
 import { AdvisorMessageEntrance } from './AdvisorMessageEntrance';
 
@@ -61,6 +69,9 @@ const FOLLOW_MS = 1500;
 const SKELETON_BUBBLES = ['64%', '80%', '48%'] as const;
 
 const CHECKING_TEXT = 'Checking which cards fit your income and pincode.';
+
+/** Pills that never go to the full results page: no income, no pincode. */
+const PRIVATE_PILLS: QuestionId[] = ['eligBridge', 'job', 'income', 'pincode'];
 
 function isUser(m: ChatMessage | undefined): boolean {
   return m?.kind === 'user-answer';
@@ -88,29 +99,16 @@ export function AdvisorScreen() {
   const { messages, step, reveal, state, arrivingId, markArrivalDone } = advisor;
   const stepNumber = step?.stepNumber ?? 0;
   const listVisible = !advisor.isLoading && !advisor.isError && advisor.hasCards;
-  const hasAnswered = !!state.answers.opener;
-  const showIntro = listVisible && !hasAnswered;
-
-  // ---- The full card list ("See all") ----
-  const [showAll, setShowAll] = useState(false);
-  // The list closes when an answer changes.
-  const answersKey = JSON.stringify(state.answers);
-  useEffect(() => {
-    setShowAll(false);
-  }, [answersKey]);
-
-  const extraCards = useMemo(() => {
-    if (!reveal) return [];
-    const inTop = new Set(reveal.top.map((t) => t.card.id));
-    return reveal.all.filter((c) => !inTop.has(c.id));
-  }, [reveal]);
+  // The large intro mascot shows only before the first answer of the app session.
+  const showIntro = listVisible && !advisor.introDone && !state.answers.opener;
 
   // The detail sheet swipes through these. A "Worth a look" card is in `top` but
   // not in `all`, so the list is the top cards first, then the rest.
-  const pagerCards = useMemo(
-    () => (reveal ? [...reveal.top.map((t) => t.card), ...extraCards] : []),
-    [reveal, extraCards],
-  );
+  const pagerCards = useMemo(() => {
+    if (!reveal) return [];
+    const inTop = new Set(reveal.top.map((t) => t.card.id));
+    return [...reveal.top.map((t) => t.card), ...reveal.all.filter((c) => !inTop.has(c.id))];
+  }, [reveal]);
 
   // The "same cards" note can stand in the chat as its own line AND sit on the current reveal.
   // Show it once: as the line.
@@ -124,6 +122,15 @@ export function AdvisorScreen() {
   // Ids already on screen never animate again. Read in render, marked after commit.
   // The user's own bubble appears at once.
   const shownIds = useRef<Set<string>>(new Set());
+  // A restored chat (coming back to the advisor): its messages are on screen already. Mark them as
+  // shown before the plan below reads the set, and jump to the end without animation.
+  const restorePending = useRef(messages.length > 0 && !!state.answers.opener);
+  const jumpUntil = useRef(0);
+  if (restorePending.current && listVisible) {
+    restorePending.current = false;
+    shownIds.current = new Set(messages.map((m) => m.id));
+    jumpUntil.current = Date.now() + FOLLOW_MS;
+  }
   const entranceDelay = useMemo(() => {
     const plan = new Map<string, number>();
     if (!listVisible) return plan;
@@ -163,10 +170,12 @@ export function AdvisorScreen() {
     if (messages.some((m) => !shownIds.current.has(m.id))) followUntil.current = Date.now() + FOLLOW_MS;
   }, [messages, listVisible]);
   const followEnd = useCallback(() => {
-    if (Date.now() < followUntil.current) scrollRef.current?.scrollToEnd({ animated: true });
+    if (Date.now() < jumpUntil.current) scrollRef.current?.scrollToEnd({ animated: false });
+    else if (Date.now() < followUntil.current) scrollRef.current?.scrollToEnd({ animated: true });
   }, []);
   const stopFollowing = useCallback(() => {
     followUntil.current = 0;
+    jumpUntil.current = 0;
   }, []);
   // The transcript's own height changes when the tray changes (a new question, more chips) or the
   // keyboard opens for the pincode: keep the end in view. Not animated, so it tracks the keyboard.
@@ -205,10 +214,115 @@ export function AdvisorScreen() {
     advisor.markHeld(card.id);
   };
 
-  const toggleAll = () => {
-    if (!showAll) analytics.track(Events.ADVISOR_EXIT, { destination: 'list', step: stepNumber });
-    setShowAll((v) => !v);
+  /** The full list opens as its own page. No income and no pincode go with it. */
+  const seeAll = () => {
+    if (!reveal) return;
+    analytics.track(Events.ADVISOR_EXIT, { destination: 'list', step: stepNumber });
+    const chips = answerPills(state, ADVISOR_CONFIG)
+      .filter((p) => !PRIVATE_PILLS.includes(p.questionId))
+      .map((p) => p.label);
+    navigation.navigate('AdvisorResults', {
+      cardIds: reveal.all.map((c) => c.id),
+      header: reveal.header,
+      chips,
+      proof: reveal.proof,
+      note: reveal.note === NOTE_SAME ? undefined : reveal.note,
+    });
   };
+
+  // ---- Rewinds ----
+  // Every rewind closes the "Change an answer" sheet first.
+  const changeSheet = useRef<BottomSheetModal>(null);
+  const closeSheet = () => changeSheet.current?.dismiss();
+
+  const goBackOne = () => {
+    closeSheet();
+    advisor.back();
+  };
+
+  /** A tap on an answer bubble. More than one answer goes: ask first. */
+  const rewindFromBubble = (id: QuestionId) => {
+    closeSheet();
+    const lost = answersLost(state, ADVISOR_CONFIG, id);
+    if (lost <= 1) {
+      advisor.rewind(id, 'bubble');
+      return;
+    }
+    const later = lost - 1;
+    Alert.alert(
+      'Change this answer?',
+      later === 1 ? 'This also clears 1 later answer.' : `This also clears ${later} later answers.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Change', onPress: () => advisor.rewind(id, 'bubble') },
+      ],
+    );
+  };
+
+  const rewindFromSheet = (id: QuestionId) => {
+    closeSheet();
+    advisor.rewind(id, 'sheet');
+  };
+
+  const startOver = () => {
+    closeSheet();
+    Alert.alert('Start over?', 'This clears all your answers.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Start over',
+        style: 'destructive',
+        onPress: () => {
+          advisor.restart();
+          // Land on the first question: the greeting and the opener, from the top.
+          stopFollowing();
+          scrollRef.current?.scrollTo({ y: 0, animated: false });
+        },
+      },
+    ]);
+  };
+
+  // ---- The end menu (no question left) ----
+  const menu: TrayMenuItem[] = [];
+  if (!step) {
+    if (reveal && reveal.total > reveal.top.length) {
+      menu.push({
+        key: 'see_all',
+        label: `See all ${reveal.total} cards`,
+        onPress: () => {
+          analytics.track(Events.ADVISOR_MENU_TAP, { action: 'see_all' });
+          seeAll();
+        },
+      });
+    }
+    if (advisor.wantsEligibility === false && !advisor.usingSaved) {
+      menu.push({
+        key: 'check_eligibility',
+        label: 'Check which cards I can get',
+        onPress: () => {
+          analytics.track(Events.ADVISOR_MENU_TAP, { action: 'check_eligibility' });
+          // Replaces the "Not now" answer. It is the last answer, so nothing after it goes.
+          advisor.answer('eligBridge', 'yes');
+        },
+      });
+    }
+    menu.push({
+      key: 'change_answer',
+      label: 'Change an answer',
+      onPress: () => {
+        analytics.track(Events.ADVISOR_MENU_TAP, { action: 'change_answer' });
+        changeSheet.current?.present();
+      },
+    });
+    menu.push({
+      key: 'start_over',
+      label: 'Start over',
+      quiet: true,
+      onPress: () => {
+        analytics.track(Events.ADVISOR_MENU_TAP, { action: 'start_over' });
+        startOver();
+      },
+    });
+  }
 
   // ---- Messages ----
   const renderMessage = (m: ChatMessage): React.ReactNode => {
@@ -235,18 +349,18 @@ export function AdvisorScreen() {
           </AdvisorBubble>
         );
       case 'user-answer':
-        return <UserAnswerBubble text={m.text} onPress={() => advisor.rewind(m.questionId)} />;
+        return <UserAnswerBubble text={m.text} onPress={() => rewindFromBubble(m.questionId)} />;
       case 'agent-reveal':
         return m.reveal ? (
           <AdvisorRevealBlock
             header={m.header}
             note={revealNote}
             reveal={m.reveal}
-            extraCards={extraCards}
-            showAll={showAll}
-            onToggleAll={toggleAll}
+            onSeeAll={seeAll}
             onOpen={openRow}
             onHaveThis={haveThis}
+            heldCount={state.held.length}
+            onUndoHeld={advisor.undoHeld}
             animateTiles={canAnimate && entranceDelay.has(m.id)}
             tileDelay={(entranceDelay.get(m.id) ?? 0) + STAGGER_MS}
             tileStagger={STAGGER_MS}
@@ -346,9 +460,10 @@ export function AdvisorScreen() {
         </ScrollView>
         <AdvisorReplyTray
           step={step}
+          menu={menu}
           usingSaved={advisor.usingSaved}
           onAnswer={advisor.answer}
-          onRestart={advisor.restart}
+          onBack={advisor.answered.length > 0 ? goBackOne : undefined}
           onChangeSaved={advisor.changeSavedDetails}
         />
       </Animated.View>
@@ -367,6 +482,7 @@ export function AdvisorScreen() {
       />
       <View style={{ flex: 1, backgroundColor: colors.background.muted }}>{body}</View>
       {sheets}
+      <AdvisorChangeAnswerSheet ref={changeSheet} items={advisor.answered} onPick={rewindFromSheet} />
     </SafeAreaView>
   );
 }

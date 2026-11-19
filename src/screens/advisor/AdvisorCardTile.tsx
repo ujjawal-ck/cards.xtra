@@ -15,7 +15,7 @@ import type { CardModel } from '../../molecules';
 import type { ProofLevel, RevealLabel } from '../../lib/advisor/types';
 
 const ART_W = mediaSize[56];
-const ART_ASPECT = 132 / 84; // same art ratio as AdvisorCardRow and RankedCardRow
+const ART_ASPECT = 132 / 84; // same art ratio as RankedCardRow
 
 const PROOF_TEXT: Record<Exclude<ProofLevel, 'none'>, string> = {
   likely: 'Likely to qualify',
