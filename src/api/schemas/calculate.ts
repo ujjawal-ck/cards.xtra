@@ -6,8 +6,8 @@
  * facts come from the full UAT response of 2026-11-18 (219 cards): fees are
  * strings, `invite_only` is a bool or an int, `max_potential_savings` is
  * "Unlimited" or a number, and `spending_breakdown` has more keys than the
- * 21 inputs. Fixtures: src/api/__fixtures__/uat.calculate_trimmed.json and
- * uat.calculate_waiver_lounge_trimmed.json.
+ * 21 inputs. Fixtures: src/api/__fixtures__/uat.calculate_trimmed.json,
+ * uat.calculate_waiver_lounge_trimmed.json and uat.calculate_league_trimmed.json.
  */
 import { z } from 'zod';
 
@@ -23,6 +23,10 @@ const breakdownLine = z
     spend: numeric,
     savings: numeric,
     savings_type: z.string().nullish(),
+    // League table (2026-11-18): about half the lines carry conv_rate, a few cashback_percentage.
+    points_earned: numeric,
+    cashback_percentage: numeric,
+    conv_rate: numeric,
     maxCap: numeric,
     maxCapReached: z.union([z.boolean(), z.number()]).nullish(),
     explanation: z.array(explanation).nullish(),
@@ -33,6 +37,9 @@ const savingsCard = z
   .object({
     seo_card_alias: z.string(),
     card_name: z.string().nullish(),
+    bank_name: z.string().nullish(),
+    // false or 0 on discontinued cards (15 of 219 on UAT, 2026-11-18).
+    sourceable: z.union([z.boolean(), z.number(), z.string()]).nullish(),
     image: z.string().nullish(),
     card_bg_image: z.string().nullish(),
     total_savings: numeric,

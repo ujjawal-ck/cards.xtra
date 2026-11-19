@@ -94,7 +94,8 @@ import type {
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
 import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
-import { categoryIdForWord, brandIdForWord } from '../lib/cardTools';
+import { categoryIdForWord, brandIdForWord, buildSpends, hasAnySpend } from '../lib/cardTools';
+import { useSavedSpends } from '../lib/savedSpends';
 import {
   colors,
   primitives,
@@ -888,6 +889,9 @@ export function HomeScreen() {
     eligibilityCheckerRef.current?.present();
   }, []);
 
+  // The spends the user saved in an earlier tool run (on this device only).
+  const { answers: savedSpendAnswers } = useSavedSpends();
+
   // Tools row tile → track, then open the tool.
   // `word` is what the tile showed at the tap; the tool opens with it picked.
   const handleToolPress = useCallback(
@@ -901,9 +905,19 @@ export function HomeScreen() {
         case 'category':
           navigation.navigate('BestForCategory', { categoryId: categoryIdForWord(word) });
           return;
-        case 'beat':
-          navigation.navigate('BeatMyCardPick');
+        case 'beat': {
+          // Spends come first: the full card list exists only after the calculation.
+          // Saved spends skip the quiz; the pick screen lets the user edit them.
+          // A tap before the saved spends are read (`loaded` false) opens the quiz. That is safe:
+          // the quiz shows the saved answers as soon as the read lands.
+          const savedSpendBody = buildSpends(savedSpendAnswers);
+          if (hasAnySpend(savedSpendBody)) {
+            navigation.navigate('BeatMyCardPick', { spends: savedSpendBody, answers: savedSpendAnswers });
+          } else {
+            navigation.navigate('SpendQuiz', { next: 'beat' });
+          }
           return;
+        }
         case 'ultimate':
           navigation.navigate('SpendQuiz', { next: 'ultimate' });
           return;
@@ -912,7 +926,7 @@ export function HomeScreen() {
           return;
       }
     },
-    [navigation]
+    [navigation, savedSpendAnswers]
   );
 
   // "Clear" inside the checker → wipe saved details + filter + toggle, then

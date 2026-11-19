@@ -187,7 +187,7 @@ Made for the Home card tools (D24 to D26). Source: the file headers in `src/`. T
 
 ## Batch `advisor-chat-1`, 2026-11-19
 
-Made for the card advisor chat (D28 in `decision.md`). Marked with `DS-ADD(advisor-chat-1)`.
+Made for the card advisor chat (D29 in `decision.md`). Marked with `DS-ADD(advisor-chat-1)`.
 
 | Part | Layer | File | What it gives | Used by today | Rollback |
 |---|---|---|---|---|---|

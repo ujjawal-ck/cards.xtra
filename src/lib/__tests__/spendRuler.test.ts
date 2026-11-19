@@ -5,6 +5,9 @@ import {
   offsetToValue,
   stepValue,
   isLabelTick,
+  rulerStep,
+  stepTyped,
+  MAX_RULER_TICKS,
   type RulerConfig,
 } from '../spendRuler';
 
@@ -55,5 +58,38 @@ describe('spendRuler', () => {
     expect(isLabelTick(10, 10)).toBe(true);
     expect(isLabelTick(5, 10)).toBe(false);
     expect(isLabelTick(5, 0)).toBe(false);
+  });
+});
+
+describe('rulerStep', () => {
+  it('keeps the step when the ruler is short enough', () => {
+    expect(rulerStep(0, 100000, 500)).toBe(500);
+    expect(rulerStep(0, 40, 1)).toBe(1);
+  });
+
+  it('widens the step so the ruler has at most 300 ticks', () => {
+    const step = rulerStep(0, 1000000, 500);
+    expect(step % 500).toBe(0);
+    expect(tickCount({ min: 0, max: 1000000, step, tickGap: 10 })).toBeLessThanOrEqual(MAX_RULER_TICKS);
+  });
+});
+
+describe('stepTyped', () => {
+  const c: RulerConfig = { min: 0, max: 1000, step: 100, tickGap: 8 };
+
+  it('acts like stepValue inside the ruler', () => {
+    expect(stepTyped(300, 1, c, 5000)).toBe(400);
+    expect(stepTyped(300, -1, c, 5000)).toBe(200);
+  });
+
+  it('goes past the ruler end up to the typed max', () => {
+    expect(stepTyped(1000, 1, c, 5000)).toBe(1100);
+    expect(stepTyped(4950, 1, c, 5000)).toBe(5000);
+    expect(stepTyped(5000, 1, c, 5000)).toBe(5000);
+  });
+
+  it('comes back to the ruler end, not into the gap', () => {
+    expect(stepTyped(1050, -1, c, 5000)).toBe(1000);
+    expect(stepTyped(1234, -1, c, 5000)).toBe(1134);
   });
 });

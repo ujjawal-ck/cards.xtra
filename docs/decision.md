@@ -6,8 +6,32 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
-## D27. Card advisor: a guided card finder, opened from search
+## D29. The card advisor is a chat, with a mascot
+2026-11-19 · branch `claude/advisor` (`a6761dd`)
+
+The owner asked for the advisor (D28) as a chat with a small animated card character. The advisor's questions and the cards sit on the left. The user's answers sit on the right. A reply tray at the bottom holds the answer chips or the pincode field. The engine and the config of D28 did not change.
+
+How it works:
+- The transcript is derived from the answers (`src/lib/advisor/transcript.ts`). No message list is stored. A message id never changes, so only new messages animate in.
+- Only the last reveal carries cards, as a horizontal rail of up to three tiles. Each earlier reveal is one line. So the cards and the next question fit on one screen.
+- A tap on one of the user's answers is a rewind: that answer and every later answer go. This replaces the answer pills of D28, where only that one answer was removed.
+- The mascot is `CreditCardAdvisorAvatar` ("Swipey"): a credit card with a face, six states, sizes 48 to 300. It is drawn with SVG parts moved by Reanimated views. The body uses `gradients.premium` and the names in `colors.advisorAvatar`. Guide: `card-advisor-avatar.md`.
+- The chat sets the mascot state from real events only (`avatarStateFor`): error when the catalogue or the eligibility check fails, thinking while the check runs, success for 2 seconds when cards turn "likely to qualify", speaking while a new advisor message arrives, listening while a question waits, idle otherwise.
+- On Android and under reduce motion the mascot shows one still pose for each state, and messages appear with no entrance. This repo keeps Reanimated entrances to iOS.
+
+Builder choices, open for the owner:
+- The name "Swipey" shows in the chat header and the greeting.
+- A rewind fires no analytics event. No event exists for it.
+- No text to speech and no microphone. The app has neither, and one would need a new dependency. `audioLevel` is a plain prop; the mouth runs its own loop without it.
+
+Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the chat from the first question to "How do you earn?", with the card rail and the auto-scroll; the mascot demo in idle, listening, speaking, success and error at 48, 96, 160 and 300.
+
+Not checked: the income, pincode and eligibility steps in the chat layout, the rewind, "I have this" on a tile, the thinking state, Android, a 360 dp screen, 130% font, a screen reader.
+
+## D28. Card advisor: a guided card finder, opened from search
 2026-11-19 · branch `claude/advisor`
+
+This entry was written as D27 on the branch. The Home tools league table took D27 on `Anmol--changes` first, so this one is D28. Commit messages before the merge still say D27.
 
 The owner asked for the advisor as a path of its own. It does not replace the Home inline questions and it does not use the card tools. Entry: a row in the search sheet (empty query, or no results) opens the `Advisor` screen. The advisor asks one tap question at a time and shows three cards after the first answer.
 
@@ -31,6 +55,26 @@ Changed after the first simulator run (2026-11-19): the reason line never repeat
 Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): the search row opens the advisor; the first-card path and the "something specific" path run to the end; the eligibility call returns and cards show "Likely to qualify"; a low income falls back to the cards that fit; a card opens the detail sheet. Seen once and not seen again in two later runs: the advisor went back to its first question after the fifth answer, and the screen then closed. Cause not known.
 
 Not checked: Apply click-out, Android, a 360 dp screen, 130% font, the "better card" and "just exploring" paths, saved eligibility details, the eligibility error state, events in Firebase (the project is still a placeholder).
+
+## D27. The four Home tools share one league table that shows every card with its sum
+2026-11-18 to 2026-11-19 · branch `claude/tools-league-table`, merged into `Anmol--changes` (`2b2b958`, `0d358ef`, `ece3c8f`, `26ab260`)
+
+The owner said the four Home tools were "very different" from great.cards, and then said: "leave ranking, we need to improve the 4 tool on home page using this". A teardown of great.cards showed one open league table with four doors. The owner approved the merge on 2026-11-19. All four tools now end on one result screen, `ToolResultsScreen`.
+
+What is locked:
+- All four tools end on one result screen that shows the sum for each card.
+- Each row shows the sum: savings + milestones (+ lounge) - annual fee. Views: "Quick view" and "By category". Sort chips, find-in-list search, and the filters "Lifetime free" and "Include invite only" sit on top.
+- Ranking is not changed. D26 holds.
+- Saved spends are one store on the device. Logout clears them. Brand runs are not saved.
+
+What is directional (the builder chose it, the owner has not confirmed it):
+- The category starting spends and the even split of one amount are removed. This replaces the part of D25 that signed off those starting spends. The owner did not answer the direct question to reopen D25. The basis is the owner's instruction to follow great.cards.
+- The screen lists every card the calculate call returns (219 on UAT), also loss-making, discontinued and invite-only cards. Three constants in `src/lib/cardTools.ts` switch this: `SHOW_CARDS_NOT_IN_APP`, `SHOW_LOSS_MAKING`, `SHOW_DISCONTINUED`. All are true.
+- Apply moved from the rows into the breakdown sheet. One constant, `APPLY_ON_ROWS` in `ToolResultsScreen.tsx`, flips it.
+- The app lists cards it does not sell. Those rows have no Apply and no card page.
+- Beat my card asks for spends first, then the card. The full card list exists only after the calculation.
+
+Costs: the app calls no great.cards endpoint. Brands are still counted by category, except Amazon and Flipkart, because the partner API rejects brand names. For the same spends, great.cards and the partner API on UAT rank cards differently. The cause is not known. Analytics meaning changed (see `screen-flows.md`, "Card tools").
 
 ## D26. Ranking is our sum plus the fee waiver and the lounge value
 2026-11-18 · branch `claude/rank-waiver-lounge`

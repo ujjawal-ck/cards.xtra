@@ -149,3 +149,7 @@ export type { StepperProps, StepperStep } from './Stepper';
 
 export { InlineFilterQuestion } from './InlineFilterQuestion';
 export type { InlineFilterQuestionProps } from './InlineFilterQuestion';
+
+// Tools v2 (league table): LeagueCardRow
+export { LeagueCardRow } from './LeagueCardRow';
+export type { LeagueCardRowProps } from './LeagueCardRow';

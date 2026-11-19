@@ -332,3 +332,9 @@ export type { QuizStepProps } from './QuizStep';
 export { CreditCardAdvisorAvatar } from './CreditCardAdvisorAvatar';
 export type { CreditCardAdvisorAvatarProps, AdvisorAvatarState } from '../lib/advisorAvatar/types';
 // DS-ADD(advisor-chat-1) end
+// Tools v2 (league table) start: EditSpendsSheet, SavingsBreakdownSheet
+export { EditSpendsSheet } from './EditSpendsSheet';
+export type { EditSpendsSheetProps, EditSpendsSheetHandle } from './EditSpendsSheet';
+export { SavingsBreakdownSheet } from './SavingsBreakdownSheet';
+export type { SavingsBreakdownSheetProps, SavingsBreakdownSheetHandle } from './SavingsBreakdownSheet';
+// Tools v2 (league table) end

@@ -352,7 +352,7 @@ describe('buildReveal', () => {
       const first = buildReveal({ state, config: C, cards: [a, b, c, d] });
       expect(first.top.every((t) => !t.isNew)).toBe(true);
       const same = buildReveal({ state, config: C, cards: [a, b, c, d], previousTop: [a.id, b.id, c.id] });
-      expect(same.note).toBe('Same cards. That answer did not change the best three.');
+      expect(same.note).toBe('Same cards. They still fit your answers.');
       expect(same.top.every((t) => !t.isNew)).toBe(true);
       const changed = buildReveal({ state, config: C, cards: [a, b, c, d], previousTop: [a.id, b.id, d.id] });
       expect(changed.note).toBeUndefined();

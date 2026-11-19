@@ -1,28 +1,21 @@
 /**
- * BeatMyCardResultScreen — "Beat my card", result: the user's card against the best other card.
+ * BeatMyCardResultScreen: "Beat my card", result: the user's card against the best other card.
  *
- * The result is never passed through navigation: the screen reads `useCardSavings(spends)` (the same
- * query key the quiz warmed) and runs `beatMyCard` on it. Outcomes:
- *   not_found  the user's card is not in the comparable list: say so, show up to 3 other cards that
- *              save money (net yearly above 0), or none.
- *   best_wins  another card is better: podium, yearly gap, line-by-line table, Apply Now + View details.
- *   mine_wins / equal  the user's card is (as good as) the best. Its net yearly above 0: its yearly
- *              value, then the next best card as one row if that card saves money. Its net yearly 0
- *              or less: say plainly that the fee is larger than the savings, no amount card.
+ * The result is never passed through navigation: the screen reads `useCardSavings(spends)` and runs
+ * `beatMyCard` on the filtered league. One template for every outcome (other card wins, your card
+ * wins, tie): hero, podium, line table, savings by category, actions. States kept from the old
+ * screen: loading, offline, error, and "card not in the list".
  *
- * Podium: PodiumCompare shows both values and marks no winner when both are 0 or less. A line under it
- * says what a value below zero means.
+ * The opponent is the best card that is not the user's card in the FILTERED list. The user's own
+ * card is found in the full list, so a filter never hides it. Apply never shows for the user's own
+ * card, and never for a card the app does not list.
  *
- * Table (D26): spend rows, then "Lounge visits" (when either card has a lounge value), "Other benefits",
- * and "Annual fee" showing the fee COUNTED in net yearly (0 when the bank waives it at this spend).
- * So each column adds up to its net yearly, apart from the per-line rounding of the spend rows. A line
- * under the table names the card whose fee is waived.
- *
- * Analytics: never the spend amounts, never the name or id of the user's card (it is kept out of every
- * row and pager). Apply goes through useCardDetailSheet, so through useClickOut.
+ * Analytics: the result view once (verdict, load_ms), the error once, a select on card details.
+ * Never a spend amount and never the name or id of the user's card.
  */
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, ScrollView } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -30,60 +23,174 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import type { RootStackParamList } from '../../navigation/types';
-import { Text, Button, Skeleton } from '../../atoms';
-import { PodiumCompare, BreakdownTable, RankedCardRow, BigAmountCard } from '../../molecules';
+import { Text, Button, Skeleton, Chip, Tag, RemoteImage } from '../../atoms';
+import { PodiumCompare, BreakdownTable, RankedCardRow, Accordion } from '../../molecules';
 import type { CardModel } from '../../molecules';
-import { Header, ScreenState } from '../../organisms';
-import { colors, spacing } from '../../tokens';
+import { EditSpendsSheet, Header, ScreenState, CARD_THUMB_ASPECT } from '../../organisms';
+import type { EditSpendsSheetHandle } from '../../organisms';
+import { colors, spacing, radius, borderWidth } from '../../tokens';
 import { useCardSavings } from '../../query/useCardSavings';
-import type { ToolCard } from '../../query/useCardSavings';
-import { beatMyCard } from '../../lib/cardTools';
-import type { BeatResult } from '../../lib/cardTools';
+import type { LeagueRow } from '../../query/useCardSavings';
+import { useSavedSpends } from '../../lib/savedSpends';
+import {
+  DEFAULT_LEAGUE_FILTERS,
+  beatMyCard,
+  buildSpends,
+  filterLeague,
+  hasAnySpend,
+  totalYearlySpend,
+} from '../../lib/cardTools';
+import type { BeatRow, LeagueFilters, SpendKey } from '../../lib/cardTools';
+import {
+  beatTableRows,
+  bestApplicable,
+  heroKind,
+  heroTitle,
+  lineDetail,
+  pickName,
+  rowFooter,
+  rowWinner,
+  waivedNote,
+  winLine,
+} from '../../lib/beatView';
 import type { ClickOutSource } from '../../lib/useClickOut';
 import { useCardDetailSheet } from '../../lib/useCardDetailSheet';
 import { formatINR } from '../../lib/money';
 import { shortCardName } from '../../lib/crossSellPresent';
 import { analytics, Events } from '../../analytics';
-import type { BreakdownRowData } from '../../lib/breakdownTable';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'BeatMyCardResult'>;
 type Rt = RouteProp<RootStackParamList, 'BeatMyCardResult'>;
 
-type Verdict = BeatResult['verdict'] | 'not_found';
-
 const TOOL = 'beat';
 const SOURCE: ClickOutSource = 'beat_my_card';
 const NOT_FOUND_SHOWN = 3;
+const HERO_ART_W = spacing[96];
+
+function artSource(row: LeagueRow) {
+  return row.card ? row.card.cardImage : row.savings.imageUrl ? { uri: row.savings.imageUrl } : {};
+}
+
+/** One category: both amounts, the winner, and the why behind a toggle. */
+function CategoryCompare({
+  row,
+  otherName,
+  onEdit,
+}: {
+  row: BeatRow;
+  otherName: string;
+  onEdit: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const winner = rowWinner(row);
+  const footer = rowFooter(row, otherName);
+  const cell = (who: string, amount: number, wins: boolean) => (
+    <View style={{ flex: 1, gap: spacing[2] }}>
+      <Text variant="caption10Medium" color={colors.text.secondary} numberOfLines={1}>
+        {who}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[6] }}>
+        <Text
+          variant="heading18SemiBold"
+          color={wins ? colors.feedback.success.text : colors.text.primary}
+        >
+          {formatINR(amount)}
+        </Text>
+        {wins ? <Tag label="Wins" size="xxs" tone="success" /> : null}
+      </View>
+    </View>
+  );
+  const body = [
+    lineDetail('Your card', row.mineLine, row.mine),
+    lineDetail(otherName, row.bestLine, row.best),
+  ].join('\n\n');
+  return (
+    <View
+      style={{
+        borderRadius: radius.xl,
+        borderWidth: borderWidth.thin,
+        borderColor: colors.border.subtle2,
+        backgroundColor: colors.surface.default,
+        padding: spacing[16],
+        gap: spacing[12],
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[8] }}>
+        <View style={{ flex: 1, gap: spacing[2] }}>
+          <Text variant="body14SemiBold" color={colors.text.primary}>
+            {row.label}
+          </Text>
+          <Text variant="body12Regular" color={colors.text.secondary}>
+            {`Your spend: ${formatINR(row.spendYearly)} a year`}
+          </Text>
+        </View>
+        <Chip label="Edit" size={24} leadingIcon="edit-outline" onPress={onEdit} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing[12] }}>
+        {cell('Your card', row.mine, winner === 'mine')}
+        {cell(otherName, row.best, winner === 'other')}
+      </View>
+      {footer ? (
+        <Text variant="body12SemiBold" color={colors.text.secondary}>
+          {footer}
+        </Text>
+      ) : null}
+      <Accordion
+        state="bare"
+        title={open ? 'Hide the details' : 'Show the details'}
+        body={body}
+        expanded={open}
+        onToggle={setOpen}
+        style={{ paddingVertical: 0 }}
+      />
+    </View>
+  );
+}
 
 export function BeatMyCardResultScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
-  const { cardAlias, spends } = params;
+  const { cardAlias } = params;
   const insets = useSafeAreaInsets();
-  const { ranked, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+
+  const [answers, setAnswers] = useState(params.answers);
+  const [spends, setSpends] = useState(params.spends);
+  // New params (e.g. the league table edited the spends) replace local state.
+  useEffect(() => {
+    setAnswers(params.answers);
+    setSpends(params.spends);
+  }, [params.answers, params.spends]);
+  const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
+  const { save } = useSavedSpends();
+  const editRef = useRef<EditSpendsSheetHandle>(null);
+
+  const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const loaded = !isLoading && !isOffline && !isError;
+  const filtered = useMemo(() => filterLeague(league, filters), [league, filters]);
+  const mineRow = useMemo(() => league.find((r) => r.savings.alias === cardAlias), [league, cardAlias]);
   const result = useMemo(
-    () => (loaded ? beatMyCard(ranked.map((r) => r.savings), cardAlias) : null),
-    [loaded, ranked, cardAlias],
+    () =>
+      loaded && mineRow
+        ? beatMyCard(
+            filtered.map((r) => r.savings),
+            cardAlias,
+            league.map((r) => r.savings),
+          )
+        : null,
+    [loaded, mineRow, filtered, league, cardAlias],
   );
-  const verdict: Verdict | null = loaded ? (result ? result.verdict : 'not_found') : null;
+  const otherRow = result ? filtered.find((r) => r.savings.alias === result.best.alias) : undefined;
+  const noSpend = !hasAnySpend(spends);
+  // All spends 0 is not "card not found": no verdict is tracked for it.
+  const verdict = loaded && !noSpend ? (!mineRow ? 'not_found' : result ? result.verdict : null) : null;
 
-  const byAlias = useMemo(() => new Map(ranked.map((r) => [r.savings.alias, r])), [ranked]);
-  const mine = result ? byAlias.get(result.mine.alias) : undefined;
-  const best = result ? byAlias.get(result.best.alias) : undefined;
-
-  // The user's card, by either alias. Never listed, never sent to analytics.
-  const isMine = (tc: ToolCard) => tc.savings.alias === cardAlias || tc.card.filterMeta?.cardAlias === cardAlias;
-  const savesMoney = (tc: ToolCard) => tc.savings.netYearly > 0;
-
-  // Analytics: once each, and the view only for a real result. No spends, no name of the user's card.
+  // Analytics: once each. No spends, no name of the user's card.
   const viewTracked = useRef(false);
   useEffect(() => {
     if (!verdict || viewTracked.current) return;
     viewTracked.current = true;
-    // loadMs is undefined when the result came from the cache: leave load_ms out.
     analytics.track(Events.BEAT_RESULT_VIEW, { verdict, ...(loadMs !== undefined ? { load_ms: loadMs } : {}) });
   }, [verdict, loadMs]);
   const errorTracked = useRef(false);
@@ -93,28 +200,65 @@ export function BeatMyCardResultScreen() {
     analytics.track(Events.TOOL_RESULT_ERROR, { tool: TOOL });
   }, [isError]);
 
-  const openDetail = (tc: ToolCard, pager: CardModel[]) => {
-    analytics.track(Events.TOOL_RESULT_SELECT, { tool: TOOL, item_id: tc.card.id, rank: tc.rank });
-    openCard(tc.card, pager);
+  const openDetail = (row: LeagueRow, pager: CardModel[]) => {
+    if (!row.card) return;
+    analytics.track(Events.TOOL_RESULT_SELECT, { tool: TOOL, item_id: row.card.id, rank: row.rank });
+    openCard(row.card, pager);
   };
 
-  const rankedRow = (tc: ToolCard, pager: CardModel[]) => (
-    <RankedCardRow
-      key={tc.savings.alias}
-      rank={tc.rank}
-      cardImage={tc.card.cardImage}
-      name={tc.card.name}
-      headline={{ label: 'You save', amount: tc.savings.netYearly, period: 'year' }}
-      onPress={() => openDetail(tc, pager)}
-    />
+  const onSubmitSpends = (next: Partial<Record<SpendKey, number>>) => {
+    setAnswers(next);
+    setSpends(buildSpends(next));
+    save(next);
+  };
+
+  const rankedRow = (r: LeagueRow, pager: CardModel[]) =>
+    r.card ? (
+      <RankedCardRow
+        key={r.savings.alias}
+        rank={r.rank}
+        cardImage={r.card.cardImage}
+        name={r.card.name}
+        headline={{ label: 'Annual savings', amount: r.savings.netYearly, period: 'year' }}
+        onPress={() => openDetail(r, pager)}
+      />
+    ) : null;
+
+  const filterChips = (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[8] }}>
+      <Chip
+        label="Lifetime free"
+        size={32}
+        state={filters.lifetimeFreeOnly ? 'selected' : 'default'}
+        onPress={() => setFilters((f) => ({ ...f, lifetimeFreeOnly: !f.lifetimeFreeOnly }))}
+      />
+      <Chip
+        label="Include invite only"
+        size={32}
+        state={filters.includeInviteOnly ? 'selected' : 'default'}
+        onPress={() => setFilters((f) => ({ ...f, includeInviteOnly: !f.includeInviteOnly }))}
+      />
+    </View>
   );
 
+  // Back to the pick screen with the spends as they are now (they may have been edited here).
+  const tryAnother = () => navigation.popTo('BeatMyCardPick', { spends, answers });
+
   let content: React.ReactNode;
-  if (isLoading) {
+  if (noSpend) {
+    content = (
+      <ScreenState
+        title="Enter at least one spend"
+        body="Every spend is 0 now, so there is nothing to compare."
+        actionLabel="Edit spends"
+        onAction={() => editRef.current?.present()}
+      />
+    );
+  } else if (isLoading) {
     content = (
       <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16], gap: spacing[16] }}>
         <Text variant="body14Regular" color={colors.text.secondary}>
-          Comparing cards for your spends. This can take up to a minute.
+          Checking every card against your spends. This can take up to a minute.
         </Text>
         <Skeleton height={spacing[96] + spacing[96]} radius="xl" />
         <Skeleton height={spacing[128]} radius="xl" />
@@ -142,9 +286,12 @@ export function BeatMyCardResultScreen() {
   } else {
     let body: React.ReactNode;
 
-    if (verdict === 'not_found' || !result || !mine || !best) {
-      const top = ranked.filter((r) => !isMine(r) && savesMoney(r)).slice(0, NOT_FOUND_SHOWN);
-      const pager = top.map((t) => t.card);
+    if (!mineRow) {
+      // The card is not in the list the calculate call returned.
+      const top = filtered
+        .filter((r) => !!r.card && r.savings.alias !== cardAlias && r.savings.netYearly > 0)
+        .slice(0, NOT_FOUND_SHOWN);
+      const pager = top.map((t) => t.card as CardModel);
       body = (
         <View style={{ gap: spacing[16] }}>
           <View style={{ gap: spacing[4] }}>
@@ -158,115 +305,215 @@ export function BeatMyCardResultScreen() {
             </Text>
           </View>
           {top.map((t) => rankedRow(t, pager))}
+          <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={tryAnother} />
         </View>
       );
-    } else if (verdict === 'best_wins') {
-      const mineVal = mine.savings.netYearly;
-      const bestVal = best.savings.netYearly;
-      const rows: BreakdownRowData[] = result.rows.map((r) => ({ label: r.label, a: r.mine, b: r.best }));
-      if (result.mine.loungeValue > 0 || result.best.loungeValue > 0) {
-        rows.push({ label: 'Lounge visits', a: result.mine.loungeValue, b: result.best.loungeValue });
-      }
-      if (result.mine.extraBenefits > 0 || result.best.extraBenefits > 0) {
-        rows.push({ label: 'Other benefits', a: result.mine.extraBenefits, b: result.best.extraBenefits });
-      }
-      // The listed fee decides whether the row shows; the value is the fee counted in the total.
-      if (result.mine.annualFee > 0 || result.best.annualFee > 0) {
-        rows.push({ label: 'Annual fee', a: -result.mine.annualFeeCounted, b: -result.best.annualFeeCounted });
-      }
-      const waivedNames = [
-        ...(result.mine.feeWaived ? ['Your card'] : []),
-        ...(result.best.feeWaived ? ['Best card'] : []),
-      ];
+    } else if (!result || !otherRow) {
       body = (
         <View style={{ gap: spacing[16] }}>
-          <Text variant="heading18SemiBold" color={colors.text.primary}>
-            {bestVal > 0
-              ? `${shortCardName(best.card.name)} can save you ${formatINR(result.gapYearly)} more a year`
-              : 'No card saves you money on these spends after its fee'}
-          </Text>
+          {filterChips}
+          <ScreenState
+            title="No card matches these filters"
+            body="Clear the filters to compare your card with the best other card."
+            actionLabel="Clear filters"
+            onAction={() => setFilters(DEFAULT_LEAGUE_FILTERS)}
+          />
+        </View>
+      );
+    } else {
+      const kind = heroKind(result.verdict);
+      const mine = result.mine;
+      const other = result.best;
+      const otherName = shortCardName(pickName(otherRow));
+      const myName = shortCardName(pickName(mineRow));
+      const heroRow = kind === 'other_wins' ? otherRow : mineRow;
+      const heroName = kind === 'other_wins' ? otherName : myName;
+      const win = winLine(result.gapYearly, otherName);
+      const note = waivedNote(mine, other, otherName);
+      const spendLabel = `Annual spends: ${formatINR(totalYearlySpend(spends))} a year`;
+      const otherSaves = other.netYearly > 0;
+      const applyRow = otherRow.card ? undefined : bestApplicable(filtered, cardAlias, mine.netYearly);
+
+      body = (
+        <View style={{ gap: spacing[16] }}>
+          {filterChips}
+
+          <Animated.View
+            key={kind}
+            entering={FadeInDown.duration(400)}
+            accessible
+            accessibilityRole="header"
+            accessibilityLabel={`${heroTitle(kind)}. ${heroName}`}
+            style={{
+              alignItems: 'center',
+              gap: spacing[8],
+              padding: spacing[16],
+              borderRadius: radius.xl,
+              backgroundColor: kind === 'tie' ? colors.surface.sunken2 : colors.feedback.success.subtle,
+            }}
+          >
+            <Text
+              variant="heading18SemiBold"
+              color={kind === 'tie' ? colors.text.primary : colors.feedback.success.text}
+            >
+              {heroTitle(kind)}
+            </Text>
+            {kind !== 'tie' ? (
+              <>
+                <RemoteImage
+                  source={artSource(heroRow)}
+                  style={{
+                    width: HERO_ART_W,
+                    aspectRatio: CARD_THUMB_ASPECT,
+                    borderRadius: radius.sm,
+                    backgroundColor: colors.surface.sunken,
+                  }}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                />
+                <Text variant="body14SemiBold" color={colors.text.primary} align="center">
+                  {kind === 'mine_wins' ? `${heroName} (your card)` : heroName}
+                </Text>
+              </>
+            ) : null}
+          </Animated.View>
+
           <View style={{ gap: spacing[8] }}>
             <PodiumCompare
-              title="Net a year"
-              a={{ name: 'Your card', image: mine.card.cardImage, value: mineVal }}
-              b={{ name: 'Best card', image: best.card.cardImage, value: bestVal }}
+              title="Annual savings"
+              contextLabel={spendLabel}
+              onContextPress={() => editRef.current?.present()}
+              a={{ name: 'Your card', image: artSource(mineRow), value: mine.netYearly }}
+              b={{ name: otherName, image: artSource(otherRow), value: other.netYearly }}
             />
-            {mineVal < 0 || bestVal < 0 ? (
+            {win ? (
+              <Text variant="body14SemiBold" color={colors.text.primary} align="center">
+                {win}
+              </Text>
+            ) : null}
+            {mine.netYearly < 0 || other.netYearly < 0 ? (
               <Text variant="body12Regular" color={colors.text.secondary}>
                 A value below zero means the annual fee is more than the savings.
               </Text>
             ) : null}
           </View>
+
           <BreakdownTable
-            rows={rows}
-            headers={{ label: 'Per year', a: 'Your card', b: 'Best card' }}
-            totalLabel="Net a year"
-            total={{ a: mineVal, b: bestVal }}
+            rows={beatTableRows(mine, other)}
+            headers={{ label: 'Per year', a: 'Your card', b: 'Other card' }}
+            totalLabel="Your annual savings"
+            total={{ a: mine.netYearly, b: other.netYearly }}
           />
-          {waivedNames.length > 0 ? (
+          {note ? (
             <Text variant="body12Regular" color={colors.text.secondary}>
-              {`${waivedNames.join(' and ')}: the bank waives the annual fee at this yearly spend, so it is not counted.`}
+              {note}
             </Text>
           ) : null}
+
+          {result.rows.length > 0 ? (
+            <View style={{ gap: spacing[12] }}>
+              <Text variant="heading18SemiBold" color={colors.text.primary}>
+                Savings by category
+              </Text>
+              {result.rows.map((r) => (
+                <CategoryCompare
+                  key={r.key}
+                  row={r}
+                  otherName={otherName}
+                  onEdit={() => editRef.current?.present(r.key as SpendKey)}
+                />
+              ))}
+            </View>
+          ) : null}
+
           <View style={{ gap: spacing[8] }}>
-            {/* No Apply for a card that also loses money on these spends. */}
-            {bestVal > 0 ? (
-              <Button label="Apply Now" variant="solid" tone="main" size={52} fullWidth onPress={() => applyCard(best.card)} />
+            {kind === 'other_wins' && otherRow.card ? (
+              <>
+                {otherRow.card.cashback ? (
+                  <View style={{ gap: spacing[2] }}>
+                    <Text variant="caption10Medium" color={colors.text.secondary}>
+                      CashKaro Rewards
+                    </Text>
+                    <Text variant="body14SemiBold" color={colors.text.primary}>
+                      {otherRow.card.cashback}
+                    </Text>
+                  </View>
+                ) : null}
+                {/* No Apply for a card that also loses money on these spends. */}
+                {otherSaves ? (
+                  <Button
+                    label="Apply now"
+                    variant="solid"
+                    tone="main"
+                    size={52}
+                    fullWidth
+                    onPress={() => otherRow.card && applyCard(otherRow.card)}
+                  />
+                ) : null}
+                <Button
+                  label="View card details"
+                  variant="outline"
+                  tone="main"
+                  size={52}
+                  fullWidth
+                  onPress={() => openDetail(otherRow, [otherRow.card as CardModel])}
+                />
+              </>
             ) : null}
+            {kind === 'other_wins' && !otherRow.card ? (
+              <>
+                <Text variant="body14Regular" color={colors.text.secondary}>
+                  You cannot apply for this card in this app.
+                </Text>
+                {applyRow?.card ? (
+                  <View style={{ gap: spacing[8] }}>
+                    <Text variant="body14SemiBold" color={colors.text.primary}>
+                      Best card you can apply for here
+                    </Text>
+                    {rankedRow(applyRow, [applyRow.card])}
+                    <Button
+                      label="Apply now"
+                      variant="solid"
+                      tone="main"
+                      size={52}
+                      fullWidth
+                      onPress={() => applyRow.card && applyCard(applyRow.card)}
+                    />
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+            {kind === 'mine_wins' ? (
+              <Text variant="body14SemiBold" color={colors.text.primary}>
+                Keep your card. No card beats it on these spends.
+              </Text>
+            ) : null}
+            {kind === 'tie' ? (
+              <Text variant="body14SemiBold" color={colors.text.primary}>
+                Keep your card. No card beats it on these spends, and one ties it.
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ gap: spacing[8] }}>
             <Button
-              label="View details"
+              label="See the full ranking"
               variant="outline"
               tone="main"
               size={52}
               fullWidth
-              onPress={() => openDetail(best, [best.card])}
+              onPress={() =>
+                navigation.navigate('ToolResults', {
+                  tool: 'beat',
+                  spends,
+                  answers,
+                  title: 'All cards, ranked',
+                  highlightAlias: cardAlias,
+                })
+              }
             />
+            <Button label="Try another card" variant="outline" tone="main" size={52} fullWidth onPress={tryAnother} />
           </View>
-        </View>
-      );
-    } else {
-      // mine_wins or equal. The next best row only when that card saves money.
-      const mineName = shortCardName(mine.card.name);
-      const mineSaves = savesMoney(mine);
-      const next = !isMine(best) && savesMoney(best) ? best : null;
-      body = (
-        <View style={{ gap: spacing[16] }}>
-          {mineSaves ? (
-            <>
-              <Text variant="heading18SemiBold" color={colors.text.primary}>
-                {verdict === 'equal'
-                  ? `${mineName} is as good as the best for these spends`
-                  : `${mineName} is already the best for these spends`}
-              </Text>
-              <BigAmountCard amount={mine.savings.netYearly} label="Your net a year with this card" />
-            </>
-          ) : (
-            <View style={{ gap: spacing[4] }}>
-              {/* Below zero can only come from a counted fee. At zero the fee may be waived: then say that. */}
-              <Text variant="heading18SemiBold" color={colors.text.primary}>
-                {mine.savings.netYearly < 0
-                  ? `${mineName} costs more than it saves on these spends`
-                  : mine.savings.feeWaived
-                    ? `${mineName} saves nothing on these spends`
-                    : `${mineName} saves nothing on these spends after its fee`}
-              </Text>
-              <Text variant="body14Regular" color={colors.text.secondary}>
-                {mine.savings.netYearly < 0
-                  ? 'With these spends, its annual fee is larger than what it saves you.'
-                  : mine.savings.feeWaived
-                    ? 'The bank waives its annual fee at this yearly spend, but the card gives no savings on these spends.'
-                    : 'With these spends, its annual fee is as large as what it saves you.'}
-              </Text>
-            </View>
-          )}
-          {next ? (
-            <View style={{ gap: spacing[8] }}>
-              <Text variant="body14SemiBold" color={colors.text.secondary}>
-                {mineSaves ? 'Next best card' : 'Best other card'}
-              </Text>
-              {rankedRow(next, [next.card])}
-            </View>
-          ) : null}
         </View>
       );
     }
@@ -294,6 +541,7 @@ export function BeatMyCardResultScreen() {
       <Header leading="back" title="Beat my card" onLeadingPress={() => navigation.goBack()} />
       {content}
       {sheets}
+      <EditSpendsSheet ref={editRef} answers={answers} onSubmit={onSubmitSpends} />
     </SafeAreaView>
   );
 }
