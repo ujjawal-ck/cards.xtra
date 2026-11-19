@@ -1,0 +1,15 @@
+{
+  "name": "cards-xtra-storybook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev -p 6006 -c .storybook",
+    "build": "storybook build -c .storybook -o dist"
+  },
+  "devDependencies": {
+    "storybook": "10.0.8",
+    "@storybook/react-native-web-vite": "10.0.8",
+    "@storybook/addon-docs": "10.0.8",
+    "vite": "^7.1.0"
+  }
+}
