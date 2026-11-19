@@ -1,0 +1,76 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Buttons/Overview" />
+
+<PageHeader title="Buttons" meta="1 component · atoms">
+One tappable action, six looks. Saffron is the only solid colour (D17). Cobalt stays for outline, link and the partner Shop & Earn CTA.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: solid (Saffron only), outline, link, or a sticky footer?"
+  rows={[
+    { building: 'The main action on a screen or card (Apply now, Get OTP, Withdraw)', use: 'Button variant="solid" tone="main"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'Partner "Shop & Earn upto X%" call to action (the one Cobalt solid)', use: 'Button variant="solid" tone="accent"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'A second action next to the main one (Compare, View details)', use: 'Button variant="outline" tone="main" or "second"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'A soft action on a tinted surface (Share)', use: 'Button variant="subtle"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'Log out, delete or any action that cannot be undone', use: 'Button variant="destructive"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'A skip or secondary action on a dark masthead', use: 'Button variant="ghost"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'An inline text action (Read terms)', use: 'Button variant="link"', tier: 'atom', story: 'components-buttons-button--docs' },
+    { building: 'A sticky bar at the bottom of a screen with one or two buttons', use: 'FooterButtons (organism, uses Button)', tier: 'organism' },
+    { building: 'A payment-method row on the withdraw screen', use: 'methodRow (screen-local, not a Button)', tier: 'screen-local' },
+  ]}
+/>
+
+## Variant and tone
+
+| Variant | main | second | accent |
+|---|---|---|---|
+| `solid` | Saffron fill (`action.primary.default`) | Saffron fill (same as main) | Cobalt fill (`action.accent.default`) |
+| `outline` | Saffron outline (`action.primary.border`, label `action.primary.hover`) | Cobalt-grey outline (`action.secondary.border`) | not used |
+| `subtle` | `action.secondary.default` fill | same | same |
+| `destructive` | `action.destructive.default` fill | same | same |
+| `ghost` | transparent, white label, `border.inverse` | same | same |
+| `link` | no box, `text.link`, underlined | same | same |
+
+Only `solid` and `outline` read `tone`. Every other variant ignores it.
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'Container (solid main)', token: 'colors.action.primary.default', note: 'Saffron. Disabled sets opacity 0.4.' },
+  { part: 'Container (solid accent)', token: 'colors.action.accent.default', note: 'Cobalt, partner CTA only.' },
+  { part: 'Outline stroke', token: 'borderWidth.thin + colors.action.secondary.border', note: 'Main tone uses colors.action.primary.border.' },
+  { part: 'Label size 36', token: 'body12Medium, radius.sm, padH spacing[24]', note: 'Height 36 (component spec).' },
+  { part: 'Label size 44', token: 'body14Medium, radius.lg, padH spacing[32]', note: 'Height sizing.touchMin.' },
+  { part: 'Label size 52', token: 'body16Medium, radius.lg, padH spacing[40]', note: 'Height 52 (component spec).' },
+  { part: 'Icon', token: 'iconSize[16] (size 36), iconSize[20] (44, 52)', note: 'Gap to label spacing[4]. Modes: none, leading, trailing, only.' },
+  { part: 'Full width inset', token: 'spacing[16]', note: 'Replaces the size padding so the label has room.' },
+  { part: 'Loading spinner', token: 'label colour', note: 'Replaces label and icon; taps blocked.' },
+]} />
+
+## Composition
+
+- A `Button` is a single atom. It holds a label and at most one icon. It never holds another component.
+- Pair at most one `solid` button with outline or link buttons in a row. Two solid Saffron buttons side by side have no hierarchy.
+- `icon="only"` still needs `label`: it becomes the accessibility label.
+- Pressed state is a Pressable state and has no static prop. Disabled and loading block `onPress`.
+- Haptic: `medium` for solid, `light` for the rest. Pass `haptic="none"` to silence it.
+- For a sticky bottom bar use `FooterButtons`. It is built from `Button`.
+
+<DoDont
+  dos={[
+    'Use solid Saffron (tone main or second) for the one primary action on a screen.',
+    'Use tone="accent" only for the partner Shop & Earn upto X% call to action.',
+    'Keep the label to one short line (a label never wraps).',
+    'Give an icon-only button a label for screen readers.',
+    'Use outline tone second for secondary actions, link for inline actions.',
+  ]}
+  donts={[
+    'Do not make a Cobalt solid button for anything else (D17: card tile Apply now, Get OTP, Apply Filter, login sheets are all Saffron).',
+    'Do not put two solid buttons next to each other.',
+    'Do not set labelColor to a raw hex. Pass a semantic token only.',
+    'Do not use ghost on a light surface (white label on white).',
+    'Do not use destructive for a plain cancel.',
+  ]}
+/>

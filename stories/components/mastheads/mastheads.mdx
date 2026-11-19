@@ -1,0 +1,60 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Mastheads/Overview" />
+
+<PageHeader title="Mastheads" meta="4 components · organisms">
+The hero block at the top of a screen or sheet. Masthead has six layouts chosen by variant, and also exports OffersCategoryStrip. The other three are single-purpose: card detail, eligibility verdict and missing cashback. Read this page together with Header and titles: one table covers both.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: a plain screen, Home, or a hero block? Read this table on both Header and titles and Mastheads."
+  rows={[
+    { building: "A plain screen with back or close, a title and optional tabs", use: "Header", tier: "organism", story: "components-header-and-titles-header--docs" },
+    { building: "The Home screen top strip: logo, help, messages, bell, then a frosted bar with search and chips after scroll", use: "HomeHeader", tier: "organism", story: "components-header-and-titles-homeheader--docs" },
+    { building: "Floating back and share buttons over a hero image or a dark hero", use: "MastheadHeader", tier: "organism", story: "components-header-and-titles-mastheadheader--docs" },
+    { building: "A per-screen hero: profile, earnings, payment, cashback status, home or offers", use: "Masthead", tier: "organism", story: "components-mastheads-masthead--docs" },
+    { building: "The collapsing hero at the top of the card detail sheet", use: "CardDetailMasthead", tier: "organism", story: "components-mastheads-carddetailmasthead--docs" },
+    { building: "The eligibility verdict hero: eligible, maybe or ineligible", use: "EligibilityMasthead", tier: "organism", story: "components-mastheads-eligibilitymasthead--docs" },
+    { building: "The Missing Cashback help intake hero", use: "MissingCashbackMasthead", tier: "organism", story: "components-mastheads-missingcashbackmasthead--docs" },
+  ]}
+/>
+
+## Anatomy
+
+Masthead variant "profile", the main part. Source: `src/organisms/Masthead.tsx`.
+
+<Anatomy parts={[
+  { part: 'Container', token: 'sizing.containerMobile (360), gap spacing[10], padding top 80 and horizontal spacing[16]', note: '242 tall' },
+  { part: 'Card', token: 'radius.xl, elevation.light.xs, images.backgrounds.medium', note: '328 by 162, padding top 48, bottom 12' },
+  { part: 'Name', token: 'heading22Bold, colors.text.primary', note: '' },
+  { part: 'Contact', token: 'body12Regular, colors.text.secondary', note: 'Masked on real data' },
+  { part: 'Edit button', token: "Button solid, tone second, size 36", note: 'marginTop spacing[12]' },
+  { part: 'Avatar ring', token: 'colors.surface.sunken, radius.full', note: '76 dp, overlaps the card top' },
+  { part: 'Avatar disc', token: 'colors.action.primary.default, elevation.brand.md', note: '64 dp, initial in heading28Bold, colors.text.inverse' },
+]} />
+
+EligibilityMasthead eligible: banner `gradients.success`, radius `2xl`, 204 tall. Info pill `colors.surface.dark`, text `colors.feedback.success.onColor`. Floating card `elevation.light.md`, pulled up by `spacing[32]` plus `spacing[20]`. CardDetailMasthead: expanded 248 plus `spacing[16]`, collapsed 102, driven by one `progress` shared value. MissingCashbackMasthead: image 360 by 268 ratio, bottom corners `radius['2xl']`, back button 40 dp `colors.surface.default`.
+
+## Composition
+
+- Masthead variants: profile, earnings, payment, cashback-status, home, offers. The home variant has size default (tall hero) and compact (header row and SearchBar only).
+- Home reuses HomeHeader and SearchBar. Offers reuses SearchBar and OffersCategoryStrip. Profile reuses Button. Cashback-status reuses StatusBadge and BrandLogo.
+- OffersCategoryStrip is exported so the Offers screen can pin it as a sticky header while the search row scrolls away.
+- CardDetailMasthead gets its progress from the parent sheet (gorhom animatedIndex). The parent also drives the sheet body from the same value.
+- EligibilityMasthead variants map to the three result sheets: EligibleSheet, MaybeSheet and IneligibleSheet.
+
+<DoDont
+  dos={[
+    'Pick the Masthead variant by screen, not by look.',
+    'Pass amounts as formatted strings with Indian grouping, for example ₹1,00,000.',
+    'Give the hero one job: one number, one action.',
+    'Use MastheadHeader on top of a hero for back and share.',
+  ]}
+  donts={[
+    'Do not stack a Header and a Masthead on one screen.',
+    'Do not hardcode a cashback rate in a hero: write X% until verified.',
+    'Do not rely on the baked heading in MissingCashbackMasthead for localised copy.',
+    'Do not mount CardDetailMasthead without a shared progress value.',
+  ]}
+/>

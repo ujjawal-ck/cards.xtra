@@ -1,0 +1,51 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Divider/Overview" />
+
+<PageHeader title="Divider" meta="2 components · atoms">
+A line between content: horizontal for stacked blocks, vertical for blocks side by side. The thick section band separates major page floors.
+</PageHeader>
+
+## Which one
+
+| You are separating | Use |
+|---|---|
+| Rows in a list or blocks in a card | `Divider style="solid"` |
+| A looser, decorative break | `Divider style="dashed"` or `"fade"` |
+| Two alternative paths ("Or") | `Divider style="or"` (horizontal) or `DividerVertical style="or"` |
+| A list from its label and count ("Your cards 3") | `Divider style="text-count"` |
+| Two major floors of a page | `Divider style="section"` (8 px band) |
+| Two blocks side by side (two stats) | `DividerVertical` |
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'solid line', token: 'colors.border.subtle3, borderWidth.thin', note: 'Override with color.' },
+  { part: 'dashed line', token: 'colors.border.default, pattern 4 8', note: 'Drawn in react-native-svg, same on iOS and Android.' },
+  { part: 'fade line', token: 'colors.border.default at 0, 100, 0 percent alpha', note: 'Fades at both ends.' },
+  { part: 'or', token: 'two flex lines and "Or" text', note: 'Vertical version: two 24 px lines and the word.' },
+  { part: 'text-count label', token: 'colors.divider.textCountFg', note: 'Line fades from colors.divider.textCountFadeStart.' },
+  { part: 'section band', token: 'spacing[8] high, colors.surface.sunken', note: 'Full bleed. Override shade with color.' },
+  { part: 'DividerVertical', token: 'width borderWidth.thin, colors.border.default, height 80', note: 'Styles: solid, fade, dashed (2 2), or.' },
+]} />
+
+## Composition
+
+- A horizontal `Divider` fills the width of its parent. Give the parent a width.
+- `DividerVertical` needs a parent with a row direction and a height; its own `height` prop sets the line length.
+- `color` works on `solid` and `dashed` only (and the section band).
+- Dividers carry no state. They are decoration; they have no accessibility role.
+
+<DoDont
+  dos={[
+    'Use a solid line inside a card and the 8 px section band between page floors.',
+    'Give the text-count style a short label and a count.',
+    'Match the vertical divider height to the blocks beside it.',
+  ]}
+  donts={[
+    'Do not stack a line and a section band together.',
+    'Do not set color to a raw hex; pass a token.',
+    'Do not use "or" for something that is not a real choice.',
+  ]}
+/>

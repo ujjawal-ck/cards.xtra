@@ -1,0 +1,55 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Tab bar/Overview" />
+
+<PageHeader title="Tab bar" meta="3 components · organism and molecules">
+Three parts that switch what the user sees. BottomNav moves between the four app sections. TabPrimary switches the content of one page. TabsSecondary flips between two to four views of the same data.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: does it move the whole app, one page, or one view of the same data?"
+  rows={[
+    { building: 'Switch between Home, Offers, Earnings and Profile', use: 'BottomNav', tier: 'organism', story: 'components-tab-bar-bottomnav--docs' },
+    { building: 'Switch the list on one page (All, Pending, Paid) with optional counts, or many tabs that scroll', use: 'TabPrimary', tier: 'molecule', story: 'components-tab-bar-tabprimary--docs' },
+    { building: 'Flip between 2 to 4 views of the same data (Cashback or Rewards), as a segment control', use: 'TabsSecondary', tier: 'molecule', story: 'components-tab-bar-tabssecondary--docs' },
+  ]}
+/>
+
+## Anatomy
+
+BottomNav, the main part. Source: `src/organisms/BottomNav.tsx`.
+
+<Anatomy parts={[
+  { part: 'Pill', token: 'colors.surface.dark, radius.full', note: '60 tall, 8 inner padding (spacing[8])' },
+  { part: 'Tab', token: 'flex: 1, full pill height', note: 'About 76 by 60 tap area, equal width' },
+  { part: 'Active label', token: 'caption10SemiBold, colors.text.inverse', note: 'Filled icon' },
+  { part: 'Inactive label', token: 'caption10Regular, colors.text.inverseMuted', note: 'Outline icon, baked at 70% white' },
+  { part: 'Spotlight', token: 'colors.text.inverse glow, primitives.transparentWhite[80] bar', note: 'One shared glow that springs between tabs, 56 by 40 glow, 20 by 3 emitter' },
+  { part: 'Icon', token: '22 dp, nav-*-outline and nav-*-filled', note: 'Settles 0.86 to 1 on activate' },
+]} />
+
+TabPrimary: container `colors.surface.default`, padding `spacing[16]`, gap `spacing[8]`, tabs are `Chip` in tab mode. TabsSecondary: track `colors.action.secondary.default`, border `colors.border.default` (`borderWidth.thin`), `radius.full`, thumb `colors.surface.default`, active label `colors.text.link`, inactive `colors.text.secondary`.
+
+## Composition
+
+- BottomNav sits in `TabNavigator`, which places it above the home indicator. The component does not position itself.
+- Header takes a `tabs` prop and renders TabPrimary under the header row. Do not stack a second TabPrimary under it.
+- TabPrimary scrolls sideways, so 2 to 10 tabs all fit without truncation. TabsSecondary does not scroll: segments share the width equally.
+- Press feedback on BottomNav is a scale to 0.92 with a spring. No size change between states, so labels never jiggle.
+- Accessibility: BottomNav is a `tablist` with `tab` roles and a selected state.
+
+<DoDont
+  dos={[
+    'Use BottomNav only for the four app sections.',
+    'Use TabPrimary for page-level filters, with a count when the number helps the choice.',
+    'Use TabsSecondary for 2 to 4 short labels on equal footing.',
+    'Keep labels short: one or two words.',
+  ]}
+  donts={[
+    'Do not add a fifth tab to BottomNav without a product decision.',
+    'Do not use TabsSecondary for more than 4 segments or long labels: it does not scroll or truncate.',
+    'Do not nest TabPrimary inside TabsSecondary or the reverse.',
+    'Do not hide BottomNav on a tab root: it is the only way between sections.',
+  ]}
+/>

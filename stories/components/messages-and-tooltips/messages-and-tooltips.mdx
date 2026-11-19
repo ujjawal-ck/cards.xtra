@@ -1,0 +1,65 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Messages and tooltips/Overview" />
+
+<PageHeader title="Messages and tooltips" meta="6 components · molecules">
+Short feedback and guidance for the user. Pick by where the message lives and how long it stays: in the page flow, attached to a strip, gone after a few seconds, shown on demand, app-wide, or promotional.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: in-flow, attached to a strip, transient, on demand, app-wide or promotional?"
+  rows={[
+    { building: 'A message in the page flow, with a title or actions (for example a success note after an email change)', use: 'InlineMessage', tier: 'molecule', story: 'components-messages-and-tooltips-inlinemessage--docs' },
+    { building: 'A thin caption strip attached to the top or bottom of a block, with an optional link', use: 'StripAlert', tier: 'molecule', story: 'components-messages-and-tooltips-stripalert--docs' },
+    { building: 'Feedback that disappears by itself after an action (download started, link copied)', use: 'Toast', tier: 'molecule', story: 'components-messages-and-tooltips-toast--docs' },
+    { building: 'A short explanation the user asks for by tapping an info icon', use: 'Tooltip', tier: 'molecule', story: 'components-messages-and-tooltips-tooltip--docs' },
+    { building: 'The app has no internet (app-wide, pinned to the top)', use: 'OfflineBanner', tier: 'molecule', story: 'components-messages-and-tooltips-offlinebanner--docs' },
+    { building: 'A promotional CTA at the bottom of a list screen', use: 'TrackMoreBanner', tier: 'molecule', story: 'components-messages-and-tooltips-trackmorebanner--docs' },
+  ]}
+/>
+
+## Anatomy
+
+Main part: `InlineMessage`. `Toast` uses the same tone system with a smaller body.
+
+<Anatomy parts={[
+  { part: 'Container fill', token: 'colors.tones[tone].bgSubtle', note: 'One of 9 tones: brand, gray, success, warning, error, info, sky, rose, purple' },
+  { part: 'Container border', token: 'colors.tones[tone].border · borderWidth.thin' },
+  { part: 'Container radius', token: 'radius.xl (Toast: radius.lg)' },
+  { part: 'Container padding', token: 'spacing[12] (Toast: 8 / 12)', note: 'Gap between parts spacing[8]' },
+  { part: 'Leading icon', token: 'iconSize[24] · colors.tones[tone].text', note: 'Optional. Toast uses iconSize[20]' },
+  { part: 'Title', token: 'body14SemiBold · colors.tones[tone].text', note: 'Optional' },
+  { part: 'Message', token: 'body14Medium · colors.tones[tone].text', note: 'Toast: body12Regular' },
+  { part: 'Actions row', token: 'body14SemiBold · spacing[16] gap', note: 'action: none, single or two' },
+  { part: 'Dismiss', token: '"×" glyph 18 px · colors.tones[tone].text', note: 'Only when onDismiss is passed. Plain text, not an icon' },
+]} />
+
+## Composition
+
+- `InlineMessage`, `StripAlert` and `Toast` share one tone system. Every colour comes from `colors.tones[tone]`. Do not pick a hex in a screen.
+- `StripAlert` is full width and 32 px high. Place it flush against the block it belongs to.
+- `Toast` has no timer and no position. The screen shows it with local state and hides it itself (about 3 s on payment history details).
+- `Tooltip` draws only the bubble and the arrow. The screen decides when it shows, where it sits and when it hides (4 s on the Earnings masthead). Use `arrowAlign="end"` under a right-aligned info icon.
+- `OfflineBanner` is mounted once in `App.js` next to the navigator. Do not mount it in a screen. It uses `colors.feedback.warning`, not a tone.
+- `TrackMoreBanner` carries its own 16 px side inset. Do not wrap it in a padded container.
+
+<DoDont
+  dos={[
+    'Use one message per event. Pick the tone by meaning: success, warning, error, info.',
+    'Write cashback rates as "X%" until the rate is verified.',
+    'Use Toast for feedback that needs no answer, and InlineMessage when the user may need to act.',
+    'Keep StripAlert text to one line: it is cut off with an ellipsis.',
+  ]}
+  donts={[
+    'Do not stack a Toast on an InlineMessage that says the same thing.',
+    'Do not mount OfflineBanner inside a screen.',
+    'Do not use Tooltip for content the user must read: it shows on demand only.',
+    'Do not hardcode tone colours. Do not invent a tenth tone.',
+  ]}
+/>
+
+## Open questions for the owner
+
+- `StripAlert` cuts long text on one line. Should it wrap, or stay cut off?
+- `Toast` and `Tooltip` timers live in each screen. Should one shared hook own them?

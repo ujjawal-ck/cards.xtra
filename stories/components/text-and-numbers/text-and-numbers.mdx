@@ -1,0 +1,61 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Text and numbers/Overview" />
+
+<PageHeader title="Text and numbers" meta="5 components · atoms">
+Everything that prints words or figures: the token-bound Text, a gradient fill, an animated money reveal, a number with a stated direction, and a countdown chip.
+</PageHeader>
+
+## Which one
+
+| You are showing | Use |
+|---|---|
+| Any copy | `Text` with a `variant` |
+| A highlighted phrase with a gradient fill | `GradientText` |
+| The Earnings headline that rolls in | `RollingAmount` |
+| A figure compared with another ("₹590, ₹2,360 less") | `StatDelta` |
+| A time left, or a fixed update date | `Timer` |
+
+## Anatomy (Text, the main part)
+
+<Anatomy parts={[
+  { part: 'variant', token: 'typography[variant]', note: 'Family, size, line height and weight in one word: body14Medium, heading24Bold, display36ExtraBold, caption10Regular.' },
+  { part: 'color', token: 'colors.text.primary (default)', note: 'Also text.secondary, text.tertiary, text.link, text.inverse, feedback.*.text.' },
+  { part: 'align', token: 'left (default), center, right', note: 'Sugar for textAlign.' },
+  { part: 'Other props', token: 'React Native Text props', note: 'numberOfLines, onPress, accessibilityRole pass through.' },
+]} />
+
+The other four parts use Text inside:
+
+| Part | Typography | Colour |
+|---|---|---|
+| `GradientText` | any `variant` | a named gradient (`gradients.reward`, `gradients.primary` ...) |
+| `RollingAmount` | `display36ExtraBold` default | `colors.text.inverse` default (for a dark surface) |
+| `StatDelta` | value `body14SemiBold`, label `body12Regular`, delta `body12SemiBold` | `feedback.success.text`, `feedback.error.text` or `text.secondary` |
+| `Timer` | `body12SemiBold` | `colors.tones.error.text`, fill `tones.error.bgSubtle`, border `tones.error.border` |
+
+## Composition
+
+- Never set font size, family, weight or line height by hand. Use a `variant`, or add one to `src/tokens/typography.ts`.
+- Text follows the OS font size with no cap. Components grow (minHeight, wrap) instead of clipping.
+- Format money with `formatINR` (Indian grouping: ₹1,00,000). `StatDelta` does this for a numeric `value`.
+- `StatDelta` states direction with an icon and a word, never colour alone.
+- `RollingAmount`: pass a `playToken` that changes to replay the roll. Do not use it for a value that changes often.
+- `Timer` ticks every second only when `targetTime` is set; otherwise it shows the numbers you pass.
+- Web: `GradientText` and `RollingAmount` use a masked view and reanimated. They may render blank or static on web. See the story notes; check on a device.
+
+<DoDont
+  dos={[
+    'Use a typography variant for every piece of text.',
+    'Use colour tokens: text.primary for body, text.secondary for support, text.link for links.',
+    'Show a rupee amount with Indian grouping and a full amount (no truncation).',
+    'Pair a good or bad delta colour with an arrow and a word.',
+  ]}
+  donts={[
+    'Do not hand-set fontSize or fontFamily on a Text.',
+    'Do not use a raw hex for a gradient; pass a named gradient.',
+    'Do not put a rolling number on a light surface without setting its colour.',
+    'Do not show only red or green to say up or down.',
+  ]}
+/>

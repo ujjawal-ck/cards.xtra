@@ -96,6 +96,7 @@ const config: StorybookConfig = {
       { find: /^@lottiefiles\/dotlottie-react$/, replacement: mock('lottie.tsx') },
       { find: /^react-native-confetti-cannon$/, replacement: mock('confetti.tsx') },
       { find: /^expo-secure-store$/, replacement: mock('secureStore.ts') },
+      { find: /^expo-sensors$/, replacement: mock('sensors.ts') },
       { find: /^expo-updates$/, replacement: mock('updates.ts') },
     ];
     const prev = cfg.resolve.alias;

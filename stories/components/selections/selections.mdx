@@ -1,0 +1,76 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Selections/Overview" />
+
+<PageHeader title="Selections" meta="11 components · atoms and molecules">
+Controls where the user picks from known options: filters, answers, consent and dates.
+Pick by how many answers are allowed, whether the choice filters a list or answers a question, and where it sits.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: one or many, filter or answer, inline or in a sheet?"
+  rows={[
+    { building: 'A filter or a tab that the user toggles on a list', use: 'Chip', tier: 'atom', story: 'components-selections-chip--docs' },
+    { building: 'A big tile with an icon, to answer a question (employment, spend category)', use: 'Selector', tier: 'atom', story: 'components-selections-selector--docs' },
+    { building: 'A labelled row in a filter sheet, one or many answers', use: 'Choice', tier: 'molecule', story: 'components-selections-choice--docs' },
+    { building: 'A bare many-of-many box inside your own row', use: 'Checkbox', tier: 'atom', story: 'components-selections-checkbox--docs' },
+    { building: 'A bare one-of-many circle inside your own row', use: 'Radio', tier: 'atom', story: 'components-selections-radio--docs' },
+    { building: 'The Home filter bar (category, filters, eligibility)', use: 'FilterRow', tier: 'molecule', story: 'components-selections-filterrow--docs' },
+    { building: 'A filter question between Home card tiles', use: 'InlineFilterQuestion', tier: 'molecule', story: 'components-selections-inlinefilterquestion--docs' },
+    { building: 'Consent above an action ("I agree to the Terms")', use: 'TermsAndConditions', tier: 'molecule', story: 'components-selections-termsandconditions--docs' },
+    { building: 'A day in a date strip (no screen uses it)', use: 'DateSelection', tier: 'atom, unused', story: 'components-selections-dateselection--docs' },
+    { building: 'A month in a wheel picker (no screen uses it)', use: 'MonthSelector', tier: 'atom, unused', story: 'components-selections-monthselector--docs' },
+    { building: 'A read-only star score', use: 'Rating', tier: 'atom', story: 'components-selections-rating--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The main part is `Chip`, the most used. Its default type is the filter chip.
+
+<Anatomy
+  parts={[
+    { part: 'Container, default', token: 'colors.surface.default · colors.border.default · borderWidth.thin', note: 'Radius radius.sm; radius.xs at size 20.' },
+    { part: 'Container, selected', token: 'colors.background.emphasis · colors.chip.selectedBorder', note: 'Pale saffron fill. Selected with a count uses the tab palette (action.secondary.default).' },
+    { part: 'Sizes', token: '20 · 24 · 28 · 32', note: 'Padding and label type grow with size: caption10Regular at 20, body12Regular at 24 and 28, a larger body variant at 32.' },
+    { part: 'Label', token: 'Text atom variant per size', note: 'Never set font values inline.' },
+    { part: 'Leading icon / image, trailing icon', token: 'iconSize[12] to iconSize[16] by size', note: 'leadingImage wins over leadingIcon.' },
+    { part: 'Dot', token: 'colors.action.accent.default', note: 'Active filters indicator. Default type only.' },
+    { part: 'Tab type', token: 'radius.full · body14Medium · action.secondary.default / action.accent.default', note: 'Fixed geometry (6 by 16 padding). `size` is ignored.' },
+    { part: 'Disabled', token: 'opacity 0.4', note: 'Toggle type uses action.accent.disabled for fill and border.' },
+  ]}
+/>
+
+## Composition
+
+- `Choice` = `Checkbox` or `Radio` + label + optional description. The row is the tap target. The inner control is visual only.
+- `FilterRow` = two `Chip`s (Category, Filters with a dot) + an Eligibility switch. The switch is the React Native Switch with a saffron track, not the `Switch` atom.
+- `InlineFilterQuestion` = title + `Chip`s (size 32) on a flat `surface.sunken` panel. A selected chip shows the card count through the `count` prop.
+- `TermsAndConditions` = optional `Checkbox` + body12 text with blue link spans. `checked="none"` drops the box for passive copy.
+- `Checkbox` and `Radio` have no group logic. The parent owns the value.
+- `Selector` has a fixed 12 right padding so a long title wraps instead of splitting a word.
+- `DateSelection`, `MonthSelector` and `Rating` come from Figma and no screen uses them today. `Rating` only shows a score.
+
+<DoDont
+  dos={[
+    'Use Radio (or a radio Choice) for exactly one answer and Checkbox for many.',
+    'Use Chip for a filter on a list and Selector for an answer to a question.',
+    'Keep selected chips cobalt. Saffron is for solid buttons only (D17).',
+    'Give a Checkbox or Radio a label through Choice so the whole row is tappable.',
+    'Show the count on a selected inline chip so the user sees what the filter leaves.',
+  ]}
+  donts={[
+    'Do not build a group of Radios without a parent that holds the selected value.',
+    'Do not use a tab Chip for page navigation. Use TabPrimary or TabsSecondary.',
+    'Do not use Rating to collect a score. It does not take taps.',
+    'Do not set the Eligibility switch with the Switch atom inside FilterRow unless the product owner decides to move it.',
+    'Do not hardcode a cashback rate in a chip label. Write "X%" until verified.',
+  ]}
+/>
+
+## Open product questions
+
+- `FilterRow`: should Eligibility move to the `Switch` atom, for one switch look across the app?
+- `Rating`: is a tap-to-rate version needed? Today it is read-only.
+- `DateSelection` and `MonthSelector`: keep, or remove with the next clean-up? No screen uses them.

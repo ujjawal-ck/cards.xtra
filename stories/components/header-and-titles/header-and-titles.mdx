@@ -1,0 +1,56 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Header and titles/Overview" />
+
+<PageHeader title="Header and titles" meta="3 components · organisms">
+The strip at the top of a screen. Header is the plain one. HomeHeader is the Home strip with two scroll states. MastheadHeader floats over a hero. Read this page together with Mastheads: one table covers both.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: a plain screen, Home, or a hero block? Read this table on both Header and titles and Mastheads."
+  rows={[
+    { building: "A plain screen with back or close, a title and optional tabs", use: "Header", tier: "organism", story: "components-header-and-titles-header--docs" },
+    { building: "The Home screen top strip: logo, help, messages, bell, then a frosted bar with search and chips after scroll", use: "HomeHeader", tier: "organism", story: "components-header-and-titles-homeheader--docs" },
+    { building: "Floating back and share buttons over a hero image or a dark hero", use: "MastheadHeader", tier: "organism", story: "components-header-and-titles-mastheadheader--docs" },
+    { building: "A per-screen hero: profile, earnings, payment, cashback status, home or offers", use: "Masthead", tier: "organism", story: "components-mastheads-masthead--docs" },
+    { building: "The collapsing hero at the top of the card detail sheet", use: "CardDetailMasthead", tier: "organism", story: "components-mastheads-carddetailmasthead--docs" },
+    { building: "The eligibility verdict hero: eligible, maybe or ineligible", use: "EligibilityMasthead", tier: "organism", story: "components-mastheads-eligibilitymasthead--docs" },
+    { building: "The Missing Cashback help intake hero", use: "MissingCashbackMasthead", tier: "organism", story: "components-mastheads-missingcashbackmasthead--docs" },
+  ]}
+/>
+
+## Anatomy
+
+Header, the main part. Source: `src/organisms/Header.tsx`.
+
+<Anatomy parts={[
+  { part: 'Header row', token: 'sizing.headerHeight (56)', note: 'Horizontal, centred. colors.surface.default, or no fill when surface is transparent' },
+  { part: 'Leading: back', token: '32 by 32 glyph, gap spacing[8], row padding 12 and 16', note: 'Title body16Medium' },
+  { part: 'Leading: close', token: '24 by 24 glyph, gap spacing[4], row padding 16 and 16', note: 'Title body14SemiBold' },
+  { part: 'Glyph stroke', token: 'borderWidth.thick (1.5)', note: 'Drawn inline with react-native-svg, tinted colors.text.primary' },
+  { part: 'Trailing slot', token: 'iconSize[32] tap target, 24 dp outline Icon', note: 'Optional, any registered IconName' },
+  { part: 'Tabs row', token: 'TabPrimary', note: 'Optional, directly under the row' },
+]} />
+
+## Composition
+
+- Header with `tabs` renders TabPrimary below the row. See Tab bar.
+- HomeHeader scrolled=false sits over the dark masthead (logo is the white-tone SVG). scrolled=true is a gradient from cobalt-100, no real blur, so web and native match. It shows the dark logo, search and filter chips.
+- MastheadHeader has no background. iconType follows the surface below it: solid for light (white fill, soft shadow), overlay for dark or image (black fill, 1 px white border).
+- No back or close SVG ships in `src/assets/icons`, so the glyphs are drawn inline. When artwork lands, swap each glyph for an Icon.
+
+<DoDont
+  dos={[
+    'Use Header on every plain screen and sheet page.',
+    'Pick MastheadHeader iconType from the surface below it.',
+    'Use leading=close for a sheet or modal page, back for a pushed page.',
+    'Keep titles to one line.',
+  ]}
+  donts={[
+    'Do not put Header over a hero image: use MastheadHeader.',
+    'Do not use HomeHeader outside Home.',
+    'Do not add a second trailing icon to Header: the slot holds one.',
+    'Do not draw your own back arrow: use the leading prop.',
+  ]}
+/>

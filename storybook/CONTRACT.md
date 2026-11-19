@@ -94,5 +94,5 @@ A PickTable is required for the families marked PICK in `pm-flows.md` 3.3 and 3.
 
 ## 10. Done check for every writer
 1. `cd storybook && npm run typecheck`: no error in your files.
-2. Build only your files: `cd storybook && SB_STORIES='../../stories/<your-folder>/**/*.mdx,../../stories/<your-folder>/**/*.stories.tsx' npx storybook build -c .storybook -o "$TMPDIR/sb-<your-agent-name>"`. It must print `Output directory`. Do not write to `storybook/dist`. MDX that links to stories outside your folder may warn; that is fine.
+2. Build only your files: `cd storybook && SB_STORIES='../../stories/<your-folder>/**/*.mdx,../../stories/<your-folder>/**/*.stories.tsx' npx storybook build -c .storybook -o "$TMPDIR/sb-<your-agent-name>"`. Do not use `{a,b}` brace globs: the value is split on commas, so give one glob per folder. Success = the output folder has `index.json` listing your stories. Do not write to `storybook/dist`. MDX that links to stories outside your folder may warn; that is fine.
 3. Report: files written, files deleted, components or states skipped and why, component bugs seen (do not fix).

@@ -1,0 +1,77 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Badge and Tag/Overview" />
+
+<PageHeader title="Badge and Tag" meta="10 components · atoms">
+Small labels that sit on or beside content. Pick by what the label says: a status, a money amount, a card type, a rank or a count. Three of the ten are unused today (WalletTag, NumberBadge, TestimonialSavingsTag).
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: status, money amount, card type, rank or count?"
+  rows={[
+    { building: 'A saffron highlight or category word ("New", "Popular")', use: 'Badge', tier: 'atom', story: 'components-badge-and-tag-badge--docs' },
+    { building: 'A coloured category or filter pill in any of 9 tones, with an icon or a close button', use: 'Tag', tier: 'atom', story: 'components-badge-and-tag-tag--docs' },
+    { building: 'A cashback order status (Pending, Confirmed, Paid, Cancelled, Delayed, Requested, Expired)', use: 'StatusBadge', tier: 'atom', story: 'components-badge-and-tag-statusbadge--docs' },
+    { building: 'A cashback amount as a pill ("Upto ₹1,200 Cashback")', use: 'CashbackBadge', tier: 'atom', story: 'components-badge-and-tag-cashbackbadge--docs' },
+    { building: 'A squared upper-case reward tag, with brand logos or an info glyph', use: 'CashbackTag', tier: 'atom', story: 'components-badge-and-tag-cashbacktag--docs' },
+    { building: 'A wallet balance next to a wallet icon (unused)', use: 'WalletTag', tier: 'atom', story: 'components-badge-and-tag-wallettag--docs' },
+    { building: 'A card type: Lifetime free, Invite only, Discontinued', use: 'CardTypeTag', tier: 'atom', story: 'components-badge-and-tag-cardtypetag--docs' },
+    { building: 'A position in a ranked list (1, 2, 3)', use: 'RankBadge', tier: 'atom', story: 'components-badge-and-tag-rankbadge--docs' },
+    { building: 'A count on a tab, cart or chip (unused)', use: 'NumberBadge', tier: 'atom', story: 'components-badge-and-tag-numberbadge--docs' },
+    { building: 'A "Saved ₹30,000 annually" line on a testimonial (unused)', use: 'TestimonialSavingsTag', tier: 'atom', story: 'components-badge-and-tag-testimonialsavingstag--docs' },
+  ]}
+/>
+
+## Anatomy (Tag, the main part)
+
+<Anatomy parts={[
+  { part: 'Container fill', token: 'colors.tones[tone].bg (default), .bgSubtle (subtle)', note: 'Gradient appearance uses gradients.tagPills.' },
+  { part: 'Border', token: 'borderWidth.thin + colors.tones[tone].border', note: 'Always drawn, also on default.' },
+  { part: 'Label', token: 'colors.tones[tone].text', note: 'xxs caption10SemiBold, xs body12Medium, sm body12Regular, md body14Regular.' },
+  { part: 'Height', token: 'spacing[16], spacing[20], spacing[20], spacing[24] + spacing[4]', note: 'A minHeight, so large OS fonts grow the tag.' },
+  { part: 'Corner', token: 'radius.xs (square) or radius.full (pill)', note: 'Status tags are never pills.' },
+  { part: 'Dot', token: 'spacing[8] circle, tone text colour', note: 'icon="dot".' },
+  { part: 'Icon', token: 'iconSize[16] (iconPx overrides)', note: 'icon-left, icon-right, icon-only.' },
+  { part: 'Close', token: 'inline 16 px X glyph, tone text colour', note: 'x-close fires onClose.' },
+]} />
+
+The other nine parts follow the same idea: a pale fill, a 1 px border or none, one short label, and a token colour.
+
+| Part | Fill | Text |
+|---|---|---|
+| `Badge` | `colors.background.emphasis` or `gradients.saffronFade` | `colors.cashback.default` |
+| `StatusBadge` | `colors.status[status].bg`, border and dot from the same block | `colors.surface.dark` |
+| `CashbackBadge` | `gradients.saffronFade` | `colors.cashback.default` |
+| `CashbackTag` | `gradients.saffronFade`, border `colors.cashback.tagBorder` | `colors.cashback.default` |
+| `CardTypeTag` | `colors.tones.{success, warning, gray}.bgSubtle` | tone text |
+| `WalletTag` | `colors.background.lavender`, border `colors.border.subtle2` | `colors.tones.brand.text` |
+| `RankBadge` | `colors.action.secondary.default` | `colors.text.link` |
+| `NumberBadge` | dark `colors.surface.inverse`, light `colors.surface.default` | inverse or `colors.text.secondary` |
+| `TestimonialSavingsTag` | none; side lines fade `colors.background.lavender` to `colors.action.accent.default` | `gradients.primary` (needs a masked view) |
+
+## Composition
+
+- A label never holds another component. `CashbackTag` holds up to two brand logos and an info glyph (md, lg).
+- `Tag` with a `status` prop sets its own tone, dot and shape. Do not also pass tone, size or icon.
+- `StatusBadge` is for the cashback lifecycle only. For any other status colour use `Tag`.
+- `CardTypeTag` on a card adds the word "card" and squares the right corners; place it flush to the card edge.
+- Pass amounts already formatted (`formatINR`), with Indian grouping, to `WalletTag`, `CashbackBadge` and `CashbackTag`.
+- Write a cashback rate as "X%" until someone verifies it.
+- `Badge`, `CashbackBadge` and `CashbackTag` share one look (saffron fade) on purpose: do not use all three in one tile.
+- Web: `TestimonialSavingsTag` depends on `GradientText` (masked view). It may not render the label on web.
+
+<DoDont
+  dos={[
+    'Choose by what the label says: status, money, card type, rank, or count.',
+    'Use StatusBadge for order and cashback status, so every screen shows the same dot and colour.',
+    'Keep text short and sentence case; CashbackTag and CardTypeTag upper-case it for you.',
+    'Use tone colours from colors.tones. Pair the gradient appearance with tone info.',
+  ]}
+  donts={[
+    'Do not use Tag with a custom bgColor for a status; use StatusBadge or the status prop.',
+    'Do not hardcode a cashback rate in a label.',
+    'Do not rely on colour alone for a status: StatusBadge always carries a word.',
+    'Do not use the Badge close icon where the brand colour matters: its cross has a baked red stroke.',
+  ]}
+/>

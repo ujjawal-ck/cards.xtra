@@ -1,0 +1,70 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Input fields/Overview" />
+
+<PageHeader title="Input fields" meta="7 components · atoms and molecules">
+Controls where the user types or drags a value: text, rupees, an OTP code or a search query.
+Pick by the kind of value. Every field shows its state by border colour and a hint line, not by a pop-up.
+</PageHeader>
+
+<PickTable
+  rule="Deciding question: text, rupees, OTP or search?"
+  rows={[
+    { building: 'A short text value (name, email, pincode)', use: 'Input', tier: 'atom', story: 'components-input-fields-input--docs' },
+    { building: 'A long free-text value (remarks, issue description)', use: 'TextArea', tier: 'atom', story: 'components-input-fields-textarea--docs' },
+    { building: 'A rupee amount the user types (income, spend)', use: 'AmountInput', tier: 'molecule', story: 'components-input-fields-amountinput--docs' },
+    { building: 'A rupee amount or a count the user picks by dragging', use: 'SpendCard', tier: 'molecule', story: 'components-input-fields-spendcard--docs' },
+    { building: 'A one-time code (login, withdraw)', use: 'OtpInput', tier: 'atom', story: 'components-input-fields-otpinput--docs' },
+    { building: 'One OTP digit cell on its own (no screen uses it)', use: 'OtpBox', tier: 'atom, unused', story: 'components-input-fields-otpbox--docs' },
+    { building: 'Searching cards and stores, with a results list', use: 'SearchBar', tier: 'molecule', story: 'components-input-fields-searchbar--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The main part is `Input`. `TextArea` and `AmountInput` reuse its look.
+
+<Anatomy
+  parts={[
+    { part: 'Box', token: 'radius.lg · colors.surface.default', note: 'Height 56 (md) or 48 (sm, sizing.touchComfortable). Padding left spacing[16], right spacing[12], gap spacing[8].' },
+    { part: 'Border, unfilled and filled', token: 'colors.border.default · borderWidth.thin', note: 'Same for both. Only the label colour differs.' },
+    { part: 'Border, selected (focus)', token: 'colors.border.focussed · borderWidth.thick', note: 'Focus sets this state unless a `state` prop is passed.' },
+    { part: 'Border, error', token: 'colors.feedback.error.default · borderWidth.thin', note: 'The label and the hint take the same colour.' },
+    { part: 'Floating label pill', token: 'body12Regular · radius.full · spacing[4]', note: 'Sits on the top border. Colour: text.link selected, text.tertiary filled, error red on error.' },
+    { part: 'Typed text', token: 'body16Regular (md) · body14Regular (sm)', note: 'Regular weight in every state.' },
+    { part: 'Hint row', token: 'body12Regular · iconSize[16] · colors.text.secondary', note: 'Optional icon. Red on error.' },
+    { part: 'Disabled', token: 'opacity 0.4', note: 'The box is muted and not editable.' },
+  ]}
+/>
+
+## Composition
+
+- `AmountInput` is an `Input` with `leadingText="₹"` plus a row of `Chip` presets. It formats live with Indian grouping (`1,20,000`) and holds the value at `max` while the user types.
+- `OtpInput` draws its own slots (56 by 64 for 4 digits, 48 by 64 for 6). It does not use `OtpBox`. One hidden text field takes all digits.
+- `SpendCard` picks a value on a ruler (snap scroll). Its typed entry mode is optional and off by default.
+- `SearchBar` shows a results list under the bar only in the `filled` state. `SearchResults` is the same list, for a parent that scrolls it by itself.
+- Inside a gorhom bottom sheet, set `useBottomSheetInput` on `Input`, `OtpInput`, `AmountInput` and `SpendCard`, or the sheet will not lift above the keyboard.
+- Login and withdraw keep 6 OTP digits (D19). Figma shows 4; the Figma file must change.
+
+<DoDont
+  dos={[
+    'Let focus and value drive the state. Force `state` only to show error or disabled.',
+    'Put the fix in the hint line: "Enter at least ₹500", not "Invalid".',
+    'Use AmountInput when the user knows the number. Use SpendCard when a rough pick is enough.',
+    'Set useBottomSheetInput on every field that sits inside a sheet.',
+    'Show rupee amounts with Indian grouping: ₹1,00,000.',
+  ]}
+  donts={[
+    'Do not set fontFamily, fontSize or fontWeight on a field. Typography comes from tokens.',
+    'Do not use OtpBox for new work. OtpInput owns the OTP row.',
+    'Do not put an AmountInput and a SpendCard side by side for the same value.',
+    'Do not use TextArea for a one-line value.',
+    'Do not hide the error in a toast. Keep it in the field hint.',
+  ]}
+/>
+
+## Open product questions
+
+- `SearchBar`: where does the "no results" message live? The component shows the bar only.
+- `AmountInput` and `SpendCard` are not wired into any screen yet (DS-ADD). Which screen takes them first is a product choice.
