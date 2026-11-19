@@ -7,9 +7,11 @@ import { encodeEligForm } from '../../../src/lib/advisor/answers';
 import { BottomSheetHeader } from '../../../src/organisms/BottomSheetHeader';
 import { FooterButtons } from '../../../src/organisms/FooterButtons';
 import { Text } from '../../../src/atoms/Text';
+import { InlineMessage } from '../../../src/molecules';
+import { ScreenState } from '../../../src/organisms';
 import { colors, spacing, radius, alpha } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness } from '../../../storybook/harness';
-import { api, reply } from '../../../storybook/fixtures';
+import { api, eligibilityFixture, reply } from '../../../storybook/fixtures';
 import { TapScript } from '../04-shared-result/_shared';
 
 const meta: Meta = {
@@ -138,4 +140,75 @@ export const CatalogueError: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:435`, docs: { description: { story: 'The card list answers 500: "Couldn\'t load cards" with "Try again". Shows after the call\'s retries (a few seconds).' } } },
   render: () => chat({}, api.ok({ cards: reply.error(500) })),
+};
+
+// ── Edge cases and loaders ───────────────────────────────────────────────────
+
+const CHECKING: Answers = { ...BROWSING, eligBridge: 'yes', eligForm: FORM_DONE };
+
+export const CatalogueLoading: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:433`, docs: { description: { story: 'The card catalogue never answers: skeleton bubbles in place of the transcript.' } } },
+  render: () => chat({}, api.loading()),
+};
+
+export const CheckingEligibility: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:372`, docs: { description: { story: 'Form answered (seeded) and the eligibility call never answers: a bubble with typing dots and "Checking which cards fit your income and pincode.", header status "Checking your cards". The call can take up to about 90 s (6 tries of 15 s); the screen shows no change over time (see the proposed twin).' } } },
+  render: () => chat(CHECKING, api.ok({ eligibility: reply.hang() })),
+};
+
+export const PincodeRejected: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:382`, docs: { description: { story: 'The eligibility call answers 422 "Please enter a valid pincode." The screen shows the same "Couldn\'t check right now" with "Try again" as for a server error; retrying repeats the same 422 (Q5: is a 422 a real "not serviceable" or a bad input?). Shows after one retry of the query.' } } },
+  render: () => chat(CHECKING, api.ok({ eligibility: eligibilityFixture.invalidPincode })),
+};
+
+export const OfflineShowsNoCards: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/screens/advisor/useAdvisor.ts:395', docs: { description: { story: 'App bug (gap G5). Offline at cold start the catalogue query is paused: not loading and not an error, so the screen says "No cards are available right now. Please check back a little later." with no retry. Only a connection problem, not an empty catalogue.' } } },
+  render: () => chat({}, api.offline()),
+};
+
+// ── Proposed ─────────────────────────────────────────────────────────────────
+
+export const OfflineProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Proposed (gap G5). Offline at cold start shows the standard offline state with a retry, not "No cards are available right now". Needs the shared "paused with no data" check in `useAdvisor` (engineering). Open question: should the chat header stay visible while offline?' } } },
+  render: () => (
+    <PhoneFrame background={colors.surface.default}>
+      <View style={{ paddingTop: spacing[48] }}>
+        <ScreenState title="You're offline" body="Check your connection and try again." actionLabel="Try again" onAction={() => undefined} />
+      </View>
+    </PhoneFrame>
+  ),
+};
+
+export const EligibilityOfflineProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Proposed (gap G5). Today a paused eligibility query shows no status and no verdict. The header says "Waiting for connection" and a warning explains; no action, because the query resumes by itself when the phone is back online. The chat is not drawn.' } } },
+  render: () => (
+    <PhoneFrame background={colors.surface.default}>
+      <View style={{ padding: spacing[16], gap: spacing[16] }}>
+        <Text variant="heading18SemiBold" color={colors.text.primary}>Waiting for connection</Text>
+        <InlineMessage tone="warning" message="You're offline. We'll check your cards when you're back." />
+      </View>
+    </PhoneFrame>
+  ),
+};
+
+export const CheckingLongProposed: Story = {
+  tags: ['proposed'],
+  parameters: { docs: { description: { story: 'Proposed (gap G6). After 10 s the checking bubble gets a second line, because the call can run up to about 90 s. Open question: is 10 s the right threshold, and should the user get a way to stop? The bubble is drawn from tokens (the screen\'s own bubble lives in `src/screens`).' } } },
+  render: () => (
+    <PhoneFrame background={colors.surface.default}>
+      <View style={{ padding: spacing[16], gap: spacing[8] }}>
+        <Text variant="heading18SemiBold" color={colors.text.primary}>Checking your cards</Text>
+        <View style={{ alignSelf: 'flex-start', gap: spacing[4], paddingHorizontal: spacing[12], paddingVertical: spacing[10], borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border.subtle3, backgroundColor: colors.surface.default }}>
+          <Text variant="body14Regular" color={colors.text.primary}>Checking which cards fit your income and pincode.</Text>
+          <Text variant="body14Regular" color={colors.text.secondary}>Still checking with the banks. This can take up to a minute.</Text>
+        </View>
+      </View>
+    </PhoneFrame>
+  ),
 };

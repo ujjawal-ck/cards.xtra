@@ -8,7 +8,7 @@ import React, { useEffect } from 'react';
 import { buildBankDirectory, mapBkCardToCardModel } from '../../../src/api/cardMapper';
 import { buildLeague, mapCalculateResponse, rankByNetValue, type SpendKey } from '../../../src/lib/cardTools';
 import type { CardModel } from '../../../src/molecules';
-import { BK_CARDS, calculateFixture, initBundleFixture, spends, clone } from '../../../storybook/fixtures';
+import { BK_CARDS, calculateFixture, initBundleFixture, spends, clone, reply } from '../../../storybook/fixtures';
 
 /** What the user typed, in question units (monthly rupees, yearly rupees, visits a year). */
 export const ANSWERS: Partial<Record<SpendKey, number>> = {
@@ -138,3 +138,77 @@ export const LEAGUE = buildLeague(rankByNetValue(mapCalculateResponse(calculateF
 /** First row that has an app card, and first that does not. */
 export const ROW_IN_APP = LEAGUE.find((r) => r.card)!;
 export const ROW_NOT_IN_APP = LEAGUE.find((r) => !r.card)!;
+
+// ── Edge-case calculate answers (always built on a clone of the fixture) ─────
+
+type Row = Record<string, any>;
+
+/** Every endpoint failure the app retries: the error state shows only after the retries (calculate 2 calls, GETs 3). */
+export const e500 = reply.error(500);
+
+/** A fresh copy of the league answer with `edit` applied to its rows. Return null from `edit` to drop a row. */
+export function calcEdit(edit: (row: Row, index: number) => Row | null) {
+  const body: { data: { savings: Row[] } } & Record<string, unknown> = clone(calculateFixture.league) as never;
+  body.data.savings = body.data.savings.map(edit).filter((r): r is Row => r !== null);
+  return body;
+}
+
+/** The league without one card. */
+export const calcWithout = (alias: string) => calcEdit((r) => (r.seo_card_alias === alias ? null : r));
+
+/** One row with the fees unknown (null): the app reads them as 0 and tags the card "Lifetime free". */
+export function calcNullFee() {
+  return calcEdit((r, i) => (i === 0 ? { ...r, annual_fees: null, joining_fees: null } : r));
+}
+
+/** The first row only. */
+export const calcOneCard = () => calcEdit((r, i) => (i === 0 ? r : null));
+
+/** No row saves anything: yearly savings 0 on every row, fees as in the fixture. */
+export const calcAllLose = () => calcEdit((r) => ({ ...r, total_savings: 0, total_savings_yearly: 0, total_extra_benefits: 0 }));
+
+/** The CRED row (not in the app) without card art, and one row with an image that fails. */
+export const calcNoArt = () =>
+  calcEdit((r) => {
+    if (r.seo_card_alias !== 'cred-indusind-bank-credit-card') return r;
+    const { image: _image, card_bg_image: _bg, ...rest } = r;
+    return rest;
+  });
+
+/**
+ * The CRED row (not in the app) is dropped, so the best other card is one the app sells. Every row except `keepAlias` saves 0 a year and has a fee that is not waived, so every other card nets below 0.
+ * `keepAlias` also saves 0 but keeps its own bigger fee, so it ranks last and "the best other card" still loses money, only less.
+ */
+export function calcOthersLose(keepAlias: string) {
+  return calcEdit((r) =>
+    r.seo_card_alias === 'cred-indusind-bank-credit-card'
+      ? null
+      : r.seo_card_alias === keepAlias
+      ? { ...r, total_savings_yearly: 0, total_savings: 0, total_extra_benefits: 0, annual_fee_spends: '0' }
+      : { ...r, total_savings_yearly: 0, total_savings: 0, total_extra_benefits: 0, annual_fees: '100', joining_fees: '100', annual_fee_spends: '0', travel_benefits: { total_travel_benefit_annual: 0 } },
+  );
+}
+
+/** `n` rows: the 9 fixture rows, then clones with new aliases and savings that fall by 25 a row, so the rank order is the index order. */
+export function calcLarge(n = 220) {
+  const body: { data: { savings: Row[] } } & Record<string, unknown> = clone(calculateFixture.league) as never;
+  const base = body.data.savings;
+  const rows: Row[] = [...base];
+  for (let i = base.length; i < n; i += 1) {
+    const src = base[i % base.length];
+    rows.push({
+      ...clone(src),
+      id: 1000 + i,
+      card_name: `${src.card_name} ${i}`,
+      seo_card_alias: `${src.seo_card_alias}-${i}`,
+      annual_fees: '0',
+      joining_fees: '0',
+      total_savings: Math.round((6000 - (i - base.length) * 25) / 12),
+      total_savings_yearly: 6000 - (i - base.length) * 25,
+    });
+  }
+  body.data.savings = rows;
+  return body;
+}
+/** Alias of the clone at index 200 of `calcLarge()`. */
+export const LARGE_ALIAS_200 = `${(calculateFixture.league.data.savings as Row[])[200 % 9].seo_card_alias}-200`;

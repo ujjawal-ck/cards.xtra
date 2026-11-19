@@ -36,6 +36,12 @@ Stories reset the shared store, cache and fetch mock when they mount, so each st
 
 <StateMatrix rows={[
   { state: "Loaded", status: 'live', story: 'flows-4b-beat-my-card-pick-list--loaded', note: "A to Z, with search and bank chips." },
+  { state: "Loading", status: 'live', story: 'flows-4b-beat-my-card-pick-list--loading', note: "Waits for the whole calculate call (G7)." },
+  { state: "Error", status: 'live', story: 'flows-4b-beat-my-card-pick-list--error', note: "Calculate answers 500." },
+  { state: "Offline", status: 'live', story: 'flows-4b-beat-my-card-pick-list--offline', note: "Paused query." },
+  { state: "Empty", status: 'live', story: 'flows-4b-beat-my-card-pick-list--empty', note: "No cards to compare yet." },
+  { state: "Search, no match", status: 'live', story: 'flows-4b-beat-my-card-pick-list--search-no-match', note: "Clear search is the only way out." },
+  { state: "My card missing, proposed", status: 'proposed', story: 'flows-4b-beat-my-card-pick-list--my-card-missing-proposed', note: "Open question Q2." },
 ]} />
 
 ## Result
@@ -45,12 +51,19 @@ Stories reset the shared store, cache and fetch mock when they mount, so each st
   { state: "mine_wins", status: 'live', story: 'flows-4b-beat-my-card-result--mine-wins', note: "Rank 1 card is not in the app list; check the hero." },
   { state: "equal", status: 'live', story: 'flows-4b-beat-my-card-result--equal', note: "Built tie: the story edits the calculate answer." },
   { state: "not_found", status: 'live', story: 'flows-4b-beat-my-card-result--not-found', note: "Card missing from the calculate list." },
+  { state: "best_wins, Apply now", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins-applyable', note: "Main revenue branch; the CRED row is dropped in the story." },
+  { state: "best_wins, no Apply", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins-no-apply', note: "Best other card also loses money." },
+  { state: "Loading", status: 'live', story: 'flows-4b-beat-my-card-result--loading', note: "Calculate never answers." },
+  { state: "Error", status: 'live', story: 'flows-4b-beat-my-card-result--error', note: "Calculate answers 500." },
+  { state: "Offline", status: 'live', story: 'flows-4b-beat-my-card-result--offline', note: "Paused query." },
+  { state: "Filter matches nothing", status: 'live', story: 'flows-4b-beat-my-card-result--filter-no-match', note: "Lifetime free tapped on an all-paid answer." },
 ]} />
 
 ## Full ranking
 
 <StateMatrix rows={[
   { state: "Loaded", status: 'live', story: 'flows-4b-beat-my-card-full-ranking--loaded', note: "User's card highlighted, no Apply for it." },
+  { state: "Find my card, far down", status: 'live', story: 'flows-4b-beat-my-card-full-ranking--find-my-card-far', note: "220 rows; the card is about row 200." },
 ]} />
 
 ## Risks

@@ -39,6 +39,14 @@ Stories reset the shared store, cache and fetch mock when they mount, so each st
   { state: "Error", status: 'live', story: 'flows-6-offers-offers-tab--load-error', note: "HTTP 500, after the app's retries." },
   { state: "Offline, shows No offers here yet (R6)", status: 'live', story: 'flows-6-offers-offers-tab--offline-shows-empty', note: "Inferred from code: false empty state." },
   { state: "Offline, proposed fix (R6)", status: 'proposed', story: 'flows-6-offers-offers-tab--offline-proposed', note: "Standard offline state. Needs the shared paused-with-no-data helper." },
+  { state: "Category fallback (production today)", status: 'live', story: 'flows-6-offers-offers-tab--category-fallback', note: "Tree call answers 400; top-level categories." },
+  { state: "Network drop", status: 'live', story: 'flows-6-offers-offers-tab--network-drop', note: "Copy blames the server (G11)." },
+  { state: "Retry after error", status: 'live', story: 'flows-6-offers-offers-tab--retry-after-error', note: "Three failures, then Try again loads." },
+  { state: "Search, results", status: 'live', story: 'flows-6-offers-offers-tab--search-results', note: "Store index lists AJIO." },
+  { state: "Search, no results", status: 'live', story: 'flows-6-offers-offers-tab--search-no-results', note: "Hint under No results." },
+  { state: "Search while the index loads (G12)", status: 'live', story: 'flows-6-offers-offers-tab--search-index-loading', note: "App bug: no-results while loading." },
+  { state: "Search while the index loads, proposed", status: 'proposed', story: 'flows-6-offers-offers-tab--search-index-loading-proposed', note: "Hint says it is still loading." },
+  { state: "Store with no rate", status: 'live', story: 'flows-6-offers-offers-tab--store-no-rate', note: "Tile CTA has no figure." },
 ]} />
 
 ## Store page
@@ -50,6 +58,14 @@ Stories reset the shared store, cache and fetch mock when they mount, so each st
   { state: "Error", status: 'live', story: 'flows-6-offers-store-page--load-error', note: "Store call answers 404." },
   { state: "Best cards", status: 'live', story: 'flows-6-offers-store-page--best-cards', note: "Page scrolled to the carousel after mount." },
   { state: "Share", status: 'live', story: 'flows-6-offers-store-page--share', note: "Share glyph tapped; the harness only logs it." },
+  { state: "No shop link today (G2)", status: 'live', story: 'flows-6-offers-store-page--no-shop-link-today', note: "App bug: Shop does nothing, silent." },
+  { state: "No shop link, proposed", status: 'proposed', story: 'flows-6-offers-store-page--no-shop-link-proposed', note: "Disabled button and a message." },
+  { state: "Guest taps Shop", status: 'live', story: 'flows-6-offers-store-page--guest-shop', note: "Login sheet for the store click-out." },
+  { state: "Signed in taps Shop", status: 'live', story: 'flows-6-offers-store-page--signed-in-shop', note: "Console logs the click-out." },
+  { state: "No cashback rate (G4)", status: 'live', story: 'flows-6-offers-store-page--no-cashback-rate', note: "App bug: prints Cashback as the rate." },
+  { state: "No cashback rate, proposed", status: 'proposed', story: 'flows-6-offers-store-page--no-cashback-rate-proposed', note: "Open question Q3." },
+  { state: "Offline", status: 'live', story: 'flows-6-offers-store-page--offline', note: "Error shows at once." },
+  { state: "Session expired", status: 'live', story: 'flows-6-offers-store-page--session-expired', note: "Login sheet asked to open." },
 ]} />
 
 ## Risks

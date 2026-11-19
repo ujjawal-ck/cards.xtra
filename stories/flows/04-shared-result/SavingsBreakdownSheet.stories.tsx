@@ -53,3 +53,38 @@ export const UsersOwnCard: Story = {
     </SheetHarness>
   ),
 };
+
+export const SavesNothing: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${SRC}:353`,
+    docs: { description: { story: 'A row with no savings lines and a net of ₹0: the sum shows, then "This card saves nothing on the spends you entered." in place of the lines.' } },
+  },
+  render: () => (
+    <SheetHarness<SavingsBreakdownSheetHandle>
+      open={(r) => r.present({ ...ROW_IN_APP, savings: { ...ROW_IN_APP.savings, lines: [], netYearly: 0 } })}
+    >
+      {(ref) => <SavingsBreakdownSheet ref={ref} yearlySpend={yearly} onViewCard={() => undefined} onApply={() => undefined} />}
+    </SheetHarness>
+  ),
+};
+
+export const NegativeNet: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${SRC}:144`,
+    docs: { description: { story: 'The card saves ₹500 a year but its annual fee counted is ₹2,500, so "Your annual savings" shows a negative figure ("-₹2,000"). Row edited in the story.' } },
+  },
+  render: () => (
+    <SheetHarness<SavingsBreakdownSheetHandle>
+      open={(r) =>
+        r.present({
+          ...ROW_IN_APP,
+          savings: { ...ROW_IN_APP.savings, yearlySavings: 500, extraBenefits: 0, loungeValue: 0, annualFee: 2500, annualFeeCounted: 2500, feeWaived: false, netYearly: -2000 },
+        })
+      }
+    >
+      {(ref) => <SavingsBreakdownSheet ref={ref} yearlySpend={yearly} onViewCard={() => undefined} onApply={() => undefined} />}
+    </SheetHarness>
+  ),
+};

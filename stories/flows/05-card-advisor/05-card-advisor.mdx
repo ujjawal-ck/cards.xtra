@@ -41,6 +41,13 @@ Mid-chat states are seeded through the advisor session store (the chat is rebuil
   { state: "Change answer", status: 'live', story: 'flows-5-card-advisor-chat--change-answer', note: "One tap after mount." },
   { state: "Start over confirm", status: 'proposed', story: 'flows-5-card-advisor-chat--start-over-confirm', note: "Today a native Alert. Proposed: a sheet." },
   { state: "Catalogue error", status: 'live', story: 'flows-5-card-advisor-chat--catalogue-error', note: "Cards list answers 500." },
+  { state: "Catalogue loading", status: 'live', story: 'flows-5-card-advisor-chat--catalogue-loading', note: "Skeleton transcript." },
+  { state: "Checking eligibility", status: 'live', story: 'flows-5-card-advisor-chat--checking-eligibility', note: "Eligibility call never answers." },
+  { state: "Pincode rejected (422)", status: 'live', story: 'flows-5-card-advisor-chat--pincode-rejected', note: "Same error copy as a server error (Q5)." },
+  { state: "Offline shows No cards (G5)", status: 'live', story: 'flows-5-card-advisor-chat--offline-shows-no-cards', note: "App bug: no retry." },
+  { state: "Offline, proposed", status: 'proposed', story: 'flows-5-card-advisor-chat--offline-proposed', note: "Standard offline state." },
+  { state: "Eligibility offline, proposed", status: 'proposed', story: 'flows-5-card-advisor-chat--eligibility-offline-proposed', note: "Waiting for connection." },
+  { state: "Checking, long, proposed", status: 'proposed', story: 'flows-5-card-advisor-chat--checking-long-proposed', note: "Second line after 10 s." },
 ]} />
 
 ## Results
@@ -50,6 +57,10 @@ Mid-chat states are seeded through the advisor session store (the chat is rebuil
   { state: "Sorted by lowest fee", status: 'live', story: 'flows-5-card-advisor-results--sorted', note: "One tap after mount." },
   { state: "Free only", status: 'live', story: 'flows-5-card-advisor-results--free-only', note: "One tap after mount." },
   { state: "No cards", status: 'live', story: 'flows-5-card-advisor-results--no-cards', note: "Ids not in the catalogue." },
+  { state: "Loading", status: 'live', story: 'flows-5-card-advisor-results--loading', note: "Card list skeleton." },
+  { state: "Error", status: 'live', story: 'flows-5-card-advisor-results--error', note: "Cards answer 500." },
+  { state: "Offline shows No cards (G5)", status: 'live', story: 'flows-5-card-advisor-results--offline-shows-no-cards', note: "App bug: wrong advice." },
+  { state: "Offline, proposed", status: 'proposed', story: 'flows-5-card-advisor-results--offline-proposed', note: "Standard offline state." },
 ]} />
 
 ## Risks

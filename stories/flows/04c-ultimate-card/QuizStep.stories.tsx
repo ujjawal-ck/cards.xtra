@@ -51,3 +51,17 @@ export const LastQuestion: Story = {
     </>
   ),
 };
+
+export const TypedAmountCapped: Story = {
+  tags: ['live'],
+  parameters: {
+    source: 'src/molecules/SpendCard.tsx:186',
+    docs: { description: { story: 'After mount, 99999999 is typed into the "Amazon amount" field of question 1. The entry is clamped to the question\'s maximum (₹10,00,000 a month at most) instead of taking the number as typed.' } },
+  },
+  render: () => (
+    <>
+      <ScreenHarness name="SpendQuiz" component={SpendQuizScreen} params={ultimate} api={api.ok()} />
+      <TapScript steps={[{ type: '99999999', into: 'Amazon amount' }]} startMs={1500} />
+    </>
+  ),
+};

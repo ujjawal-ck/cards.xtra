@@ -2,10 +2,13 @@ import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { View, ScrollView } from 'react-native';
 import { OffersBrandAmazon } from '../../../src/screens/OffersBrandAmazon';
-import { Skeleton } from '../../../src/atoms';
+import { Skeleton, Text } from '../../../src/atoms';
+import { InlineMessage } from '../../../src/molecules';
+import { FooterButtons } from '../../../src/organisms/FooterButtons';
 import { colors, radius, spacing } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness, routeParams } from '../../../storybook/harness';
-import { api, offerStoreFixture } from '../../../storybook/fixtures';
+import { api, clone, offerStoreFixture } from '../../../storybook/fixtures';
+import { TapScript } from '../04-shared-result/_shared';
 
 /**
  * Flow 6, step 2. MONEY STEP: the store page ends in the cashback click-out (sticky "Earn Cashback on <Brand>").
@@ -21,7 +24,7 @@ type Story = StoryObj;
 
 const SRC = 'src/screens/OffersBrandAmazon.tsx';
 const params = routeParams('OffersBrandAmazon', { slug: 'ajio-coupons', category: 'Fashion' });
-const Store = ({ a, auth }: { a: ReturnType<typeof api.ok>; auth?: 'guest' | 'signedIn' }) => (
+const Store = ({ a, auth }: { a: ReturnType<typeof api.ok>; auth?: 'guest' | 'signedIn' | 'sessionExpired' }) => (
   <ScreenHarness name="OffersBrandAmazon" component={OffersBrandAmazon} params={params} auth={auth} api={a} />
 );
 
@@ -90,6 +93,111 @@ export const LoadingProposed: Story = {
           {[0, 1, 2].map((i) => <Skeleton key={i} height={spacing[48]} radius="lg" />)}
         </View>
       </ScrollView>
+    </PhoneFrame>
+  ),
+};
+
+// ── Edge cases and loaders ───────────────────────────────────────────────────
+
+/** A copy of the AJIO store answer, edited. Never edit the shared fixture. */
+const storeAnswer = (edit: (attrs: Record<string, any>) => void) => {
+  const body: any = clone(offerStoreFixture.default);
+  edit(body.data.attributes);
+  return body;
+};
+const SHOP = [{ click: 'Earn Cashback on', prefix: true }];
+
+export const NoShopLinkToday: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${SRC}:553`,
+    docs: { description: { story: 'App bug (gap G2, P0 attribution). The store answer has no `cashback_url`. Signed in, the footer still shows "Earn Cashback on AJIO"; after mount the script taps it: `offer_shop` is logged, then the click-out returns with nothing on screen and no `clickout_blocked` event. The user sees a dead button.' } },
+  },
+  render: () => (
+    <>
+      <Store auth="signedIn" a={api.ok({ offerStore: storeAnswer((a) => { delete a.cashback_url; }) })} />
+      <TapScript steps={SHOP} startMs={2000} />
+    </>
+  ),
+};
+
+export const GuestShop: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:89', docs: { description: { story: 'A guest taps "Earn Cashback on AJIO" (script, after mount): the login sheet for the store click-out opens (kind `store`), and the click continues after login.' } } },
+  render: () => (
+    <>
+      <Store a={api.ok()} />
+      <TapScript steps={SHOP} startMs={2000} />
+    </>
+  ),
+};
+
+export const SignedInShop: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:557`, docs: { description: { story: 'Signed in, the script taps "Earn Cashback on AJIO". Nothing opens in the harness: the console logs `[storybook] click-out <url>` with the store\'s tracking link.' } } },
+  render: () => (
+    <>
+      <Store auth="signedIn" a={api.ok()} />
+      <TapScript steps={SHOP} startMs={2000} />
+    </>
+  ),
+};
+
+export const NoCashbackRate: Story = {
+  tags: ['live'],
+  parameters: {
+    source: 'src/organisms/StoreCashbackDetails.tsx:220',
+    docs: { description: { story: 'App bug (gap G4, Q3). The store answer has `cashback.amount: 0` and no `tracking_speed`. The cashback floor prints "Cashback" where the rate should be (and "Flat" / "Cashback" "Cashback" in places), the timelines tile shows "—", and the footer CTA still says "Earn Cashback on AJIO".' } },
+  },
+  render: () => <Store a={api.ok({ offerStore: storeAnswer((a) => { a.cashback = { ...a.cashback, amount: '0' }; delete a.tracking_speed; }) })} />,
+};
+
+export const Offline: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:365`, docs: { description: { story: 'Offline at cold start: the paused query is not loading, so "Couldn\'t load this store" shows at once. "Try again" does nothing until the phone is back online.' } } },
+  render: () => <Store a={api.offline()} />,
+};
+
+export const SessionExpired: Story = {
+  tags: ['live'],
+  parameters: { source: 'src/lib/useClickOut.tsx:89', docs: { description: { story: 'Tokens exist but every user call answers 401 and the refresh fails: the session drops to guest and the login sheet is asked to open. The store page itself needs no login, so it still reads; Shop then gates as a guest.' } } },
+  render: () => <Store auth="sessionExpired" a={api.ok()} />,
+};
+
+// ── Proposed ─────────────────────────────────────────────────────────────────
+
+const Footer = ({ children }: { children: React.ReactNode }) => (
+  <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.surface.default }}>{children}</View>
+);
+
+export const NoShopLinkProposed: Story = {
+  tags: ['proposed'],
+  parameters: {
+    docs: { description: { story: 'Proposed (gap G2, pattern `patterns-click-out--no-link-proposed`). With no `cashback_url`, the footer button is disabled and a message says why, instead of a button that does nothing. Open question: show the store at all without a link (Q3)? The page above the footer is not drawn.' } },
+  },
+  render: () => (
+    <PhoneFrame>
+      <Footer>
+        <View style={{ padding: spacing[16] }}>
+          <InlineMessage tone="info" message="Shopping through Cards.xtra isn't available for this store right now." />
+        </View>
+        <FooterButtons buttons="single" size={52} color="main" primaryLabel="Earn Cashback on AJIO" primaryDisabled />
+      </Footer>
+    </PhoneFrame>
+  ),
+};
+
+export const NoCashbackRateProposed: Story = {
+  tags: ['proposed'],
+  parameters: {
+    docs: { description: { story: 'Proposed (gap G4, Q3). With no rate, the cashback floor is hidden and one message says the rate is unavailable, instead of printing "Cashback" as the rate. Open question Q3: list such a store, show it without Shop, or hide it from Offers? The rest of the page is not drawn.' } },
+  },
+  render: () => (
+    <PhoneFrame background={colors.surface.default}>
+      <View style={{ padding: spacing[16], gap: spacing[16] }}>
+        <Text variant="heading20SemiBold" color={colors.text.primary}>AJIO</Text>
+        <InlineMessage tone="info" message="The cashback rate for this store isn't available right now." />
+      </View>
     </PhoneFrame>
   ),
 };
