@@ -74,7 +74,7 @@ describe('nextQuestion', () => {
     const cards = [card({ cat: [SHOPPING], isFree: true, newToCredit: true }), card({ cat: [FUEL], isFree: true, newToCredit: true })];
     const step = nextQuestion(st({ opener: 'first', history: 'no' }), C, cards, known);
     expect(step?.question.id).toBe('need');
-    expect(step?.ask).toBe('Where does most of your monthly spend go? Pick up to 3.');
+    expect(step?.ask).toBe('Where does most of your monthly spend go?');
     expect(step?.why).toBe('A card pays back most where you already spend.');
     expect(step?.stepNumber).toBe(3);
   });
@@ -485,6 +485,18 @@ describe('answerPills', () => {
       { questionId: 'need', label: 'Online shopping' },
       { questionId: 'need', label: 'Fuel' },
     ]);
+  });
+
+  it('does not show the food pill twice once the food type is answered', () => {
+    const answered = st({ opener: 'specific', need: 'food,fuel', foodType: 'delivery,dining' });
+    expect(answerPills(answered, C).map((p) => p.label)).toEqual([
+      'Something specific',
+      'Fuel',
+      'Food delivery',
+      'Eating out',
+    ]);
+    const notSure = st({ opener: 'specific', need: 'food,fuel', foodType: NOT_SURE });
+    expect(answerPills(notSure, C).map((p) => p.label)).toEqual(['Something specific', 'Food', 'Fuel']);
   });
 
   it('skips "Not sure", inactive answers, an invalid form and a not-earning form', () => {

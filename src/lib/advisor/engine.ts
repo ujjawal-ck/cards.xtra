@@ -501,7 +501,12 @@ export function buildReveal(input: BuildRevealInput): AdvisorReveal {
 
 export function answerPills(state: AdvisorState, config: AdvisorConfig): AnswerPill[] {
   const pills: AnswerPill[] = [];
-  for (const step of walkAnswers(state, config).steps) {
+  const { steps } = walkAnswers(state, config);
+  // A tag that a later answer replaced (food, then the food type): its pill is not shown twice.
+  const replaced = new Set(
+    steps.filter((s) => s.used && s.picks.length > 0).map((s) => s.question.replacesCategory),
+  );
+  for (const step of steps) {
     if (!step.used) continue;
     const questionId = step.question.id;
     if (step.question.kind === 'eligibility') {
@@ -510,6 +515,8 @@ export function answerPills(state: AdvisorState, config: AdvisorConfig): AnswerP
       continue;
     }
     for (const pick of step.picks) {
+      const tag = pick.set.categoryTagId;
+      if (tag !== undefined && replaced.has(tag) && step.question.replacesCategory !== tag) continue;
       const label = pick.pill ?? pick.label;
       if (label !== '') pills.push({ questionId, label });
     }

@@ -33,7 +33,7 @@ export interface AdvisorCardTileProps {
 }
 
 export function AdvisorCardTile({ card, label, proof, reason, isNew, onPress, onHaveThis }: AdvisorCardTileProps) {
-  const fee = card.feeType === 'lifetime-free' ? 'Lifetime free' : `Joining ${card.joiningFee} · Annual ${card.annualFee}`;
+  const fee = card.feeType === 'lifetime-free' ? 'Lifetime free' : `Joining ${card.detail?.fee.joining.amount ?? card.joiningFee} · Annual ${card.detail?.fee.annual.amount ?? card.annualFee}`;
   const proofText = proof === 'none' ? '' : PROOF_TEXT[proof];
   const a11yLabel = [card.name, fee, reason, proofText].filter(Boolean).join('. ');
 

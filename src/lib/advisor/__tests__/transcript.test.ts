@@ -123,7 +123,7 @@ describe('buildTranscript', () => {
     const t = build(st({ opener: 'first', history: 'no', need: 'shopping' }), catalogue());
     const q = (id: string) => t.messages.find((m) => m.id === id) as Extract<ChatMessage, { kind: 'agent-question' }>;
     expect(q('q:opener').ask).toBe('What brings you here today?');
-    expect(q('q:need').ask).toBe('Where does most of your monthly spend go? Pick up to 3.');
+    expect(q('q:need').ask).toBe('Where does most of your monthly spend go?');
     expect(q('q:need').why).toBe('A card pays back most where you already spend.');
   });
 

@@ -28,6 +28,9 @@ import { eligFormValue, type SavedInputs } from './advisorSession';
 /** The tray never takes more than this share of the window height; its content scrolls instead.
  *  A layout ratio, not a token value. */
 const TRAY_MAX_RATIO = 0.46;
+/** With a fixed footer button under the scroll area, the scroll area gets less, so the chat
+ *  above keeps the question in view. */
+const TRAY_MAX_RATIO_WITH_FOOTER = 0.36;
 
 /** One row of the end menu. */
 export interface TrayMenuItem {
@@ -190,12 +193,14 @@ export function AdvisorReplyTray({
       ) : null}
       {multi ? (
         <Text variant="body12Regular" color={colors.text.secondary}>
-          {`Pick up to ${multi.max}`}
+          {step && step.options.filter((o) => !o.exclusive).length <= multi.max
+            ? 'Pick one or more'
+            : `Pick up to ${multi.max}`}
         </Text>
       ) : null}
       <ScrollView
         ref={scrollRef}
-        style={{ flexGrow: 0, maxHeight: height * TRAY_MAX_RATIO }}
+        style={{ flexGrow: 0, maxHeight: height * (footer ? TRAY_MAX_RATIO_WITH_FOOTER : TRAY_MAX_RATIO) }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
         persistentScrollbar

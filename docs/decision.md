@@ -6,6 +6,38 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D31. Advisor chat: results page, end menu, one eligibility form, multi-select
+2026-11-19 · branch `claude/advisor` (`b81a901`, `83ebeb9`, `5fff29c` and the commit of this entry)
+
+The owner tested D30 and listed these problems: "See all" opened an endless list inside the chat, some questions need more than one answer, eligibility took several separate inputs, the end was abrupt, and "Start over" landed in a different place. The owner approved a direction, then said "Build it".
+
+What changed:
+- **Results page.** "See all N cards" opens the page `AdvisorResults` (`src/screens/advisor/AdvisorResultsScreen.tsx`). It shows the reveal header, the answers as read-only chips, a note when the list was widened, a sort (Recommended, Lowest fee), a "Free cards only" chip, and one tile for each card. A tile opens the card detail sheet. A tile does not apply. The route params hold card ids and display text only: no income, no pincode. The in-place list and `AdvisorCardRow` are gone.
+- **End menu.** With no question left, the tray shows rows: "See all N cards", "Check which cards I can get" (only after "Not now" on the bridge), "Change an answer", "Start over". "Change an answer" opens a sheet with each question and its answer.
+- **Back and Start over.** A "Back" row in the tray removes the last answer only. "Start over" asks first, then shows the first question in the chat. The large intro mascot shows only before the first answer of the app session.
+- **Warning before a rewind.** A tap on an older answer asks first when it clears more than one answer.
+- **Undo.** "I have this" shows "N cards hidden because you have them. Undo".
+- **Kept chat.** The chat is kept in memory for the app session (`advisorSession.ts`): answers, held cards, the saved-details switch, the form draft and the analytics memory. A return fires no event a second time and plays no entrance again. Logout clears it. Nothing goes to disk.
+- **One eligibility form.** The questions `job`, `income` and `pincode` are one question, `eligForm`: three radio rows, the exact monthly income and the pincode, in the tray. "Student or not earning yet" is kept and needs no income. The answer bubble reads "Salaried · ₹35,000 · 110001".
+- **Multi-select.** `need`, `missing` and `foodType` take up to 3 answers, with a "Done" button. Picked categories are OR-ed: a card passes with any of them, and a card with more of them ranks first. "A bit of everything" and "Just show me better ones" cannot be combined. The food type answers replace the food tag. An option whose category has no card is not offered.
+- **One merge function.** `applyAnswer` in `engine.ts` is the one place an answer becomes slots. `answers.ts` is the one place that builds or reads the answer text. `slots.categoryTagId` is now `slots.categoryTagIds`.
+- Config version 2. New events: `advisor_rewind` (this closes the open item of D29), `advisor_menu_tap`, `advisor_results_view`, `advisor_results_sort`. `advisor_answer` sends `entered` for the form, and `picks` for a multi answer.
+
+Decisions that replace older ones:
+- The exact income replaces "the bottom of the band" and the ₹15,000 value for the lowest band (D28). The check now runs on the number the user types, as the app's own eligibility sheet does.
+- The greeting no longer says "no forms".
+
+Known limits:
+- A "Worth a look" card can be in the chat rail but not on the results page: the page lists `reveal.all`.
+- The saved eligibility details are read once for each app session. Details saved on a card page during the session reach the advisor only after a restart or a logout.
+- The acknowledgement of the form can change once, when the check result arrives (D30 limit, now also in `chatTypes.ts`).
+- The form line says "Used only for this check. The app does not save it." The values go to the eligibility API and stay in memory for the session.
+- Seen once on the simulator: the question "Tell me how you earn, your monthly income and your pincode." was cut after the first line, with space for two lines. Cause not found. The question is now one short line ("Fill in the short form below."). Watch other two-line questions on a real phone.
+
+Checked on the iPhone 17 simulator (Expo Go, local BFF on BankKaro UAT, 2026-11-19): "something specific" with two picks (food and fuel), the food type question with one pick, the fee question, the bridge, the form with an income of ₹1,35,000 and a pincode, 36 cards "likely to qualify", the count acknowledgement, the end menu, the results page with chips and tiles, a return to the chat with the answers kept, the "Change an answer" sheet and a rewind from it, "Back", leaving the advisor and coming back, "just exploring" then "Getting approved easily" then the not-earning form, and "Start over" with its confirm. The tips `caps`, `ltf` and `softcheck` showed. Type check clean, 668 Jest tests pass.
+
+Not checked: the tray and the form above the on-screen keyboard (the simulator showed no keyboard), "I have this" and its undo, the warning on an answer bubble, the "Check which cards I can get" row, the `missing` question with several picks, the sort and the free chip on the results page, the detail sheet from the results page, the Apply click-out, saved eligibility details, the eligibility error state, Android, a 360 dp screen, 130% font, a screen reader. The change sheet uses dynamic sizing with a scroll view: no other sheet in the repo does.
+
 ## D30. Advisor chat: stacked answers, acknowledgements and quick tips
 2026-11-19 · branch `claude/advisor`
 
