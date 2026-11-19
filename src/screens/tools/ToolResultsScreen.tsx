@@ -74,6 +74,9 @@ const APPLY_ON_ROWS = false;
 const SOURCE: ClickOutSource = 'tool_results';
 const SKELETON_ROWS = 4;
 const TABS = [{ label: 'Quick view' }, { label: 'By category' }];
+/** Scroll to a far row: how many times to jump and try again, and the wait between tries. */
+const SCROLL_MAX_RETRIES = 40;
+const SCROLL_RETRY_MS = 60;
 /** Where a found row lands: a little below the top of the list. */
 const SCROLL_VIEW_POSITION = 0.2;
 
@@ -259,13 +262,16 @@ export function ToolResultsScreen() {
   }, []);
   const onScrollToIndexFailed = useCallback(
     (info: { index: number; averageItemLength: number }) => {
-      // Rows have no fixed height: jump near the row, let it render, then try again (a few times at most).
+      // Rows have no fixed height, and the list has only drawn the rows near the screen. A jump
+      // past the drawn rows stops at the last drawn row, so one try moves only one batch of rows.
+      // Jump, let the next batch draw, and try again until the row is there. The limit covers a
+      // list of a few hundred rows and still stops if the row never draws.
       listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
-      if (retries.current >= 3) return;
+      if (retries.current >= SCROLL_MAX_RETRIES) return;
       retries.current += 1;
       setTimeout(() => {
-        listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: SCROLL_VIEW_POSITION });
-      }, 100);
+        listRef.current?.scrollToIndex({ index: info.index, animated: false, viewPosition: SCROLL_VIEW_POSITION });
+      }, SCROLL_RETRY_MS);
     },
     [],
   );
@@ -441,6 +447,8 @@ export function ToolResultsScreen() {
 
   const filterRow = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[8], alignItems: 'center' }}>
+      {/* First in the row: on the beat tool it is why the user opened the full list. */}
+      {highlightAlias && myInLeague ? <Chip label="Find my card" size={32} onPress={findMine} /> : null}
       <Chip label="Search" leadingIcon="search-outline" size={32} onPress={() => setSearchOpen(true)} />
       <FilterToggle
         label="Lifetime free"
@@ -452,7 +460,6 @@ export function ToolResultsScreen() {
         value={filters.includeInviteOnly}
         onChange={(v) => setFilters((f) => ({ ...f, includeInviteOnly: v }))}
       />
-      {highlightAlias && myInLeague ? <Chip label="Find my card" size={32} onPress={findMine} /> : null}
     </ScrollView>
   );
 

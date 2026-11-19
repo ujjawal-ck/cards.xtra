@@ -227,7 +227,7 @@ export function BestForBrandsScreen() {
                 {BRANDS_HONEST_LINE}
               </Text>
               <Text variant="body14Regular" color={colors.text.secondary}>
-                Spend a month on each brand. Leave it at 0 if you do not spend here.
+                Enter what you spend on each brand in a month. Leave it at 0 if you do not spend here.
               </Text>
               {picked.map((b) => {
                 const q = questionForBrand(b);
