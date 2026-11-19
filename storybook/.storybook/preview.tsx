@@ -90,7 +90,7 @@ const preview: Preview = {
     backgrounds: { default: 'app', values: [{ name: 'app', value: colors.background.default }, { name: 'muted', value: primitives.slate[150] }] },
     options: {
       storySort: {
-        order: ['Introduction', 'Foundations', 'Components', 'Patterns', 'Flows', '*'],
+        order: ['Introduction', ['Start here', 'Gaps and unsupported'], 'Foundations', 'Components', 'Patterns', 'Flows', '*'],
       },
     },
   },
