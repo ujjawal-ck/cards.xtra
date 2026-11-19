@@ -13,6 +13,7 @@
  */
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { View, type ViewStyle } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer, NavigationIndependentTree, createNavigationContainerRef } from '@react-navigation/native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -47,7 +48,13 @@ export interface PhoneFrameProps {
 }
 
 /** A 390x844 phone-sized box for screens and for proposed layouts composed from DS parts. */
-export function PhoneFrame({ children, width = PHONE_WIDTH, height = PHONE_HEIGHT, background, sheets = true, style }: PhoneFrameProps) {
+export function PhoneFrame({ children, width, height, background, sheets = true, style }: PhoneFrameProps) {
+  // On a phone-sized canvas (a Storybook mobile viewport, or a real phone) fill it, so the
+  // window the app measures and the frame are the same size. On a wide canvas use 390 x 844.
+  const win = useWindowDimensions();
+  const phoneCanvas = win.width <= 480;
+  width = width ?? (phoneCanvas ? win.width : PHONE_WIDTH);
+  height = height ?? (phoneCanvas ? win.height : PHONE_HEIGHT);
   return (
     <View
       style={[

@@ -66,7 +66,16 @@ function ClearAlert() {
   return null;
 }
 
+// Phone sizes. Every story opens on a phone canvas, so the window the app measures is a phone.
+const PHONES = {
+  android360: { name: 'Android small (360 x 800)', styles: { width: '360px', height: '800px' }, type: 'mobile' },
+  iphone390: { name: 'iPhone 14/15 (390 x 844)', styles: { width: '390px', height: '844px' }, type: 'mobile' },
+  android412: { name: 'Android (412 x 915)', styles: { width: '412px', height: '915px' }, type: 'mobile' },
+  iphone430: { name: 'iPhone Pro Max (430 x 932)', styles: { width: '430px', height: '932px' }, type: 'mobile' },
+};
+
 const preview: Preview = {
+  initialGlobals: { viewport: { value: 'iphone390', isRotated: false } },
   decorators: [
     (Story, ctx) => (
       <Providers key={ctx.id}>
@@ -77,6 +86,7 @@ const preview: Preview = {
   ],
   parameters: {
     layout: 'centered',
+    viewport: { options: PHONES },
     backgrounds: { default: 'app', values: [{ name: 'app', value: colors.background.default }, { name: 'muted', value: primitives.slate[150] }] },
     options: {
       storySort: {
