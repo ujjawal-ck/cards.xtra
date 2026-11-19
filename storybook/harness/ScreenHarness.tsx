@@ -33,8 +33,8 @@ export function ScreenHarness({ name, component, params, api, width = 390 }: Scr
         <AuthProvider>
           <NavigationIndependentTree>
             <NavigationContainer ref={navRef}>
-              <LoginSheetProvider navigationRef={navRef}>
-                <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <LoginSheetProvider navigationRef={navRef as any}>
+                <Stack.Navigator id={undefined as any} screenOptions={{ headerShown: false }}>
                   <Stack.Screen name={name} component={component} initialParams={params as any} />
                 </Stack.Navigator>
               </LoginSheetProvider>

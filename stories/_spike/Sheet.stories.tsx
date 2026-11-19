@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { View } from 'react-native';
 import { LogoutConfirmSheet, type LogoutConfirmSheetRef } from '../../src/organisms/LogoutConfirmSheet';
 const meta: Meta = { title: 'Spike/Sheet', parameters: { layout: 'fullscreen' } };

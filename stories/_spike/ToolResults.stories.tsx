@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { ToolResultsScreen } from '../../src/screens/tools/ToolResultsScreen';
 import { ScreenHarness } from '../../storybook/harness/ScreenHarness';
 import calc from '../../src/api/__fixtures__/uat.calculate_league_trimmed.json';

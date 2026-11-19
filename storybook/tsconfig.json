@@ -1,0 +1,6 @@
+{
+  "extends": "../node_modules/expo/tsconfig.base",
+  "compilerOptions": { "resolveJsonModule": true, "jsx": "react-jsx", "noEmit": true, "skipLibCheck": true,
+    "types": ["node"], "baseUrl": "..", "paths": { "@storybook/react-native-web-vite": ["storybook/node_modules/@storybook/react-native-web-vite/dist/index.d.ts"], "@storybook/react": ["storybook/node_modules/@storybook/react/dist/index.d.ts"], "@storybook/addon-docs/blocks": ["storybook/node_modules/@storybook/addon-docs/dist/blocks.d.ts"] } },
+  "include": ["../stories/**/*", "./harness/**/*", "./blocks/**/*", "./fixtures/**/*", "./mocks/**/*", "./.storybook/*.ts", "./.storybook/*.tsx", "../src/types/**/*.d.ts"]
+}

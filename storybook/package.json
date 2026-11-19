@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "storybook": "storybook dev -p 6006 -c .storybook",
-    "build": "storybook build -c .storybook -o dist"
+    "build": "storybook build -c .storybook -o dist",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "devDependencies": {
     "storybook": "10.0.8",

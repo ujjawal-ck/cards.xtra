@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { Button } from '../../src/atoms/Button';
 const meta: Meta = { title: 'Spike/Button' };
 export default meta;
