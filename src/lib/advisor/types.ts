@@ -74,6 +74,43 @@ export interface AdvisorOption {
   set: Partial<AdvisorSlots>;
   /** Hide the option when this returns true for the slots filled so far. */
   hideWhen?: (slots: AdvisorSlots) => boolean;
+  /** One short line the advisor says right after this answer. It uses the
+   *  answer and says what changed. No praise. A function may return undefined
+   *  (say nothing). */
+  ack?: string | ((ctx: AckContext) => string | undefined);
+}
+
+/** What an acknowledgement can look at. */
+export interface AckContext {
+  /** The slots after this answer. */
+  slots: AdvisorSlots;
+  /** The cards after this answer. */
+  reveal: AdvisorReveal;
+  /** True when this answer changed the top cards, the header or the proof level. */
+  changed: boolean;
+}
+
+/** A quick tip: one useful fact, shown once, at one place in the journey. */
+export interface AdvisorTip {
+  /** Two tips can share an id (two places for the same fact): the first one that applies shows. */
+  id: string;
+  /** One or two short sentences. No bank name, no rate, no promise of approval. */
+  text: string;
+  /** Show right after the answer to this question (after its acknowledgement and its cards). */
+  after?: QuestionId;
+  /** Show right before this question is asked. */
+  before?: QuestionId;
+  /** Show only when this returns true. Absent means always. */
+  when?: (ctx: TipContext) => boolean;
+}
+
+export interface TipContext {
+  /** For `after`: the slots including that answer. For `before`: the slots before the question. */
+  slots: AdvisorSlots;
+  /** The cards at that point, or null before the first answer. */
+  reveal: AdvisorReveal | null;
+  /** True when an eligibility result was applied to `reveal`. */
+  eligibilityApplied: boolean;
 }
 
 export interface AdvisorQuestion {
@@ -103,6 +140,10 @@ export interface AdvisorConfig {
   /** Questions after the opener, in asking order, for each journey. */
   journeys: Record<JourneyId, QuestionId[]>;
   questions: Record<QuestionId, AdvisorQuestion>;
+  /** The line said after a "Not sure" answer. */
+  notSureAck: string;
+  /** Quick tips, in no special order. Each id shows at most once in a chat. */
+  tips: AdvisorTip[];
 }
 
 /** The whole session state. */

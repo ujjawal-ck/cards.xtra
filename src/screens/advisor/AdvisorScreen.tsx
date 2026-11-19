@@ -37,7 +37,7 @@ import type { ProofLevel } from '../../lib/advisor/types';
 import type { ChatMessage } from '../../lib/advisor/chatTypes';
 import { useAdvisor } from './useAdvisor';
 import { AdvisorChatHeader } from './AdvisorChatHeader';
-import { AdvisorBubble, AdvisorEarlierLine, UserAnswerBubble } from './AdvisorChatBubble';
+import { AdvisorBubble, AdvisorEarlierLine, AdvisorTipBubble, UserAnswerBubble } from './AdvisorChatBubble';
 import { AdvisorRevealBlock } from './AdvisorRevealBlock';
 import { AdvisorReplyTray } from './AdvisorReplyTray';
 import { AdvisorTypingDots } from './AdvisorTypingDots';
@@ -221,6 +221,8 @@ export function AdvisorScreen() {
             </Text>
           </AdvisorBubble>
         );
+      case 'agent-tip':
+        return <AdvisorTipBubble text={m.text} />;
       case 'agent-question':
         return (
           <AdvisorBubble accessibilityLabel={`Swipey: ${m.why} ${m.ask}`}>

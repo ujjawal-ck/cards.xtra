@@ -26,8 +26,12 @@ import type {
 import type { AdvisorAvatarState } from '../advisorAvatar/types';
 
 export type ChatMessage =
-  /** Left. A plain line from the advisor: the greeting, a "same cards" note, the closing line. */
+  /** Left. A plain line from the advisor: the greeting, an acknowledgement of
+   *  the last answer (id `k:<question id>`), a "same cards" note, the closing line. */
   | { id: string; kind: 'agent-text'; text: string }
+  /** Left. A quick tip (id `t:<tip id>`): one useful fact, drawn apart from
+   *  the normal lines so it reads as a tip and not as a question. */
+  | { id: string; kind: 'agent-tip'; text: string }
   /** Left. One question: the expert line (`why`) and the question (`ask`).
    *  `current` is true for the question that waits for an answer now. */
   | { id: string; kind: 'agent-question'; questionId: QuestionId; why: string; ask: string; current: boolean }

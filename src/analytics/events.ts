@@ -146,6 +146,7 @@ export const Events = {
   ADVISOR_ELIGIBILITY_BRIDGE: 'advisor_eligibility_bridge', // params: outcome (shown | accepted | declined)
   ADVISOR_ELIGIBILITY_ERROR: 'advisor_eligibility_error',
   ADVISOR_EXIT: 'advisor_exit', // params: destination (card | apply | list | back), step
+  ADVISOR_TIP_VIEW: 'advisor_tip_view', // a quick tip was shown, once per tip in a chat. params: tip_id
 
   // ── orders ─────────────────────────────────────────────────
   ORDER_SELECT: 'order_select',

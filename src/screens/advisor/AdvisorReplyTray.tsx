@@ -1,24 +1,26 @@
 /**
  * AdvisorReplyTray: the reply area pinned under the chat.
  *
- *   choice question  the options as wrapping chips (plus "Not sure"). The content scrolls when it
- *                    is taller than TRAY_MAX_RATIO of the window (the need question has up to 9).
+ *   choice question  one full-width option row per answer, stacked in the given order, with a
+ *                    quieter "Not sure" row last. The rows scroll inside the tray when they are
+ *                    taller than TRAY_MAX_RATIO of the window (the need question has up to 9).
  *   pincode question the six-digit input and "Check cards".
  *   no question      "Start over".
  *
  * The screen keeps this tray above the keyboard (useKeyboardPadding on the wrapper).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text, Chip, Button, Input } from '../../atoms';
+import { Text, Button, Input } from '../../atoms';
 import { colors, spacing, borderWidth, sizing } from '../../tokens';
+import { AdvisorOptionRow } from './AdvisorOptionRow';
 import { NOT_SURE } from '../../lib/advisor/types';
 import type { AdvisorStep, QuestionId } from '../../lib/advisor/types';
 
 /** The tray never takes more than this share of the window height; its content scrolls instead.
  *  A layout ratio, not a token value. */
-const TRAY_MAX_RATIO = 0.4;
+const TRAY_MAX_RATIO = 0.46;
 const PINCODE = /^[1-9]\d{5}$/;
 
 /** Keep only digits, at most six. A Hindi keyboard can send Devanagari digits
@@ -47,24 +49,27 @@ export function AdvisorReplyTray({
   const { height } = useWindowDimensions();
   const [pin, setPin] = useState('');
 
-  // A new pincode question starts empty.
+  // A new question starts empty (pincode) and at the top of the list (options). The scroll
+  // indicator flashes once, so a long list shows that more rows sit below.
+  const scrollRef = useRef<ScrollView>(null);
   const questionId = step?.question.id;
   useEffect(() => {
     setPin('');
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    scrollRef.current?.flashScrollIndicators();
   }, [questionId]);
 
   let content: React.ReactNode;
   if (!step) {
     content = <Button label="Start over" variant="outline" tone="second" size={44} fullWidth onPress={onRestart} />;
   } else if (step.question.kind === 'choice') {
-    const chipStyle = { minHeight: sizing.touchMin };
     content = (
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[8] }}>
+      <View style={{ gap: spacing[8] }}>
         {step.options.map((o) => (
-          <Chip key={o.id} label={o.label} style={chipStyle} onPress={() => onAnswer(step.question.id, o.id)} />
+          <AdvisorOptionRow key={o.id} label={o.label} onPress={() => onAnswer(step.question.id, o.id)} />
         ))}
         {step.question.notSure ? (
-          <Chip label="Not sure" style={chipStyle} onPress={() => onAnswer(step.question.id, NOT_SURE)} />
+          <AdvisorOptionRow label="Not sure" quiet onPress={() => onAnswer(step.question.id, NOT_SURE)} />
         ) : null}
       </View>
     );
@@ -126,9 +131,11 @@ export function AdvisorReplyTray({
         </View>
       ) : null}
       <ScrollView
+        ref={scrollRef}
         style={{ flexGrow: 0, maxHeight: height * TRAY_MAX_RATIO }}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator
+        persistentScrollbar
       >
         {content}
       </ScrollView>

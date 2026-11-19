@@ -114,3 +114,24 @@ export function AdvisorEarlierLine({ header }: { header: string }) {
     </View>
   );
 }
+
+/** A quick tip from the advisor: the advisor bubble's shape and edge, on the calm info tint the
+ *  app uses for notes (feedback.info.subtle, as in the withdraw note boxes), with a sparkle. */
+export function AdvisorTipBubble({ text }: { text: string }) {
+  return (
+    <AdvisorBubble
+      accessibilityLabel={`Quick tip: ${text}`}
+      style={{ backgroundColor: colors.feedback.info.subtle, borderColor: colors.feedback.info.subtle }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}>
+        <Icon name="feat-sparkle-filled" size={iconSize[14]} color={colors.feedback.info.text} />
+        <Text variant="body12SemiBold" color={colors.feedback.info.text}>
+          Quick tip
+        </Text>
+      </View>
+      <Text variant="body14Regular" color={colors.text.primary}>
+        {text}
+      </Text>
+    </AdvisorBubble>
+  );
+}

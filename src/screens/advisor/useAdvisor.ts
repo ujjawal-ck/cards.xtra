@@ -156,6 +156,24 @@ export function useAdvisor(source: AdvisorSource | undefined) {
     setArrivingId(newestAdvisorId);
   }, [newestAdvisorId]);
 
+  // ---- Analytics: a quick tip was shown ----
+  // Once per tip id per chat. A tip that leaves the transcript (a rewind) is forgotten, so it
+  // counts again if it comes back, like seenAdvisorIds above.
+  const seenTipIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const present = new Set<string>();
+    for (const m of messages) {
+      if (m.kind !== 'agent-tip') continue;
+      present.add(m.id);
+      if (seenTipIds.current.has(m.id)) continue;
+      seenTipIds.current.add(m.id);
+      analytics.track(Events.ADVISOR_TIP_VIEW, { tip_id: m.id.replace(/^t:/, '') });
+    }
+    seenTipIds.current.forEach((id) => {
+      if (!present.has(id)) seenTipIds.current.delete(id);
+    });
+  }, [messages]);
+
   /** The screen calls this when the entrance of message `id` has ended (or will not run). */
   const markArrivalDone = useCallback((id: string) => {
     setArrivingId((current) => (current === id ? null : current));

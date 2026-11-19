@@ -3,6 +3,7 @@ jest.mock('../../../api/bankkaro', () => ({ checkEligibility: jest.fn() }));
 
 import type { CardModel } from '../../../molecules/CardTile';
 import type { AvatarSignals, ChatMessage } from '../chatTypes';
+import type { AdvisorConfig } from '../types';
 import { ADVISOR_CONFIG } from '../config';
 import { avatarStateFor, buildTranscript, rewindAnswers } from '../transcript';
 import { NOT_SURE, type AdvisorEligibility, type AdvisorState, type QuestionId } from '../types';
@@ -88,6 +89,7 @@ const eligibleFor = (cards: CardModel[], i: number[]): AdvisorEligibility => ({
 const textOf = (m: ChatMessage): string => {
   switch (m.kind) {
     case 'agent-text':
+    case 'agent-tip':
     case 'user-answer':
       return m.text;
     case 'agent-question':
@@ -150,13 +152,14 @@ describe('buildTranscript', () => {
     }
     // hello, then (question, answer, reveal?) per answer, then the tail.
     expect(ids.slice(0, 3)).toEqual(['hello', 'q:opener', 'a:opener']);
-    expect(ids[3]).toBe('r:opener');
+    expect(ids.slice(3, 5)).toEqual(['k:opener', 'r:opener']);
     expect(ids.indexOf('a:eligBridge')).toBe(ids.indexOf('q:eligBridge') + 1);
-    expect(ids.indexOf('q:job')).toBe(ids.indexOf('a:eligBridge') + 1);
+    expect(ids.indexOf('q:job')).toBe(ids.indexOf('a:eligBridge') + 2); // k:eligBridge between
     expect(ids.indexOf('q:income')).toBe(ids.indexOf('a:job') + 1);
-    expect(ids.indexOf('q:pincode')).toBe(ids.indexOf('a:income') + 1);
+    expect(ids.indexOf('q:pincode')).toBe(ids.indexOf('a:income') + 2); // k:income between
     expect(ids.indexOf('a:pincode')).toBe(ids.indexOf('q:pincode') + 1);
-    expect(ids[ids.indexOf('a:pincode') + 1]).toBe('r:pincode');
+    expect(ids[ids.indexOf('a:pincode') + 1]).toBe('k:pincode');
+    expect(ids[ids.indexOf('a:pincode') + 2]).toBe('r:pincode');
     expect(kinds(t.messages).filter((k) => k === 'user-answer')).toHaveLength(8);
     expect(t.step).toBeNull();
     expect(t.messages[t.messages.length - 1].id).toBe('closing');
@@ -207,7 +210,7 @@ describe('buildTranscript', () => {
     }
   });
 
-  it('an eligibility result arriving changes no earlier text; it adds only r:pincode and the tail', () => {
+  it('an eligibility result arriving changes no earlier text; it adds only k:pincode, r:pincode and the tail', () => {
     const cards = catalogue();
     const before = build(st(FULL_FIRST), cards, null);
     const after = build(st(FULL_FIRST), cards, eligibleFor(cards, [0, 1]));
@@ -217,8 +220,8 @@ describe('buildTranscript', () => {
     }
     const beforeIds = new Set(before.messages.map((m) => m.id));
     const added = after.messages.filter((m) => !beforeIds.has(m.id) && m.id !== 'closing');
-    expect(added.map((m) => m.id)).toEqual(['r:pincode']);
-    expect(added[0].kind).toBe('agent-reveal');
+    expect(added.map((m) => m.id)).toEqual(['k:pincode', 'r:pincode']);
+    expect(added[1].kind).toBe('agent-reveal');
     expect(before.reveal!.proof).not.toBe('likely');
     expect(after.reveal!.proof).toBe('likely');
     expect(after.messages[after.messages.length - 1]).toMatchObject({ id: 'closing' });
@@ -278,6 +281,161 @@ describe('buildTranscript', () => {
     const b = build(st({ opener: 'first', history: 'no' }, [cards[0].id]), cards);
     expect(b.reveal!.all.map((c) => c.id)).not.toContain(cards[0].id);
     expect(a.reveal!.all.map((c) => c.id)).toContain(cards[0].id);
+  });
+});
+
+const idsOf = (t: { messages: ChatMessage[] }) => t.messages.map((m) => m.id);
+const textById = (t: { messages: ChatMessage[] }, id: string) => {
+  const m = t.messages.find((x) => x.id === id);
+  return m && 'text' in m ? m.text : undefined;
+};
+
+describe('acknowledgements', () => {
+  it('adds k:<id> right after a:<id> and before the reveal', () => {
+    const ids = idsOf(build(st({ opener: 'first' }), catalogue()));
+    const a = ids.indexOf('a:opener');
+    expect(ids[a + 1]).toBe('k:opener');
+    expect(ids[a + 2]).toBe('r:opener');
+    expect(build(st({ opener: 'first' }), catalogue()).messages[a + 1]).toMatchObject({ kind: 'agent-text' });
+  });
+
+  it('NOT_SURE gives the notSureAck text', () => {
+    const t = build(st({ opener: 'first', history: NOT_SURE }), catalogue());
+    expect(textById(t, 'k:history')).toBe(C.notSureAck);
+  });
+
+  it('says nothing when the filters were relaxed', () => {
+    const cards = [
+      card({ cat: [FUEL], annualFee: 500 }),
+      card({ cat: [FUEL], annualFee: 600 }),
+      card({ cat: [SHOPPING], isFree: true }),
+    ];
+    const t = build(st({ opener: 'specific', need: 'fuel', fee: 'free' }), cards);
+    expect(t.reveal!.dropped.length).toBeGreaterThan(0);
+    expect(idsOf(t)).not.toContain('k:fee');
+  });
+
+  it('the same-cards line n:<id> shows only when the option has no ack', () => {
+    const cards = catalogue();
+    // "No history" keeps the first-card filter, so the cards stay the same.
+    const tiny = (ack?: string): AdvisorConfig => ({
+      ...C,
+      questions: {
+        ...C.questions,
+        history: {
+          ...C.questions.history,
+          options: C.questions.history.options.map((o) => (o.id === 'no' ? { ...o, ack } : o)),
+        },
+      },
+    });
+    const run = (cfg: AdvisorConfig) =>
+      idsOf(buildTranscript({ state: st({ opener: 'first', history: 'no' }), config: cfg, cards, eligibility: null, eligibilityKnown: false }));
+    expect(run(tiny())).toContain('n:history');
+    expect(run(tiny())).not.toContain('k:history');
+    expect(run(tiny('No history.'))).toContain('k:history');
+    expect(run(tiny('No history.'))).not.toContain('n:history');
+    // With the real config the option has an ack, so no n: line.
+    const real = idsOf(build(st({ opener: 'first', history: 'no' }), cards));
+    expect(real).toContain('k:history');
+    expect(real).not.toContain('n:history');
+  });
+
+  it('upi ack function: RuPay on top and not', () => {
+    const withRupay = build(st({ opener: 'first', history: 'no', need: 'shopping', upi: 'daily' }), catalogue());
+    expect(textById(withRupay, 'k:upi')).toMatch(/^UPI daily\. Cards that link to UPI are now on top\.$/);
+    const some = build(st({ opener: 'first', history: 'no', need: 'shopping', upi: 'sometimes' }), catalogue());
+    expect(textById(some, 'k:upi')).toBe('UPI sometimes. Cards that link to UPI are now on top.');
+    const noRupay = [card({ cat: [SHOPPING], isFree: true, newToCredit: true }), card({ cat: [SHOPPING], isFree: true, newToCredit: true })];
+    const t = build(st({ opener: 'first', history: 'no', need: 'shopping', upi: 'daily' }), noRupay);
+    expect(textById(t, 'k:upi')).toBe('None of these link to UPI, so the order stays.');
+  });
+
+  it('pincode: none without a result, count lines with a likely result, none with a note or not likely', () => {
+    const cards = catalogue();
+    expect(idsOf(build(st(FULL_FIRST), cards, null))).not.toContain('k:pincode');
+    expect(textById(build(st(FULL_FIRST), cards, eligibleFor(cards, [0])), 'k:pincode')).toBe('1 card fits your income and pincode.');
+    const many = build(st(FULL_FIRST), cards, eligibleFor(cards, [0, 1, 2]));
+    expect(textById(many, 'k:pincode')).toBe(`${many.reveal!.total} cards fit your income and pincode.`);
+    expect(many.reveal!.total).toBeGreaterThan(1);
+    // Result that matches no card: the reveal has a note and is not likely.
+    const none = build(st(FULL_FIRST), cards, { eligibleAliases: ['nope'], incomeMonthly: 40000 });
+    expect(none.reveal!.proof).not.toBe('likely');
+    expect(idsOf(none)).not.toContain('k:pincode');
+  });
+});
+
+describe('tips', () => {
+  const tipIds = (t: { messages: ChatMessage[] }) => idsOf(t).filter((id) => id.startsWith('t:'));
+
+  it('payfull only in journey first, right after history', () => {
+    const t = build(st({ opener: 'first', history: 'no' }), catalogue());
+    const ids = idsOf(t);
+    expect(ids).toContain('t:payfull');
+    expect(ids.indexOf('t:payfull')).toBeGreaterThan(ids.indexOf('r:history') >= 0 ? ids.indexOf('r:history') : ids.indexOf('a:history'));
+    expect(t.messages.find((m) => m.id === 't:payfull')).toMatchObject({ kind: 'agent-tip' });
+    expect(tipIds(build(st({ opener: 'better', missing: 'travel' }), catalogue()))).not.toContain('t:payfull');
+  });
+
+  it('caps after need in journey specific with a category, once', () => {
+    const t = build(st({ opener: 'specific', need: 'shopping' }), catalogue());
+    expect(tipIds(t).filter((id) => id === 't:caps')).toHaveLength(1);
+    expect(idsOf(t).indexOf('t:caps')).toBeGreaterThan(idsOf(t).indexOf('a:need'));
+    expect(tipIds(build(st({ opener: 'specific', need: 'everything' }), catalogue()))).not.toContain('t:caps');
+    expect(tipIds(build(st({ opener: 'first', history: 'no', need: 'shopping' }), catalogue()))).not.toContain('t:caps');
+  });
+
+  it('caps is not shown twice when missing and need could both show it', () => {
+    const t = build(st({ opener: 'better', missing: 'shopping', need: 'shopping' }), catalogue());
+    expect(tipIds(t).filter((id) => id === 't:caps')).toHaveLength(1);
+    const ids = idsOf(t);
+    expect(ids.indexOf('t:caps')).toBeGreaterThan(ids.indexOf('a:missing'));
+  });
+
+  it('ltf sits right before the fee question, current and answered', () => {
+    const current = build(st({ opener: 'specific', need: 'shopping' }), catalogue());
+    const ids = idsOf(current);
+    expect(ids[ids.length - 2]).toBe('t:ltf');
+    expect(ids[ids.length - 1]).toBe('q:fee');
+    const answered = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any' }), catalogue()));
+    expect(answered[answered.indexOf('q:fee') - 1]).toBe('t:ltf');
+    expect(answered.filter((id) => id === 't:ltf')).toHaveLength(1);
+  });
+
+  it('softcheck before the bridge, and before job on the explore approved path, never twice', () => {
+    const bridge = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any' }), catalogue()));
+    expect(bridge[bridge.length - 2]).toBe('t:softcheck');
+    expect(bridge[bridge.length - 1]).toBe('q:eligBridge');
+    const approved = idsOf(build(st({ opener: 'explore', matters: 'approved' }), catalogue()));
+    expect(approved[approved.length - 2]).toBe('t:softcheck');
+    expect(approved[approved.length - 1]).toBe('q:job');
+    const both = idsOf(build(st({ opener: 'specific', need: 'shopping', fee: 'any', eligBridge: 'yes' }), catalogue()));
+    expect(both.filter((id) => id === 't:softcheck')).toHaveLength(1);
+    expect(both[both.indexOf('q:eligBridge') - 1]).toBe('t:softcheck');
+  });
+
+  it('wait only with a result that is not likely', () => {
+    const cards = catalogue();
+    expect(tipIds(build(st(FULL_FIRST), cards, null))).not.toContain('t:wait');
+    expect(tipIds(build(st(FULL_FIRST), cards, eligibleFor(cards, [0])))).not.toContain('t:wait');
+    const none = build(st(FULL_FIRST), cards, { eligibleAliases: ['nope'], incomeMonthly: 40000 });
+    expect(tipIds(none)).toContain('t:wait');
+    const ids = idsOf(none);
+    expect(ids.indexOf('t:wait')).toBeGreaterThan(ids.indexOf('a:pincode'));
+  });
+
+  it('ids stay unique at every prefix and history is stable with the new kinds', () => {
+    const cards = catalogue();
+    for (const elig of [null, eligibleFor(cards, [0]), { eligibleAliases: ['nope'], incomeMonthly: 40000 }]) {
+      for (let k = 0; k < ORDER.length; k++) {
+        const a = build(prefixOf(k), cards, elig);
+        const b = build(prefixOf(k + 1), cards, elig);
+        expect(new Set(idsOf(b)).size).toBe(idsOf(b).length);
+        const byId = new Map(b.messages.map((m) => [m.id, m]));
+        for (const m of a.messages.filter((x) => !isTail(x))) {
+          expect(textOf(byId.get(m.id)!)).toBe(textOf(m));
+        }
+      }
+    }
   });
 });
 
