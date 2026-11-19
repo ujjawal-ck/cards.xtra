@@ -37,6 +37,7 @@ import type { IconName } from '../atoms/Icon';
 import { useScreenFocused } from '../lib/useScreenFocused';
 import { rotatingWordIndex, TOOLS_ROW_TICK_MS } from '../lib/toolsRowRotation';
 import { TOOL_CATEGORIES, ROTATING_BRANDS } from '../lib/cardTools';
+import type { ToneName } from '../tokens';
 import {
   colors,
   spacing,
@@ -59,13 +60,15 @@ const FIT_MAX_FONT_SCALE = 1;
 // Wrapped labels never take more lines than this; the rotating word's box
 // always reserves them, so a word change moves nothing.
 const FIT_MAX_LINES = 2;
+// Round tinted holder behind each tile icon.
+const ICON_HOLDER = spacing[32];
 
 /** Row height at normal text size (fit mode), for loading skeletons. Same
- *  parts as a tile: vertical padding, icon, gap, one line1 line, the two
+ *  parts as a tile: vertical padding, icon holder, gap, one line1 line, the two
  *  reserved lines of the rotating word, and the border. */
 export const TOOLS_ROW_FIT_H =
   spacing[8] * 2 +
-  iconSize[24] +
+  ICON_HOLDER +
   spacing[4] +
   typography.body12Regular.lineHeight +
   typography.body12SemiBold.lineHeight * FIT_MAX_LINES +
@@ -76,6 +79,8 @@ const BRAND_WORDS = ROTATING_BRANDS;
 
 interface ToolTileSpec {
   icon: IconName;
+  /** Key of colors.tones: tints the round holder and the glyph. */
+  tone: ToneName;
   line1: string;
   /** Fixed second line. Omitted for rotating tiles. */
   line2?: string;
@@ -85,22 +90,26 @@ interface ToolTileSpec {
   a11yLabel: string;
 }
 
-// Icons: nearest existing glyphs (no dedicated tool icons in the set).
+// Icons: filled glyph in a tone-tinted round holder (no dedicated tool icons
+// in the set, so these are the nearest existing glyphs).
 const TILES: Record<ToolId, ToolTileSpec> = {
   category: {
-    icon: 'feat-discount-outline',
+    icon: 'feat-discount-filled',
+    tone: 'info',
     line1: 'Best card for',
     words: CATEGORY_WORDS,
     a11yLabel: 'Find best card for a category',
   },
   beat: {
-    icon: 'star-outline',
+    icon: 'star-filled',
+    tone: 'warning',
     line1: 'Try Beat',
     line2: 'My Card',
     a11yLabel: 'Try Beat My Card',
   },
   ultimate: {
-    icon: 'feat-sparkle-outline',
+    icon: 'feat-sparkle-filled',
+    tone: 'purple',
     line1: 'Find My',
     line2: 'Ultimate Card',
     a11yLabel: 'Find My Ultimate Card',
@@ -108,7 +117,8 @@ const TILES: Record<ToolId, ToolTileSpec> = {
   brands: {
     // Not nav-offers-outline: the nav-* glyphs bake a white stroke for the
     // dark tab bar and ignore `color`, so they vanish on this white tile.
-    icon: 'cart-outline',
+    icon: 'cart-filled',
+    tone: 'brand',
     line1: 'Best card for',
     words: BRAND_WORDS,
     a11yLabel: 'Find best card for a brand',
@@ -203,11 +213,22 @@ export function ToolsRow({ onPress, style }: ToolsRowProps) {
                 : colors.surface.default,
             })}
           >
-            <Icon
-              name={tile.icon}
-              size={iconSize[24]}
-              color={colors.action.accent.default}
-            />
+            <View
+              style={{
+                width: ICON_HOLDER,
+                height: ICON_HOLDER,
+                borderRadius: radius.full,
+                backgroundColor: colors.tones[tile.tone].bgSubtle,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon
+                name={tile.icon}
+                size={iconSize[20]}
+                color={colors.tones[tile.tone].text}
+              />
+            </View>
             <View style={{ alignItems: 'center' }}>
               <Text
                 variant="body12Regular"
