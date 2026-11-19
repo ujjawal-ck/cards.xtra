@@ -12,7 +12,7 @@ import { colors, spacing } from '../../../src/tokens';
 import { ScreenHarness } from '../../../storybook/harness';
 import { api, reply, mcDraftFixture, mcExitDatesFixture, mcValidateFixture, mcSubmitFixture, MC_SAMPLE_ORDER_ID } from '../../../storybook/fixtures';
 import { sleep, tap, typeInto } from './_dom';
-import { ProposedPage, OfflineState } from './_proposed';
+import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
   title: 'Flows/8 Orders and missing cashback/Date, order ID, amount',
@@ -54,7 +54,7 @@ export const ChooseDateError: Story = {
 /** No visit dates: "We couldn't find any recent visits", Continue disabled. */
 export const ChooseDateNoDates: Story = {
   tags: ['live'],
-  parameters: { source: `${DATE}:92` },
+  parameters: { source: `${DATE}:110` },
   render: () => date(api.ok({ mcExitDates: mcExitDatesFixture.empty })),
 };
 
@@ -140,10 +140,10 @@ export const OrderIdNetworkError: Story = {
   play: async () => { await sleep(1500); await typeInto('Enter order ID', MC_SAMPLE_ORDER_ID); await tap('Continue'); },
 };
 
-/** Choose date with no connection and no cache: a false "no recent visits". */
+/** N2 (fixed on branch `claude/mc-p0-fixes`): Choose date with no connection and no cache. */
 export const ChooseDateOffline: Story = {
   tags: ['live'],
-  parameters: { source: `${DATE}:92`, docs: { description: { story: 'R6 (inferred from code). Offline with no cache, the dates query is paused, so the empty branch shows "We couldn\'t find any recent visits". `api.offline()` reproduces the pause. Fix: see the proposed story below.' } } },
+  parameters: { source: `${DATE}:92`, docs: { description: { story: 'N2, fixed on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Offline with no cache, the dates query is paused. The screen now shows a ScreenState block: "You\'re offline", "Connect to the internet and try again." and a "Try again" action. It no longer reads "We couldn\'t find any recent visits". `api.offline()` reproduces the pause.' } } },
   render: () => date(api.offline()),
 };
 
@@ -153,13 +153,6 @@ export const HugeAmount: Story = {
   parameters: { source: `${AMOUNT}:57`, docs: { description: { story: 'Reached by typing 100000000 and tapping Submit. The regex has no upper bound, so the claim posts. The mock answers with the default pending claim. Open question Q8: add a bound or a confirm step?' } } },
   render: () => amount(api.ok()),
   play: async () => { await typeInto('Enter amount', '100000000'); await tap('Submit'); },
-};
-
-/** PROPOSED: Choose date offline. */
-export const ChooseDateOfflineProposed: Story = {
-  tags: ['proposed'],
-  parameters: { docs: { description: { story: 'Fix for R6. Copy reuses the tool screens\' "You\'re offline" / "Check your connection and try again." Open question: no illustration until the "Connection lost" asset exists (DS gap 1).' } } },
-  render: () => <ProposedPage title="Did You Shop?"><OfflineState /></ProposedPage>,
 };
 
 /** PROPOSED: the claim submit has an unknown outcome (timeout or dropped connection). */

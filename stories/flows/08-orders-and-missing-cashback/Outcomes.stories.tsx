@@ -13,8 +13,8 @@ import { StepProgress } from '../../../src/atoms/StepProgress';
 import { images } from '../../../src/assets/images';
 import { colors, spacing, radius } from '../../../src/tokens';
 import { ScreenHarness } from '../../../storybook/harness';
-import { api, reply, mcDraftFixture } from '../../../storybook/fixtures';
-import { tap } from './_dom';
+import { api, reply, mcDraftFixture, mcTicketFixture } from '../../../storybook/fixtures';
+import { sleep, tap, waitFor } from './_dom';
 import { ProposedPage } from './_proposed';
 
 const meta: Meta = {
@@ -161,7 +161,48 @@ export const CategorySelectSubmitting: Story = {
   play: async () => { await tap('Mobile Recharge'); await tap('Submit'); },
 };
 
-/** The invoice layout the two proposed upload states share. */
+const UPLOAD = 'src/screens/MissingCashbackInvoiceUpload.tsx';
+const invoice = (a: ReturnType<typeof api.ok>) => <ScreenHarness name="MissingCashbackInvoiceUpload" component={MissingCashbackInvoiceUpload} auth="signedIn" params={{ draft: mcDraftFixture.c2Queued }} api={a} />;
+
+/** Picks one tiny PNG through the web file input that expo-image-picker opens, then taps Submit. */
+async function attachAndSubmit() {
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const pick = tap('Add screenshot', { settleMs: 0 });
+  const input = await waitFor(() => document.querySelector<HTMLInputElement>('input[data-testid="file-input"]'), 5000);
+  await pick;
+  if (!input) return false;
+  const bytes = Uint8Array.from(atob(PNG), (c) => c.charCodeAt(0));
+  const dt = new DataTransfer();
+  dt.items.add(new File([bytes], 'invoice_1.png', { type: 'image/png' }));
+  input.files = dt.files;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(800);
+  return tap('Submit', { settleMs: 600 });
+}
+
+/** L1 (fixed on branch `claude/mc-p0-fixes`): the ticket POST ends in a gateway 504 after the upload was sent. */
+export const UploadUnconfirmed: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${UPLOAD}:137`,
+    docs: { description: { story: 'L1, fixed on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Reached by taps: Add screenshot (the play function attaches one tiny PNG through the web file input), then Submit. The ticket POST answers 504. A sent upload that ends in a timeout, a dropped connection or a 502, 503 or 504 reads "We couldn\'t confirm the upload. Check Missing Cashback, Others tab, before you try again." instead of the raw error, because the ticket may exist.' } },
+  },
+  render: () => invoice(api.ok({ mcTicket: reply.code(504, '504', 'Gateway Timeout') })),
+  play: async () => { await attachAndSubmit(); },
+};
+
+/** L1 (fixed on branch `claude/mc-p0-fixes`): the upload is running, the "Uploading" line shows. */
+export const UploadingSlow: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${UPLOAD}:224`,
+    docs: { description: { story: 'L1, fixed on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Reached by taps: Add screenshot (one tiny PNG), then Submit. The ticket POST answers after 30 s, so the screen stays in its submitting state: Submit is loading and the line "Uploading. This can take up to a minute on a slow network." shows. The upload now has a 60 s deadline (it had 15 s) and is never retried.' } },
+  },
+  render: () => invoice(api.ok({ mcTicket: reply.delay(30000, mcTicketFixture.default) })),
+  play: async () => { await attachAndSubmit(); },
+};
+
+/** The invoice layout the proposed upload state shares. */
 function InvoiceLayout({ children, loading = false }: { children: React.ReactNode; loading?: boolean }) {
   return (
     <ProposedPage
@@ -183,29 +224,16 @@ function InvoiceLayout({ children, loading = false }: { children: React.ReactNod
   );
 }
 
-/** PROPOSED: three photos uploading on a slow network. */
+/** PROPOSED: per-file upload progress. The app now shows a plain "Uploading" line (see Uploading slow). */
 export const UploadingProposed: Story = {
   tags: ['proposed'],
   parameters: {
-    docs: { description: { story: 'G16 (P0, inferred, not measured). Today one POST carries every photo with a 15 s deadline, no retry and only a button spinner. Proposed: a step bar and a keep-open note. Open question: upload one photo at a time so progress is real and a failure costs one file. The bar here is a design stand-in: the app has no per-file progress. Thumbnails are bundled brand images.' } },
+    docs: { description: { story: 'L1 (fixed on branch `claude/mc-p0-fixes`, 4d40166): the app now has a 60 s deadline and a plain "Uploading" line. This story still proposes something not built: a per-file progress bar ("Uploading 1 of 3") and a keep-open note. Open question: upload one photo at a time so progress is real and a failure costs one file. The bar here is a design stand-in: the app has no per-file progress. Thumbnails are bundled brand images.' } },
   },
   render: () => (
     <InvoiceLayout loading>
       <StepProgress value={1} total={3} label="Uploading 1 of 3" showCount={false} />
       <InlineMessage tone="info" message="Keep the app open until the upload finishes." />
-    </InvoiceLayout>
-  ),
-};
-
-/** PROPOSED: the upload timed out and the outcome is unknown. */
-export const UploadUnknownOutcomeProposed: Story = {
-  tags: ['proposed'],
-  parameters: {
-    docs: { description: { story: 'G2b. Today the catch shows raw text and a retry can raise a second ticket. Proposed: a warning that sends the user to the Others tab before they upload again. Open question: block a new upload until the user has opened the list, or only warn?' } },
-  },
-  render: () => (
-    <InvoiceLayout>
-      <InlineMessage tone="warning" title="We couldn't confirm your upload" message="Check the Others tab in your claims before you upload again." primaryActionLabel="View claims" onPrimaryAction={() => {}} />
     </InvoiceLayout>
   ),
 };

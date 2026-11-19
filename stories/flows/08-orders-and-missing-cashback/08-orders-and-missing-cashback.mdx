@@ -113,6 +113,7 @@ Three tabs. The four hidden stories are static sample lists in the source, shown
   { state: "Feedback Appreciated", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--feedback-appreciated", note: "No, one reason ticked and submitted: the 'Your Feedback is Appreciated' sheet." },
   { state: "Lookup Failed", status: "proposed", story: "flows-8-orders-and-missing-cashback-did-you-shop--lookup-failed", note: "PROPOSED: the store-visit lookup failed. Today a native Alert." },
   { state: "Lookup Failed Alert", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--lookup-failed-alert", note: "The store-visit lookup failed: a native Alert shows, rendered as a dialog on web." },
+  { state: "Yes Offline", status: "live", story: "flows-8-orders-and-missing-cashback-did-you-shop--yes-offline", note: "N1, fixed on branch claude/mc-p0-fixes (4d40166): Yes while the lookup is paused offline shows the Alert 'You’re offline' with Try again. It no longer goes to Oops." },
 ]} />
 
 ## Where did you shop
@@ -147,9 +148,8 @@ Three screens, one claim draft. States that need typing use a play function.
   { state: "Submit Timeout Then Duplicate", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--submit-timeout-then-duplicate", note: "A claim submit that drops the connection, then a second tap that hits 'already exists'." },
   { state: "Order Id Checking", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--order-id-checking", note: "The order-ID check is running: Continue shows its loading state." },
   { state: "Order Id Network Error", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--order-id-network-error", note: "The order-ID check loses the connection: the raw transport text shows under the field." },
-  { state: "Choose Date Offline", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline", note: "Choose date with no connection and no cache: a false 'no recent visits'." },
+  { state: "Choose Date Offline", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline", note: "N2, fixed on branch claude/mc-p0-fixes (4d40166): offline with no cache shows an offline block with Try again, not 'no recent visits'." },
   { state: "Huge Amount", status: "live", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--huge-amount", note: "An amount with no upper bound is accepted: 10,00,00,000." },
-  { state: "Choose Date Offline Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline-proposed", note: "PROPOSED: Choose date offline." },
   { state: "Submit Unknown Outcome Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-date-order-id-amount--submit-unknown-outcome-proposed", note: "PROPOSED: the claim submit has an unknown outcome (timeout or dropped connection)." },
 ]} />
 
@@ -171,8 +171,9 @@ The submit answer and the store group decide the screen. File too large (R18) is
   { state: "Category Select Submit Error", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--category-select-submit-error", note: "C1: the update call fails after a category is picked." },
   { state: "New User Check Submitting", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--new-user-check-submitting", note: "B1: the update call is running: the button shows its loading state and both answers are disabled." },
   { state: "Category Select Submitting", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--category-select-submitting", note: "C1: the update call is running: Submit shows its loading state." },
-  { state: "Uploading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--uploading-proposed", note: "PROPOSED: three photos uploading on a slow network." },
-  { state: "Upload Unknown Outcome Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--upload-unknown-outcome-proposed", note: "PROPOSED: the upload timed out and the outcome is unknown." },
+  { state: "Upload Unconfirmed", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--upload-unconfirmed", note: "L1, fixed on branch claude/mc-p0-fixes (4d40166): the ticket POST answers 504 after the upload was sent. The error says the upload is unconfirmed and points to Missing Cashback, Others tab." },
+  { state: "Uploading Slow", status: "live", story: "flows-8-orders-and-missing-cashback-outcomes--uploading-slow", note: "L1, fixed on branch claude/mc-p0-fixes (4d40166): the upload is running, the Uploading line shows (60 s deadline)." },
+  { state: "Uploading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-outcomes--uploading-proposed", note: "PROPOSED: per-file upload progress bar (not built). The app shows a plain Uploading line." },
 ]} />
 
 ## Risks
@@ -180,7 +181,7 @@ The submit answer and the store group decide the screen. File too large (R18) is
 - R13: a not-tracked claim tells the user to raise a ticket from Get Help, and Get Help restarts the same intake. See Claims list, "Not tracked with reason".
 - R14: order detail "Need Help" restarts the claim from store choice; store, date and order ID are not carried. See Order detail.
 - R18: invoice above about 4.4 MB fails at the BFF but the app allows 6 MB and the text says 2 MB. See Outcomes, "Invoice file too large".
-- R6: offline with no cache, Orders list, Order detail, Claims list and the "Yes" answer show false empties. Stories are in Flow 10, Paused screens.
+- R6: offline with no cache, Orders list, Order detail and Claims list show false empties. The "Yes" answer (N1) and Choose date (N2) are fixed on branch `claude/mc-p0-fixes`, not yet in `Anmol--changes`. Stories are in Flow 10, Paused screens.
 - R17: a session that ends during claim submit or invoice upload has no defined return. Stories are in Flow 10, Mid-flow return.
 
 ## Open questions

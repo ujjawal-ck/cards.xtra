@@ -35,7 +35,7 @@ export const CheckingStoreVisits: Story = {
 /** Yes with store visits: moves on to "Where did you shop?". The harness shows a stub page for that route. */
 export const YesWithVisits: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:72`, docs: { description: { story: 'Reached by a tap on Yes. The next screen is on the Where did you shop step; here the harness shows its stub page.' } } },
+  parameters: { source: `${SRC}:61`, docs: { description: { story: 'Reached by a tap on Yes. The next screen is on the Where did you shop step; here the harness shows its stub page.' } } },
   render: () => screen(api.ok()),
   play: async () => { await tap('Yes'); },
 };
@@ -43,7 +43,7 @@ export const YesWithVisits: Story = {
 /** Yes with no store visits in 30 days: goes to the Oops screen (stub page here). */
 export const YesWithoutVisits: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:72`, docs: { description: { story: 'Reached by a tap on Yes, with an empty retailer list. See the Where did you shop step for the Oops screen itself.' } } },
+  parameters: { source: `${SRC}:61`, docs: { description: { story: 'Reached by a tap on Yes, with an empty retailer list. See the Where did you shop step for the Oops screen itself.' } } },
   render: () => screen(api.empty()),
   play: async () => { await tap('Yes'); },
 };
@@ -71,16 +71,24 @@ export const FeedbackAppreciated: Story = {
 /** The store-visit lookup failed: a native Alert shows, rendered as a dialog on web. */
 export const LookupFailedAlert: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:60`, docs: { description: { story: 'Reached by a tap on Yes after the lookup has failed. The retailers call answers 500; the play function waits 2 s for the retries, then taps Yes. The native Alert shows as a dialog through the web shim. Design: see "Lookup failed" below.' } } },
+  parameters: { source: `${SRC}:72`, docs: { description: { story: 'Reached by a tap on Yes after the lookup has failed. The retailers call answers 500; the play function waits 2 s for the retries, then taps Yes. The native Alert shows as a dialog through the web shim. Design: see "Lookup failed" below.' } } },
   render: () => screen(api.ok({ mcRetailers: reply.error(500) })),
   play: async () => { await sleep(2000); await tap('Yes'); },
+};
+
+/** N1 (fixed on branch `claude/mc-p0-fixes`): Yes while the lookup is paused offline. */
+export const YesOffline: Story = {
+  tags: ['live'],
+  parameters: { source: `${SRC}:72`, docs: { description: { story: 'N1, fixed on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Every call fails like a dropped network, so the retailers lookup is paused with no data. A tap on Yes shows the Alert "You\'re offline" / "Connect to the internet and try again." with Cancel and "Try again". It no longer routes to the Oops screen and does not track has_visits. The native Alert shows as a dialog through the web shim.' } } },
+  render: () => screen(api.offline()),
+  play: async () => { await sleep(1000); await tap('Yes'); },
 };
 
 /** PROPOSED: the store-visit lookup failed. Today a native Alert. */
 export const LookupFailed: Story = {
   tags: ['proposed'],
   parameters: {
-    docs: { description: { story: 'Today `MissingCashbackHelp.tsx:60` shows a native `Alert` ("Couldn\'t check your store visits"). Offline with no cache is worse: a paused lookup counts as "no visits" and routes to Oops (see Flow 10). Open question: inline message above the buttons (this design) or keep the Alert.' } },
+    docs: { description: { story: 'Today `MissingCashbackHelp.tsx:72` shows a native `Alert` ("Couldn\'t check your store visits"). Offline with no cache now has its own Alert ("You\'re offline", see the Yes offline story). Open question: inline message above the buttons (this design) or keep the Alert.' } },
   },
   render: () => (
     <ProposedPage title="Missing Cashback" background={colors.background.muted}>
