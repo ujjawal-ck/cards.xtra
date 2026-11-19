@@ -1,0 +1,89 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/10 Offline and session/Overview" />
+
+<PageHeader title="Offline and session" meta="flow 10 · screens and states">Never lose my place, or think my money is gone, because the network or the session failed. Cross-cutting: the offline banner is on every screen, paused queries leave false empties (R6), and an expired session opens the login sheet by itself.</PageHeader>
+
+Open a state from the matrix. Every flow story renders in its own frame, so a state opens as a page and not inline.
+
+## Flow
+
+```
+OFFLINE
+  device loses network ──> Offline banner (top strip, every screen)
+        │
+        └─ first load with no cache ──> query PAUSED (not loading, not error)
+              Home | Earnings | Offers | Orders | Order detail | Claims | Profile
+                 └─> falls to its loaded or empty layout: "0 cards", ₹0, "No orders yet"  (R6)
+              Proposed: one shared offline state "You're offline / Try again"
+
+SESSION
+  refresh token rejected ──> cache cleared ──> status "unauthenticated"
+        └─> login sheet opens itself (source session_expired, one fixed title)
+              ├─ screen behind shows a false empty ("No orders yet")
+              └─ after login the user stays where they were (no onSuccess)
+  during a money step (withdraw OTP, claim submit, invoice upload):
+        └─> return to the step is not defined  [not built, R17]
+```
+
+## Offline banner
+
+Needs the browser to report offline; see the story notes.
+
+<StateMatrix rows={[
+  { state: "Banner Over Orders", status: "live", story: "flows-10-offline-and-session-offline-banner--banner-over-orders", note: "The warning strip at the top of the screen while the device is offline. Under it, Orders list shows its loaded or empty layout." },
+  { state: "Banner Over Profile", status: "live", story: "flows-10-offline-and-session-offline-banner--banner-over-profile", note: "The same strip over the Profile tab: name and contact empty under it." },
+]} />
+
+## Paused screens
+
+Live stories show what the app does today. Proposed stories show the standard offline state.
+
+<StateMatrix rows={[
+  { state: "Home Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--home-offline", note: "Home: no cards, no error, no message." },
+  { state: "Earnings Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--earnings-offline", note: "Earnings: Confirmed and Pending read ₹0 (a wrong money figure)." },
+  { state: "Offers Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--offers-offline", note: "Offers: 'No offers here yet'." },
+  { state: "Orders List Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--orders-list-offline", note: "Orders list: 'No orders yet'." },
+  { state: "Order Detail Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--order-detail-offline", note: "Order detail: the body renders with empty values." },
+  { state: "Claims List Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--claims-list-offline", note: "Claims list: the empty tab copy." },
+  { state: "Missing Cashback Yes Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--missing-cashback-yes-offline", note: "Missing cashback 'Yes' offline: the paused lookup counts as 'no visits' and goes to Oops. A play function taps Yes." },
+  { state: "Profile Offline", status: "live", story: "flows-10-offline-and-session-paused-screens--profile-offline", note: "Profile: blank name and contact." },
+  { state: "Orders List Offline Fix", status: "proposed", story: "flows-10-offline-and-session-paused-screens--orders-list-offline-fix", note: "PROPOSED: Orders list offline with no cache." },
+  { state: "Order Detail Offline Fix", status: "proposed", story: "flows-10-offline-and-session-paused-screens--order-detail-offline-fix", note: "PROPOSED: Order detail offline with no cache." },
+  { state: "Claims List Offline Fix", status: "proposed", story: "flows-10-offline-and-session-paused-screens--claims-list-offline-fix", note: "PROPOSED: Claims list offline with no cache." },
+  { state: "Earnings Offline Fix", status: "proposed", story: "flows-10-offline-and-session-paused-screens--earnings-offline-fix", note: "PROPOSED: Earnings offline with no cache: no ₹0 figures." },
+  { state: "Profile Offline Fix", status: "proposed", story: "flows-10-offline-and-session-paused-screens--profile-offline-fix", note: "PROPOSED: Profile offline with no cache: skeleton lines and a warning." },
+]} />
+
+## Session expired
+
+<StateMatrix rows={[
+  { state: "Orders List Session Expired", status: "live", story: "flows-10-offline-and-session-session-expired--orders-list-session-expired", note: "Orders list when the refresh token is rejected: the login sheet rises over 'No orders yet'." },
+  { state: "Earnings Session Expired", status: "live", story: "flows-10-offline-and-session-session-expired--earnings-session-expired", note: "Earnings when the session ends: the sheet over the guest layout." },
+  { state: "Profile Session Expired", status: "live", story: "flows-10-offline-and-session-session-expired--profile-session-expired", note: "Profile when the session ends: the account card gives way to the guest prompt, the sheet opens." },
+  { state: "Orders List Login Prompt", status: "proposed", story: "flows-10-offline-and-session-session-expired--orders-list-login-prompt", note: "PROPOSED: Orders list shows a login prompt instead of a false 'No orders yet'." },
+]} />
+
+## Mid-flow return
+
+Not built (R17). One design each; the return behaviour is an open question.
+
+<StateMatrix rows={[
+  { state: "Withdraw Otp Session Ended", status: "proposed", story: "flows-10-offline-and-session-mid-flow-return--withdraw-otp-session-ended", note: "PROPOSED: the session ends on the withdraw OTP step. Details kept, the user logs in, then confirms again." },
+  { state: "Claim Submit Session Ended", status: "proposed", story: "flows-10-offline-and-session-mid-flow-return--claim-submit-session-ended", note: "PROPOSED: the session ends while a claim is being submitted (amount step)." },
+  { state: "Invoice Upload Session Ended", status: "proposed", story: "flows-10-offline-and-session-mid-flow-return--invoice-upload-session-ended", note: "PROPOSED: the session ends while an invoice is uploading (C1-Other and C2 claims)." },
+]} />
+
+## Risks
+
+- R6: offline cold start shows false empties and a wrong ₹0. Stories: Paused screens.
+- R17: session ends during a money step; the return is not defined. Stories: Mid-flow return.
+- R20: the OTP rate limit shows the raw API message with no time to retry (login, not shown here; see Flow 1).
+
+## Open questions
+
+1. With a cache, show the last known data with a "last updated" label, or keep today's silent stale data? (R6)
+2. Should the login sheet say the session ended (needs a title and body per source, DS gap 4)? (Session expired)
+3. After login, return to the same step with entered values, restart it, or repeat the action on its own? (R17)
+4. How long should a withdraw OTP stay valid across a login? (R17)
