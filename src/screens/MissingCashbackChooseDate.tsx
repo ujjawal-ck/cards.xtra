@@ -19,8 +19,10 @@ import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text, Button, BrandLogoTile, MonthSelector, DateSelection } from '../atoms';
-import { Header } from '../organisms';
+import { Header, ScreenState } from '../organisms';
 import { useExitClickDates } from '../query/useMissingCashback';
+import { isPausedWithoutData } from '../query/paused';
+import { resolveChooseDateView } from '../query/missingCashbackStates';
 import { colors, spacing } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { images } from '../assets/images';
@@ -34,7 +36,8 @@ const CONTENT_GAP = 36;
 export function MissingCashbackChooseDate() {
   const navigation = useNavigation<Nav>();
   const { draft } = useRoute<Rt>().params;
-  const { data, isLoading, isError, refetch, isFetching } = useExitClickDates(draft.storeId);
+  const datesQuery = useExitClickDates(draft.storeId);
+  const { data, isLoading, isError, refetch, isFetching } = datesQuery;
 
   const months = data?.months ?? [];
   const [monthKey, setMonthKey] = useState<string | null>(null);
@@ -57,6 +60,14 @@ export function MissingCashbackChooseDate() {
   };
 
   const hasDates = months.length > 0;
+  // Offline with no cache is paused, not loading or failed: it must not read
+  // as "no recent visits".
+  const view = resolveChooseDateView({
+    isLoading,
+    isError,
+    isOffline: isPausedWithoutData(datesQuery),
+    monthCount: months.length,
+  });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -74,11 +85,18 @@ export function MissingCashbackChooseDate() {
               </Text>
             </View>
 
-            {isLoading ? (
+            {view === 'loading' ? (
               <View style={{ paddingVertical: spacing[40], alignItems: 'center' }}>
                 <ActivityIndicator color={colors.action.primary.default} />
               </View>
-            ) : isError ? (
+            ) : view === 'offline' ? (
+              <ScreenState
+                title="You’re offline"
+                body="Connect to the internet and try again."
+                actionLabel="Try again"
+                onAction={() => refetch()}
+              />
+            ) : view === 'error' ? (
               <View style={{ paddingHorizontal: spacing[24], alignItems: 'center', gap: spacing[8] }}>
                 <Text variant="body14SemiBold" color={colors.text.primary} align="center">
                   Couldn’t load your visit dates.
@@ -89,7 +107,7 @@ export function MissingCashbackChooseDate() {
                   </Text>
                 </Pressable>
               </View>
-            ) : !hasDates ? (
+            ) : view === 'empty' ? (
               <View style={{ paddingHorizontal: spacing[24], alignItems: 'center' }}>
                 <Text variant="body14Regular" color={colors.text.secondary} align="center">
                   {`We couldn’t find any recent visits to ${draft.storeName}.`}

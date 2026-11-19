@@ -233,6 +233,14 @@ export async function updateQueue(
 }
 
 /**
+ * Deadline for the invoice upload. Several photos in one POST can take well
+ * over the default 15 s on a slow network, so the ticket could never be raised.
+ * The POST is not idempotent, so it is never retried: a retry could create a
+ * second ticket.
+ */
+export const INVOICE_UPLOAD_TIMEOUT_MS = 60_000;
+
+/**
  * Raise a ticket with invoice attachments (C1-"Other" / C2). Sends multipart
  * form-data: text fields + each file as `ticket_attachment`, `ticket_attachment1`…
  * When `files` is empty, falls back to a JSON:API body (no attachments).
@@ -265,7 +273,7 @@ export async function raiseTicket(
       // RN FormData file descriptor.
       fd.append(field, { uri: f.uri, name: f.name, type: f.type } as any);
     });
-    return ck(path, { method: 'POST', auth: { userToken }, body: fd });
+    return ck(path, { method: 'POST', auth: { userToken }, body: fd, timeoutMs: INVOICE_UPLOAD_TIMEOUT_MS });
   }
 
   // No files — JSON:API body.
