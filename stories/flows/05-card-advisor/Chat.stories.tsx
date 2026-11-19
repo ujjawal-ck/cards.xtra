@@ -9,7 +9,7 @@ import { FooterButtons } from '../../../src/organisms/FooterButtons';
 import { Text } from '../../../src/atoms/Text';
 import { InlineMessage } from '../../../src/molecules';
 import { ScreenState } from '../../../src/organisms';
-import { colors, spacing, radius, alpha } from '../../../src/tokens';
+import { colors, spacing, radius, alpha, borderWidth } from '../../../src/tokens';
 import { PhoneFrame, ScreenHarness } from '../../../storybook/harness';
 import { api, eligibilityFixture, reply } from '../../../storybook/fixtures';
 import { TapScript } from '../04-shared-result/_shared';
@@ -204,7 +204,7 @@ export const CheckingLongProposed: Story = {
     <PhoneFrame background={colors.surface.default}>
       <View style={{ padding: spacing[16], gap: spacing[8] }}>
         <Text variant="heading18SemiBold" color={colors.text.primary}>Checking your cards</Text>
-        <View style={{ alignSelf: 'flex-start', gap: spacing[4], paddingHorizontal: spacing[12], paddingVertical: spacing[10], borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border.subtle3, backgroundColor: colors.surface.default }}>
+        <View style={{ alignSelf: 'flex-start', gap: spacing[4], paddingHorizontal: spacing[12], paddingVertical: spacing[10], borderRadius: radius.xl, borderWidth: borderWidth.thin, borderColor: colors.border.subtle3, backgroundColor: colors.surface.default }}>
           <Text variant="body14Regular" color={colors.text.primary}>Checking which cards fit your income and pincode.</Text>
           <Text variant="body14Regular" color={colors.text.secondary}>Still checking with the banks. This can take up to a minute.</Text>
         </View>

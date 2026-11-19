@@ -6,11 +6,12 @@ import { InlineMessage } from '../../../src/molecules';
 import { Skeleton, Tag, Text } from '../../../src/atoms';
 import { mapCalculateResponse, rankByNetValue, spendsKey } from '../../../src/lib/cardTools';
 import { queryClient } from '../../../src/query/queryClient';
-import { colors, radius, spacing } from '../../../src/tokens';
+import { borderWidth, colors, radius, spacing } from '../../../src/tokens';
+import { cardsQueryKey } from '../../../src/query/useCards';
 import { PhoneFrame, ScreenHarness, routeParams } from '../../../storybook/harness';
 import { api, calculateFixture, reply, spends, spendsFixture } from '../../../storybook/fixtures';
 import {
-  ANSWERS, SPENDS, TapScript, calcAllLose, calcAllPaid, calcLarge, calcNoArt, calcNullFee, calcOneCard, e500,
+  ANSWERS, APP_CARDS, SPENDS, TapScript, calcAllLose, calcAllPaid, calcLarge, calcNoArt, calcNullFee, calcOneCard, e500,
 } from './_shared';
 
 const meta: Meta = {
@@ -155,7 +156,7 @@ export const LargeLeague: Story = {
   tags: ['live'],
   parameters: {
     source: `${SRC}:583`,
-    docs: { description: { story: 'The 9 fixture rows cloned to 220 with new aliases; savings fall by ₹25 a row, so the order is the row order. FlatList windows the list. This is a web render, not proof of scroll cost on a low-end phone.' } },
+    docs: { description: { story: 'The 9 fixture rows cloned to 220 with new aliases; savings fall by ₹25 a row, so the clones keep their order and the 9 fixture rows fall in among them by net. FlatList windows the list. This is a web render, not proof of scroll cost on a low-end phone.' } },
   },
   render: () => table(api.ok({ calculate: calcLarge(220) })),
 };
@@ -173,7 +174,7 @@ export const SearchNoMatch: Story = {
 
 export const AllLoseMoney: Story = {
   tags: ['live'],
-  parameters: { source: 'src/molecules/LeagueCardRow.tsx:156', docs: { description: { story: 'One small spend (₹100 on water bills) and a calculate answer where every row saves 0 a year: cards with a fee show a negative annual figure ("-₹X") in the primary text colour.' } } },
+  parameters: { source: 'src/molecules/LeagueCardRow.tsx:156', docs: { description: { story: 'One small spend (₹100 on water bills) and a calculate answer, edited in the story, where every row saves 0 a year, no fee is waived, and the rows with no annual fee in the fixture get a ₹500 fee: every row shows a negative annual figure ("-₹X") in the primary text colour.' } } },
   render: () => (
     <ScreenHarness
       name="ToolResults"
@@ -223,7 +224,7 @@ export const OfflineWithCache: Story = {
   tags: ['live'],
   parameters: {
     source: 'src/query/useCardSavings.ts:124',
-    docs: { description: { story: 'The phone is offline, but the same spends were calculated earlier: the story seeds the query cache before the screen mounts. The cached list shows (the hook is not "offline" when it has data). The global offline banner is not mounted in this harness.' } },
+    docs: { description: { story: 'The phone is offline, but the same spends were calculated earlier: the story seeds the query cache before the screen mounts. The card catalogue is seeded too, as Home would have loaded it. The cached list shows (the hook is not "offline" when it has data). The global offline banner is not mounted in this harness.' } },
   },
   render: () => (
     <ScreenHarness
@@ -236,6 +237,7 @@ export const OfflineWithCache: Story = {
           list: rankByNetValue(mapCalculateResponse(calculateFixture.league)),
           loadMs: 0,
         });
+        queryClient.setQueryData(cardsQueryKey, APP_CARDS);
       }}
     />
   ),
@@ -258,7 +260,7 @@ export const Width360: Story = {
 const Rows = ({ names }: { names: string[] }) => (
   <View style={{ gap: spacing[8] }}>
     {names.map((n) => (
-      <View key={n} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: spacing[12], borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border.subtle3, backgroundColor: colors.surface.default }}>
+      <View key={n} style={{ flexDirection: 'row', justifyContent: 'space-between', padding: spacing[12], borderRadius: radius.lg, borderWidth: borderWidth.thin, borderColor: colors.border.subtle3, backgroundColor: colors.surface.default }}>
         <Text variant="body14SemiBold" color={colors.text.primary}>{n}</Text>
         <Text variant="body14SemiBold" color={colors.text.primary}>₹X a year</Text>
       </View>
@@ -290,7 +292,7 @@ export const NullFeeProposed: Story = {
   render: () => (
     <PhoneFrame background={colors.surface.default}>
       <View style={{ padding: spacing[16], gap: spacing[8] }}>
-        <View style={{ padding: spacing[12], borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border.subtle3, gap: spacing[8] }}>
+        <View style={{ padding: spacing[12], borderRadius: radius.lg, borderWidth: borderWidth.thin, borderColor: colors.border.subtle3, gap: spacing[8] }}>
           <View style={{ flexDirection: 'row', gap: spacing[8], alignItems: 'center' }}>
             <View style={{ width: spacing[64], height: spacing[40], borderRadius: radius.sm, backgroundColor: colors.surface.sunken }} />
             <View style={{ flex: 1, gap: spacing[2] }}>

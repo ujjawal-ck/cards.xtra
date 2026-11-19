@@ -70,7 +70,7 @@ export const BestWinsApplyable: Story = {
   tags: ['live'],
   parameters: {
     source: `${SRC}:443`,
-    docs: { description: { story: 'Verdict `best_wins` with a card the app sells. The calculate answer is edited in the story: the CRED row (rank 1, not in the app) is dropped, so the best other card is one the user can apply for and the result shows "Apply now". The user holds HDFC Regalia Gold.' } },
+    docs: { description: { story: 'Verdict `best_wins` with a card the app sells: the user holds HDFC Regalia Gold, the best other card is HSBC Live Plus (in the app), and the result shows "Apply now". The story drops the CRED row (not in the app) from the calculate answer, but HSBC already ranks 1 with the full fixture (net ₹11,160 a year, fee waived, against CRED at ₹11,111), so this renders the same branch as `BestWins`.' } },
   },
   render: () => screen('hdfc-regalia-gold', api.ok({ calculate: calcWithout('cred-indusind-bank-credit-card') })),
 };

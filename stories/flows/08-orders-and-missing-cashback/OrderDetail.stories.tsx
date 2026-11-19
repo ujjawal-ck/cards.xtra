@@ -82,7 +82,7 @@ export const NeedHelpWithoutContext: Story = {
 /** The order id is unknown: the generic error shows, and "Retry" cannot help. */
 export const NotFound: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:199`, docs: { description: { story: 'The order call answers 404. The screen shows the same text as for a 500 ("Couldn\'t load this order.") with a Retry link. Wait 1 to 2 s for the retries to end. See the proposed story for a copy that fits.' } } },
+  parameters: { source: `${SRC}:199`, docs: { description: { story: 'The order call answers 404. The screen shows the same text as for a 500 ("Couldn\'t load this order.") with a Retry link. A 4xx is not retried, so the error shows at once. See the proposed story for a copy that fits.' } } },
   render: () => show(reply.error(404)),
 };
 

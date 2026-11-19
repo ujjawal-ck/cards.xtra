@@ -171,7 +171,7 @@ function InvoiceLayout({ children, loading = false }: { children: React.ReactNod
       <View style={{ padding: spacing[16], gap: spacing[12] }}>
         <Text variant="body16Bold" color={colors.text.primary}>Upload your invoice</Text>
         <Text variant="body14SemiBold" color={colors.action.accent.default}>Add screenshot</Text>
-        <Text variant="body12Regular" color={colors.text.secondary}>Allowed: .jpg, .png, .jpeg, .bmp · Max 2MB</Text>
+        <Text variant="body12Regular" color={colors.text.secondary}>Allowed: .jpg, .png, .jpeg, .pdf, .bmp · Max 2MB</Text>
         <View style={{ flexDirection: 'row', gap: spacing[8] }}>
           {[images.brands.flipkart, images.brands.amazon, images.brands.ajio].map((src, i) => (
             <Image key={i} source={src} style={{ width: spacing[64], height: spacing[64], borderRadius: radius.md }} />

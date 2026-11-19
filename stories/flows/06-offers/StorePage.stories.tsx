@@ -147,9 +147,9 @@ export const NoCashbackRate: Story = {
   tags: ['live'],
   parameters: {
     source: 'src/organisms/StoreCashbackDetails.tsx:220',
-    docs: { description: { story: 'App bug (gap G4, Q3). The store answer has `cashback.amount: 0` and no `tracking_speed`. The cashback floor prints "Cashback" where the rate should be (and "Flat" / "Cashback" "Cashback" in places), the timelines tile shows "—", and the footer CTA still says "Earn Cashback on AJIO".' } },
+    docs: { description: { story: 'App bug (gap G4, Q3). The store answer has `cashback.amount: 0` (no boost, so no `strike_out_value`) and no `tracking_speed`. The cashback floor prints "Cashback" where the rate should be (and "Flat" / "Cashback" "Cashback" in places), the timelines tile shows "—", and the footer CTA still says "Earn Cashback on AJIO".' } },
   },
-  render: () => <Store a={api.ok({ offerStore: storeAnswer((a) => { a.cashback = { ...a.cashback, amount: '0' }; delete a.tracking_speed; }) })} />,
+  render: () => <Store a={api.ok({ offerStore: storeAnswer((a) => { a.cashback = { ...a.cashback, amount: '0' }; delete a.cashback.strike_out_value; delete a.tracking_speed; }) })} />,
 };
 
 export const Offline: Story = {
@@ -167,7 +167,7 @@ export const SessionExpired: Story = {
 // ── Proposed ─────────────────────────────────────────────────────────────────
 
 const Footer = ({ children }: { children: React.ReactNode }) => (
-  <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.surface.default }}>{children}</View>
+  <View style={{ position: 'absolute', left: spacing[0], right: spacing[0], bottom: spacing[0], backgroundColor: colors.surface.default }}>{children}</View>
 );
 
 export const NoShopLinkProposed: Story = {

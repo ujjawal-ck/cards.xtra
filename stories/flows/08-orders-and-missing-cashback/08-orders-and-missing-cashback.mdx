@@ -55,7 +55,6 @@ Entry from Earnings and Profile. Six states, plus one proposed fix for a failed 
   { state: "Null Amount", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--null-amount", note: "The cashback amount is null: the card reads ₹0." },
   { state: "Unknown Status", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--unknown-status", note: "A status string the app does not know shows as 'Pending'." },
   { state: "Logo Failed", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--logo-failed", note: "The store logo fails to load: a blank tile." },
-  { state: "Long Store Name 360", status: "live", story: "flows-8-orders-and-missing-cashback-orders-list--long-store-name-360", note: "A 60-character store name at 360 dp: one line, cut with an ellipsis." },
   { state: "Loading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-orders-list--loading-proposed", note: "PROPOSED: three skeleton rows instead of the bare spinner." },
   { state: "End Of List Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-orders-list--end-of-list-proposed", note: "PROPOSED: a closing line under the last card." },
 ]} />
@@ -94,7 +93,7 @@ Three tabs. The four hidden stories are static sample lists in the source, shown
   { state: "Empty Others", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--empty-others", note: "Others tab, no tickets: 'No tickets yet'." },
   { state: "Loading", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--loading", note: "First load: bare spinner." },
   { state: "Load Error", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--load-error", note: "Every call answers 500: 'Couldn't load your claims' with 'Try again'. Wait 1 to 2 s." },
-  { state: "Others Partial Failure", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--others-partial-failure", note: "Others tab: the Pending fetch fails, the Resolved one works. The list shows half, with no notice." },
+  { state: "Others Partial Failure", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--others-partial-failure", note: "Others tab: the Resolved fetch fails, the Pending one works. The tab reads \"No tickets yet\", with no notice." },
   { state: "Session Expired", status: "live", story: "flows-8-orders-and-missing-cashback-claims-list--session-expired", note: "The session ended on the claims list: an empty tab behind the login sheet." },
   { state: "Loading Proposed", status: "proposed", story: "flows-8-orders-and-missing-cashback-claims-list--loading-proposed", note: "PROPOSED: three skeleton rows instead of the bare spinner." },
   { state: "Hidden Ticket List Closed", status: "hidden", story: "flows-8-orders-and-missing-cashback-claims-list--hidden-ticket-list-closed", note: "HIDDEN: Closed sample list (static data)." },

@@ -289,11 +289,11 @@ export const ManyCards: Story = {
 export const LongNames360: Story = {
   tags: ['live'],
   globals: { viewport: { value: 'android360', isRotated: false } },
-  parameters: { source: 'src/screens/HomeScreen.tsx:327', docs: { description: { story: 'Edge case at 360 dp. Pinned to the Android small viewport. One card name and its bank name (bank id 6) are 70 characters long. Check the tile name, the tags and the fee strip for clipping or overlap.' } } },
+  parameters: { source: 'src/screens/HomeScreen.tsx:327', docs: { description: { story: 'Edge case at 360 dp. Pinned to the Android small viewport. One card name and its bank name (bank id 6, HDFC Bank) are 71 characters long. Check the tile name, the tags and the fee strip for clipping or overlap.' } } },
   render: () => {
     const long = 'HDFC Bank Regalia Gold Premium Lifetime Free Travel Rewards Credit Card';
     const data = BK_CARDS.map((c, i) => (i === 0 ? { ...c, name: long } : c));
-    const bank_data = initBundleFixture.default.data.bank_data.map((b) => (b.id === 6 ? { ...b, name: 'The Hongkong and Shanghai Banking Corporation Limited India Retail Bank' } : b));
+    const bank_data = initBundleFixture.default.data.bank_data.map((b) => (b.id === 6 ? { ...b, name: 'HDFC Bank Limited Retail Banking and Credit Cards Division India Mumbai' } : b));
     return <Home width={360} height={800} a={api.ok({ cards: { ...cardsFixture.default, data }, initBundle: { ...initBundleFixture.default, data: { ...initBundleFixture.default.data, bank_data } } })} />;
   },
 };

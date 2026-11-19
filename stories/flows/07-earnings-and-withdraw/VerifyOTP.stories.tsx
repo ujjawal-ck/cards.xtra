@@ -166,7 +166,8 @@ export const ResendAfterUnknownOutcome: Story = {
   render: () => <Screen a={api.ok({ payment: reply.network(), sendOtp: sendOtpFixture.default })} />,
   play: async ({ canvasElement }) => {
     await typeCode({ canvasElement });
-    await tapText(canvasElement, 'OK', 20000);
+    // The Alert shim draws its dialog on document.body, outside the story root.
+    await tapText(canvasElement.ownerDocument.body, 'OK', 20000);
     await tapText(canvasElement, 'Resend OTP', 45000);
     await sleep(500);
     await typeInto(canvasElement, 0, '713958');

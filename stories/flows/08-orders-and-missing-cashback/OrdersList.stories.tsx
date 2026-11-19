@@ -186,13 +186,6 @@ export const LogoFailed: Story = {
   render: () => harness({ orders: oneRow({ merchant_image_url: 'https://storybook.invalid/logo.png' }) }),
 };
 
-/** A 60-character store name at 360 dp: one line, cut with an ellipsis. */
-export const LongStoreName360: Story = {
-  tags: ['live'],
-  globals: { viewport: { value: 'android360', isRotated: false } },
-  parameters: { source: 'src/organisms/OrderCard.tsx:218', docs: { description: { story: 'The store name has `numberOfLines={1}`. Pinned to the Android 360 dp viewport.' } } },
-  render: () => <ScreenHarness name="OrdersList" component={OrdersList} auth="signedIn" width={360} api={api.ok({ orders: oneRow({ merchant_name: 'Test Store With A Very Long Name That Keeps Going On And On Now' }) })} />,
-};
 
 /** PROPOSED: three skeleton rows instead of the bare spinner. */
 export const LoadingProposed: Story = {

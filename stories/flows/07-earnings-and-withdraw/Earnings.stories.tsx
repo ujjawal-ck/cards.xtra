@@ -164,7 +164,7 @@ export const BreakupSheetWhileLoading: Story = {
 /** The Cashback breakup sheet with loaded data: Confirmed, Pending and Paid cashback. Taps the Cashback card after mount. */
 export const BreakupSheet: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:447` },
+  parameters: { source: `${SRC}:449` },
   render: () => <Earnings a={api.ok()} />,
   play: tapCashbackCard,
 };
@@ -177,7 +177,7 @@ export const LargeAmounts360: Story = {
   render: () => <Earnings width={360} a={api.ok({ earnings: earningsFixture.rich })} />,
 };
 
-/** The earnings call answers HTTP 403 (gateway or bad key). Only 401 triggers a refresh, so the screen shows its generic "Couldn't load your earnings" and a retry cannot help. Open question Q12. Shows after the app's own retries (1 to 2 s). */
+/** The earnings call answers HTTP 403 (gateway or bad key). Only 401 triggers a refresh, so the screen shows its generic "Couldn't load your earnings" and a retry cannot help. Open question Q12. A 4xx is not retried, so the error shows at once. */
 export const Forbidden403: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:199` },

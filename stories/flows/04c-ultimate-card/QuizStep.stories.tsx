@@ -56,12 +56,12 @@ export const TypedAmountCapped: Story = {
   tags: ['live'],
   parameters: {
     source: 'src/molecules/SpendCard.tsx:186',
-    docs: { description: { story: 'After mount, 99999999 is typed into the "Amazon amount" field of question 1. The entry is clamped to the question\'s maximum (₹10,00,000 a month at most) instead of taking the number as typed.' } },
+    docs: { description: { story: 'After mount, 99999999 is typed into the "Amazon amount" field of question 1, then the field loses focus. The entry is clamped to the question\'s maximum: the field shows ₹10,00,000 (a month at most) and the "+" button is disabled. While the field has focus it keeps the digits as typed.' } },
   },
   render: () => (
     <>
       <ScreenHarness name="SpendQuiz" component={SpendQuizScreen} params={ultimate} api={api.ok()} />
-      <TapScript steps={[{ type: '99999999', into: 'Amazon amount' }]} startMs={1500} />
+      <TapScript steps={[{ type: '99999999', into: 'Amazon amount', blur: true }]} startMs={1500} />
     </>
   ),
 };

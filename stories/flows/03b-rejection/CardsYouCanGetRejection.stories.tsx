@@ -99,11 +99,11 @@ export const OfflineProposed: Story = {
   ),
 };
 
-/** The rejected card has a 70-character name, on the small Android viewport (360 dp). */
+/** The rejected card has a 71-character name, on the small Android viewport (360 dp). */
 export const LongName360: Story = {
   tags: ['live'],
   globals: { viewport: { value: 'android360', isRotated: false } },
-  parameters: { source: 'src/screens/CardsYouCanGetScreen.tsx:127', docs: { description: { story: 'Edge case at 360 dp. Pinned to the Android small viewport. The rejected card (HDFC Regalia Gold) is renamed to 70 characters in the catalogue, so the context strip and the closest-card row carry the long name. Check wrapping and clipping.' } } },
+  parameters: { source: 'src/screens/CardsYouCanGetScreen.tsx:127', docs: { description: { story: 'Edge case at 360 dp. Pinned to the Android small viewport. The rejected card (HDFC Regalia Gold) is renamed to 71 characters in the catalogue, so the context strip and the closest-card row carry the long name. Check wrapping and clipping.' } } },
   render: () => {
     const long = 'HDFC Bank Regalia Gold Premium Lifetime Free Travel Rewards Credit Card';
     const data = BK_CARDS.map((c) => (c.card_alias === 'hdfc-regalia-gold' ? { ...c, name: long } : c));

@@ -106,21 +106,21 @@ export const LoadError: Story = {
   render: () => <ScreenHarness name="MissingCashbackDidYouShop" component={MissingCashbackDidYouShop} auth="signedIn" api={api.error()} />,
 };
 
-/** Others tab: the Pending fetch fails, the Resolved one works. The list shows half, with no notice. */
+/** Others tab: the Resolved fetch fails, the Pending one works. The raised ticket is missing and the tab reads empty, with no notice. */
 export const OthersPartialFailure: Story = {
   tags: ['live'],
   parameters: {
     source: 'src/query/useMissingCashback.ts:111',
-    docs: { description: { story: 'Reached by a tap on Others. Others fetches Pending and Resolved with `allSettled` and keeps whatever succeeds. Here Pending answers 500, so tickets under Pending are missing and nothing says so. The In Review tab, which also needs Pending, shows its error first. Wait 2 to 4 s for the retries.' } },
+    docs: { description: { story: 'Reached by a tap on Others. Others fetches Pending and Resolved with `allSettled` and keeps whatever succeeds. Here Resolved answers 500. The only raised ticket in the fixtures is under Resolved, so the tab reads "No tickets yet" and nothing says a fetch failed. Wait 1 to 2 s for the retries.' } },
   },
-  render: () => list({ mcQueue: (req) => (req.query.get('filter[status]') === 'Pending' ? reply.error(500) : mcQueueFixture.resolved) }),
+  render: () => list({ mcQueue: (req) => (req.query.get('filter[status]') === 'Resolved' ? reply.error(500) : mcQueueFixture.pending) }),
   play: async () => { await tap(/^Others/); },
 };
 
 /** The session ended on the claims list: an empty tab behind the login sheet. */
 export const SessionExpired: Story = {
   tags: ['live'],
-  parameters: { source: 'src/query/useMissingCashback.ts:188', docs: { description: { story: 'Every user call answers 401, so the session ends and the login sheet opens. The claims query is disabled with no token, so the tab reads as empty. Same pattern as the Orders list. Design: see Flow 10, Session expired, "login prompt" (title "Log in to see your claims").' } } },
+  parameters: { source: 'src/query/useMissingCashback.ts:98', docs: { description: { story: 'Every user call answers 401, so the session ends and the login sheet opens. The claims query is disabled with no token, so the tab reads as empty. Same pattern as the Orders list. Design: see Flow 10, Session expired, "login prompt" (title "Log in to see your claims").' } } },
   render: () => <ScreenHarness name="MissingCashbackDidYouShop" component={MissingCashbackDidYouShop} auth="sessionExpired" params={{ backTo: 'back' }} api={api.ok()} />,
 };
 

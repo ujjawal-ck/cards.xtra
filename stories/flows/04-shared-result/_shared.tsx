@@ -28,7 +28,7 @@ export const SPENDS = spends({ ...ANSWERS });
 
 export type TapStep =
   | { click: string; prefix?: boolean; times?: number }
-  | { type: string; into: string }
+  | { type: string; into: string; blur?: boolean }
   | { wait: number };
 
 const INTERACTIVE = '[role="button"],[role="switch"],[role="checkbox"],[role="tab"],[role="radio"],[role="link"],button,a,[tabindex="0"]';
@@ -98,6 +98,7 @@ export function TapScript({ steps, startMs = 900, gapMs = 350 }: { steps: TapSte
         input.focus();
         setter?.call(input, step.type);
         input.dispatchEvent(new Event('input', { bubbles: true }));
+        if (step.blur) input.blur();
         await sleep(gapMs);
       }
     })();
@@ -130,10 +131,10 @@ export function calcTie() {
 // ── League rows for the sheet stories ───────────────────────────────────────
 
 const bankDir = buildBankDirectory(initBundleFixture.default);
-const appCards: CardModel[] = BK_CARDS.filter((c) => c.status).map((c) => mapBkCardToCardModel(c, bankDir));
+export const APP_CARDS: CardModel[] = BK_CARDS.filter((c) => c.status).map((c) => mapBkCardToCardModel(c, bankDir));
 
 /** The ranked league of the calculate fixture, joined to the fixture cards. Rank 1 is not in the app. */
-export const LEAGUE = buildLeague(rankByNetValue(mapCalculateResponse(calculateFixture.league)), appCards, true);
+export const LEAGUE = buildLeague(rankByNetValue(mapCalculateResponse(calculateFixture.league)), APP_CARDS, true);
 
 /** First row that has an app card, and first that does not. */
 export const ROW_IN_APP = LEAGUE.find((r) => r.card)!;
@@ -164,10 +165,22 @@ export function calcNullFee() {
 /** The first row only. */
 export const calcOneCard = () => calcEdit((r, i) => (i === 0 ? r : null));
 
-/** No row saves anything: yearly savings 0 on every row, fees as in the fixture. */
-export const calcAllLose = () => calcEdit((r) => ({ ...r, total_savings: 0, total_savings_yearly: 0, total_extra_benefits: 0 }));
+/**
+ * Every row nets below 0: yearly savings, milestones and lounge value 0, no fee waiver, and a ₹500
+ * annual fee on the rows that have no annual fee in the fixture (the other rows keep their own fee).
+ */
+export const calcAllLose = () =>
+  calcEdit((r) => ({
+    ...r,
+    total_savings: 0,
+    total_savings_yearly: 0,
+    total_extra_benefits: 0,
+    annual_fee_spends: '0',
+    travel_benefits: { total_travel_benefit_annual: 0 },
+    annual_fees: Number(r.annual_fees) > 0 ? r.annual_fees : '500',
+  }));
 
-/** The CRED row (not in the app) without card art, and one row with an image that fails. */
+/** The CRED row (not in the app) without card art (no `image`, no `card_bg_image`). */
 export const calcNoArt = () =>
   calcEdit((r) => {
     if (r.seo_card_alias !== 'cred-indusind-bank-credit-card') return r;

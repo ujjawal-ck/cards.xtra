@@ -87,11 +87,18 @@ export const SettlingNoAmount: Story = {
   play: tapWithdraw,
 };
 
-/** Exactly the minimum: confirmed cashback ₹250 and rewards ₹0 against a ₹250 minimum. The gate compares with "less than", so ₹250 passes and the method list opens (the stub "→ WithdrawMethodSelect" shows). Taps Withdraw after mount. */
+/** Payment info with a ₹250 minimum (the default fixture says ₹100). The gate reads the minimum from payment info. */
+const paymentInfoMin250 = (() => {
+  const body = JSON.parse(JSON.stringify(paymentInfoFixture.default)) as { data: { attributes: Record<string, unknown> } };
+  body.data.attributes.payment_threshold = '250.00';
+  return body;
+})();
+
+/** Exactly the minimum: confirmed cashback ₹250 and rewards ₹0 against a ₹250 minimum (payment info threshold set to 250). The gate compares with "less than", so ₹250 passes and the method list opens (the stub "→ WithdrawMethodSelect" shows). Taps Withdraw after mount. */
 export const ExactlyMinimum: Story = {
   tags: ['live'],
   parameters: { source: `${SRC}:106` },
-  render: () => <Gate a={api.ok({ earnings: earningsWith(earningsFixture.belowThreshold, { total_earned: '690.00', total_cashback_earned: '690.00', confirmed_cashback: '250.00' }) })} />,
+  render: () => <Gate a={api.ok({ paymentInfo: paymentInfoMin250, earnings: earningsWith(earningsFixture.belowThreshold, { total_earned: '690.00', total_cashback_earned: '690.00', confirmed_cashback: '250.00' }) })} />,
   play: tapWithdraw,
 };
 

@@ -3,7 +3,10 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { SavingsBreakdownSheet, type SavingsBreakdownSheetHandle } from '../../../src/organisms/SavingsBreakdownSheet';
 import { SheetHarness } from '../../../storybook/harness';
 import { totalYearlySpend } from '../../../src/lib/cardTools';
-import { ROW_IN_APP, ROW_NOT_IN_APP, SPENDS } from './_shared';
+import { LEAGUE, ROW_IN_APP, ROW_NOT_IN_APP, SPENDS } from './_shared';
+
+/** HDFC Regalia Gold from the fixture: ₹2,925 a year of savings against a ₹2,950 fee that is not waived. */
+const ROW_NEGATIVE = LEAGUE.find((r) => r.savings.alias === 'hdfc-regalia-gold')!;
 
 const meta: Meta = {
   title: 'Flows/4 Shared result/Savings breakdown sheet',
@@ -58,11 +61,13 @@ export const SavesNothing: Story = {
   tags: ['live'],
   parameters: {
     source: `${SRC}:353`,
-    docs: { description: { story: 'A row with no savings lines and a net of ₹0: the sum shows, then "This card saves nothing on the spends you entered." in place of the lines.' } },
+    docs: { description: { story: 'The HSBC Live Plus row edited in the story to save nothing: no savings lines, savings and milestones ₹0, the fee waived, so "Your annual savings" is ₹0. The sum shows, then "This card saves nothing on the spends you entered." in place of the lines.' } },
   },
   render: () => (
     <SheetHarness<SavingsBreakdownSheetHandle>
-      open={(r) => r.present({ ...ROW_IN_APP, savings: { ...ROW_IN_APP.savings, lines: [], netYearly: 0 } })}
+      open={(r) =>
+        r.present({ ...ROW_IN_APP, savings: { ...ROW_IN_APP.savings, lines: [], monthlySavings: 0, yearlySavings: 0, extraBenefits: 0, loungeValue: 0, netYearly: 0 } })
+      }
     >
       {(ref) => <SavingsBreakdownSheet ref={ref} yearlySpend={yearly} onViewCard={() => undefined} onApply={() => undefined} />}
     </SheetHarness>
@@ -72,17 +77,12 @@ export const SavesNothing: Story = {
 export const NegativeNet: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:144`,
-    docs: { description: { story: 'The card saves ₹500 a year but its annual fee counted is ₹2,500, so "Your annual savings" shows a negative figure ("-₹2,000"). Row edited in the story.' } },
+    source: `${SRC}:287`,
+    docs: { description: { story: 'HDFC Regalia Gold from the fixture, not edited: it saves ₹2,925 a year, its ₹2,950 annual fee is not waived (the bank waives it at ₹4,00,000 of spend), so "Your annual savings" shows a negative figure (-₹25).' } },
   },
   render: () => (
     <SheetHarness<SavingsBreakdownSheetHandle>
-      open={(r) =>
-        r.present({
-          ...ROW_IN_APP,
-          savings: { ...ROW_IN_APP.savings, yearlySavings: 500, extraBenefits: 0, loungeValue: 0, annualFee: 2500, annualFeeCounted: 2500, feeWaived: false, netYearly: -2000 },
-        })
-      }
+      open={(r) => r.present(ROW_NEGATIVE)}
     >
       {(ref) => <SavingsBreakdownSheet ref={ref} yearlySpend={yearly} onViewCard={() => undefined} onApply={() => undefined} />}
     </SheetHarness>

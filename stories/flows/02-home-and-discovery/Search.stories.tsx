@@ -71,7 +71,7 @@ export const CatalogueNotLoadedProposed: Story = {
 /** A long query that matches nothing. */
 export const LongQuery: Story = {
   tags: ['live'],
-  parameters: { source: 'src/organisms/SearchTopSheet.tsx:417', docs: { description: { story: 'Edge case. A 55-character query in the search field, no results. Check that the field and the no-results block hold the long text without overflow.' } } },
+  parameters: { source: 'src/organisms/SearchTopSheet.tsx:417', docs: { description: { story: 'Edge case. A 50-character query in the search field, no results. Check that the field and the no-results block hold the long text without overflow.' } } },
   render: () => <Sheet value="hdfc regalia gold credit card lifetime free lounge" sections={[]} onAdvisorPress={() => {}} />,
 };
 
