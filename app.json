@@ -6,9 +6,6 @@
     "runtimeVersion": {
       "policy": "fingerprint"
     },
-    "updates": {
-      "url": "https://u.expo.dev/64b72278-5c46-4e92-8d5f-f547507fe7a5"
-    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -75,9 +72,12 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "64b72278-5c46-4e92-8d5f-f547507fe7a5"
+        "projectId": "00fc768a-bc57-4e4a-9d83-ea1a2574e361"
       }
     },
-    "owner": "cashkaro"
+    "owner": "buildsbyanmol",
+    "updates": {
+      "url": "https://u.expo.dev/00fc768a-bc57-4e4a-9d83-ea1a2574e361"
+    }
   }
 }
