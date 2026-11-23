@@ -110,7 +110,8 @@ export function SpendQuizScreen() {
     if (tool === 'ultimate') {
       navigation.replace('ToolResults', { tool: 'ultimate', spends, answers, title: 'Your best cards' });
     } else {
-      navigation.replace('BeatMyCardPick', { spends, answers, fromQuiz: true });
+      // Not reached: Home opens Beat my card on BeatMyCardPick, not through this quiz.
+      navigation.replace('BeatMyCardPick');
     }
   };
 

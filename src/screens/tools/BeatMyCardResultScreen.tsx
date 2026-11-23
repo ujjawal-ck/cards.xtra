@@ -10,11 +10,15 @@
  * card is found in the full list, so a filter never hides it. Apply never shows for the user's own
  * card, and never for a card the app does not list.
  *
+ * Under the hero, "Based on <categories>" (the categories picked on the spends page that have a spend)
+ * opens the edit sheet with only those categories' questions; its "+ Add a category" row goes back to
+ * the spends page, where the chips are. An edit here keeps the categories as they were.
+ *
  * Analytics: the result view once (verdict, load_ms), the error once, a select on card details.
  * Never a spend amount and never the name or id of the user's card.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -56,6 +60,8 @@ import {
 import type { ClickOutSource } from '../../lib/useClickOut';
 import { useCardDetailSheet } from '../../lib/useCardDetailSheet';
 import { formatINR } from '../../lib/money';
+import { basedOnText } from '../../lib/beatFlow';
+import { keysForCategories } from '../../lib/toolFlows';
 import { shortCardName } from '../../lib/crossSellPresent';
 import { analytics, Events } from '../../analytics';
 
@@ -150,7 +156,7 @@ function CategoryCompare({
 export function BeatMyCardResultScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
-  const { cardAlias } = params;
+  const { cardAlias, categories } = params;
   const insets = useSafeAreaInsets();
 
   const [answers, setAnswers] = useState(params.answers);
@@ -163,6 +169,9 @@ export function BeatMyCardResultScreen() {
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
   const { save } = useSavedSpends();
   const editRef = useRef<EditSpendsSheetHandle>(null);
+  // Memoized: the sheet rebuilds its list when the `keys` array changes.
+  const editKeys = useMemo(() => keysForCategories(categories), [categories]);
+  const basedOn = basedOnText(categories, answers);
 
   const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
@@ -242,7 +251,7 @@ export function BeatMyCardResultScreen() {
   );
 
   // Back to the pick screen with the spends as they are now (they may have been edited here).
-  const tryAnother = () => navigation.popTo('BeatMyCardPick', { spends, answers });
+  const tryAnother = () => navigation.popTo('BeatMyCardPick');
 
   let content: React.ReactNode;
   if (noSpend) {
@@ -377,6 +386,20 @@ export function BeatMyCardResultScreen() {
               </>
             ) : null}
           </Animated.View>
+
+          {basedOn ? (
+            <Pressable
+              onPress={() => editRef.current?.present()}
+              accessibilityRole="button"
+              accessibilityLabel={`${basedOn}. Edit spends`}
+              hitSlop={spacing[8]}
+              style={{ alignSelf: 'center' }}
+            >
+              <Text variant="body14SemiBold" color={colors.text.link} align="center">
+                {basedOn}
+              </Text>
+            </Pressable>
+          ) : null}
 
           <View style={{ gap: spacing[8] }}>
             <PodiumCompare
@@ -541,7 +564,16 @@ export function BeatMyCardResultScreen() {
       <Header leading="back" title="Beat my card" onLeadingPress={() => navigation.goBack()} />
       {content}
       {sheets}
-      <EditSpendsSheet ref={editRef} answers={answers} onSubmit={onSubmitSpends} />
+      <EditSpendsSheet
+        ref={editRef}
+        keys={editKeys}
+        answers={answers}
+        onSubmit={onSubmitSpends}
+        onAddCategory={() => {
+          editRef.current?.dismiss();
+          navigation.goBack();
+        }}
+      />
     </SafeAreaView>
   );
 }

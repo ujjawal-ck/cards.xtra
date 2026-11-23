@@ -128,11 +128,13 @@ export const Events = {
   TOOL_TILE_TAP: 'tool_tile_tap', // params: tool, position (1-based)
   TOOL_START: 'tool_start', // first screen of a tool opened. params: tool
   TOOL_QUIZ_STEP: 'tool_quiz_step', // params: tool, step, total, skipped (bool)
-  TOOL_QUIZ_COMPLETE: 'tool_quiz_complete', // params: tool, answered (count of spends above 0), extended (bool)
+  TOOL_QUIZ_COMPLETE: 'tool_quiz_complete', // params: tool, answered (count of spends above 0), extended (bool), categories (count, optional: beat spends page)
   TOOL_RESULT_VIEW: 'tool_result_view', // params: tool, cards_shown, load_ms
   TOOL_RESULT_ERROR: 'tool_result_error', // params: tool
   TOOL_RESULT_SELECT: 'tool_result_select', // a result row opened. params: tool, item_id, rank
   BEAT_RESULT_VIEW: 'beat_result_view', // params: verdict (best_wins | mine_wins | equal | not_found), load_ms
+  BEAT_CARD_PICK: 'beat_card_pick', // params: bank (string). Never card name or id.
+  BEAT_CARD_REQUEST: 'beat_card_request', // params: card_name (user text, trimmed, max 60 chars)
 
   // ── card advisor (guided card finder, opened from search) ──
   // Never send an income amount, a pincode or a card the user owns. The eligibility form answer is sent as 'entered': no job, no income, no pincode.

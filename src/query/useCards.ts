@@ -6,7 +6,7 @@
  * maps each to the app's CardModel via the shared mapper. The Home screen
  * consumes the mapped list directly.
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCards, initBundle } from '../api/bankkaro';
 import { getCardRateStores } from '../api/cashkaro';
 import {
@@ -21,7 +21,11 @@ import type { CardModel } from '../molecules';
 
 export const cardsQueryKey = ['bk', 'cards'] as const;
 
+/** The raw /cardgenius/cards response (every row). useCardTags reads it too, so both share one download. */
+export const rawCardsQueryKey = ['bk', 'cards', 'raw'] as const;
+
 export function useCards() {
+  const queryClient = useQueryClient();
   const query = useQuery<CardModel[]>({
     queryKey: cardsQueryKey,
     queryFn: async () => {
@@ -32,7 +36,9 @@ export function useCards() {
       // directory falls back to static names, missing rates fall back to the
       // BankKaro commission — the card list still loads either way.
       const [cardsRes, initRes, rateStores] = await Promise.all([
-        getCards(),
+        // staleTime 0: each useCards fetch (mount, focus refetch) downloads again,
+        // as before; a raw fetch already in flight (useCardTags) is joined.
+        queryClient.fetchQuery({ queryKey: rawCardsQueryKey, queryFn: getCards, staleTime: 0 }),
         initBundle().catch(fallbackTo(null, 'bk init-bundle (bank directory)')),
         getCardRateStores().catch(fallbackTo([] as any[], 'ck card-rate stores')),
       ]);

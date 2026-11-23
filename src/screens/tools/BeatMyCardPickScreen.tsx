@@ -1,39 +1,58 @@
 /**
- * BeatMyCardPickScreen: "Beat my card", step 1: pick the card the user has.
+ * BeatMyCardPickScreen: "Beat my card", step 1: pick the card the user has. No spends needed.
  *
- * The list is every card the calculate call returns (also cards this app does not list), because the
- * user's own card is an input, not a product we sell. No savings number is shown here: the result
- * screen is the reveal. The user can edit the spends from here; the list loads again for new spends.
- * Analytics: the start event only. Never the card name, never a spend amount.
+ * The list is every card the calculate call returns for a fixed probe body (PROBE_SPENDS, spec 9.3),
+ * also cards this app does not list, because the user's own card is an input, not a product we sell.
+ * The probe is one cached query, so going back to this screen is instant. A to Z by name (never by
+ * rank: the rank would show the winner before the result), search, bank chips A to Z. Typing in the
+ * search resets the bank chip to "All". "Use this card" shows only after a pick and opens the spends page.
+ *
+ * "Can't find your card? Tell us" sits under the list, outside it, so it shows also when a search finds
+ * nothing. It opens a small sheet with one field; Send tracks an analytics event only (no backend).
+ *
+ * Analytics: TOOL_START once on open, BEAT_CARD_PICK { bank } on "Use this card", BEAT_CARD_REQUEST
+ * { card_name } on Send. Never the name or id of the picked card, never a spend amount.
+ * Not run on a device: check the request sheet above the keyboard on Android.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, FlatList, Pressable, ScrollView } from 'react-native';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { View, FlatList, Pressable, ScrollView, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  BottomSheetModal,
+  BottomSheetBackdrop,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 
 import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import type { RootStackParamList } from '../../navigation/types';
-import { Text, Icon, Input, Button, Chip, Radio, RemoteImage, Skeleton } from '../../atoms';
-import { EditSpendsSheet, Header, ScreenState, CARD_THUMB_ASPECT } from '../../organisms';
-import type { EditSpendsSheetHandle } from '../../organisms';
-import { colors, spacing, radius, borderWidth, iconSize } from '../../tokens';
+import { Text, Input, Button, Chip, Radio, RemoteImage, Skeleton } from '../../atoms';
+import { Toast } from '../../molecules';
+import { Header, ScreenState, CARD_THUMB_ASPECT, BottomSheetHeader } from '../../organisms';
+import { colors, spacing, radius, borderWidth, opacity } from '../../tokens';
 import { useCardSavings } from '../../query/useCardSavings';
 import type { LeagueRow } from '../../query/useCardSavings';
-import { useSavedSpends } from '../../lib/savedSpends';
-import { buildSpends, hasAnySpend, totalYearlySpend } from '../../lib/cardTools';
-import type { SpendKey } from '../../lib/cardTools';
+import { PROBE_SPENDS } from '../../lib/beatFlow';
 import { filterPickRows, pickBanks, pickName } from '../../lib/beatView';
-import { formatINR } from '../../lib/money';
 import { haptics } from '../../lib/haptics';
 import { analytics, Events } from '../../analytics';
+import { resetBeatSpendsDraft } from './BeatMyCardSpendsScreen';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'BeatMyCardPick'>;
-type Rt = RouteProp<RootStackParamList, 'BeatMyCardPick'>;
 
 // Row art: 64 wide at the shared card thumbnail ratio.
 const ART_W = spacing[64];
+const CARD_NAME_MAX = 60;
+const TOAST_MS = 3000;
+const CTA_H = 52;
+const SHEET_SNAP_POINTS = ['60%'];
+
+/** Gap between list rows. Module level, so the list keeps one component type (audit NAV-05). */
+function RowSeparator() {
+  return <View style={{ height: spacing[8] }} />;
+}
 
 type PickRowProps = { row: LeagueRow; selected: boolean; onPress: (alias: string) => void };
 
@@ -86,58 +105,151 @@ const PickRow = React.memo(function PickRow({ row, selected, onPress }: PickRowP
   );
 });
 
+type CardRequestSheetHandle = { present(): void };
+
+/**
+ * "Tell us" sheet: one field (card name) and Send. Built like EligibilityCheckerSheet: BottomSheetModal,
+ * BottomSheetHeader as the handle, a plain Input (the bottom-sheet input drops focus per keystroke on the
+ * new architecture) at the top of one tall snap. Send calls `onSend` with the trimmed name (max 60 characters) and closes the sheet.
+ */
+const CardRequestSheet = forwardRef<CardRequestSheetHandle, { onSend: (name: string) => void }>(
+  function CardRequestSheet({ onSend }, ref) {
+    const insets = useSafeAreaInsets();
+    const sheetRef = useRef<BottomSheetModal>(null);
+    const [name, setName] = useState('');
+    const trimmed = name.trim().slice(0, CARD_NAME_MAX);
+
+    useImperativeHandle(ref, () => ({ present: () => sheetRef.current?.present() }), []);
+
+    const renderBackdrop = useCallback(
+      (props: BottomSheetBackdropProps) => (
+        <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={opacity[50]} />
+      ),
+      [],
+    );
+
+    const send = () => {
+      if (!trimmed) return;
+      onSend(trimmed);
+      sheetRef.current?.dismiss();
+    };
+
+    return (
+      <BottomSheetModal
+        ref={sheetRef}
+        enablePanDownToClose
+        // One tall snap with the field at the top, like EligibilityCheckerSheet: gorhom's keyboard lift does
+        // not track the plain Input, so the field must stay above the keypad without it. Return sends too.
+        snapPoints={SHEET_SNAP_POINTS}
+        enableDynamicSizing={false}
+        android_keyboardInputMode="adjustResize"
+        onDismiss={() => setName('')}
+        backdropComponent={renderBackdrop}
+        handleComponent={() => null}
+        backgroundStyle={{
+          backgroundColor: colors.surface.default,
+          borderTopLeftRadius: radius['2xl'],
+          borderTopRightRadius: radius['2xl'],
+        }}
+      >
+        <BottomSheetView>
+          <BottomSheetHeader title="Tell us your card" />
+          <View
+            style={{
+              paddingHorizontal: spacing[16],
+              paddingBottom: insets.bottom + spacing[16],
+              gap: spacing[16],
+            }}
+          >
+            <Input
+              label="Card name"
+              placeholder="Card name"
+              value={name}
+              onChangeText={setName}
+              maxLength={CARD_NAME_MAX}
+              autoFocus
+              autoCorrect={false}
+              returnKeyType="send"
+              onSubmitEditing={send}
+            />
+            <Button label="Send" size={CTA_H} fullWidth disabled={!trimmed} onPress={send} />
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
+    );
+  },
+);
+
 export function BeatMyCardPickScreen() {
   const navigation = useNavigation<Nav>();
-  const { params } = useRoute<Rt>();
   const insets = useSafeAreaInsets();
 
-  const [answers, setAnswers] = useState(params.answers);
-  const [spends, setSpends] = useState(params.spends);
-  // New params (e.g. the result screen edited the spends) replace local state.
-  useEffect(() => {
-    setAnswers(params.answers);
-    setSpends(params.spends);
-  }, [params.answers, params.spends]);
-
-  const { league, isLoading, isOffline, isError, refetch } = useCardSavings(spends);
-  const { save } = useSavedSpends();
-  const editRef = useRef<EditSpendsSheetHandle>(null);
+  const { league, isLoading, isOffline, isError, refetch } = useCardSavings(PROBE_SPENDS, { keepForSession: true });
+  const requestRef = useRef<CardRequestSheetHandle>(null);
 
   const [query, setQuery] = useState('');
   const [bank, setBank] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
-  // The quiz already sent TOOL_START when it opened this screen.
+  // A fresh entry (from Home) starts the spends page from the saved spends, not from an old draft.
   useEffect(() => {
-    if (!params.fromQuiz) analytics.track(Events.TOOL_START, { tool: 'beat' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    resetBeatSpendsDraft();
+    analytics.track(Events.TOOL_START, { tool: 'beat' });
   }, []);
 
-  const banks = useMemo(() => pickBanks(league), [league]);
+  // Acceptance 2: in a debug build, the list count is logged to check it against the calculate row count.
+  useEffect(() => {
+    if (__DEV__ && league.length > 0) console.log(`[beat] picker cards: ${league.length}`);
+  }, [league.length]);
+
+  useEffect(() => {
+    if (!showToast) return;
+    const id = setTimeout(() => setShowToast(false), TOAST_MS);
+    return () => clearTimeout(id);
+  }, [showToast]);
+
+  // Bank chips A to Z (spec 3.1). pickBanks gives the names; the order is set here.
+  const banks = useMemo(() => pickBanks(league).sort((a, b) => a.bank.localeCompare(b.bank)), [league]);
   // A to Z by name, not rank order: the rank order would show the winner before the result does.
   const byName = useMemo(
     () => [...league].sort((x, y) => pickName(x).localeCompare(pickName(y))),
     [league],
   );
   const shown = useMemo(() => filterPickRows(byName, bank, query), [byName, bank, query]);
-  // A pick that no longer exists (spends changed) is dropped.
   const pickedRow = useMemo(() => league.find((r) => r.savings.alias === picked), [league, picked]);
 
-  const onPick = (alias: string) => {
+  const onPick = useCallback((alias: string) => {
     haptics.impact('light');
+    // Close the search keyboard so the "Use this card" button under it shows.
+    Keyboard.dismiss();
     setPicked(alias);
+  }, []);
+
+  // Stable, so the memoized PickRow re-renders only when its own `selected` changes (audit NAV-05).
+  const renderItem = useCallback(
+    ({ item }: { item: LeagueRow }) => (
+      <PickRow row={item} selected={item.savings.alias === picked} onPress={onPick} />
+    ),
+    [picked, onPick],
+  );
+
+  // Typing resets the bank chip to "All" (spec 3.1).
+  const onSearch = (text: string) => {
+    setQuery(text);
+    setBank(null);
   };
 
-  const onSubmitSpends = (next: Partial<Record<SpendKey, number>>) => {
-    setAnswers(next);
-    setSpends(buildSpends(next));
-    save(next);
-  };
-
-  const onSee = () => {
+  const onUse = () => {
     if (!pickedRow) return;
     haptics.impact('light');
-    navigation.navigate('BeatMyCardResult', { cardAlias: pickedRow.savings.alias, spends, answers });
+    analytics.track(Events.BEAT_CARD_PICK, { bank: pickedRow.savings.bankName?.trim() ?? '' });
+    navigation.navigate('BeatMyCardSpends', { cardAlias: pickedRow.savings.alias });
+  };
+
+  const onRequest = (name: string) => {
+    analytics.track(Events.BEAT_CARD_REQUEST, { card_name: name });
+    setShowToast(true);
   };
 
   const shell = (body: React.ReactNode, footer?: React.ReactNode) => (
@@ -146,25 +258,30 @@ export function BeatMyCardPickScreen() {
       <Header leading="back" title="Beat my card" onLeadingPress={() => navigation.goBack()} />
       {body}
       {footer}
-      <EditSpendsSheet ref={editRef} answers={answers} onSubmit={onSubmitSpends} />
+      {showToast ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: insets.bottom + spacing[96],
+            alignItems: 'center',
+            paddingHorizontal: spacing[16],
+          }}
+        >
+          <Toast tone="success" icon="check-circle-filled" message="Thanks. We got your card name." />
+        </View>
+      ) : null}
+      <CardRequestSheet ref={requestRef} onSend={onRequest} />
     </SafeAreaView>
   );
 
-  if (!hasAnySpend(spends)) {
-    return shell(
-      <ScreenState
-        title="Enter at least one spend"
-        body="Every spend is 0 now, so there is nothing to compare."
-        actionLabel="Edit spends"
-        onAction={() => editRef.current?.present()}
-      />,
-    );
-  }
   if (isLoading) {
     return shell(
       <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[16], gap: spacing[12] }}>
         <Text variant="body14Regular" color={colors.text.secondary}>
-          Checking every card against your spends. This can take up to a minute.
+          Loading all cards. This can take up to a minute.
         </Text>
         <Skeleton height={spacing[80]} radius="lg" />
         <Skeleton height={spacing[80]} radius="lg" />
@@ -200,6 +317,7 @@ export function BeatMyCardPickScreen() {
 
   return shell(
     <FlatList
+      style={{ flex: 1 }}
       data={shown}
       extraData={picked}
       keyExtractor={(r) => r.savings.alias}
@@ -209,34 +327,13 @@ export function BeatMyCardPickScreen() {
           <Text variant="heading18SemiBold" color={colors.text.primary}>
             Which card do you have?
           </Text>
-          <Pressable
-            onPress={() => editRef.current?.present()}
-            accessibilityRole="button"
-            accessibilityLabel={`Annual spends: ${formatINR(totalYearlySpend(spends))} a year. Edit`}
-            hitSlop={spacing[8]}
-            style={{
-              alignSelf: 'flex-start',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing[6],
-              paddingVertical: spacing[6],
-              paddingHorizontal: spacing[12],
-              borderRadius: radius.full,
-              backgroundColor: colors.action.secondary.default,
-            }}
-          >
-            <Text variant="body12SemiBold" color={colors.text.link}>
-              {`Annual spends: ${formatINR(totalYearlySpend(spends))} a year`}
-            </Text>
-            <Icon name="edit-outline" size={iconSize[16]} color={colors.text.link} />
-          </Pressable>
           <Input
             size="sm"
             label="Search cards"
-            placeholder="Search by card or bank"
+            placeholder="Search by card name"
             leadingIcon="search-outline"
             value={query}
-            onChangeText={setQuery}
+            onChangeText={onSearch}
             autoCorrect={false}
             returnKeyType="search"
           />
@@ -274,29 +371,45 @@ export function BeatMyCardPickScreen() {
           }}
         />
       }
-      ItemSeparatorComponent={() => <View style={{ height: spacing[8] }} />}
-      renderItem={({ item }) => (
-        <PickRow row={item} selected={item.savings.alias === picked} onPress={onPick} />
-      )}
+      ItemSeparatorComponent={RowSeparator}
+      renderItem={renderItem}
+      // 219 rows with remote card art: mount a small window (audit NAV-05).
+      initialNumToRender={10}
+      windowSize={7}
       contentContainerStyle={{
         paddingHorizontal: spacing[16],
         paddingTop: spacing[8],
         paddingBottom: spacing[24],
       }}
     />,
-    pickedRow ? (
-      <View
-        style={{
-          paddingHorizontal: spacing[16],
-          paddingTop: spacing[12],
-          paddingBottom: insets.bottom + spacing[12],
-          borderTopWidth: borderWidth.thin,
-          borderTopColor: colors.border.subtle3,
-          backgroundColor: colors.surface.default,
-        }}
+    <View
+      style={{
+        paddingHorizontal: spacing[16],
+        paddingTop: spacing[12],
+        paddingBottom: insets.bottom + spacing[12],
+        borderTopWidth: borderWidth.thin,
+        borderTopColor: colors.border.subtle3,
+        backgroundColor: colors.surface.default,
+        gap: spacing[12],
+      }}
+    >
+      <Pressable
+        onPress={() => requestRef.current?.present()}
+        accessibilityRole="button"
+        accessibilityLabel="Can't find your card? Tell us"
+        hitSlop={spacing[8]}
+        style={{ alignSelf: 'center' }}
       >
-        <Button label="See if a card beats it" variant="solid" tone="main" size={52} fullWidth onPress={onSee} />
-      </View>
-    ) : null,
+        <Text variant="body14Regular" color={colors.text.secondary} align="center">
+          {"Can't find your card? "}
+          <Text variant="body14SemiBold" color={colors.text.link}>
+            Tell us
+          </Text>
+        </Text>
+      </Pressable>
+      {pickedRow ? (
+        <Button label="Use this card" variant="solid" tone="main" size={CTA_H} fullWidth onPress={onUse} />
+      ) : null}
+    </View>,
   );
 }

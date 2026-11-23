@@ -77,8 +77,15 @@ export interface UseCardSavingsResult {
   loadMs?: number;
 }
 
-/** Pass null (or an all-zero profile) to keep the hook idle. */
-export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsResult {
+/**
+ * Pass null (or an all-zero profile) to keep the hook idle.
+ * `keepForSession`: the result never goes stale and is never dropped while the app runs (the Beat my
+ * card picker's probe list, spec 9.3). Every caller of that profile must pass it.
+ */
+export function useCardSavings(
+  spends: CalculateSpends | null,
+  opts?: { keepForSession?: boolean },
+): UseCardSavingsResult {
   const enabled = spends !== null && hasAnySpend(spends);
   const cards = useCards();
 
@@ -92,7 +99,8 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
       return { list: rankByNetValue(mapCalculateResponse(raw)), loadMs };
     },
     enabled,
-    staleTime: CALCULATE_STALE_MS,
+    staleTime: opts?.keepForSession ? Infinity : CALCULATE_STALE_MS,
+    ...(opts?.keepForSession ? { gcTime: Infinity } : null),
     // calculateSavings already retries once in the transport; no second layer here.
     retry: false,
   });
