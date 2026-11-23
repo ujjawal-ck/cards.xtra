@@ -10,8 +10,8 @@
  * and the screen and the results subtitle say so.
  *
  * `route.params.brandId` (a TOOL_BRANDS id) starts with that brand picked.
- * Brand logos: amazon, flipkart, myntra, ajio and nykaa tiles show a logo from images.brands (src/lib/brandLogos.ts).
- * The other 5 brands have no logo file, so their tiles are text only.
+ * Brand logos: amazon, flipkart and myntra tiles show a clean logo (src/lib/brandLogos.ts).
+ * The other 7 brands have no clean logo file, so their tiles are text only.
  * Not run on a device: check at 360 dp and 130% font.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -204,7 +204,7 @@ export function BestForBrandsScreen() {
                               resizeMode="contain"
                               accessibilityElementsHidden
                               importantForAccessibility="no-hide-descendants"
-                              style={{ width: mediaSize[40], height: mediaSize[40], borderRadius: radius.sm }}
+                              style={{ width: mediaSize[64], height: mediaSize[40], borderRadius: radius.sm }}
                             />
                           ) : undefined
                         }
