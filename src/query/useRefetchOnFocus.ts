@@ -29,9 +29,17 @@ interface Refetchable {
   isFetching: boolean;
 }
 
-export function useRefetchOnFocus(query: Refetchable): void {
+export function useRefetchOnFocus(
+  query: Refetchable,
+  /** Skip the refetch on the screen's FIRST focus after mount. For a screen
+   *  whose data was just prefetched by the screen before it (order detail,
+   *  prefetched by the Orders list): opening it costs no second call. Later
+   *  focuses (coming back to the screen) still refetch. */
+  opts?: { skipFirstFocus?: boolean },
+): void {
   const ref = useRef(query);
   ref.current = query;
+  const firstFocus = useRef(!!opts?.skipFirstFocus);
 
   // useFocusEffect needs a navigation context. A query hook can be called from
   // a component rendered in a @gorhom/bottom-sheet portal (e.g. CardDetailSheet
@@ -46,6 +54,10 @@ export function useRefetchOnFocus(query: Refetchable): void {
     useFocusEffect(
       useCallback(() => {
         const q = ref.current;
+        if (firstFocus.current) {
+          firstFocus.current = false;
+          return;
+        }
         if (q.isFetched && !q.isFetching) q.refetch();
       }, [])
     );

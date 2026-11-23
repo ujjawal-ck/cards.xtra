@@ -14,7 +14,9 @@
  *   4. Instruction band (node 4049:131919) — full-bleed Section-Orange tint.
  *   5. Order list — vertical stack of <OrderCard> timeline cards (Figma
  *      orders/list-v2-timeline 6194:26502): status-tinted strip + logo/amount
- *      + meta row + optional expandable note, per card.
+ *      + meta row + optional expandable note, per card. Grouped under month
+ *      headings as each row's detail date arrives (useOrderDates); a failed
+ *      detail call puts the row under "Other".
  *
  * Token map (per property):
  *   screen bg          → colors.background.default
@@ -98,7 +100,8 @@ import {
 } from '../organisms';
 import { images } from '../assets/images';
 import type { OrdersFilterTab, OrderStoreOption } from '../organisms';
-import { useOrders } from '../query/useOrders';
+import { useOrders, useOrderDates } from '../query/useOrders';
+import { groupOrdersByMonth } from '../api/ordersMapper';
 import { isPausedWithoutData } from '../query/paused';
 import type { OrdersApiFilters } from '../api/cashkaro';
 import { colors, spacing, radius, iconSize, borderWidth, sizing, elevation } from '../tokens';
@@ -290,6 +293,15 @@ export function OrdersList() {
     return rows.filter((r) => applied.storeKeys.includes(r.merchantKey));
   }, [rows, applied.storeKeys]);
 
+  // Month sections. The list has no date, so each shown row's detail is
+  // fetched in the background (4 at a time); the list shows at once and
+  // groups as the dates arrive.
+  const datesById = useOrderDates(filteredRows);
+  const sections = useMemo(
+    () => groupOrdersByMonth(filteredRows ?? [], datesById),
+    [filteredRows, datesById]
+  );
+
   const appliedCount = filterCount(applied);
   const draftCount = filterCount(draft);
   // The two filter chips split the applied set so neither double-counts:
@@ -466,26 +478,39 @@ export function OrdersList() {
           ) : (
             // Revamped list — a stack of timeline-style cards (Figma
             // orders/list-v2-timeline). px16 gutter, spacing[12] between cards.
+            // Month headings use the Earnings style. One flat list of keyed
+            // children, so a card that moves into its month is not remounted.
             <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[12], gap: spacing[12] }}>
-              {(filteredRows ?? []).map(({ id, type, status, amount, metaValue, note, logoSrc, showAmountChevron }) => (
-                <OrderCard
-                  key={id}
-                  type={type}
-                  status={status ?? 'pending'}
-                  amount={amount}
-                  metaValue={metaValue}
-                  note={note}
-                  logoSrc={logoSrc}
-                  onPress={
-                    showAmountChevron
-                      ? () => {
-                          analytics.track(Events.ORDER_SELECT, { order_id: id, status });
-                          navigation.navigate('OrdersDetail', { id });
-                        }
-                      : undefined
-                  }
-                />
-              ))}
+              {sections.flatMap((section) => [
+                section.label ? (
+                  <Text
+                    key={`section-${section.key}`}
+                    variant="body14SemiBold"
+                    color={colors.text.secondary}
+                  >
+                    {section.label}
+                  </Text>
+                ) : null,
+                ...section.rows.map(({ id, type, status, amount, metaValue, note, logoSrc, showAmountChevron }) => (
+                  <OrderCard
+                    key={id}
+                    type={type}
+                    status={status ?? 'pending'}
+                    amount={amount}
+                    metaValue={metaValue}
+                    note={note}
+                    logoSrc={logoSrc}
+                    onPress={
+                      showAmountChevron
+                        ? () => {
+                            analytics.track(Events.ORDER_SELECT, { order_id: id, status });
+                            navigation.navigate('OrdersDetail', { id });
+                          }
+                        : undefined
+                    }
+                  />
+                )),
+              ])}
               {isFetchingNextPage ? (
                 <View style={{ paddingVertical: spacing[16], alignItems: 'center' }}>
                   <ActivityIndicator color={colors.action.primary.default} />

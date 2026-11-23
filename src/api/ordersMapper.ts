@@ -32,6 +32,9 @@
  *     not an empty list: mapOrders throws, so the screen shows its error.
  *   • The OrderRow `type` drives both the meta line ("Order ID:"/"Bonus Type:"
  *     /"Referral Name:") and the badge variant (referral → Tag, else Status).
+ *   • Month grouping: the list has no date, so OrdersList fetches each shown
+ *     row's detail (useOrderDates) and groups by its `transaction_date`
+ *     (groupOrdersByMonth below).
  */
 import type { ImageSourcePropType } from 'react-native';
 import type { OrderRowType, OrderRowBadgeVariant, TimelineStep } from '../organisms';
@@ -39,6 +42,7 @@ import type { StatusBadgeStatus } from '../atoms';
 import type { ToneName } from '../tokens';
 import { images } from '../assets/images';
 import { formatINROrDash } from '../lib/money';
+import { groupByMonth, type MonthSection } from '../lib/groupByMonth';
 
 // Timeline status key (a subset of StatusBadgeStatus the detail visuals cover).
 export type OrderStatusKey = 'pending' | 'delayed' | 'cancelled' | 'confirmed' | 'paid';
@@ -63,7 +67,8 @@ export interface OrderListRow {
    *  the name, then the record id). Same store ⇒ same key. */
   merchantKey: string;
   /** Order date (ISO). The list response has no date field (`transaction_date`
-   *  is detail-only), so the list leaves this unset: one ungrouped list. */
+   *  is detail-only), so the list leaves this unset. OrdersList groups by the
+   *  detail's date instead (groupOrdersByMonth). */
   dateISO?: string;
 }
 
@@ -83,6 +88,8 @@ export interface OrderDetailModel {
   orderAmount: string;
   orderId: string;
   transactionDate: string;
+  /** Raw `transaction_date` (ISO), for the Orders list's month grouping. */
+  transactionDateISO?: string;
   /** Cashback-journey timeline. */
   steps: TimelineStep[];
 }
@@ -222,7 +229,7 @@ export function mapOrders(res: any): OrderListRow[] {
 
     // The doc's list response has no store name (detail-only), so this read is
     // best effort: a name field if the API sends one, else a readable logo slug.
-    // No date is read, so rows are not month-grouped.
+    // No date is read here: the month comes from the detail (groupOrdersByMonth).
     const merchantName =
       str(a.merchant_name) ||
       str(a.report_merchant_name) ||
@@ -368,6 +375,46 @@ export function mapOrderDetail(res: any): OrderDetailModel {
     orderAmount: money(a.order_amount),
     orderId: str(a.order_id) || '—',
     transactionDate: shortDate(a.transaction_date) || '—',
+    transactionDateISO: str(a.transaction_date) || undefined,
     steps: buildSteps(statusKey, a),
   };
+}
+
+// ── month grouping ─────────────────────────────────────────────────────────
+
+/** Row id → its detail's `transaction_date` (ISO), or null when the detail
+ *  call failed or sent no date. No key: the detail is not fetched yet. */
+export type OrderDatesById = Record<string, string | null>;
+
+/**
+ * Orders list rows → sections for the screen. The list response has no date,
+ * so the month comes from each row's detail (`datesById`):
+ *   • no row has its detail yet → one section with no heading (the plain list);
+ *   • dated rows → "Month YYYY" sections, newest first, server order inside;
+ *   • rows still waiting for their detail → one section with no heading;
+ *   • failed detail call, or no usable date → "Other", last.
+ */
+export function groupOrdersByMonth(
+  rows: OrderListRow[],
+  datesById: OrderDatesById
+): MonthSection<OrderListRow>[] {
+  if (rows.length === 0) return [];
+  const dated: { row: OrderListRow; dateISO: string }[] = [];
+  const waiting: OrderListRow[] = [];
+  const other: OrderListRow[] = [];
+  for (const row of rows) {
+    const iso = datesById[row.id];
+    if (iso === undefined) waiting.push(row);
+    else if (iso && !isNaN(new Date(iso).getTime())) dated.push({ row, dateISO: iso });
+    else other.push(row);
+  }
+  if (waiting.length === rows.length) return [{ key: 'waiting', label: '', rows }];
+  const sections: MonthSection<OrderListRow>[] = groupByMonth(dated).map((s) => ({
+    key: s.key,
+    label: s.label,
+    rows: s.rows.map((d) => d.row),
+  }));
+  if (waiting.length) sections.push({ key: 'waiting', label: '', rows: waiting });
+  if (other.length) sections.push({ key: 'other', label: 'Other', rows: other });
+  return sections;
 }
