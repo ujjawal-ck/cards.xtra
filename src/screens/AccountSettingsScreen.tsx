@@ -55,6 +55,12 @@ import { useProfile } from '../query/useProfile';
 import { FIELD_COPY } from './editContact';
 import type { RootStackParamList, EditContactField } from '../navigation/types';
 
+// Hidden: the mini-app API has only `GET users/profile`, so name edits, email
+// and mobile changes saved nothing while showing "updated successfully"
+// (AUTH-04, UX-02, PM-07; parity item C). Same approach as Delete Account (D23).
+// Flip to true once `PUT users/profile` and the OTP change endpoints exist.
+const SHOW_PROFILE_EDIT = false;
+
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AccountSettings'>;
 type Rt = RouteProp<RootStackParamList, 'AccountSettings'>;
 
@@ -128,19 +134,22 @@ export function AccountSettingsScreen() {
           <View style={{ paddingHorizontal: spacing[16], gap: spacing[24] }}>
             {/* Full Name — inline editable. (Figma fields are sm: 48px box,
                 14px Regular value — see node 3396:26627.) */}
-            <Input
-              label="Full Name"
-              size="sm"
-              value={name}
-              onChangeText={setName}
-              trailingIcon="edit-outline"
-              autoCapitalize="words"
-            />
+            <View pointerEvents={SHOW_PROFILE_EDIT ? 'auto' : 'none'}>
+              <Input
+                label="Full Name"
+                size="sm"
+                value={name}
+                onChangeText={SHOW_PROFILE_EDIT ? setName : () => undefined}
+                trailingIcon={SHOW_PROFILE_EDIT ? 'edit-outline' : undefined}
+                autoCapitalize="words"
+              />
+            </View>
 
             {/* Email — display-only; pencil/row launches the change flow. */}
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole={SHOW_PROFILE_EDIT ? 'button' : undefined}
               accessibilityLabel="Change email"
+              disabled={!SHOW_PROFILE_EDIT}
               onPress={() => launchChange('email')}
             >
               <View pointerEvents="none">
@@ -152,15 +161,16 @@ export function AccountSettingsScreen() {
                   // used to render scrolled to its end, "07879902@…").
                   selection={{ start: 0, end: 0 }}
                   onChangeText={() => undefined}
-                  trailingIcon="edit-outline"
+                  trailingIcon={SHOW_PROFILE_EDIT ? 'edit-outline' : undefined}
                 />
               </View>
             </Pressable>
 
             {/* Mobile Number — display-only; pencil/row launches the flow. */}
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole={SHOW_PROFILE_EDIT ? 'button' : undefined}
               accessibilityLabel="Change mobile number"
+              disabled={!SHOW_PROFILE_EDIT}
               onPress={() => launchChange('mobile')}
             >
               <View pointerEvents="none">
@@ -172,7 +182,7 @@ export function AccountSettingsScreen() {
                   // used to render scrolled to its end, "07879902@…").
                   selection={{ start: 0, end: 0 }}
                   onChangeText={() => undefined}
-                  trailingIcon="edit-outline"
+                  trailingIcon={SHOW_PROFILE_EDIT ? 'edit-outline' : undefined}
                 />
               </View>
             </Pressable>
@@ -184,7 +194,7 @@ export function AccountSettingsScreen() {
         </ScrollView>
 
         {/* Success message — only after a completed email/mobile change. */}
-        {updated ? (
+        {SHOW_PROFILE_EDIT && updated ? (
           <View style={{ paddingHorizontal: spacing[16], paddingBottom: spacing[12] }}>
             <InlineMessage
               tone="success"
@@ -195,15 +205,17 @@ export function AccountSettingsScreen() {
         ) : null}
 
         {/* Sticky Save Changes — cobalt/accent, disabled until name changes. */}
-        <FooterButtons
-          buttons="single"
-          color="second"
-          size={52}
-          shadow="off"
-          primaryLabel="Save Changes"
-          primaryDisabled={!dirty}
-          onPrimary={() => navigation.goBack()}
-        />
+        {SHOW_PROFILE_EDIT ? (
+          <FooterButtons
+            buttons="single"
+            color="second"
+            size={52}
+            shadow="off"
+            primaryLabel="Save Changes"
+            primaryDisabled={!dirty}
+            onPrimary={() => navigation.goBack()}
+          />
+        ) : null}
       </SafeAreaView>
     </View>
   );

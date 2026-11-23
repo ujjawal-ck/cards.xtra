@@ -58,6 +58,7 @@ import { analytics, Events } from '../analytics';
 import { ApiError } from '../api/client';
 import { dummyEmail, randomPassword } from '../lib/eccentricName';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../lib/phone';
+import { openUrl } from '../lib/openUrl';
 
 export interface LoginSuccess {
   /** True when this OTP round created a new CashKaro account. */
@@ -87,6 +88,9 @@ export function useLoginSheet(): LoginSheetContextValue {
   return ctx;
 }
 
+// Terms open in the device browser (UX-16, parity G). Privacy keeps opening the
+// in-app PrivacyPolicy screen (openPrivacyPolicy).
+const TERMS_URL = 'https://cashkaro.com/terms-conditions-app';
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 // Time for the sheet to start closing before the next screen / action runs,
@@ -480,7 +484,17 @@ export function LoginSheetProvider({
                   align="center"
                   style={{ width: '100%' }}
                 >
-                  By continuing, you agree to the Terms & Conditions and{' '}
+                  By continuing, you agree to CashKaro's{' '}
+                  <Text
+                    variant="body12Medium"
+                    color={colors.text.link}
+                    onPress={() => openUrl(TERMS_URL)}
+                    accessibilityRole="link"
+                    suppressHighlighting
+                  >
+                    terms & conditions
+                  </Text>{' '}
+                  and{' '}
                   <Text
                     variant="body12Medium"
                     color={colors.text.link}
@@ -488,7 +502,7 @@ export function LoginSheetProvider({
                     accessibilityRole="link"
                     suppressHighlighting
                   >
-                    Privacy Policy
+                    privacy policy
                   </Text>
                 </Text>
               </View>

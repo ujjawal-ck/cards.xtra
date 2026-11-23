@@ -24,7 +24,17 @@ import type { RootStackParamList } from '../navigation/types';
 
 const DISMISS_KEY = 'never_miss_cashback_nudge_dismissed';
 
+// Hidden (audit PM-08, DATA-11, AUTH-03; user decision 2026-11-23: copy the
+// CashKaro app, which has no cashback reminder). The Profile row and the
+// Orders pip are hidden with their own flags. Flip all three to bring it back.
+const SHOW_NEVER_MISS_CASHBACK_NUDGE = false;
+
 export function NeverMissCashbackNudge() {
+  if (!SHOW_NEVER_MISS_CASHBACK_NUDGE) return null;
+  return <NeverMissCashbackNudgeInner />;
+}
+
+function NeverMissCashbackNudgeInner() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: orders } = useOrders();
   // Start hidden; an effect resolves the persisted-dismiss + armed checks so we
