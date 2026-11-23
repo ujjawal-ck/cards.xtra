@@ -124,11 +124,13 @@ export function WithdrawSuccess() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Exit the whole withdraw stack back to the Home tab.
+  // Exit the whole withdraw stack back to the Home tab. popTo returns to the
+  // MainTabs already under this stack; navigate pushed a second MainTabs, and
+  // Back from Home then reopened this success screen.
   const exitToHome = () =>
     navigation
       .getParent<NativeStackNavigationProp<RootStackParamList>>()
-      ?.navigate('MainTabs', { screen: 'Home' });
+      ?.popTo('MainTabs', { screen: 'Home' });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>

@@ -1,15 +1,20 @@
 /**
  * withdraw.ts — the payout request, made safe against double payouts.
  *
- * Three rules:
+ * Four rules:
  *   1. One payout in flight at a time (a module-level lock, so a double tap,
  *      the OTP auto-submit and a re-render can't fire two requests).
  *   2. Never auto-retry /payment/paymentV1. The transport never retries a
  *      POST, and the mutation has retry: false.
- *   3. If the request times out or the network drops, we don't know whether
- *      CashKaro accepted it. Before telling the user to try again, re-check
- *      GET /payment/payment: error code 5002 means a payout is already pending,
- *      i.e. ours went through.
+ *   3. Only a 4xx from the server is a real rejection (isPayoutRejection).
+ *      Every other failure means "outcome unknown": a timeout, a network or
+ *      dropped connection, a 429, any 5xx (including the BFF's 502
+ *      UPSTREAM_ERROR and 504), or anything else. CashKaro may already have
+ *      accepted the payout.
+ *   4. For an unknown outcome, re-check GET /payment/payment up to 3 times,
+ *      about 5 s apart. Error code 5002 means a payout is pending, i.e. ours
+ *      went through. If no re-check shows it, throw PayoutUnknownError, and
+ *      the screen blocks any further payout attempt.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isApiError } from '../../api/http/errors';
@@ -27,7 +32,7 @@ import { qk } from '../keys';
 export type WithdrawOutcome =
   /** CashKaro accepted the request. */
   | { status: 'submitted' }
-  /** The request timed out, but a re-check shows a payout is now pending. */
+  /** The answer was lost, but a re-check shows a payout is now pending. */
   | { status: 'submitted_after_recheck' };
 
 /** Thrown when we can't tell whether the payout went through. */
@@ -46,10 +51,35 @@ export class PayoutInFlightError extends Error {
   }
 }
 
+/**
+ * True only for a real rejection: the server answered with a 4xx (not 429).
+ * Everything else, a non-ApiError included, is "outcome unknown".
+ */
+export function isPayoutRejection(e: unknown): boolean {
+  return isApiError(e) && e.kind === 'http' && e.status >= 400 && e.status < 500 && e.status !== 429;
+}
+
+/** How many times, and how far apart, the pending-payout re-check runs. */
+export const RECHECK_ATTEMPTS = 3;
+export const RECHECK_INTERVAL_MS = 5_000;
+/** One re-check read: short deadline, no transport retries, so the screen is
+ *  never locked for minutes (3 reads x 10 s + 2 waits x 5 s = about 40 s). */
+export const RECHECK_TIMEOUT_MS = 10_000;
+/** After an unknown outcome, every new payout is blocked app-wide for this
+ *  long (not only on the screen that saw it): Back, then "Get Paid" again,
+ *  must not open a second payout while the first may still be landing. */
+export const UNKNOWN_COOLDOWN_MS = 10 * 60_000;
+
 export interface WithdrawDeps {
   submit: (token: string, draft: WithdrawDraft, otpGuid: string) => Promise<unknown>;
   recheck: (token: string) => Promise<unknown>;
+  /** Pause between re-checks. Injectable so tests don't wait 5 s. */
+  wait?: (ms: number) => Promise<void>;
+  /** Clock. Injectable for the cool-down tests. */
+  now?: () => number;
 }
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const defaultDeps: WithdrawDeps = {
   submit: (token, draft, otpGuid) => {
@@ -59,14 +89,33 @@ const defaultDeps: WithdrawDeps = {
     if (method === 'flipkart') return submitFlipkartPayment(token, paymentType, draft.email ?? '', otpGuid, paymentMethodId);
     return Promise.reject(new Error(`Unsupported payout method: ${method}`));
   },
-  recheck: (token) => fetchPaymentInfo(token),
+  recheck: (token) => fetchPaymentInfo(token, undefined, { timeoutMs: RECHECK_TIMEOUT_MS, retries: 0 }),
+  wait: sleep,
 };
 
 let inFlight = false;
+/** Time until which new payouts are blocked after an unknown outcome. */
+let unknownUntil = 0;
 
 /** Test seam. */
 export function __resetPayoutLock(): void {
   inFlight = false;
+  unknownUntil = 0;
+}
+
+/** True while an earlier payout's outcome is still unknown (cool-down). */
+export function isPayoutOutcomePending(now: number = Date.now()): boolean {
+  return now < unknownUntil;
+}
+
+/** True when one GET /payment/payment shows a pending payout (code 5002). */
+async function showsPendingPayout(token: string, deps: WithdrawDeps): Promise<boolean> {
+  try {
+    await deps.recheck(token);
+    return false; // a 200 means no payout is pending (yet)
+  } catch (check) {
+    return paymentInProcessAmountFromError(check) !== null;
+  }
 }
 
 /** Submit one payout. Pure of React so it can be unit tested. */
@@ -77,19 +126,24 @@ export async function submitWithdrawal(
   deps: WithdrawDeps = defaultDeps,
 ): Promise<WithdrawOutcome> {
   if (inFlight) throw new PayoutInFlightError();
+  const now = deps.now ?? Date.now;
+  // An earlier payout may still be landing: never send another one yet.
+  if (isPayoutOutcomePending(now())) throw new PayoutUnknownError();
   inFlight = true;
   try {
     await deps.submit(token, draft, otpGuid);
     return { status: 'submitted' };
   } catch (e) {
-    // A real answer from the server (4xx/5xx) is final: surface it.
-    if (!(isApiError(e) && (e.kind === 'timeout' || e.kind === 'network'))) throw e;
-    // No answer: find out whether the payout landed before allowing a retry.
-    try {
-      await deps.recheck(token);
-    } catch (check) {
-      if (paymentInProcessAmountFromError(check) !== null) return { status: 'submitted_after_recheck' };
+    // A 4xx is CashKaro's final answer: surface it.
+    if (isPayoutRejection(e)) throw e;
+    // Anything else: find out whether the payout landed. Keep the lock while
+    // we look, so nothing else can submit in the meantime.
+    const wait = deps.wait ?? sleep;
+    for (let attempt = 1; attempt <= RECHECK_ATTEMPTS; attempt++) {
+      if (attempt > 1) await wait(RECHECK_INTERVAL_MS);
+      if (await showsPendingPayout(token, deps)) return { status: 'submitted_after_recheck' };
     }
+    unknownUntil = now() + UNKNOWN_COOLDOWN_MS;
     throw new PayoutUnknownError();
   } finally {
     inFlight = false;
@@ -103,6 +157,10 @@ export function useWithdraw() {
   return useMutation({
     mutationKey: ['user', 'withdraw'],
     retry: false,
+    // Never pause a payout while NetInfo says offline: a paused mutation
+    // resumes later, maybe after the user left or retried. Run it now; an
+    // offline phone fails fast into the unknown-outcome path above.
+    networkMode: 'always',
     mutationFn: ({ draft, otpGuid }: { draft: WithdrawDraft; otpGuid: string }) => {
       if (!accessToken) return Promise.reject(new PayoutUnknownError());
       return submitWithdrawal(accessToken, draft, otpGuid);

@@ -20,19 +20,43 @@ import { CK } from '../config/env';
 export type PaymentTypeKey = 'cashback' | 'rewards' | 'cashback_and_rewards';
 export type PaymentMethodKey = 'amazon' | 'flipkart' | 'upi' | 'bank';
 
-// Fallbacks if the API response doesn't expose ids (matches the reference).
-const DEFAULT_PAYMENT_METHOD_IDS: Record<PaymentMethodKey, number> = {
-  amazon: 12,
-  flipkart: 13,
-  upi: 20,
-  bank: 18,
-};
+/** Payment method ids read from /payment/payment. A method the response did
+ *  not list is absent: there is no built-in fallback id. */
+export type PaymentMethodIds = Partial<Record<PaymentMethodKey, number>>;
+
+/** Thrown when the payout method id was not read from the API. Sending a
+ *  built-in id could pay out through the wrong method, so the flow stops. */
+export class PaymentMethodUnavailableError extends Error {
+  constructor() {
+    super('This payment method is not available right now. Please try again later.');
+    this.name = 'PaymentMethodUnavailableError';
+  }
+}
+
+/** The id to send with the payout POST. Throws when the API did not give one. */
+export function requirePaymentMethodId(
+  ids: PaymentMethodIds | undefined,
+  method: PaymentMethodKey
+): number {
+  const id = ids?.[method];
+  if (typeof id !== 'number' || !Number.isFinite(id)) throw new PaymentMethodUnavailableError();
+  return id;
+}
+
+/** A money field: the number, or null when it is missing or not a number.
+ *  Never 0 for an unknown amount. */
+function moneyOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  return Number.isFinite(n) ? n : null;
+}
 
 export interface PaymentData {
   mobile: string;
-  totalEarnings: number;
-  cashbackEarnings: number;
-  rewardsEarnings: number;
+  /** null when the field is missing or not a number ("balance unavailable"). */
+  totalEarnings: number | null;
+  cashbackEarnings: number | null;
+  rewardsEarnings: number | null;
   currencyCode: string;
   paymentThreshold: number;
   /** True when a previous payout is still settling — the user can't request
@@ -48,10 +72,16 @@ export interface PaymentData {
  *  return data — it fails with HTTP 400 / error code 5002 ("a payment request
  *  from you is already pending"). Callers detect that via
  *  paymentInProcessAmountFromError() rather than a field on the success body. */
-export async function fetchPaymentInfo(token: string, signal?: AbortSignal): Promise<any> {
+export async function fetchPaymentInfo(
+  token: string,
+  signal?: AbortSignal,
+  opts?: { timeoutMs?: number; retries?: number },
+): Promise<any> {
   return ck('/payment/payment', { contract: ['payment/payment', Schemas.PaymentInfoResponse],
     auth: { userToken: token },
     signal,
+    ...(opts?.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}),
+    ...(opts?.retries !== undefined ? { retries: opts.retries } : {}),
     query: { device: CK.device, paymentautomation: 'true', include: 'charities' },
   });
 }
@@ -98,9 +128,9 @@ export function extractPaymentData(info: any): PaymentData {
   const a = info?.data?.attributes ?? {};
   return {
     mobile: a.mobile || '',
-    totalEarnings: parseFloat(a.total_earnings) || 0,
-    cashbackEarnings: parseFloat(a.cashback_earnings) || 0,
-    rewardsEarnings: parseFloat(a.rewards_earnings) || 0,
+    totalEarnings: moneyOrNull(a.total_earnings),
+    cashbackEarnings: moneyOrNull(a.cashback_earnings),
+    rewardsEarnings: moneyOrNull(a.rewards_earnings),
     currencyCode: a.currency_code || 'INR',
     paymentThreshold: parseFloat(a.payment_threshold) || 250,
     // A successful response means NO payout is pending. The in-process state is
@@ -111,11 +141,10 @@ export function extractPaymentData(info: any): PaymentData {
   };
 }
 
-/** Pull payment_method ids out of the (loosely-shaped) response. */
-export function extractPaymentMethodIds(
-  info: any
-): Record<PaymentMethodKey, number> {
-  const ids: Record<PaymentMethodKey, number> = { ...DEFAULT_PAYMENT_METHOD_IDS };
+/** Pull payment_method ids out of the (loosely-shaped) response. Only ids the
+ *  response lists are returned; use requirePaymentMethodId() at submit. */
+export function extractPaymentMethodIds(info: any): PaymentMethodIds {
+  const ids: PaymentMethodIds = {};
 
   // Documented shape (CK doc, GET /payment/payment):
   // relationships.payment_methods.data[] with { id, attributes.payment_name }.
@@ -127,8 +156,9 @@ export function extractPaymentMethodIds(
       ? info.included.filter((i: any) => i?.type === 'payment_method')
       : [];
   if (candidates.length === 0 && info) {
-    // Falling back to built-in ids could send a payout to the wrong method on
-    // a backend where ids differ, so make it visible.
+    // No built-in ids any more: the withdraw form stops before the OTP
+    // (requirePaymentMethodId). Make the gap visible. The report key is kept
+    // as-is because src/api/__tests__/mappers.test.ts pins it.
     reportHandled(new Error('payment_methods missing in /payment/payment'), 'payment method ids: using defaults');
   }
 
@@ -206,8 +236,12 @@ export function verifyHasError(res: any): boolean {
   return !!(res?.error || (res?.data?.errors && res.data.errors.length > 0));
 }
 
-/** Deadline for a payout request (the server can be slow to confirm). */
-export const PAYOUT_TIMEOUT_MS = 30_000;
+/** Deadline for a payout request. It must be longer than the BFF's own wait
+ *  for CashKaro (55 s, `USER_TIMEOUT_MS` in bff/src/proxy.js) and Vercel's
+ *  `maxDuration` of 60 s. Then the BFF answers first (its 504 or 502 goes to
+ *  the re-check path), and the app never gives up while the payout is still
+ *  running upstream. */
+export const PAYOUT_TIMEOUT_MS = 65_000;
 
 export async function submitUPIPayment(
   token: string,

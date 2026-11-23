@@ -110,7 +110,7 @@ export function GetHelpScreen() {
     {
       icon: 'help-cash-outline',
       label: 'Your Cashback',
-      onPress: () => navigation.navigate('MainTabs', { screen: 'Earnings' }),
+      onPress: () => navigation.popTo('MainTabs', { screen: 'Earnings' }),
     },
     {
       icon: 'help-ticket-outline',

@@ -8,8 +8,13 @@
  * / Flipkart), then routes to the method-specific success screen.
  *
  * States: invalid OTP → "Enter a valid OTP"; resend timer hits 0 → "OTP is
- * expired" + Resend (re-sends a fresh OTP). A submit failure (e.g. invalid
- * UPI/email) surfaces as an alert.
+ * expired" + Resend (re-sends a fresh OTP). A 4xx from the payout (e.g.
+ * invalid UPI/email) shows the server's message. Any other payout failure
+ * means the outcome is unknown: the screen shows "Couldn't confirm your
+ * withdrawal" and blocks Resend and Verify for the rest of its life.
+ *
+ * While verify + payout run, the screen can't be left (Back, header back,
+ * Android Back, iOS swipe): usePreventRemove.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -22,7 +27,7 @@ import Animated from 'react-native-reanimated';
 import { useKeyboardPadding } from '../../lib/useKeyboardInset';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, usePreventRemove } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -39,9 +44,10 @@ import {
   verifyHasError,
 } from '../../api/payments';
 import { ApiError } from '../../api/client';
-import { useWithdraw, PayoutInFlightError, PayoutUnknownError } from '../../query/mutations/withdraw';
+import { useWithdraw, isPayoutRejection } from '../../query/mutations/withdraw';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
+import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
@@ -59,10 +65,13 @@ export function WithdrawVerifyOTP() {
   const { accessToken } = useAuth();
   const { draft, maskedMobile } = params;
   const withdraw = useWithdraw();
+  const { blockIfOffline, offlineToast } = useOfflineSubmitGuard();
 
   const [otp, setOtp] = useState('');
   const [otpGuid, setOtpGuid] = useState(params.otpGuid);
-  const [busy, setBusy] = useState(false); // verifying + submitting
+  const [busy, setBusy] = useState(false); // verifying + submitting, or resending
+  // Verify + payout running: the screen must not be left (NAV-08).
+  const [paying, setPaying] = useState(false);
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState<OtpError>('none');
 
@@ -78,12 +87,22 @@ export function WithdrawVerifyOTP() {
 
   // Synchronous re-entry guard. `busy` is React state, so the auto-submit
   // effect and a Verify tap landing in the same frame could both pass the
-  // `busy` check and submit the payout twice.
+  // `busy` check and submit the payout twice. Resend uses it too.
   const inFlight = useRef(false);
-  // otpGuids whose payout POST went out but whose outcome is unknown (timeout /
-  // network drop). Never auto-resubmit those: the server may already have
-  // accepted the withdrawal, and a retry could request a second payout.
-  const unconfirmedGuids = useRef(new Set<string>());
+  // Set once any payout on this screen ended with an unknown outcome. From
+  // then on, Verify AND Resend are blocked for the rest of the screen's life:
+  // the server may already have accepted the withdrawal, and a fresh OTP from
+  // Resend must not open a way to request a second payout.
+  const outcomeUnknown = useRef(false);
+  // Set just before our own reset to the success screen, so the block on
+  // leaving lets that one navigation through.
+  const leaving = useRef(false);
+
+  // Block Back / header back / Android Back / iOS swipe while verify + payout
+  // run. Leaving mid-request hid the result from the user.
+  usePreventRemove(paying, ({ data }) => {
+    if (leaving.current) navigation.dispatch(data.action);
+  });
 
   const showUnconfirmed = () => {
     Alert.alert(
@@ -95,10 +114,11 @@ export function WithdrawVerifyOTP() {
       [
         {
           text: 'Go to Earnings',
+          // popTo, not navigate: navigate pushed a second MainTabs on top.
           onPress: () =>
             navigation
               .getParent<NativeStackNavigationProp<RootStackParamList>>()
-              ?.navigate('MainTabs', { screen: 'Earnings' }),
+              ?.popTo('MainTabs', { screen: 'Earnings' }),
         },
         { text: 'OK', style: 'cancel' },
       ],
@@ -107,20 +127,28 @@ export function WithdrawVerifyOTP() {
 
   const verifyAndPay = async () => {
     if (inFlight.current || busy || otp.length !== OTP_LENGTH) return;
+    if (outcomeUnknown.current) {
+      showUnconfirmed();
+      return;
+    }
     if (!accessToken || !otpGuid) {
       Alert.alert('Session expired', 'Please request a new OTP.');
       return;
     }
-    if (unconfirmedGuids.current.has(otpGuid)) {
-      showUnconfirmed();
-      return;
-    }
     inFlight.current = true;
     setBusy(true);
+    setPaying(true);
     const done = () => {
       inFlight.current = false;
       setBusy(false);
+      setPaying(false);
     };
+
+    // 0) Offline: send nothing, keep the typed OTP.
+    if (await blockIfOffline()) {
+      done();
+      return;
+    }
 
     // 1) Verify OTP.
     let verifyRes: any;
@@ -158,23 +186,26 @@ export function WithdrawVerifyOTP() {
       inFlight.current = false;
       // Replace the whole withdraw stack with the success screen: Back from
       // success used to reopen this OTP screen frozen behind its busy overlay
-      // (and could invite a resubmit).
+      // (and could invite a resubmit). `leaving` lets this reset past the
+      // block on leaving.
+      leaving.current = true;
       navigation.reset({
         index: 0,
         routes: [{ name: 'WithdrawSuccess', params: { amount: draft.amount, method } }],
       });
     } catch (e: any) {
-      // Another submit is already running: leave the busy overlay up.
-      if (e instanceof PayoutInFlightError) return;
       done();
       play('error');
-      if (e instanceof PayoutUnknownError || (e instanceof ApiError && e.status === 0)) {
-        // Timed out / connection dropped AFTER the request was sent: the
-        // outcome is unknown, so don't claim it failed or invite a blind retry.
-        unconfirmedGuids.current.add(otpGuid);
-        showUnconfirmed();
-      } else {
+      if (isPayoutRejection(e)) {
+        // A 4xx: CashKaro's real answer (e.g. invalid UPI ID). Show it.
         Alert.alert('Payment failed', e?.message ?? 'Please try again.');
+      } else {
+        // Everything else is an unknown outcome: PayoutUnknownError (timeout,
+        // network, 429, 5xx after the re-check), PayoutInFlightError (another
+        // payout is still running) or anything unexpected. Don't claim it
+        // failed, and block any further payout from this screen.
+        outcomeUnknown.current = true;
+        showUnconfirmed();
       }
     }
   };
@@ -191,9 +222,16 @@ export function WithdrawVerifyOTP() {
   };
 
   const handleResend = async () => {
-    if (!accessToken || busy) return;
+    // A fresh OTP would get past the block after an unknown outcome (QA-08).
+    if (outcomeUnknown.current) {
+      showUnconfirmed();
+      return;
+    }
+    if (!accessToken || busy || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try {
+      if (await blockIfOffline()) return;
       const { otpGuid: fresh } = await sendPaymentRequestOTP(accessToken);
       analytics.track(Events.WITHDRAW_OTP_RESEND);
       setOtpGuid(fresh);
@@ -203,6 +241,7 @@ export function WithdrawVerifyOTP() {
     } catch (e: any) {
       Alert.alert('Could not resend OTP', e?.message ?? 'Please try again.');
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -289,6 +328,7 @@ export function WithdrawVerifyOTP() {
           nothing on Android under edge-to-edge (see useKeyboardInset.ts),
           so the keys covered the CTA and T&C checkbox. */}
       <Animated.View style={keyboardPad}>
+        {offlineToast}
         <FooterButtons
           buttons="single"
           size={52}

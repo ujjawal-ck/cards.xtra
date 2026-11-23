@@ -9,7 +9,7 @@
  * for obviously-malformed input (this replaces the old strict regex that
  * rejected valid handles).
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Alert } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useKeyboardPadding } from '../../lib/useKeyboardInset';
@@ -25,9 +25,10 @@ import { colors, spacing } from '../../tokens';
 import type { WithdrawStackParamList } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
-import { sendPaymentRequestOTP } from '../../api/payments';
+import { requirePaymentMethodId, sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
+import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawEnterUPI'>;
@@ -45,27 +46,37 @@ export function WithdrawEnterUPI() {
   const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
+  const { blockIfOffline, offlineToast } = useOfflineSubmitGuard();
 
   const [upi, setUpi] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [showError, setShowError] = useState(false);
   const [sending, setSending] = useState(false);
+  // Synchronous guard: `sending` is React state, so a fast double tap could
+  // pass the check twice, send two OTP SMS and push two OTP screens.
+  const sendingRef = useRef(false);
 
   const handleGetPaid = async () => {
     if (!looksLikeUpi(upi)) {
       setShowError(true);
       return;
     }
-    if (!accessToken || sending) return;
+    if (!accessToken || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
+      // Offline: send nothing, keep what the user typed.
+      if (await blockIfOffline()) return;
+      // No built-in fallback id: if the API did not list this method, stop
+      // here, before an OTP is sent.
+      const paymentMethodId = requirePaymentMethodId(info?.methodIds, 'upi');
       const { otpGuid, sentToMobile } = await sendPaymentRequestOTP(accessToken);
       navigation.navigate('WithdrawVerifyOTP', {
         draft: {
           method: 'upi',
           paymentType: params.paymentType,
           amount: params.amount,
-          paymentMethodId: info?.methodIds.upi ?? 20,
+          paymentMethodId,
           upiId: upi.trim(),
         },
         otpGuid,
@@ -74,6 +85,7 @@ export function WithdrawEnterUPI() {
     } catch (e: any) {
       Alert.alert('Could not send OTP', e?.message ?? 'Please try again.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -134,6 +146,7 @@ export function WithdrawEnterUPI() {
           nothing on Android under edge-to-edge (see useKeyboardInset.ts),
           so the keys covered the CTA and T&C checkbox. */}
       <Animated.View style={keyboardPad}>
+        {offlineToast}
         <FooterButtons
           buttons="single"
           size={52}

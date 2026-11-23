@@ -6,7 +6,7 @@
  * `flipkartgiftcard` payment). "Get Paid" is gated until both emails match
  * and the T&C is checked; the email is validated server-side at submit.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Alert, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useKeyboardPadding } from '../../lib/useKeyboardInset';
@@ -22,9 +22,10 @@ import { colors, spacing, radius } from '../../tokens';
 import type { WithdrawStackParamList } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
-import { sendPaymentRequestOTP } from '../../api/payments';
+import { requirePaymentMethodId, sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
+import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
@@ -58,11 +59,15 @@ export function WithdrawFlipkart() {
   const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
+  const { blockIfOffline, offlineToast } = useOfflineSubmitGuard();
 
   const [email, setEmail] = useState('');
   const [confirm, setConfirm] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [sending, setSending] = useState(false);
+  // Synchronous guard: `sending` is React state, so a fast double tap could
+  // pass the check twice, send two OTP SMS and push two OTP screens.
+  const sendingRef = useRef(false);
 
   const valid = EMAIL_RE.test(email.trim()) && email.trim() === confirm.trim();
   // Inline errors (Figma 3283:51858 / 3283:52088). Email is checked once the
@@ -73,16 +78,22 @@ export function WithdrawFlipkart() {
     confirm.length > 0 && confirm.trim() !== email.trim().slice(0, confirm.trim().length);
 
   const handleGetPaid = async () => {
-    if (!accessToken || sending) return;
+    if (!accessToken || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
+      // Offline: send nothing, keep what the user typed.
+      if (await blockIfOffline()) return;
+      // No built-in fallback id: if the API did not list this method, stop
+      // here, before an OTP is sent.
+      const paymentMethodId = requirePaymentMethodId(info?.methodIds, 'flipkart');
       const { otpGuid, sentToMobile } = await sendPaymentRequestOTP(accessToken);
       navigation.navigate('WithdrawVerifyOTP', {
         draft: {
           method: 'flipkart',
           paymentType: params.paymentType,
           amount: params.amount,
-          paymentMethodId: info?.methodIds.flipkart ?? 13,
+          paymentMethodId,
           email: email.trim(),
         },
         otpGuid,
@@ -91,6 +102,7 @@ export function WithdrawFlipkart() {
     } catch (e: any) {
       Alert.alert('Could not send OTP', e?.message ?? 'Please try again.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -167,6 +179,7 @@ export function WithdrawFlipkart() {
           nothing on Android under edge-to-edge (see useKeyboardInset.ts),
           so the keys covered the CTA and T&C checkbox. */}
       <Animated.View style={keyboardPad}>
+        {offlineToast}
         <FooterButtons
           buttons="single"
           size={52}
