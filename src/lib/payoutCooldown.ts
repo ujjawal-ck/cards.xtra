@@ -6,8 +6,8 @@
  * payouts are blocked, and the CashKaro account id (`ck_user_id`, saved by
  * fetchProfile) when it is known. Memory keeps a copy for the sync check.
  * The saved value is read once per app run, before the first check
- * (hydratePayoutCooldown). A saved cool-down of another account (both ids
- * known and different) is ignored. A read error means "no saved cool-down",
+ * (hydratePayoutCooldown). It blocks every account on the phone, whatever
+ * user id it was saved with (review-2). A read error means "no saved cool-down",
  * as in the other secure-store helpers. Cleared at every session end
  * (sessionEnd.ts, review R-05). Unavailable on web, where only memory is used.
  */
@@ -58,8 +58,11 @@ export function hydratePayoutCooldown(): Promise<void> {
         const [raw, me] = await Promise.all([SecureStore.getItemAsync(PAYOUT_COOLDOWN_KEY), currentUserId()]);
         const saved = parseSaved(raw);
         if (!saved || gen !== generation) return;
-        // Another account's cool-down: it does not block this user.
-        if (saved.userId && me && saved.userId !== me) return;
+        // Every account on this phone is blocked (review-2 R2-02, R2-04): the
+        // stored user id can switch between the login id and the profile id,
+        // so an id match was a way round the cool-down. The id is kept in the
+        // saved value for diagnosis only.
+        void me;
         until = Math.max(until, saved.until);
       } catch {
         // No saved cool-down.
@@ -105,9 +108,9 @@ export async function clearPayoutCooldown(): Promise<void> {
 
 /**
  * Forget the memory copy only; the saved value stays. Used at a session end:
- * the next check reads the device again and the user-id match decides. The
+ * the next check reads the device again and the saved value blocks. The
  * same user logging back in stays blocked (log out and in is not a way round
- * the cool-down); a different known user is not blocked; an unknown user id
+ * the cool-down); a different account on the phone is blocked too; an unknown user id
  * stays blocked (fail closed). Review follow-up to R-05.
  */
 export function forgetPayoutCooldownMemory(): void {

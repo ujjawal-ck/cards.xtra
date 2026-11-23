@@ -81,8 +81,8 @@ export async function endLocalSession(deviceId: string | null): Promise<void> {
   ]);
   // The payout cool-down is NOT cleared: logging out and in again must not be a
   // way to send a second payout while the first may still be landing. Only the
-  // memory copy goes; the next check re-reads the device and the saved user id
-  // decides (a different known user is not blocked).
+  // memory copy goes; the next check re-reads the device, and the saved value
+  // blocks every account on the phone until it ends (review-2 R2-02).
   forgetPayoutCooldownMemory();
 }
 

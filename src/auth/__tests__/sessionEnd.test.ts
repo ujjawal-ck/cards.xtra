@@ -154,11 +154,11 @@ describe('endLocalSession', () => {
       expect(payoutCooldownOn(Date.now())).toBe(true);
     });
 
-    it('does not block a different known user', async () => {
+    it('blocks a different account on the same phone too (review-2 R2-02)', async () => {
       await start();
       mockStore.set('ck_user_id', '77');
       await hydratePayoutCooldown();
-      expect(payoutCooldownOn(Date.now())).toBe(false);
+      expect(payoutCooldownOn(Date.now())).toBe(true);
     });
 
     it('stays blocked while the user id is not known yet (fail closed)', async () => {

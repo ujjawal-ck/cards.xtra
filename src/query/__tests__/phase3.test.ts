@@ -395,14 +395,40 @@ describe('payout cool-down on the device (R-01, R-05)', () => {
     expect(await isPayoutOutcomePending(T + 1)).toBe(true);
   });
 
-  it("after a restart, does not block another user (both ids known and different)", async () => {
+  it('after a restart, blocks every account on the phone, also a different known user (review-2 R2-02, R2-04)', async () => {
     mockStore.set('ck_user_id', '42');
     await unknownPayout();
     __resetPayoutLock();
     mockStore.set('ck_user_id', '77');
-    expect(await isPayoutOutcomePending(T + 1)).toBe(false);
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
     const d = okDeps(T + 1);
-    await expect(submitWithdrawal('t', draft, 'g2', d)).resolves.toEqual({ status: 'submitted' });
+    await expect(submitWithdrawal('t', draft, 'g2', d)).rejects.toBeInstanceOf(PayoutUnknownError);
+    expect(d.submit).not.toHaveBeenCalled();
+  });
+
+  it('an app kill during the POST leaves the next run blocked (review-2 R2-03)', async () => {
+    const hanging = {
+      submit: jest.fn(() => new Promise<never>(() => undefined)),
+      recheck: jest.fn(),
+      wait,
+      now: () => T,
+    };
+    void submitWithdrawal('t', draft, 'g', hanging);
+    await new Promise((r) => setImmediate(r)); // the POST is in flight
+    expect(hanging.submit).toHaveBeenCalledTimes(1);
+    __resetPayoutLock(); // the app is killed: memory and the lock are gone
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
+  });
+
+  it('a clear answer removes the cool-down saved before the POST', async () => {
+    const ok = okDeps(T);
+    await expect(submitWithdrawal('t', draft, 'g', ok)).resolves.toEqual({ status: 'submitted' });
+    __resetPayoutLock();
+    expect(await isPayoutOutcomePending(T + 1)).toBe(false);
+    const rejected = { submit: jest.fn(async () => Promise.reject(new ApiError('bad upi', 422))), recheck: jest.fn(), wait, now: () => T };
+    await expect(submitWithdrawal('t', draft, 'g2', rejected)).rejects.toBeInstanceOf(ApiError);
+    __resetPayoutLock();
+    expect(await isPayoutOutcomePending(T + 1)).toBe(false);
   });
 
   it('a cool-down saved with no user id blocks every user', async () => {

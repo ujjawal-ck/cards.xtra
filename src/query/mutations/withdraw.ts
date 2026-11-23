@@ -157,12 +157,20 @@ export async function submitWithdrawal(
     // An earlier payout may still be landing (in this app run or before a
     // restart): never send another one yet.
     if (await isPayoutOutcomePending(now())) throw new PayoutUnknownError();
+    // Save the cool-down BEFORE the POST (review-2 R2-03): an app kill during
+    // the up-to-65 s request must leave the next run blocked. A clear answer
+    // (accepted, or a 4xx rejection) removes it again.
+    await startPayoutCooldown(now() + UNKNOWN_COOLDOWN_MS);
     try {
       await deps.submit(token, draft, otpGuid);
+      await clearPayoutCooldown();
       return { status: 'submitted' };
     } catch (e) {
       // A 4xx is CashKaro's final answer: surface it.
-      if (isPayoutRejection(e)) throw e;
+      if (isPayoutRejection(e)) {
+        await clearPayoutCooldown();
+        throw e;
+      }
       // Save the cool-down before the re-check: the screen is locked for about
       // 40 s, and a user who kills the app then must stay blocked after the
       // restart.
