@@ -103,9 +103,20 @@ export async function clearPayoutCooldown(): Promise<void> {
   if (gen === generation) hydrated = null;
 }
 
-/** Test seam: memory as after an app restart. The saved value is kept. */
-export function __resetPayoutCooldownMemory(): void {
+/**
+ * Forget the memory copy only; the saved value stays. Used at a session end:
+ * the next check reads the device again and the user-id match decides. The
+ * same user logging back in stays blocked (log out and in is not a way round
+ * the cool-down); a different known user is not blocked; an unknown user id
+ * stays blocked (fail closed). Review follow-up to R-05.
+ */
+export function forgetPayoutCooldownMemory(): void {
   generation++;
   until = 0;
   hydrated = null;
+}
+
+/** Test seam: memory as after an app restart. The saved value is kept. */
+export function __resetPayoutCooldownMemory(): void {
+  forgetPayoutCooldownMemory();
 }

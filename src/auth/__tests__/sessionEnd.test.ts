@@ -52,8 +52,6 @@ const USER_KEYS: Record<string, string> = {
   }),
   'cardsxtra.toolSpends.v1': JSON.stringify({ fuel: 3000 }),
   never_miss_cashback_enabled: '1',
-  // The payout cool-down after an unknown outcome (R-05).
-  'cardsxtra.payoutUnknownUntil.v1': JSON.stringify({ until: Date.now() + 10 * 60_000, userId: '42' }),
 };
 /** Keys that belong to the install: kept on purpose. */
 const DEVICE_KEYS: Record<string, string> = {
@@ -117,16 +115,39 @@ describe('endLocalSession', () => {
     expect(CashbackGuard.stopGuard).toHaveBeenCalledTimes(1);
   });
 
-  it('ends the payout cool-down in memory too, so the next user in the same app run is not blocked (R-05)', async () => {
-    await hydratePayoutCooldown();
-    await startPayoutCooldown(Date.now() + 10 * 60_000);
-    expect(payoutCooldownOn(Date.now())).toBe(true);
-    await endLocalSession('dev-1');
-    // No module reset: the same app run.
-    expect(payoutCooldownOn(Date.now())).toBe(false);
-    await hydratePayoutCooldown();
-    expect(payoutCooldownOn(Date.now())).toBe(false);
-    expect(mockStore.has('cardsxtra.payoutUnknownUntil.v1')).toBe(false);
+  describe('payout cool-down across a session end (log out and in is no way round it)', () => {
+    const KEY = 'cardsxtra.payoutUnknownUntil.v1';
+    const start = async () => {
+      mockStore.set('ck_user_id', '42');
+      await hydratePayoutCooldown();
+      await startPayoutCooldown(Date.now() + 10 * 60_000);
+      expect(payoutCooldownOn(Date.now())).toBe(true);
+      await endLocalSession('dev-1');
+      // The saved value stays; the memory copy is forgotten until the next read.
+      expect(mockStore.has(KEY)).toBe(true);
+      expect(payoutCooldownOn(Date.now())).toBe(false);
+    };
+
+    it('blocks the same user who logs in again', async () => {
+      await start();
+      mockStore.set('ck_user_id', '42');
+      await hydratePayoutCooldown();
+      expect(payoutCooldownOn(Date.now())).toBe(true);
+    });
+
+    it('does not block a different known user', async () => {
+      await start();
+      mockStore.set('ck_user_id', '77');
+      await hydratePayoutCooldown();
+      expect(payoutCooldownOn(Date.now())).toBe(false);
+    });
+
+    it('stays blocked while the user id is not known yet (fail closed)', async () => {
+      await start();
+      mockStore.delete('ck_user_id');
+      await hydratePayoutCooldown();
+      expect(payoutCooldownOn(Date.now())).toBe(true);
+    });
   });
 
   it('is safe to run twice and never throws on a storage failure', async () => {
