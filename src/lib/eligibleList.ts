@@ -11,7 +11,7 @@
  * Imports no token barrel (jest cannot load it).
  */
 import type { CardModel } from '../molecules/CardTile';
-import { bandIdx, isLtf } from './crossSell';
+import { bandIdx, isLtf, rankReward } from './crossSell';
 import type { CrossSellCard } from './crossSell';
 
 import { contextTag, similarityTo } from './rejection';
@@ -114,7 +114,10 @@ export function buildEligibleList(input: EligibleListInput): EligibleListResult 
   const simOf = src ? similarityTo(src, catalogue) : () => 0;
   const sim = (c: CardModel): number => (c.crossSell ? simOf(c.crossSell) : 0);
   const bandGap = (c: CardModel): number => (src && c.crossSell ? Math.abs(bandIdx(c.crossSell) - bandIdx(src)) : 0);
-  const reward = (c: CardModel): number => c.crossSell?.reward ?? 0;
+  // Sort on the internal value (CashKaro rate, else commission), as before the
+  // 2026-11-23 display change: the displayed reward is CashKaro-only and is
+  // empty until CashKaro maps card stores.
+  const reward = (c: CardModel): number => (c.crossSell ? rankReward(c.crossSell) : 0);
 
   const toItem = (c: CardModel): EligibleItem => ({
     id: c.id,

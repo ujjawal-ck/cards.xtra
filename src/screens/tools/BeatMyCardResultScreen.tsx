@@ -10,6 +10,11 @@
  * card is found in the full list, so a filter never hides it. Apply never shows for the user's own
  * card, and never for a card the app does not list.
  *
+ * FILTERED includes the card rule (leagueForDisplay, decision 2026-11-23): once CashKaro maps card
+ * stores, the opponent and the "cards that beat yours" lists hold only cards that match a CashKaro
+ * store row; until then a card the app does not sell reads as not listed (no Apply). The user's own
+ * card needs no CashKaro rate: it always gets its verdict.
+ *
  * Under the hero, "Based on <categories>" (the categories picked on the spends page that have a spend)
  * opens the edit sheet with only those categories' questions; its "+ Add a category" row goes back to
  * the spends page, where the chips are. An edit here keeps the categories as they were.
@@ -34,6 +39,8 @@ import { EditSpendsSheet, Header, ScreenState, CARD_THUMB_ASPECT } from '../../o
 import type { EditSpendsSheetHandle } from '../../organisms';
 import { colors, spacing, radius, borderWidth } from '../../tokens';
 import { useCardSavings } from '../../query/useCardSavings';
+import { leagueForDisplay } from '../../api/cardRates';
+import { rewardLabel } from '../../api/cardMapper';
 import type { LeagueRow } from '../../query/useCardSavings';
 import { useSavedSpends } from '../../lib/savedSpends';
 import {
@@ -173,11 +180,15 @@ export function BeatMyCardResultScreen() {
   const editKeys = useMemo(() => keysForCategories(categories), [categories]);
   const basedOn = basedOnText(categories, answers);
 
-  const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const loaded = !isLoading && !isOffline && !isError;
-  const filtered = useMemo(() => filterLeague(league, filters), [league, filters]);
+  // The card rule first (display only), then the chips. The user's own card always stays.
+  const filtered = useMemo(
+    () => filterLeague(leagueForDisplay(league, shown, cardAlias), filters),
+    [league, shown, cardAlias, filters],
+  );
   const mineRow = useMemo(() => league.find((r) => r.savings.alias === cardAlias), [league, cardAlias]);
   const result = useMemo(
     () =>
@@ -452,13 +463,13 @@ export function BeatMyCardResultScreen() {
           <View style={{ gap: spacing[8] }}>
             {kind === 'other_wins' && otherRow.card ? (
               <>
-                {otherRow.card.cashback ? (
+                {rewardLabel(otherRow.card) ? (
                   <View style={{ gap: spacing[2] }}>
                     <Text variant="caption10Medium" color={colors.text.secondary}>
                       CashKaro Rewards
                     </Text>
                     <Text variant="body14SemiBold" color={colors.text.primary}>
-                      {otherRow.card.cashback}
+                      {rewardLabel(otherRow.card)}
                     </Text>
                   </View>
                 ) : null}

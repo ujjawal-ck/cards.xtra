@@ -106,7 +106,8 @@ import {
 } from '../tokens';
 import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
-import { selectTileBenefits } from '../api/cardMapper';
+import { useOnSessionEnd } from '../auth/useOnSessionEnd';
+import { rewardLabel, selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
 import type { ClickOutSource } from '../lib/useClickOut';
 import { loadSavedProfile, saveEligibilityInputs } from '../lib/savedProfile';
@@ -328,6 +329,7 @@ const HomeCardTile = React.memo(function HomeCardTile({
         cardName={card.name}
         cashbackText={card.cashbackValue}
         rewardPrefix={card.rewardPrefix}
+        rewardText={card.cashback}
         inviteOnly={card.inviteOnly}
         tags={card.tags}
         benefits={benefits}
@@ -824,6 +826,14 @@ export function HomeScreen() {
   useEffect(() => {
     loadSavedProfile().then((p) => setSavedEligibilityPrefill(p.eligibility ?? null));
   }, []);
+  // A session that ends while Home is mounted (expiry opens the login sheet
+  // over this screen) must not leave the last user's PIN code and income here.
+  useOnSessionEnd(() => {
+    setEligibilityDetails(null);
+    setEligibleAliases(null);
+    setEligibilityOn(false);
+    setSavedEligibilityPrefill(null);
+  });
 
   // Commit an eligibility result (from either checker) → store details for
   // prefill + the eligible set, and switch the toggle on.
@@ -2765,11 +2775,9 @@ export function HomeScreen() {
             <EligibleSheet
               showConfetti
               cardImage={resultHeroCard?.cardImage}
-              rewardHeadline={
-                resultHeroCard?.cashbackValue
-                  ? `${resultHeroCard.cashbackValue} Rewards`
-                  : undefined
-              }
+              // The card's CashKaro reward ("Flat ₹X Rewards" / "Upto ₹X Rewards" /
+              // the server text). None → the sheet hides the reward block.
+              rewardHeadline={rewardLabel(resultHeroCard) || undefined}
               pincode={eligibilityDisplay?.pincode}
               amount={eligibilityDisplay?.amount}
               occupation={eligibilityDisplay?.occupation}

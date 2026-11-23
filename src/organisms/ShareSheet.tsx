@@ -109,6 +109,9 @@ export interface ShareSheetProps {
 }
 
 // ---- Layout constants (per Figma 3976:56803). ----------------------
+/** Badge text for a card with no reward amount. */
+const NO_REWARD_TEXT = 'Rewards';
+
 // Spec frame dims — not in the reusable spacing scale.
 const PREVIEW_W = 312;
 const PREVIEW_H = 413;
@@ -214,7 +217,10 @@ function ShareSheetBody({
   const handleShare = useCallback(() => {
     if (onShare) return onShare();
     Share.share({
-      message: `Found ${cardName} on Cards.xtra by CashKaro — earn ${cashbackValue} on activation.`,
+      // No reward amount: drop the "earn ..." clause rather than leave a gap.
+      message: cashbackValue.trim()
+        ? `Found ${cardName} on Cards.xtra by CashKaro — earn ${cashbackValue} on activation.`
+        : `Found ${cardName} on Cards.xtra by CashKaro.`,
     })
       .then((res) => {
         if (res.action === Share.sharedAction) {
@@ -303,10 +309,11 @@ function ShareSheetBody({
           {/* CashbackBadge centred. The atom defaults to
               alignSelf:'flex-start' so it would hug the left edge of
               the column flex container; override to centre it. */}
+          {/* No reward amount: "Rewards" alone, with no prefix. */}
           <CashbackBadge
-            showPrefix
+            showPrefix={!!cashbackValue.trim()}
             prefix="Upto"
-            value={cashbackValue}
+            value={cashbackValue.trim() || NO_REWARD_TEXT}
             size="md"
             style={{ alignSelf: 'center' }}
           />

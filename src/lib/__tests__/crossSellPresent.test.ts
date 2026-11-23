@@ -100,7 +100,19 @@ describe('presentPick', () => {
     const same = presentPick(s, pick(mk({ reward: 500 }), 'similar'), rw);
     expect(same.stats[1]).toMatchObject({ delta: 'Same', direction: 'same' });
     const none = presentPick(s, pick(mk({ reward: 0 }), 'similar'), { cashbackValue: '' });
-    expect(none.stats[1]).toMatchObject({ value: 'None', direction: 'down', sentiment: 'neutral' });
+    expect(none.stats[1]).toMatchObject({ value: 'Rewards', direction: 'down', sentiment: 'neutral' });
+  });
+
+  it('no CashKaro amount: "Rewards", or the server text, with no Flat / Upto prefix (never "None")', () => {
+    const s = mk({ reward: 0 });
+    const plain = presentPick(s, pick(mk({ reward: 0 }), 'similar'), { cashbackValue: '', rewardPrefix: 'Upto', cashback: 'Rewards' });
+    expect(plain.stats[1]).toMatchObject({ value: 'Rewards', delta: 'Same' });
+    const server = presentPick(s, pick(mk({ reward: 0 }), 'similar'), {
+      cashbackValue: '',
+      rewardPrefix: 'Flat',
+      cashback: 'Earn Rewards on this card',
+    });
+    expect(server.stats[1].value).toBe('Earn Rewards on this card');
   });
 
   it('easier to get: income first (down / good), fee second', () => {

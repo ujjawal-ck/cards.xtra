@@ -36,7 +36,13 @@ export function shortCardName(name: string): string {
 export interface PickRewardDisplay {
   cashbackValue: string;
   rewardPrefix?: 'Flat' | 'Upto';
+  /** The card's reward label (CardModel.cashback). With no amount it is the server's
+   *  CashKaro text or "Rewards"; shown then, with no Flat / Upto prefix. */
+  cashback?: string;
 }
+
+/** The reward word when a card has no CashKaro amount and no server text. */
+const NO_REWARD_TEXT = 'Rewards';
 
 const TAG_ICONS: Record<string, IconName> = {
   Fuel: 'feat-fuel-outline',
@@ -125,7 +131,9 @@ function feeStat(src: CrossSellCard, c: CrossSellCard): PickStat {
 }
 
 function rewardStat(src: CrossSellCard, c: CrossSellCard, d: PickRewardDisplay): PickStat {
-  const value = d.cashbackValue ? (d.rewardPrefix === 'Upto' ? 'Upto ' : '') + d.cashbackValue : 'None';
+  const value = d.cashbackValue
+    ? (d.rewardPrefix === 'Upto' ? 'Upto ' : '') + d.cashbackValue
+    : d.cashback?.trim() || NO_REWARD_TEXT;
   return { label: 'Rewards', value, ...compare(c.reward, src.reward, false, inr, sameRupees) };
 }
 

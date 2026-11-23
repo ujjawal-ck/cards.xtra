@@ -41,6 +41,7 @@ describe('CardModel.crossSell', () => {
       annualFee: 2950, // 2500 + 18% GST
       inviteOnly: false,
       reward: 1400,
+      internalReward: 1400, // internal (never shown): the CashKaro rate, else the commission
       earn: 1800,
       incomeLpa: 0, // "N/A"
       incomeSelfEmpLpa: 0, // absent
@@ -70,9 +71,17 @@ describe('CardModel.crossSell', () => {
     expect(c.cashbackValue).toBe('5%');
   });
 
-  it('reward falls back to the commission without a CashKaro rate', () => {
-    expect(mapBkCardToCardModel(raw(), {}, null).crossSell?.reward).toBe(1400);
+  it('reward is 0 without a CashKaro rate: the BankKaro commission is never the reward', () => {
+    const c = mapBkCardToCardModel(raw(), {}, null);
+    expect(c.crossSell?.reward).toBe(0);
+    expect(c.crossSell?.internalReward).toBe(1400); // gates and ranking only, as before
+    expect(c.cashbackValue).toBe('');
+    expect(c.cashback).toBe('Rewards');
     expect(mapBkCardToCardModel(raw({ commission: 'N/A', bk_commission: '' }), {}, null).crossSell?.reward).toBe(0);
+  });
+
+  it('reward is the CashKaro rupee rate when there is one', () => {
+    expect(mapBkCardToCardModel(raw(), {}, { amount: 1200, unit: 'inr' }).crossSell?.reward).toBe(1200);
   });
 
   it('parses messy numbers to 0 and keeps a real priority of 0', () => {

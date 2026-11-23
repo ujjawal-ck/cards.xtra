@@ -2,7 +2,10 @@
  * ToolResultsScreen: the league table, one screen for all four card tools.
  *
  * Every card BankKaro returns for the spends, in one FlatList (219 on UAT),
- * also cards the app does not list (no Apply, no card page for those).
+ * also cards the app does not list (no Apply, no card page for those), while
+ * the CashKaro card filter is off. Once CashKaro maps card stores, only the
+ * cards that match a CashKaro store row show (leagueForDisplay, decision
+ * 2026-11-23); the user's own card (highlightAlias) always stays.
  * Reads its result from useCardSavings(spends); only spends and answers arrive
  * through navigation.
  *
@@ -39,6 +42,7 @@ import {
 } from '../../organisms';
 import { colors, spacing, radius, borderWidth, iconSize, opacity } from '../../tokens';
 import { useCardSavings, type LeagueRow } from '../../query/useCardSavings';
+import { leagueForDisplay } from '../../api/cardRates';
 import {
   DEFAULT_LEAGUE_FILTERS,
   buildSpends,
@@ -185,7 +189,12 @@ export function ToolResultsScreen() {
   const [spends, setSpends] = useState(() => params.spends);
   const { save } = useSavedSpends();
 
-  const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league: fullLeague, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  // The card rule, display only. The user's own card always stays.
+  const league = useMemo(
+    () => leagueForDisplay(fullLeague, shown, highlightAlias),
+    [fullLeague, shown, highlightAlias],
+  );
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
