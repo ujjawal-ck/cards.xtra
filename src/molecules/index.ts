@@ -127,6 +127,9 @@ export type {
 export { ReviewCard } from './ReviewCard';
 export type { ReviewCardProps, ReviewModel } from './ReviewCard';
 
+export { HeroVideo } from './HeroVideo';
+export type { HeroVideoProps } from './HeroVideo';
+
 export { OfflineBanner } from './OfflineBanner';
 
 // DS-ADD(ds-figma-1) start: BreakdownTable, SpendCard, PodiumCompare, BigAmountCard
