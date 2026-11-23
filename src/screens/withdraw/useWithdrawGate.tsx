@@ -125,7 +125,11 @@ export function useWithdrawGate({
       />
       <PaymentProcessingSheet
         ref={processingRef}
-        amount={formatINR(paymentInfo?.paymentInProcessAmount ?? 0)}
+        amount={
+          (paymentInfo?.paymentInProcessAmount ?? 0) > 0
+            ? formatINR(paymentInfo?.paymentInProcessAmount ?? 0)
+            : undefined
+        }
         onBrowseDeals={onBrowseDeals}
       />
     </>

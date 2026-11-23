@@ -12,8 +12,9 @@
  *      UPSTREAM_ERROR and 504), or anything else. CashKaro may already have
  *      accepted the payout.
  *   4. For an unknown outcome, re-check GET /payment/payment up to 3 times,
- *      about 5 s apart. Error code 5002 means a payout is pending, i.e. ours
- *      went through. If no re-check shows it, throw PayoutUnknownError, and
+ *      about 5 s apart. A 5002 "pending" or "30-minute rule" means ours went
+ *      through (landedKind). A 5002 "disabled after a contact change" does
+ *      not. If no re-check shows it landed, throw PayoutUnknownError, and
  *      the screen blocks any further payout attempt.
  *
  * The cool-down after an unknown outcome is saved on the device
@@ -22,8 +23,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isApiError } from '../../api/http/errors';
 import {
+  classifyPayment5002,
   fetchPaymentInfo,
-  paymentInProcessAmountFromError,
   submitAmazonPayment,
   submitFlipkartPayment,
   submitUPIPayment,
@@ -42,7 +43,8 @@ import { qk } from '../keys';
 export type WithdrawOutcome =
   /** CashKaro accepted the request. */
   | { status: 'submitted' }
-  /** The answer was lost, but a re-check shows a payout is now pending. */
+  /** The answer was lost, but a re-check shows a payout is now pending, or
+   *  the 30-minute rule (a payout was just taken). */
   | { status: 'submitted_after_recheck' };
 
 /** Thrown when we can't tell whether the payout went through. */
@@ -119,13 +121,23 @@ export async function isPayoutOutcomePending(now: number = Date.now()): Promise<
   return payoutCooldownOn(now);
 }
 
-/** True when one GET /payment/payment shows a pending payout (code 5002). */
-async function showsPendingPayout(token: string, deps: WithdrawDeps): Promise<boolean> {
+/** One GET /payment/payment after an unknown outcome. Returns the 5002 kind
+ *  that shows our payout landed, or null when it does not show that. */
+async function landedKind(token: string, deps: WithdrawDeps): Promise<'pending' | 'rate_limited' | null> {
   try {
     await deps.recheck(token);
-    return false; // a 200 means no payout is pending (yet)
+    return null; // a 200 means no payout is pending (yet)
   } catch (check) {
-    return paymentInProcessAmountFromError(check) !== null;
+    const block = classifyPayment5002(check);
+    // pending: CashKaro holds a payout request, i.e. ours.
+    // rate_limited: CashKaro took a payout request in the last 30 minutes.
+    // Right after our POST that is ours (an instant payout is "paid", not
+    // "pending"). Either way a second payout must not go out.
+    if (block?.kind === 'pending' || block?.kind === 'rate_limited') return block.kind;
+    // disabled_after_contact_change (or an unknown 5002) is no evidence that
+    // ours landed: not landed for this attempt; the next one, or the unknown
+    // path, decides.
+    return null;
   }
 }
 
@@ -160,10 +172,16 @@ export async function submitWithdrawal(
       const wait = deps.wait ?? sleep;
       for (let attempt = 1; attempt <= RECHECK_ATTEMPTS; attempt++) {
         if (attempt > 1) await wait(RECHECK_INTERVAL_MS);
-        if (await showsPendingPayout(token, deps)) {
+        const landed = await landedKind(token, deps);
+        if (landed === 'pending') {
           // CashKaro shows the payout as pending (5002): that blocks a second
           // one on its side, so no cool-down.
           await clearPayoutCooldown();
+          return { status: 'submitted_after_recheck' };
+        }
+        if (landed === 'rate_limited') {
+          // Landed too, but the evidence is indirect (the 30-minute rule, not
+          // our request): keep the cool-down that was saved above.
           return { status: 'submitted_after_recheck' };
         }
       }

@@ -149,6 +149,74 @@ describe('payout safety', () => {
     await expect(submitWithdrawal('t', draft, 'g', deps(submit, recheck))).resolves.toEqual({ status: 'submitted_after_recheck' });
   });
 
+  // The two security 5002s of GET /payment/payment (openapi-mini.json 400-13,
+  // examples 5 and 6). Audit D2.
+  const rateLimited = () =>
+    new ApiError('refused', 400, {
+      errors: [{
+        code: '5002',
+        detail: 'As a security measure, only one payment request is allowed within 30 minutes. Please request for another payment after 30 minutes.',
+        meta: { type: 'security' },
+      }],
+    });
+  const contactChanged = () =>
+    new ApiError('refused', 400, {
+      errors: [{
+        code: '5002',
+        detail: 'For security, payments are temporarily disabled because you recently updated your registered email ID or mobile number. Request a payment after 22-08-2025 04:00:03 PM please.',
+        meta: { type: 'security' },
+      }],
+    });
+
+  it('a re-check that shows the 30-minute rule counts as landed and keeps the cool-down', async () => {
+    const submit = jest.fn(async () => Promise.reject(timeout()));
+    const recheck = jest.fn(async () => Promise.reject(rateLimited()));
+    await expect(submitWithdrawal('t', draft, 'g', deps(submit, recheck))).resolves.toEqual({ status: 'submitted_after_recheck' });
+    expect(recheck).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledTimes(1);
+    // Indirect evidence: the cool-down saved before the re-check stays on.
+    expect(await isPayoutOutcomePending()).toBe(true);
+    expect(mockStore.has(PAYOUT_COOLDOWN_KEY)).toBe(true);
+  });
+
+  it('a re-check that shows "disabled after a contact change" is not landed: 3 re-checks, then unknown', async () => {
+    const submit = jest.fn(async () => Promise.reject(timeout()));
+    const recheck = jest.fn(async () => Promise.reject(contactChanged()));
+    await expect(submitWithdrawal('t', draft, 'g', deps(submit, recheck))).rejects.toBeInstanceOf(PayoutUnknownError);
+    expect(recheck).toHaveBeenCalledTimes(RECHECK_ATTEMPTS);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(await isPayoutOutcomePending()).toBe(true);
+    expect(mockStore.has(PAYOUT_COOLDOWN_KEY)).toBe(true);
+  });
+
+  it('"disabled after a contact change" on the 1st re-check, then pending on the 2nd: landed', async () => {
+    const submit = jest.fn(async () => Promise.reject(timeout()));
+    const recheck = jest
+      .fn<Promise<unknown>, [string]>()
+      .mockRejectedValueOnce(contactChanged())
+      .mockRejectedValueOnce(pending());
+    await expect(submitWithdrawal('t', draft, 'g', deps(submit, recheck))).resolves.toEqual({ status: 'submitted_after_recheck' });
+    expect(recheck).toHaveBeenCalledTimes(2);
+    expect(await isPayoutOutcomePending()).toBe(false);
+  });
+
+  it('a 5002 the classifier cannot place is not landed (fail closed)', async () => {
+    const submit = jest.fn(async () => Promise.reject(timeout()));
+    const recheck = jest.fn(async () =>
+      Promise.reject(new ApiError('refused', 400, { errors: [{ code: '5002', detail: 'Payments are paused.', meta: { type: 'security' } }] })),
+    );
+    await expect(submitWithdrawal('t', draft, 'g', deps(submit, recheck))).rejects.toBeInstanceOf(PayoutUnknownError);
+    expect(recheck).toHaveBeenCalledTimes(RECHECK_ATTEMPTS);
+  });
+
+  it('a security 5002 from paymentV1 itself is a real rejection, passed straight through', async () => {
+    const recheck = jest.fn();
+    const err = rateLimited();
+    await expect(submitWithdrawal('t', draft, 'g', { submit: async () => Promise.reject(err), recheck, wait })).rejects.toBe(err);
+    expect(recheck).not.toHaveBeenCalled();
+    expect(await isPayoutOutcomePending()).toBe(false);
+  });
+
   it('an error that is not an ApiError is unknown too (fail closed)', async () => {
     const submit = jest.fn(async () => Promise.reject(new TypeError('boom')));
     await expect(submitWithdrawal('t', draft, 'g', deps(submit))).rejects.toBeInstanceOf(PayoutUnknownError);

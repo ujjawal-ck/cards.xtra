@@ -3,6 +3,7 @@
  * CashKaro doc and staging fixtures.
  */
 import {
+  classifyPayment5002,
   extractPaymentData,
   extractPaymentMethodIds,
   paymentInProcessAmountFromError,
@@ -120,6 +121,72 @@ describe('5002 / 5003 detection keeps its meaning', () => {
   it('5003 fixtures: the cash-out minimum', () => {
     expect(paymentThresholdFromError(new ApiError('min', 400, fx('doc.payment_info_1')))).toBe(100);
     expect(paymentThresholdFromError(new ApiError('min', 400, fx('staging.payment_info')))).toBe(250);
+  });
+});
+
+// The three 5002 examples of GET /payment/payment (openapi-mini.json 400-13,
+// examples 2, 5 and 6), and the paymentV1 one (400-16, no meta).
+const PENDING_TEXT =
+  'A payment request from you is already pending. This will be processed shortly. Once this is paid, you can request for another payment.';
+const RATE_TEXT =
+  'As a security measure, only one payment request is allowed within 30 minutes. Please request for another payment after 30 minutes.';
+const contactText = (when: string) =>
+  `For security, payments are temporarily disabled because you recently updated your registered email ID or mobile number. Request a payment after ${when} please.`;
+const err5002 = (e: Record<string, unknown>) => new ApiError('refused', 400, { errors: [{ code: '5002', ...e }] });
+
+describe('code 5002 has three meanings (audit D2)', () => {
+  it('pending: the amount from meta.requested_earnings', () => {
+    const e = err5002({ title: PENDING_TEXT, detail: PENDING_TEXT, meta: { requested_earnings: '20.00' } });
+    expect(classifyPayment5002(e)).toEqual({ kind: 'pending', amount: 20 });
+    expect(paymentInProcessAmountFromError(e)).toBe(20);
+  });
+
+  it('pending with no amount (paymentV1 shape, "already Pending", no meta): amount null', () => {
+    const e = err5002({
+      title: 'A payment request from you is already Pending. This will be processed shortly. Once this is paid, you can request for another payment.',
+    });
+    expect(classifyPayment5002(e)).toEqual({ kind: 'pending', amount: null });
+  });
+
+  it('pending with a zero or unreadable amount: amount null, never 0', () => {
+    expect(classifyPayment5002(err5002({ detail: PENDING_TEXT, meta: { requested_earnings: '0.00' } }))).toEqual({
+      kind: 'pending',
+      amount: null,
+    });
+    expect(classifyPayment5002(err5002({ detail: PENDING_TEXT, meta: { requested_earnings: 'n/a' } }))).toEqual({
+      kind: 'pending',
+      amount: null,
+    });
+  });
+
+  it('rate_limited: meta.type "security" and the 30-minute text', () => {
+    const e = err5002({ title: RATE_TEXT, detail: RATE_TEXT, meta: { type: 'security' } });
+    expect(classifyPayment5002(e)).toEqual({ kind: 'rate_limited', detail: RATE_TEXT });
+    // Not a pending payout: no "in process" amount.
+    expect(paymentInProcessAmountFromError(e)).toBeNull();
+  });
+
+  it('disabled_after_contact_change: meta.type "security"; the server text (with its date) passes through', () => {
+    const doc = err5002({ title: contactText('22-08-2025 04:00:03 PM'), detail: contactText('22-08-2025 04:00:03 PM'), meta: { type: 'security' } });
+    expect(classifyPayment5002(doc)).toEqual({ kind: 'disabled_after_contact_change', detail: contactText('22-08-2025 04:00:03 PM') });
+    const other = err5002({ detail: contactText('01-12-2026 10:15:00 AM'), meta: { type: 'security' } });
+    expect(classifyPayment5002(other)).toEqual({ kind: 'disabled_after_contact_change', detail: contactText('01-12-2026 10:15:00 AM') });
+    expect(paymentInProcessAmountFromError(other)).toBeNull();
+  });
+
+  it('uses the title when there is no detail', () => {
+    expect(classifyPayment5002(err5002({ title: RATE_TEXT, meta: { type: 'security' } }))).toEqual({
+      kind: 'rate_limited',
+      detail: RATE_TEXT,
+    });
+  });
+
+  it('a 5002 it cannot place is null (fail closed), as is any other error', () => {
+    expect(classifyPayment5002(err5002({ detail: 'Payments are paused.', meta: { type: 'security' } }))).toBeNull();
+    expect(classifyPayment5002(err5002({ detail: 'Something else.' }))).toBeNull();
+    expect(classifyPayment5002(new ApiError('min', 400, fx('doc.payment_info_1')))).toBeNull();
+    expect(classifyPayment5002(new ApiError('down', 502, { errors: [{ code: '5002', meta: { requested_earnings: '20.00' } }] }))).toBeNull();
+    expect(classifyPayment5002(new Error('x'))).toBeNull();
   });
 });
 

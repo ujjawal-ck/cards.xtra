@@ -56,6 +56,7 @@ import {
 import { formatRupees } from './withdraw/amount';
 import {
   bucketAmount,
+  payoutBlockedText,
   resolveWithdrawView,
   type WithdrawBucket,
 } from './withdraw/balances';
@@ -190,6 +191,7 @@ export function WithdrawScreen() {
   const paymentQ = usePaymentInfo();
   const payment = paymentQ.data;
   const view = resolveWithdrawView(paymentQ, entryBucket);
+  const blocked = payoutBlockedText(payment);
 
   // Numeric amount threaded into the next screen's params. null = unknown.
   const amountNum = (bucket: WithdrawBucket): number | null =>
@@ -333,11 +335,13 @@ export function WithdrawScreen() {
               actionLabel={paymentQ.isFetching ? 'Retrying…' : 'Try again'}
               onAction={() => paymentQ.refetch()}
             />
-          ) : view === 'processing' ? (
-            <ScreenState
-              title="Payment Is Processing"
-              body="You can request another payment after this is completed :)"
-            />
+          ) : (view === 'processing' ||
+              view === 'rate_limited' ||
+              view === 'payments_disabled') &&
+            blocked ? (
+            // Code 5002: a payout pending, the 30-minute rule, or payouts
+            // off after a contact change. Never "₹0".
+            <ScreenState title={blocked.title} body={blocked.body} />
           ) : view === 'below_minimum' && payment ? (
             <ScreenState
               title={`Minimum ${formatINR(payment.paymentThreshold)} to withdraw`}

@@ -12,8 +12,9 @@ import {
   fetchPaymentInfo,
   extractPaymentData,
   extractPaymentMethodIds,
-  paymentInProcessAmountFromError,
+  classifyPayment5002,
   paymentThresholdFromError,
+  type Payment5002,
   type PaymentData,
   type PaymentMethodIds,
 } from '../api/payments';
@@ -27,6 +28,9 @@ export interface PaymentInfo extends PaymentData {
   /** True when the balance is below the cash-out minimum (API code 5003).
    *  `paymentThreshold` then holds that minimum. Withdraw is not possible. */
   belowThreshold?: boolean;
+  /** Why CashKaro refuses a new payout (API code 5002), when it does. Only
+   *  `pending` sets `paymentInProcess`; the two security blocks do not. */
+  payoutBlock?: Payment5002;
 }
 
 /** A 200 from /payment/payment → PaymentInfo. */
@@ -35,16 +39,18 @@ export function paymentInfoFromResponse(info: unknown): PaymentInfo {
 }
 
 /**
- * The two /payment/payment errors that are states, not failures. Returns null
- * for any other error (the query then fails as usual).
+ * The /payment/payment errors that are states, not failures (5002 and 5003).
+ * Returns null for any other error (the query then fails as usual).
  */
 export function paymentInfoFromError(e: unknown): PaymentInfo | null {
-  // A payout already in flight isn't an error for our purposes — the
-  // endpoint 400s with code 5002 and the pending amount in its meta.
-  // Resolve to an in-process PaymentInfo so the UI can show the
-  // "Payment Is Processing" sheet instead of a failed query.
-  const pendingAmount = paymentInProcessAmountFromError(e);
-  if (pendingAmount !== null) {
+  // Code 5002 has three meanings (classifyPayment5002). A payout already in
+  // flight resolves to an in-process PaymentInfo, so the UI can show
+  // "Payment Is Processing" instead of a failed query. The two security
+  // blocks (30-minute rule, contact change) are not "in process": the
+  // withdraw screen shows their own message.
+  const block = classifyPayment5002(e);
+  if (block) {
+    const pending = block.kind === 'pending';
     return {
       mobile: '',
       // No success body: the balances are unknown, not ₹0.
@@ -53,10 +59,11 @@ export function paymentInfoFromError(e: unknown): PaymentInfo | null {
       rewardsEarnings: null,
       currencyCode: 'INR',
       paymentThreshold: 250,
-      paymentInProcess: true,
-      paymentInProcessAmount: pendingAmount,
+      paymentInProcess: pending,
+      paymentInProcessAmount: pending ? block.amount ?? 0 : 0,
+      payoutBlock: block,
       // No success body to read method ids from. The withdraw flow that
-      // needs them is blocked while a payout pends.
+      // needs them is blocked while CashKaro refuses a payout.
       methodIds: {},
     };
   }

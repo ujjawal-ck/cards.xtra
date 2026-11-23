@@ -86,22 +86,58 @@ export async function fetchPaymentInfo(
   });
 }
 
-// Error code returned by /payment/payment when a payout is already pending.
+// Error code returned by /payment/payment when CashKaro refuses a new payout.
 const PAYMENT_IN_PROCESS_CODE = '5002';
 
+/** The three meanings of code 5002 in the CashKaro doc. `amount` is null when
+ *  the error gives no positive amount. `detail` is the server's own text. */
+export type Payment5002 =
+  | { kind: 'pending'; amount: number | null }
+  | { kind: 'rate_limited'; detail: string | null }
+  | { kind: 'disabled_after_contact_change'; detail: string | null };
+
 /**
- * When /payment/payment fails because a payout is already pending (HTTP 400,
- * error code 5002), returns the amount (₹, numeric) of that pending request —
- * read from `errors[0].meta.requested_earnings`. Returns null for any other
- * error, so callers can re-throw / handle normally.
+ * Classifies a 400 code 5002 from /payment/payment (openapi-mini.json,
+ * GET /payment/payment 400 examples 2, 5 and 6). Returns null for any other
+ * error, and for a 5002 that matches none of the three meanings: callers then
+ * fail closed (an error state, or an unknown payout outcome).
  */
-export function paymentInProcessAmountFromError(e: unknown): number | null {
+export function classifyPayment5002(e: unknown): Payment5002 | null {
   if (!(e instanceof ApiError) || e.status !== 400) return null;
   const errors = (e.payload as any)?.errors;
   if (!Array.isArray(errors)) return null;
   const err = errors.find((x: any) => String(x?.code) === PAYMENT_IN_PROCESS_CODE);
   if (!err) return null;
-  return parseFloat(err?.meta?.requested_earnings) || 0;
+  const meta = err.meta ?? {};
+  const text = `${err.detail ?? ''} ${err.title ?? ''}`;
+  const detail =
+    [err.detail, err.title].find((t): t is string => typeof t === 'string' && t.trim() !== '')?.trim() ?? null;
+  // Doc: "A payment request from you is already pending. ..." with
+  // meta.requested_earnings "20.00" (paymentV1 sends "already Pending", no meta).
+  if (meta.requested_earnings != null || /already pending/i.test(text)) {
+    const amount = moneyOrNull(meta.requested_earnings);
+    return { kind: 'pending', amount: amount !== null && amount > 0 ? amount : null };
+  }
+  if (meta.type === 'security') {
+    // Doc: "As a security measure, only one payment request is allowed within
+    // 30 minutes. ..." with meta.type "security".
+    if (/only one payment request|30 minutes/i.test(text)) return { kind: 'rate_limited', detail };
+    // Doc: "For security, payments are temporarily disabled because you recently
+    // updated your registered email ID or mobile number. ..." meta.type "security".
+    if (/temporarily disabled|recently updated/i.test(text)) {
+      return { kind: 'disabled_after_contact_change', detail };
+    }
+  }
+  return null;
+}
+
+/**
+ * The amount (₹) of a pending payout (5002, meaning "pending"), 0 when the
+ * error gives none. Null for any other error, the security 5002s included.
+ */
+export function paymentInProcessAmountFromError(e: unknown): number | null {
+  const c = classifyPayment5002(e);
+  return c?.kind === 'pending' ? c.amount ?? 0 : null;
 }
 
 // Error code returned by /payment/payment when the user's confirmed balance is
