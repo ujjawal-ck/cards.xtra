@@ -5,7 +5,7 @@
  * NOT a standalone Figma frame (the attachment uploader lives only inside the
  * feedback form), so built on-brand from the component library + tokens; the
  * allowed-types/size caption matches the Figma uploader spec
- * (.jpg/.png/.jpeg/.gif, up to 3 files, 2MB each; the doc also allows pdf, which the image picker cannot attach). Picks images via expo-image-picker.
+ * (.jpg/.png/.jpeg/.gif/.pdf, up to 3 files, 2MB each). Picks images via expo-image-picker and PDFs via expo-document-picker.
  *
  * On submit: raiseTicket(exitDate, storeId, exitId, ticketData, files) →
  * MissingCashbackTicketSuccess. Hydrates a missing exit_id from the queue item
@@ -18,6 +18,7 @@ import { View, Pressable, ScrollView, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import * as ImagePicker from 'expo-image-picker';
+import type * as DocumentPickerModule from 'expo-document-picker';
 import Svg, { Path } from 'react-native-svg';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -78,6 +79,39 @@ export function MissingCashbackInvoiceUpload() {
       uri: a.uri,
       name: a.fileName || `invoice_${Date.now()}_${i}.jpg`,
       type: a.mimeType || 'image/jpeg',
+    }));
+    setFiles((prev) => [...prev, ...picked]);
+    setError(null);
+  };
+
+  const pickPdf = async () => {
+    // Loaded on tap, not at import: expo-document-picker is a native module, and a
+    // build made before it was added must still open this screen (and the app).
+    let DocumentPicker: typeof DocumentPickerModule;
+    try {
+      DocumentPicker = require('expo-document-picker');
+    } catch {
+      setError('PDF upload needs the latest app version. Please add a photo of the invoice instead.');
+      return;
+    }
+    const res = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (res.canceled) return;
+    const limitMessage = checkInvoiceFiles(
+      files.length,
+      res.assets.map((a) => ({ name: a.name || a.uri, type: a.mimeType || 'application/pdf', size: a.size })),
+    );
+    if (limitMessage) {
+      setError(limitMessage);
+      return;
+    }
+    const picked: McTicketFile[] = res.assets.map((a, i) => ({
+      uri: a.uri,
+      name: /\.pdf$/i.test(a.name || '') ? (a.name as string) : `invoice_${Date.now()}_${i}.pdf`,
+      type: 'application/pdf',
     }));
     setFiles((prev) => [...prev, ...picked]);
     setError(null);
@@ -189,19 +223,38 @@ export function MissingCashbackInvoiceUpload() {
                 Add screenshot
               </Text>
               <Text variant="body12Regular" color={colors.text.secondary}>
-                Allowed: .jpg, .jpeg, .png, .gif · Up to 3 files, 2MB each
+                Allowed: .jpg, .jpeg, .png, .gif, .pdf · Up to 3 files, 2MB each
               </Text>
             </Pressable>
+
+            <Button label="Add PDF" variant="outline" tone="second" size={52} fullWidth onPress={pickPdf} />
 
             {/* Thumbnails */}
             {files.length > 0 ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[8] }}>
                 {files.map((f, i) => (
                   <View key={`${f.uri}-${i}`} style={{ width: THUMB, height: THUMB }}>
-                    <Image
-                      source={{ uri: f.uri }}
-                      style={{ width: THUMB, height: THUMB, borderRadius: radius.md, backgroundColor: colors.background.muted }}
-                    />
+                    {f.type === 'application/pdf' ? (
+                      <View
+                        style={{
+                          width: THUMB,
+                          height: THUMB,
+                          borderRadius: radius.md,
+                          backgroundColor: colors.background.muted,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text variant="body12SemiBold" color={colors.text.secondary}>
+                          PDF
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: f.uri }}
+                        style={{ width: THUMB, height: THUMB, borderRadius: radius.md, backgroundColor: colors.background.muted }}
+                      />
+                    )}
                     <Pressable
                       accessibilityRole="button"
                       onPress={() => removeAt(i)}

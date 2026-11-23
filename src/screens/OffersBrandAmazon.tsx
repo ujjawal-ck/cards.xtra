@@ -54,7 +54,6 @@ import {
   StoreOfferDetails,
   StoreCashbackTimelines,
   StoreTermsConditions,
-  StoreSimilarStore,
   StoreBestCards,
   StoreFaq,
   BottomSheet,
@@ -75,6 +74,17 @@ import { upsellTimerValue } from '../api/offersMapper';
 import { useClickOut } from '../lib/useClickOut';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
+
+/**
+ * TC-14 (user decision 2026-11-23): the "similar stores" floor shows sample
+ * stores from the design, not real data. Hidden on every store page until a
+ * real API exists. Do not turn this on before then.
+ */
+const SHOW_SIMILAR_STORES = false;
+// Loaded only when the flag is on, so no sample-store data is imported while
+// it is off. (Barrel-free path: the organism file itself.)
+const StoreSimilarStore: typeof import('../organisms/StoreSimilarStore').StoreSimilarStore | null =
+  SHOW_SIMILAR_STORES ? require('../organisms/StoreSimilarStore').StoreSimilarStore : null;
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'OffersBrandAmazon'>;
 type BrandRoute = RouteProp<RootStackParamList, 'OffersBrandAmazon'>;
@@ -515,14 +525,18 @@ export function OffersBrandAmazon() {
           <StoreBestCards category={route.params?.category} style={{ width: '100%' }} />
 
           {/* 8. Store / Similar Store — one row of 3 */}
-          <StoreSimilarStore
-            property1="Stores"
-            onStorePress={noop}
-            style={{ width: '100%' }}
-          />
+          {StoreSimilarStore ? (
+            <>
+              <StoreSimilarStore
+                property1="Stores"
+                onStorePress={noop}
+                style={{ width: '100%' }}
+              />
 
-          {/* Single divider (Figma stacks 3 here — artifact) */}
-          <Divider style="section" />
+              {/* Single divider (Figma stacks 3 here — artifact) */}
+              <Divider style="section" />
+            </>
+          ) : null}
 
           {/* 9. Did You Know? floor — title + MilestoneStat carousel */}
           <View style={{ width: '100%', gap: spacing[16] }}>

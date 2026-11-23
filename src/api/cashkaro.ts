@@ -438,12 +438,13 @@ const CARD_RATE_CATEGORY = 'home-categories-exclusive';
  */
 export async function getCardRateStores(): Promise<any[]> {
   const all: any[] = [];
-  // One segment for every page, so the pages agree.
-  const segment = segmentQuery();
+  // No `filter[segmentid]` here: it is not known whether the filter restricts
+  // the card stores returned (user decision 2026-11-23). Offers category and
+  // store calls keep it.
   for (let page = 1; page <= 20; page++) {
     const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, { contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
       auth: 'aws',
-      query: { device: CK.device, 'page[size]': 100, 'page[number]': page, ...segment },
+      query: { device: CK.device, 'page[size]': 100, 'page[number]': page },
     });
     const rows: any[] = Array.isArray(res?.data) ? res.data : [];
     all.push(...rows);

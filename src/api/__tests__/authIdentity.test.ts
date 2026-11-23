@@ -123,15 +123,44 @@ describe('filter[segmentid] on the offers calls', () => {
     await ck.getCategoryOffers('miniapp/fashion');
     await ck.getOfferCategoryTree('miniapp');
     await ck.getOfferStore('flipkart');
-    await ck.getCardRateStores();
     return urls.filter((u) => u.includes('/offers/'));
+  };
+  const cardRateCalls = async () => {
+    urls.length = 0;
+    bodyFor = () => ({ data: [] });
+    await ck.getCardRateStores();
+    return urls.filter((u) => u.includes('/offers/category/home-categories-exclusive'));
   };
 
   it('is sent on /offers/category/* and /offers/{slug} when a segment is known', async () => {
     ck.configureSegmentSource(() => ({ ids: ['1629794856', '1629794721'] }));
     const sent = await offerCalls();
-    expect(sent).toHaveLength(4);
+    expect(sent).toHaveLength(3);
     for (const url of sent) expect(segmentParam(url)).toBe('1629794856,1629794721');
+  });
+
+  it('is NOT sent on the card-rate call, and the store call still has it (2026-11-23)', async () => {
+    ck.configureSegmentSource(() => ({ ids: ['1629794856', '1629794721'] }));
+    const card = await cardRateCalls();
+    expect(card).toHaveLength(1);
+    expect(segmentParam(card[0])).toBeNull();
+    expect(card[0]).not.toContain('segmentid');
+    urls.length = 0;
+    bodyFor = () => ({ data: [] });
+    await ck.getOfferStore('flipkart');
+    expect(segmentParam(urls[0])).toBe('1629794856,1629794721');
+  });
+
+  it('never adds 888888888 itself: only the stored ids are sent', async () => {
+    ck.configureSegmentSource(() => ({ ids: ['1629794856'] }));
+    for (const url of await offerCalls()) {
+      expect(segmentParam(url)).toBe('1629794856');
+      expect(url).not.toContain(ck.NEW_USER_SEGMENT_ID);
+    }
+    ck.configureSegmentSource(() => null);
+    for (const url of await offerCalls()) expect(url).not.toContain(ck.NEW_USER_SEGMENT_ID);
+    expect(ck.segmentFilterValue({ ids: ['1'] }, 0)).toBe('1');
+    expect(ck.segmentFilterValue({ ids: [] }, 0)).toBeUndefined();
   });
 
   it('is absent for a guest (no source, or a source that gives null)', async () => {

@@ -120,6 +120,14 @@ describe('D13: ticket upload limits and 422 message', () => {
     expect(mc.checkInvoiceFiles(2, [f('application/pdf', mc.INVOICE_MAX_BYTES)])).toBeNull();
   });
 
+  it('PDF: accepts 1.5 MB, refuses 3 MB, and counts toward the 3-file limit', () => {
+    const MB = 1024 * 1024;
+    expect(mc.checkInvoiceFiles(0, [f('application/pdf', 1.5 * MB, 'bill.pdf')])).toBeNull();
+    expect(mc.checkInvoiceFiles(0, [f('application/pdf', 3 * MB, 'bill.pdf')])).toMatch(/2 MB/);
+    expect(mc.checkInvoiceFiles(2, [f('application/pdf', MB, 'a.pdf'), f('image/png')])).toMatch(/up to 3/);
+    expect(mc.checkInvoiceFiles(3, [f('application/pdf', MB, 'a.pdf')])).toMatch(/up to 3/);
+  });
+
   it('refuses a fourth file', () => {
     expect(mc.checkInvoiceFiles(3, [f('image/jpeg')])).toMatch(/up to 3/);
     expect(mc.checkInvoiceFiles(0, [1, 2, 3, 4].map(() => f('image/jpeg')))).toMatch(/up to 3/);
