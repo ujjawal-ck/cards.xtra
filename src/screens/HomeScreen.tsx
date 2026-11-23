@@ -54,7 +54,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 import { Text, Chip, Switch, Icon, Divider } from '../atoms';
-import { InlineFilterQuestion } from '../molecules';
+import { HeroVideo, InlineFilterQuestion } from '../molecules';
 import type { CardModel, SearchResultSection } from '../molecules';
 import {
   BottomSheetHeader,
@@ -93,7 +93,6 @@ import type {
   ToolId,
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
-import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
 import { categoryIdForWord, brandIdForWord, buildSpends, hasAnySpend } from '../lib/cardTools';
 import { useSavedSpends } from '../lib/savedSpends';
 import {
@@ -141,10 +140,10 @@ import type { InlineRow, InlineChip } from '../lib/inlineFilters';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
-// Scroll Y at which the frosted scrolled HomeHeader starts to appear: the
-// compact masthead's height, so the bar fades in once the masthead has
-// scrolled out of view. Follows HOME_MASTHEAD_COMPACT_H if it changes.
-const FROSTED_HEADER_FADE_IN = HOME_MASTHEAD_COMPACT_H;
+// Scroll Y at which the frosted scrolled HomeHeader starts to appear. The
+// hero masthead is ≈ 408 tall; the bar fades in once most of it has scrolled
+// out of view (the value used with the hero before D24).
+const FROSTED_HEADER_FADE_IN = 220;
 // Fade length in scroll px (the same 60 the old 220 → 280 ramp used).
 const FROSTED_HEADER_FADE_RAMP = 60;
 const FROSTED_HEADER_FADE_FULL = FROSTED_HEADER_FADE_IN + FROSTED_HEADER_FADE_RAMP;
@@ -2018,12 +2017,12 @@ export function HomeScreen() {
             SearchTopSheet). */}
         <Masthead
           variant="home"
-          // Compact: header row + SearchBar only, over the plain brand
-          // gradient (no image, no hero video).
-          size="compact"
           // No unread badge: there's no notifications feed yet (it was a
           // hard-coded "1" that never cleared).
           notificationCount={0}
+          background={
+            <HeroVideo source={require('../assets/videos/home-hero.mp4')} />
+          }
           onSearchPress={() => setSearchOpen(true)}
           onMessagePress={() => undefined}
           onBellPress={() => {
