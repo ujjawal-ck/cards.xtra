@@ -80,6 +80,7 @@ jest.mock('../../api/cashkaro', () => ({
   getEarnings: jest.fn(async () => ({})),
 }));
 jest.mock('../../query/useProfile', () => ({ fetchProfile: jest.fn(async () => ({ id: 42 })) }));
+jest.mock('../../query/useEarnings', () => ({ fetchEarnings: jest.fn(async () => ({})) }));
 jest.mock('../../query/queryClient', () => ({
   queryClient: {
     clear: jest.fn(),
@@ -99,6 +100,9 @@ jest.mock('../../../modules/cashback-guard', () => ({
 const SecureStore = require('expo-secure-store') as { deleteItemAsync: jest.Mock; setItemAsync: jest.Mock };
 const cashkaro = require('../../api/cashkaro') as { refreshTokens: jest.Mock; logout: jest.Mock };
 const CashbackGuard = require('../../../modules/cashback-guard') as { stopGuard: jest.Mock };
+const { fetchEarnings } = require('../../query/useEarnings') as { fetchEarnings: jest.Mock };
+const { queryClient } = require('../../query/queryClient') as { queryClient: { prefetchQuery: jest.Mock } };
+const { qk } = require('../../query/keys') as typeof import('../../query/keys');
 const { AuthProvider } = require('../AuthContext') as typeof import('../AuthContext');
 const { analytics } = require('../../analytics') as typeof import('../../analytics');
 const { __setClock } = require('../../api/http/tokenManager') as typeof import('../../api/http/tokenManager');
@@ -275,5 +279,17 @@ describe('AUTH-02: signIn', () => {
 
     await b.setDisplayName('Ravi');
     expect((await settle()).displayName).toBe('Ravi');
+  });
+
+  it('R-08: the earnings prefetch uses the same query function as useEarnings', async () => {
+    const v = await launch(VALID);
+    queryClient.prefetchQuery.mockClear();
+    await v.signIn({ accessToken: VALID, refreshToken: 'b-refresh' });
+    const call = queryClient.prefetchQuery.mock.calls.find(
+      ([o]) => JSON.stringify(o.queryKey) === JSON.stringify(qk.user.earnings()),
+    );
+    expect(call).toBeDefined();
+    await call![0].queryFn({ signal: undefined });
+    expect(fetchEarnings).toHaveBeenCalledWith(VALID, undefined);
   });
 });

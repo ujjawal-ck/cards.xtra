@@ -145,28 +145,31 @@ export function extractPaymentData(info: any): PaymentData {
  *  response lists are returned; use requirePaymentMethodId() at submit. */
 export function extractPaymentMethodIds(info: any): PaymentMethodIds {
   const ids: PaymentMethodIds = {};
+  const included: any[] = Array.isArray(info?.included) ? info.included : [];
 
-  // Documented shape (CK doc, GET /payment/payment):
+  // Documented shape (CK doc, GET /payment/payment): top-level
   // relationships.payment_methods.data[] with { id, attributes.payment_name }.
-  // `included` is kept as a second source in case CK moves it there.
-  const documented = info?.relationships?.payment_methods?.data;
-  const candidates: any[] = Array.isArray(documented)
-    ? documented
-    : Array.isArray(info?.included)
-      ? info.included.filter((i: any) => i?.type === 'payment_method')
-      : [];
-  if (candidates.length === 0 && info) {
-    // No built-in ids any more: the withdraw form stops before the OTP
-    // (requirePaymentMethodId). Make the gap visible. The report key is kept
-    // as-is because src/api/__tests__/mappers.test.ts pins it.
-    reportHandled(new Error('payment_methods missing in /payment/payment'), 'payment method ids: using defaults');
-  }
-
-  if (!Array.isArray(candidates) || candidates.length === 0) return ids;
-
+  // JSON:API standard shape (review R-03): the same list under
+  // data.relationships (data is one row, or a list of rows). `included` is
+  // kept as the last source in case CK moves it there.
+  const rows: any[] = Array.isArray(info?.data) ? info.data : [info?.data];
+  const listed = [info?.relationships, ...rows.map((r) => r?.relationships)]
+    .map((rel) => rel?.payment_methods?.data)
+    .find(Array.isArray);
+  const candidates: any[] = Array.isArray(listed)
+    ? listed
+    : included.filter((i: any) => i?.type === 'payment_method');
   for (const m of candidates) {
-    const attrs = m?.attributes ?? m;
-    const rawId = m?.id ?? attrs?.id;
+    const rawId = m?.id ?? m?.attributes?.id;
+    // A JSON:API relationship row can be a bare { type, id }: its name is then
+    // on the `included` row with the same id. A row with no name maps to
+    // nothing (never by id).
+    const linked = m?.attributes
+      ? undefined
+      : included.find(
+          (i: any) => i?.attributes && String(i?.id) === String(rawId) && (!m?.type || i?.type === m.type)
+        );
+    const attrs = m?.attributes ?? linked?.attributes ?? m;
     const id = typeof rawId === 'number' ? rawId : Number.parseInt(String(rawId), 10);
     if (!Number.isFinite(id)) continue;
     const label = String(
@@ -182,6 +185,13 @@ export function extractPaymentMethodIds(info: any): PaymentMethodIds {
       label.includes('rtgs')
     )
       ids.bank = id;
+  }
+  if (Object.keys(ids).length === 0 && info) {
+    // No built-in ids any more: the withdraw form stops before the OTP
+    // (requirePaymentMethodId). Make the gap visible, also for a list whose
+    // rows carry no name. The report key is kept as-is because
+    // src/api/__tests__/mappers.test.ts pins it.
+    reportHandled(new Error('payment_methods missing in /payment/payment'), 'payment method ids: using defaults');
   }
   return ids;
 }

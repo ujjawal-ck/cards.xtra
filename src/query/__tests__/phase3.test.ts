@@ -1,5 +1,17 @@
 jest.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ accessToken: null }) }));
 jest.mock('@react-native-community/netinfo', () => ({ __esModule: true, default: { addEventListener: jest.fn(() => () => undefined) } }));
+// The device store the payout cool-down is saved in. It survives __resetPayoutLock (an app restart).
+const mockStore = new Map<string, string>();
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async (k: string) => mockStore.get(k) ?? null),
+  setItemAsync: jest.fn(async (k: string, v: string) => {
+    mockStore.set(k, v);
+  }),
+  deleteItemAsync: jest.fn(async (k: string) => {
+    mockStore.delete(k);
+  }),
+}));
+jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid' }));
 
 import { QueryClient } from '@tanstack/react-query';
 import { qk } from '../keys';
@@ -17,6 +29,7 @@ import {
 } from '../mutations/withdraw';
 import { ApiError } from '../../api/http/errors';
 import { isOfflineState } from '../../lib/network';
+import { PAYOUT_COOLDOWN_KEY } from '../../lib/payoutCooldown';
 import type { WithdrawDraft } from '../../navigation/types';
 
 const draft: WithdrawDraft = { method: 'upi', paymentType: 'cashback', amount: 300, paymentMethodId: 20, upiId: 'x@upi' };
@@ -51,7 +64,10 @@ describe('query keys', () => {
 });
 
 describe('payout safety', () => {
-  beforeEach(() => __resetPayoutLock());
+  beforeEach(() => {
+    mockStore.clear();
+    __resetPayoutLock();
+  });
 
   // No real 5 s pauses between re-checks in tests.
   const wait = jest.fn(async () => undefined);
@@ -70,6 +86,7 @@ describe('payout safety', () => {
     const d = deps(submit);
     const first = submitWithdrawal('t', draft, 'g', d);
     await expect(submitWithdrawal('t', draft, 'g', d)).rejects.toBeInstanceOf(PayoutInFlightError);
+    await new Promise((r) => setImmediate(r)); // the saved cool-down is read before the POST
     release();
     await first;
     expect(submit).toHaveBeenCalledTimes(1);
@@ -175,7 +192,7 @@ describe('payout safety', () => {
     };
     await expect(submitWithdrawal('t', draft, 'g', d)).rejects.toBeInstanceOf(PayoutUnknownError);
     expect(d.recheck).toHaveBeenCalledTimes(3);
-    expect(isPayoutOutcomePending(clock)).toBe(true);
+    expect(await isPayoutOutcomePending(clock)).toBe(true);
     // A fresh OTP (new guid) from any screen is still refused, without a POST.
     d.submit.mockResolvedValueOnce(undefined as any);
     await expect(submitWithdrawal('t', draft, 'g2', d)).rejects.toBeInstanceOf(PayoutUnknownError);
@@ -189,7 +206,8 @@ describe('payout safety', () => {
   it('a payout that was confirmed (or rejected) starts no cool-down', async () => {
     const d = { submit: jest.fn(async () => Promise.reject(new ApiError('x', 422))), recheck: jest.fn(), wait };
     await expect(submitWithdrawal('t', draft, 'g', d)).rejects.toBeInstanceOf(ApiError);
-    expect(isPayoutOutcomePending()).toBe(false);
+    expect(await isPayoutOutcomePending()).toBe(false);
+    expect(mockStore.has(PAYOUT_COOLDOWN_KEY)).toBe(false);
   });
 
   it('releases the lock after a real rejection', async () => {
@@ -214,6 +232,121 @@ describe('payout safety', () => {
     open();
     await expect(first).rejects.toBeInstanceOf(PayoutUnknownError);
     expect(submit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('payout cool-down on the device (R-01, R-05)', () => {
+  const wait = jest.fn(async () => undefined);
+  const T = 1_000_000;
+  /** One payout whose outcome stays unknown, at time T. */
+  async function unknownPayout() {
+    const d = {
+      submit: jest.fn(async () => Promise.reject(new ApiError('x', 504))),
+      recheck: jest.fn(async () => ({})),
+      wait,
+      now: () => T,
+    };
+    await expect(submitWithdrawal('t', draft, 'g', d)).rejects.toBeInstanceOf(PayoutUnknownError);
+  }
+  /** A payout that would succeed, at time `at`. */
+  const okDeps = (at: number) => ({ submit: jest.fn(async () => ({})), recheck: jest.fn(), wait, now: () => at });
+  const saved = () => JSON.parse(mockStore.get(PAYOUT_COOLDOWN_KEY) ?? 'null');
+
+  beforeEach(() => {
+    mockStore.clear();
+    __resetPayoutLock();
+  });
+
+  it('is saved with its end time and the user id', async () => {
+    mockStore.set('ck_user_id', '42');
+    await unknownPayout();
+    expect(saved()).toEqual({ until: T + UNKNOWN_COOLDOWN_MS, userId: '42' });
+  });
+
+  it('survives an app restart: no POST until it ends', async () => {
+    await unknownPayout();
+    __resetPayoutLock(); // the app is killed and opened again: memory is empty
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
+    const d = okDeps(T + 1);
+    await expect(submitWithdrawal('t', draft, 'g2', d)).rejects.toBeInstanceOf(PayoutUnknownError);
+    expect(d.submit).not.toHaveBeenCalled();
+    expect(d.recheck).not.toHaveBeenCalled(); // refused up front, no re-check and no new cool-down
+  });
+
+  it('ends 10 minutes after the unknown outcome, after a restart too', async () => {
+    await unknownPayout();
+    __resetPayoutLock();
+    expect(await isPayoutOutcomePending(T + UNKNOWN_COOLDOWN_MS - 1)).toBe(true);
+    expect(await isPayoutOutcomePending(T + UNKNOWN_COOLDOWN_MS)).toBe(false);
+    const d = okDeps(T + UNKNOWN_COOLDOWN_MS);
+    await expect(submitWithdrawal('t', draft, 'g2', d)).resolves.toEqual({ status: 'submitted' });
+    expect(d.submit).toHaveBeenCalledTimes(1);
+  });
+
+  it('is saved before the re-check, so a kill while the screen is locked keeps it', async () => {
+    let open!: () => void;
+    const gate = new Promise<void>((r) => (open = r));
+    const d = {
+      submit: jest.fn(async () => Promise.reject(new ApiError('x', 504))),
+      recheck: jest.fn(async () => {
+        await gate;
+        return {};
+      }),
+      wait,
+      now: () => T,
+    };
+    const first = submitWithdrawal('t', draft, 'g', d);
+    await new Promise((r) => setImmediate(r)); // the POST failed, the 1st re-check runs
+    expect(d.recheck).toHaveBeenCalledTimes(1);
+    expect(saved()).toEqual({ until: T + UNKNOWN_COOLDOWN_MS });
+    open();
+    await expect(first).rejects.toBeInstanceOf(PayoutUnknownError);
+  });
+
+  it('a re-check that shows the payout pending (5002) clears it', async () => {
+    const d = {
+      submit: jest.fn(async () => Promise.reject(new ApiError('x', 504))),
+      recheck: jest.fn(async () =>
+        Promise.reject(new ApiError('pending', 400, { errors: [{ code: '5002', meta: { requested_earnings: '300' } }] })),
+      ),
+      wait,
+      now: () => T,
+    };
+    await expect(submitWithdrawal('t', draft, 'g', d)).resolves.toEqual({ status: 'submitted_after_recheck' });
+    expect(mockStore.has(PAYOUT_COOLDOWN_KEY)).toBe(false);
+    expect(await isPayoutOutcomePending(T)).toBe(false);
+  });
+
+  it('after a restart, blocks the same user and a user whose id is not known yet', async () => {
+    mockStore.set('ck_user_id', '42');
+    await unknownPayout();
+    __resetPayoutLock();
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
+    __resetPayoutLock();
+    mockStore.delete('ck_user_id');
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
+  });
+
+  it("after a restart, does not block another user (both ids known and different)", async () => {
+    mockStore.set('ck_user_id', '42');
+    await unknownPayout();
+    __resetPayoutLock();
+    mockStore.set('ck_user_id', '77');
+    expect(await isPayoutOutcomePending(T + 1)).toBe(false);
+    const d = okDeps(T + 1);
+    await expect(submitWithdrawal('t', draft, 'g2', d)).resolves.toEqual({ status: 'submitted' });
+  });
+
+  it('a cool-down saved with no user id blocks every user', async () => {
+    await unknownPayout();
+    __resetPayoutLock();
+    mockStore.set('ck_user_id', '77');
+    expect(await isPayoutOutcomePending(T + 1)).toBe(true);
+  });
+
+  it('a malformed saved value is no cool-down', async () => {
+    mockStore.set(PAYOUT_COOLDOWN_KEY, '<garbage>');
+    expect(await isPayoutOutcomePending(T)).toBe(false);
   });
 });
 

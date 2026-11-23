@@ -36,7 +36,7 @@ import { Header, Masthead, FooterButtons } from '../../organisms';
 import { colors, spacing } from '../../tokens';
 import { analytics, Events } from '../../analytics';
 import { play } from '../../lib/haptics';
-import type { RootStackParamList, WithdrawStackParamList } from '../../navigation/types';
+import type { WithdrawStackParamList } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
 import {
   sendPaymentRequestOTP,
@@ -48,6 +48,7 @@ import { useWithdraw, isPayoutRejection } from '../../query/mutations/withdraw';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
 import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
+import { showPayoutUnconfirmed } from './payoutPending';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawVerifyOTP'>;
@@ -104,26 +105,7 @@ export function WithdrawVerifyOTP() {
     if (leaving.current) navigation.dispatch(data.action);
   });
 
-  const showUnconfirmed = () => {
-    Alert.alert(
-      "Couldn't confirm your withdrawal",
-      // Payment History still shows sample payouts, so don't send people
-      // there. Earnings re-reads the live balance, and tapping Withdraw again
-      // shows "payment in process" if this request did go through.
-      'Your request may already have gone through. Check Earnings in a few minutes before trying again: a payout in progress shows up when you tap Withdraw.',
-      [
-        {
-          text: 'Go to Earnings',
-          // popTo, not navigate: navigate pushed a second MainTabs on top.
-          onPress: () =>
-            navigation
-              .getParent<NativeStackNavigationProp<RootStackParamList>>()
-              ?.popTo('MainTabs', { screen: 'Earnings' }),
-        },
-        { text: 'OK', style: 'cancel' },
-      ],
-    );
-  };
+  const showUnconfirmed = () => showPayoutUnconfirmed(navigation);
 
   const verifyAndPay = async () => {
     if (inFlight.current || busy || otp.length !== OTP_LENGTH) return;

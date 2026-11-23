@@ -11,6 +11,7 @@ import { bumpSessionGeneration, __setClock } from '../../api/http/tokenManager';
 import { base64Encode } from '../../api/http/client';
 import { ApiError } from '../../api/http/errors';
 import * as CashbackGuard from '../../../modules/cashback-guard';
+import { hydratePayoutCooldown, payoutCooldownOn, startPayoutCooldown } from '../../lib/payoutCooldown';
 
 const mockStore = new Map<string, string>();
 jest.mock('expo-secure-store', () => ({
@@ -51,6 +52,8 @@ const USER_KEYS: Record<string, string> = {
   }),
   'cardsxtra.toolSpends.v1': JSON.stringify({ fuel: 3000 }),
   never_miss_cashback_enabled: '1',
+  // The payout cool-down after an unknown outcome (R-05).
+  'cardsxtra.payoutUnknownUntil.v1': JSON.stringify({ until: Date.now() + 10 * 60_000, userId: '42' }),
 };
 /** Keys that belong to the install: kept on purpose. */
 const DEVICE_KEYS: Record<string, string> = {
@@ -112,6 +115,18 @@ describe('endLocalSession', () => {
     expect(sinkProps).toContainEqual({ ck_user_id: null });
     expect(sinkIds[sinkIds.length - 1]).toBe('dev-1');
     expect(CashbackGuard.stopGuard).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends the payout cool-down in memory too, so the next user in the same app run is not blocked (R-05)', async () => {
+    await hydratePayoutCooldown();
+    await startPayoutCooldown(Date.now() + 10 * 60_000);
+    expect(payoutCooldownOn(Date.now())).toBe(true);
+    await endLocalSession('dev-1');
+    // No module reset: the same app run.
+    expect(payoutCooldownOn(Date.now())).toBe(false);
+    await hydratePayoutCooldown();
+    expect(payoutCooldownOn(Date.now())).toBe(false);
+    expect(mockStore.has('cardsxtra.payoutUnknownUntil.v1')).toBe(false);
   });
 
   it('is safe to run twice and never throws on a storage failure', async () => {

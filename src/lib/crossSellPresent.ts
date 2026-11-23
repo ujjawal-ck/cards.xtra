@@ -5,7 +5,7 @@
  * Mirrors bandText / statsFor / iconFor in the approved prototype.
  */
 import type { IconName } from '../atoms';
-import { inr, isLtf } from './crossSell';
+import { inr, isLtf, shownRewardGain } from './crossSell';
 import type { CrossSellCard, CrossSellPick } from './crossSell';
 
 export interface PickStat {
@@ -62,8 +62,11 @@ export function bandParts(src: CrossSellCard, p: CrossSellPick): { text: string;
       if (src.annualFee - c.annualFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.annualFee - c.annualFee), text: 'less a year' };
       if (src.joiningFee - c.joiningFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.joiningFee - c.joiningFee), text: 'lower joining fee' };
       return { text: 'Similar fee' };
-    case 'moreRewards':
-      return { amount: inr(c.reward - src.reward), text: 'more Rewards' };
+    case 'moreRewards': {
+      // The amount reads the displayed reward only: none when a card shows no amount.
+      const gain = shownRewardGain(src, c);
+      return gain > 0 ? { amount: inr(gain), text: 'more Rewards' } : { text: 'More rewards' };
+    }
     case 'easier':
       return { text: 'Easier to get' };
     case 'eligible':

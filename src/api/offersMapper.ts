@@ -141,12 +141,17 @@ export interface OfferStoreSummary {
 
 /**
  * Map `GET /offers/category/<slug>` → grid store summaries.
- * `{ data: [] }` is a real empty category. A body without a `data` array (a
- * proxy page, captive-portal HTML) throws, so the grid shows its error state
- * instead of a false "No offers here yet".
+ * `{ data: [] }` is a real empty category, and so is a JSON:API body that
+ * counts 0 stores (`meta.total_records: 0`) with no `data` list or a null one
+ * (review R-10; the production shape of an empty category is not captured).
+ * Any other body without a `data` array (a proxy page, captive-portal HTML)
+ * throws, so the grid shows its error state instead of a false "No offers
+ * here yet".
  */
 export function mapCategoryOffers(res: any): OfferStoreSummary[] {
   if (!Array.isArray(res?.data)) {
+    const total = res?.meta?.total_records;
+    if (res?.data == null && (total === 0 || total === '0')) return [];
     throw new Error('Offers category response had no data list');
   }
   const data: any[] = res.data;

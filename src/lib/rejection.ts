@@ -14,7 +14,7 @@
  * Alternatives reuse the cross-sell engine's gate, similarity and fee bands
  * (src/lib/crossSell.ts); the engine itself is not changed in behaviour.
  */
-import { CONFIG, bandIdx, cost, idf, inr, isLtf, passesEarningGate, profile, rankReward, sim, topShared } from './crossSell';
+import { CONFIG, bandIdx, cost, idf, inr, isLtf, passesEarningGate, profile, rankReward, shownRewardGain, sim, topShared } from './crossSell';
 import type { CrossSellCard } from './crossSell';
 import { shortCardName } from './crossSellPresent';
 
@@ -98,8 +98,9 @@ export function contextTag(
 ): { text: string; tone: RejectionTone } {
   if (src.bank && c.bank === src.bank) return { text: `Also from ${c.bank}`, tone: 'gray' };
   if (isLtf(c) && !isLtf(src)) return { text: 'Lifetime free', tone: 'success' };
-  // Displayed text: `reward` (CashKaro only), never the internal rankReward.
-  const rewardGain = c.reward - src.reward;
+  // Displayed text: `reward` (CashKaro only), never the internal rankReward. No tag when
+  // either card shows no reward amount.
+  const rewardGain = shownRewardGain(src, c);
   if (rewardGain >= CONFIG.minRewardGain) return { text: `${inr(rewardGain)} more Rewards`, tone: 'brand' };
   const feeGain = cost(src) - cost(c);
   if (feeGain >= CONFIG.minFeeGain) return { text: `${inr(feeGain)} lower fee`, tone: 'success' };

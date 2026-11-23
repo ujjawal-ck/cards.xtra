@@ -37,12 +37,14 @@ interface CkOptions {
   timeoutMs?: number;
   /** Mark a write safe to retry on transient failures. */
   idempotent?: boolean;
+  /** Max extra attempts for transient failures (client default: 2 for a GET). */
+  retries?: number;
   /** Response contract: [endpoint name, zod schema]. Mismatches are reported, never thrown. */
   contract?: [string, ZodTypeAny];
 }
 
 export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent, contract } = opts;
+  const { method = 'GET', body, query, auth, signal, timeoutMs, idempotent, retries, contract } = opts;
   const headers: Record<string, string> = { ...CK.headers() };
   // JSON:API content-type for write bodies — EXCEPT multipart (FormData file
   // uploads), where the runtime must set the boundary content-type itself.
@@ -56,6 +58,7 @@ export async function ck<T = any>(path: string, opts: CkOptions = {}): Promise<T
       signal,
       timeoutMs,
       idempotent,
+      retries,
       headers: bearer ? { ...headers, Authorization: `Bearer ${bearer}` } : headers,
     });
   // 'aws' (guest) calls go out without Authorization: the BFF adds its token.

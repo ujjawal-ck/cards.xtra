@@ -26,6 +26,7 @@ import { requirePaymentMethodId, sendPaymentRequestOTP } from '../../api/payment
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
 import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
+import { blockIfPayoutPending } from './payoutPending';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
 type Rt = RouteProp<WithdrawStackParamList, 'WithdrawFlipkart'>;
@@ -84,6 +85,8 @@ export function WithdrawFlipkart() {
     try {
       // Offline: send nothing, keep what the user typed.
       if (await blockIfOffline()) return;
+      // An earlier payout's outcome is still unknown: send no OTP (R-06).
+      if (await blockIfPayoutPending(navigation)) return;
       // No built-in fallback id: if the API did not list this method, stop
       // here, before an OTP is sent.
       const paymentMethodId = requirePaymentMethodId(info?.methodIds, 'flipkart');

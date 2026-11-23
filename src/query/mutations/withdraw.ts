@@ -15,6 +15,9 @@
  *      about 5 s apart. Error code 5002 means a payout is pending, i.e. ours
  *      went through. If no re-check shows it, throw PayoutUnknownError, and
  *      the screen blocks any further payout attempt.
+ *
+ * The cool-down after an unknown outcome is saved on the device
+ * (lib/payoutCooldown.ts), so killing the app does not end it (review R-01).
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isApiError } from '../../api/http/errors';
@@ -27,6 +30,13 @@ import {
 } from '../../api/payments';
 import type { WithdrawDraft } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
+import {
+  __resetPayoutCooldownMemory,
+  clearPayoutCooldown,
+  hydratePayoutCooldown,
+  payoutCooldownOn,
+  startPayoutCooldown,
+} from '../../lib/payoutCooldown';
 import { qk } from '../keys';
 
 export type WithdrawOutcome =
@@ -67,7 +77,8 @@ export const RECHECK_INTERVAL_MS = 5_000;
 export const RECHECK_TIMEOUT_MS = 10_000;
 /** After an unknown outcome, every new payout is blocked app-wide for this
  *  long (not only on the screen that saw it): Back, then "Get Paid" again,
- *  must not open a second payout while the first may still be landing. */
+ *  must not open a second payout while the first may still be landing. The
+ *  cool-down is saved on the device, so an app restart keeps it. */
 export const UNKNOWN_COOLDOWN_MS = 10 * 60_000;
 
 export interface WithdrawDeps {
@@ -94,18 +105,18 @@ const defaultDeps: WithdrawDeps = {
 };
 
 let inFlight = false;
-/** Time until which new payouts are blocked after an unknown outcome. */
-let unknownUntil = 0;
 
-/** Test seam. */
+/** Test seam: memory as after an app restart (the saved cool-down is kept). */
 export function __resetPayoutLock(): void {
   inFlight = false;
-  unknownUntil = 0;
+  __resetPayoutCooldownMemory();
 }
 
-/** True while an earlier payout's outcome is still unknown (cool-down). */
-export function isPayoutOutcomePending(now: number = Date.now()): boolean {
-  return now < unknownUntil;
+/** True while an earlier payout's outcome is still unknown (cool-down). It
+ *  reads the saved cool-down first, once per app run. */
+export async function isPayoutOutcomePending(now: number = Date.now()): Promise<boolean> {
+  await hydratePayoutCooldown();
+  return payoutCooldownOn(now);
 }
 
 /** True when one GET /payment/payment shows a pending payout (code 5002). */
@@ -126,25 +137,39 @@ export async function submitWithdrawal(
   deps: WithdrawDeps = defaultDeps,
 ): Promise<WithdrawOutcome> {
   if (inFlight) throw new PayoutInFlightError();
-  const now = deps.now ?? Date.now;
-  // An earlier payout may still be landing: never send another one yet.
-  if (isPayoutOutcomePending(now())) throw new PayoutUnknownError();
+  // Take the lock before the first await: a double tap must not pass the
+  // check above twice.
   inFlight = true;
   try {
-    await deps.submit(token, draft, otpGuid);
-    return { status: 'submitted' };
-  } catch (e) {
-    // A 4xx is CashKaro's final answer: surface it.
-    if (isPayoutRejection(e)) throw e;
-    // Anything else: find out whether the payout landed. Keep the lock while
-    // we look, so nothing else can submit in the meantime.
-    const wait = deps.wait ?? sleep;
-    for (let attempt = 1; attempt <= RECHECK_ATTEMPTS; attempt++) {
-      if (attempt > 1) await wait(RECHECK_INTERVAL_MS);
-      if (await showsPendingPayout(token, deps)) return { status: 'submitted_after_recheck' };
+    const now = deps.now ?? Date.now;
+    // An earlier payout may still be landing (in this app run or before a
+    // restart): never send another one yet.
+    if (await isPayoutOutcomePending(now())) throw new PayoutUnknownError();
+    try {
+      await deps.submit(token, draft, otpGuid);
+      return { status: 'submitted' };
+    } catch (e) {
+      // A 4xx is CashKaro's final answer: surface it.
+      if (isPayoutRejection(e)) throw e;
+      // Save the cool-down before the re-check: the screen is locked for about
+      // 40 s, and a user who kills the app then must stay blocked after the
+      // restart.
+      await startPayoutCooldown(now() + UNKNOWN_COOLDOWN_MS);
+      // Find out whether the payout landed. Keep the lock while we look, so
+      // nothing else can submit in the meantime.
+      const wait = deps.wait ?? sleep;
+      for (let attempt = 1; attempt <= RECHECK_ATTEMPTS; attempt++) {
+        if (attempt > 1) await wait(RECHECK_INTERVAL_MS);
+        if (await showsPendingPayout(token, deps)) {
+          // CashKaro shows the payout as pending (5002): that blocks a second
+          // one on its side, so no cool-down.
+          await clearPayoutCooldown();
+          return { status: 'submitted_after_recheck' };
+        }
+      }
+      await startPayoutCooldown(now() + UNKNOWN_COOLDOWN_MS);
+      throw new PayoutUnknownError();
     }
-    unknownUntil = now() + UNKNOWN_COOLDOWN_MS;
-    throw new PayoutUnknownError();
   } finally {
     inFlight = false;
   }

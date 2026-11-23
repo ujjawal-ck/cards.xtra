@@ -45,6 +45,48 @@ describe('payment method ids (no built-in fallback)', () => {
   });
 });
 
+describe('payment method ids: both response shapes (review R-03)', () => {
+  const methods = [
+    { type: 'payment_method', id: 12, attributes: { payment_name: 'Amazon Gift Card' } },
+    { type: 'payment_method', id: 13, attributes: { payment_name: 'Flipkart Gift Card' } },
+    { type: 'payment_method', id: 20, attributes: { payment_name: 'UPI' } },
+  ];
+  const all = { amazon: 12, flipkart: 13, upi: 20 };
+  const bare = methods.map(({ type, id }) => ({ type, id }));
+  const attrs = { total_earnings: '500.00' };
+
+  it('reads relationships at the top level (CK doc)', () => {
+    expect(extractPaymentMethodIds({ data: { attributes: attrs }, relationships: { payment_methods: { data: methods } } })).toEqual(all);
+  });
+
+  it('reads relationships nested under data (JSON:API), with attributes on the rows', () => {
+    const body = { data: { type: 'payment', id: 1, attributes: attrs, relationships: { payment_methods: { data: methods } } } };
+    expect(extractPaymentMethodIds(body)).toEqual(all);
+  });
+
+  it('reads relationships nested in a data[] row', () => {
+    const body = { data: [{ type: 'payment', id: 1, attributes: attrs, relationships: { payment_methods: { data: methods } } }] };
+    expect(extractPaymentMethodIds(body)).toEqual(all);
+  });
+
+  it('reads nested bare identifiers, with the names from `included`', () => {
+    const body = {
+      data: { type: 'payment', id: 1, attributes: attrs, relationships: { payment_methods: { data: bare } } },
+      included: [{ type: 'charity', id: 20, attributes: { name: 'Not a method' } }, ...methods],
+    };
+    expect(extractPaymentMethodIds(body)).toEqual(all);
+  });
+
+  it('nested bare identifiers with no names give no ids (never an id by position), and report it', () => {
+    const seen: string[] = [];
+    setHandledErrorReporter((_e, ctx) => seen.push(ctx));
+    const body = { data: { type: 'payment', id: 1, attributes: attrs, relationships: { payment_methods: { data: bare } } } };
+    expect(extractPaymentMethodIds(body)).toEqual({});
+    expect(() => requirePaymentMethodId(extractPaymentMethodIds(body), 'upi')).toThrow(PaymentMethodUnavailableError);
+    expect(seen.length).toBeGreaterThan(0);
+  });
+});
+
 describe('withdrawable amounts (null, never 0, when unknown)', () => {
   it('maps the doc fixture amounts exactly', () => {
     const d = extractPaymentData(fx('doc.payment_info'));

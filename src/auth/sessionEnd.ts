@@ -11,8 +11,10 @@
  *   - secure store: ck_access_token, ck_refresh_token, ck_display_name,
  *     ck_name_pending, ck_user_id (clearSession); cardsxtra.profile.v1 (PIN
  *     code, income, income type, applied cards); cardsxtra.toolSpends.v1;
- *     never_miss_cashback_enabled (the Cashback Reminder opt-in)
- *   - memory: the React Query cache, the saved spends, the advisor chat
+ *     never_miss_cashback_enabled (the Cashback Reminder opt-in);
+ *     cardsxtra.payoutUnknownUntil.v1 (the payout cool-down, review R-05)
+ *   - memory: the React Query cache, the saved spends, the advisor chat, the
+ *     payout cool-down
  *   - analytics: the ck_user_id user property; the user id goes back to the
  *     device id
  *   - the Cashback Reminder service is stopped
@@ -25,6 +27,7 @@ import * as SecureStore from 'expo-secure-store';
 import { clearSession, saveSession, type Session } from './tokenStore';
 import { clearSavedProfile } from '../lib/savedProfile';
 import { clearSavedSpends } from '../lib/savedSpends';
+import { clearPayoutCooldown } from '../lib/payoutCooldown';
 import { resetAdvisorSession } from '../screens/advisor/advisorSession';
 import {
   bumpSessionGeneration,
@@ -72,6 +75,9 @@ export async function endLocalSession(deviceId: string | null): Promise<void> {
     clearSavedProfile(),
     // Without the opt-in, CashbackGuardScreen does not start the service again.
     SecureStore.deleteItemAsync(CASHBACK_REMINDER_OPT_IN),
+    // The next user must not be blocked by this user's payout cool-down. It
+    // clears the memory copy at once, then the key.
+    clearPayoutCooldown(),
   ]);
 }
 

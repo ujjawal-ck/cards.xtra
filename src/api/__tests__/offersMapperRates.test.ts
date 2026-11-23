@@ -106,4 +106,17 @@ describe('unusable category response', () => {
     expect(() => mapCategoryOffers({})).toThrow();
     expect(() => mapCategoryOffers(undefined)).toThrow();
   });
+
+  it('R-10: a category that counts 0 stores is empty, with no data list or a null one', () => {
+    expect(mapCategoryOffers({ meta: { total_records: 0 }, data: [] })).toEqual([]);
+    expect(mapCategoryOffers({ meta: { total_records: 0 } })).toEqual([]);
+    expect(mapCategoryOffers({ meta: { total_records: 0 }, data: null })).toEqual([]);
+    expect(mapCategoryOffers({ meta: { total_records: '0' } })).toEqual([]);
+    // Stores counted but no list, a missing count, or a list of the wrong type: still an error.
+    expect(() => mapCategoryOffers({ meta: { total_records: 9 } })).toThrow();
+    expect(() => mapCategoryOffers({ meta: {} })).toThrow();
+    expect(() => mapCategoryOffers({ meta: { total_records: '' } })).toThrow();
+    expect(() => mapCategoryOffers({ meta: { total_records: null } })).toThrow();
+    expect(() => mapCategoryOffers({ meta: { total_records: 0 }, data: 'oops' })).toThrow();
+  });
 });

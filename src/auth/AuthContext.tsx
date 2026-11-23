@@ -32,7 +32,6 @@ import { endLocalSession, restoreSession } from './sessionEnd';
 import {
   logout as ckLogout,
   refreshTokens as ckRefreshTokens,
-  getEarnings,
 } from '../api/cashkaro';
 import {
   configureUserSession,
@@ -42,8 +41,8 @@ import {
 } from '../api/http/tokenManager';
 import { qk } from '../query/keys';
 import { fetchProfile } from '../query/useProfile';
+import { fetchEarnings } from '../query/useEarnings';
 import { queryClient } from '../query/queryClient';
-import { mapEarnings } from '../api/earningsMapper';
 import { analytics, Events } from '../analytics';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
@@ -89,7 +88,9 @@ function warmUserCache(accessToken: string): void {
   queryClient
     .prefetchQuery({
       queryKey: qk.user.earnings(),
-      queryFn: async ({ signal }) => mapEarnings(await getEarnings(accessToken, signal)),
+      // The same query function as useEarnings: a body with no amount is an
+      // error, never cached as ₹0 (review R-08).
+      queryFn: ({ signal }) => fetchEarnings(accessToken, signal),
     })
     .catch(() => undefined);
   queryClient
