@@ -44,7 +44,7 @@ No secret values appear here; keys are referred to by their env names.
 |---|---|---|---|---|
 | 1 | `GET /token` | **Called by the BFF only**, never by the app. `x-api-key: CK_API_KEY`, optional Basic auth (`CK_BASIC_USER:CK_BASIC_PASS`); no `device` | `data.attributes.token` → site token | BFF caches it (JWT `exp` − 2 min, fallback 25 min) and adds it to every guest call. Not on the BFF allowlist. |
 | 2 | `POST /loginotp?device=App` (guest) | `{data:{type:"user_otp",attributes:{mobile_number:<number>}}}` | `data.id` → `otp_guid`; `data.attributes.otp_expire_sec` (not shown) | Onboarding login sheet: Get OTP, Resend. "not regist…" error → signup. BFF rate limit: 30 per IP and 5 per mobile number in 10 min (429). |
-| 3 | `POST /signupotp` (guest, **no** `device`) | Same as #2 | Same as #2 | Fallback for new numbers; Resend in signup mode. |
+| 3 | `POST /signupotp?device=App` (guest) | Same as #2 | Same as #2 | Fallback for new numbers; Resend in signup mode. |
 | 4 | `POST /login?device=App` (guest) | `{data:{type:"auth",attributes:{mobile_number,otp_guid,otp:"digits",device_info}}}` | `data.attributes.access_token`, `refresh_token` | Verify (existing user). `otp` is sent as a digit string (keeps a leading zero). `device_info` fields: see `auth-and-secrets.md`. |
 | 5 | `POST /signupV1?device=App` (guest) | `{data:{type:"auth",attributes:{fullname,email,password,mobile_number,otp_guid,otp,referral_user:null,device_info}}}` | Same as #4 | Verify (new user). Name typed by the user; email and password generated (D16). The BFF sets `ip_address` from `x-forwarded-for` and, when `SIGNUP_PASSWORD` is set, replaces the password. |
 | 6 | `POST /refreshtoken?device=App` (guest) | `{data:{type:"auth",attributes:{refresh_token}}}` | `data.attributes.access_token`; `refresh_token` too when CashKaro rotates it (kept) | `refreshUserToken` in `tokenManager.ts`: before a user call when the JWT is about to expire, and on a user-call 401. Single-flight. |
@@ -63,7 +63,7 @@ There is **no delete-account API**. The Delete Account screen is hidden (D23).
 
 | # | Call | Request | Response read | Screens |
 |---|---|---|---|---|
-| 10 | `GET /users/orders` (user) | `device=App`, `page[size]=20`; optional `filter[status]` (pending,confirmed,paid,requested,cancelled), `filter[cashbacktype]` (cashback,rewards), `filter[fromdate]`/`filter[todate]` (yyyy-MM-dd). Store filter is client-side. | `data[]` (`myorder`): `id`, `cashback_type`, `cashback_status`, `is_delayed`, `cashback_amount`, `order_id`, `referral_name`, `bonus_type`, `comments`, `merchant_image_url`; merchant name from `merchant_name`/`report_merchant_name`/`store_name` or the logo filename | Orders list (filters), Never-miss nudge on Home. First 20 only. |
+| 10 | `GET /users/orders` (user) | `device=App`, `page[size]=20`; optional `filter[status]` (pending,confirmed,paid,requested,cancelled), `filter[cashbacktype]` (cashback,rewards), `filter[fromdate]`/`filter[todate]` (yyyy-MM-dd). Store filter is client-side. | `data[]` (`myorder`): `id`, `cashback_type`, `cashback_status`, `is_delayed`, `cashback_amount`, `order_id`, `referral_name`, `bonus_type`, `comments`, `merchant_image_url`; merchant name from `merchant_name`/`report_merchant_name`/`store_name` or the logo filename | Orders list (filters), Never-miss nudge on Home. Pages of 20, loaded on scroll until `meta.total_records` (`useOrders`, infinite query). |
 | 11 | `GET /users/orders/{id}?device=App` | | `cashback_type`, `cashback_status`, `is_delayed`, `cashback_amount`, `order_amount`, `order_id`, `merchant_image_url`, dates (`transaction_date`, `pending_date`, `confirm_date`, `paid_date`, `cancelled_date`, `expected_confirmation_date`) | Order detail (status badge, "expected by", timeline); also from a tracked claim. |
 
 ## CashKaro: offers (app token, JSON:API)
@@ -97,7 +97,7 @@ All withdraw calls use the user token with refresh-and-retry on 401, like the ot
 |---|---|---|---|---|
 | 21 | `GET /users/missingcashback/retailers?device=App&page[number]=1&page[size]=100` | | `data[].attributes`: `store_id`/`id`, `store_name`/`report_merchant_name`, `store_logo`/`image_url`, `group` (A/B1/B2/C1/C2/D), `tracking_speed` | "Did you shop?" → store list. Always refetched. |
 | 22 | `GET /users/missingcashback/exitclickdates/{storeId}` | | `data[].attributes.exitclick_date`/`exit_date`, `exit_id`; `meta.sample_orderid`, `orderid_hint_message`, `orderid_format` (regex map for client validation) | Choose date; Order ID hint and validation. |
-| 23 | `GET /users/missingcashback/queue?filter[status]=Pending\|Resolved\|Rejected&page[number]=1&page[size]=50` | | `data[]` claims (`cashback_id`, `status`, `groupid`, `details`, `under_tracking`, `expected_resolution_date`, `status_update`, `click_date`, `order_id`, `order_amount`, store name/image, cashback value, `ticket_id`, `ticket_status`); `meta.{pending,resolved,others}` | Claims tabs (In Review / Closed / Others). "not found / no data / empty" → empty list. |
+| 23 | `GET /users/missingcashback/queue?filter[status]=Pending\|Resolved&page[number]=1&page[size]=50` | | `data[]` claims (`cashback_id`, `status`, `groupid`, `details`, `under_tracking`, `expected_resolution_date`, `status_update`, `click_date`, `order_id`, `order_amount`, store name/image, cashback value, `ticket_id`, `ticket_status`); `meta.{pending,resolved,others}` | Claims tabs (In Review / Closed / Others). "not found / no data / empty" → empty list. |
 | 24 | `POST /users/missingcashback/validate` | `{data:{type:"missingcashback",attributes:{storeid,exitclick_date,order_id}}}` | Success or error message | Order ID → Continue. |
 | 25 | `POST /users/missingcashback/queue` | Same + `order_amount` ("0" for group D) | `data.id` → queue id; `meta.{cashback_id,cashbackvalue,status,under_tracking}` → outcome: tracked / resolved / auto-tracking / needs details (B1 new-user, C1 category, C2 invoice) / queued | Amount → Submit (or Order ID for group D). |
 | 26 | `PUT /users/missingcashback/queue/{queueId}` | `{data:{type:"queue",attributes:{user_type?:"New"\|"Existing",category?:"Mobile Recharge"\|"No Cashback"}}}` | Same as #25 | New-user check (B1), category select (C1). |
@@ -124,9 +124,9 @@ None. Row 33 (`api.ipify.org` for the signup IP) was removed: the BFF sets `ip_a
 
 ## Known inconsistencies and risks
 
-1. `?device=App` is sent inconsistently (missing on `/signupotp`, `/users/verify` and most missing-cashback calls).
+1. `?device=App` is sent inconsistently (missing on `/users/verify` and most missing-cashback calls).
 2. The Offers fallback triggers on any 400, not specifically code 10003.
-3. Single-page fetches: category stores (100), orders (20), claims (50).
+3. Single-page fetches: category stores (100) and claims (50). Orders page on scroll.
 4. `include=coupons,related_offers` and `include=charities` are requested but unused.
 5. The comment on `verifyPaymentRequestOTP` says "integer"; the OTP is sent as a digit string.
 6. The BFF OTP rate limit is kept in memory per running copy. Move it to a shared store before launch.
