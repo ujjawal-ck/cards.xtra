@@ -104,15 +104,50 @@ describe('orders', () => {
     }
   });
 
-  it('reads the order date when the list row carries transaction_date', () => {
+  it('does not read detail-only fields from a list row (D19)', () => {
     const rows = mapOrders({
       data: [
-        { id: '1', attributes: { cashback_type: 'Cashback', cashback_status: 'Paid', cashback_amount: '5', transaction_date: '2026-11-03T00:00:00Z' } },
-        { id: '2', attributes: { cashback_type: 'Cashback', cashback_status: 'Paid', cashback_amount: '5' } },
+        {
+          id: '1',
+          attributes: {
+            cashback_type: 'Cashback',
+            cashback_status: 'Pending',
+            cashback_amount: '5',
+            merchant_image_url: 'https://x/stores/amazon-india.png',
+            transaction_date: '2026-11-03T00:00:00Z',
+            is_delayed: 'yes',
+          },
+        },
       ],
     });
-    expect(rows[0].dateISO).toBe('2026-11-03T00:00:00Z');
-    expect(rows[1].dateISO).toBeUndefined();
+    expect(rows[0].dateISO).toBeUndefined();
+    expect(rows[0].status).toBe('pending');
+    expect(rows[0].merchantName).toBe('Amazon India');
+  });
+
+  it('names a store from a readable logo slug, and gives "" for a hash-like one', () => {
+    const row = (url: string) => ({ id: '1', attributes: { cashback_type: 'Cashback', cashback_status: 'Paid', cashback_amount: '5', merchant_image_url: url } });
+    const [a, b, c] = mapOrders({
+      data: [
+        row('https://x/stores/amazon-india.png'),
+        row('https://x/stores/3f9a8b7c6d5e4f3a.png'),
+        row('https://x/stores/no-image.jpg'),
+      ],
+    });
+    expect(a.merchantName).toBe('Amazon India');
+    expect(b.merchantName).toBe('');
+    expect(c.merchantName).toBe('');
+    expect(a.merchantKey).toBe('https://x/stores/amazon-india.png');
+  });
+
+  it('maps the doc list example: amounts, statuses, no date', () => {
+    const rows = mapOrders(fx('doc.orders'));
+    expect(rows.map((r) => r.amount)).toEqual(['₹18', '₹100', '₹5,623']);
+    expect(rows.map((r) => r.status)).toEqual(['pending', 'pending', 'pending']);
+    for (const r of rows) {
+      expect(r.dateISO).toBeUndefined();
+      expect(r.merchantKey).toBeTruthy();
+    }
   });
 
   it('maps an empty staging list to []', () => {

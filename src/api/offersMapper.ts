@@ -223,6 +223,8 @@ export interface OfferStoreDetail {
   /** True when the store has an upsell offer (bonus card + timer). */
   isUpsell: boolean;
   upsellText?: string;
+  /** Upsell cashback expiry (ISO) from `attributes.upsell.cashback_expiry_date`. */
+  upsellExpiry?: string;
   timelineTiles: TimelineTile[];
   rewardRates: { rate: string; description: string }[];
   termsIntro?: string;
@@ -327,7 +329,13 @@ export function mapOfferStore(res: any): OfferStoreDetail | null {
     a.special_terms_conditions,
   );
 
-  const upsellText: string | undefined = a.cashback_upsell_button_text || undefined;
+  // The store endpoint nests the upsell under `attributes.upsell{}`; the top-level
+  // `cashback_upsell_button_text` exists only on list rows (kept as the fallback).
+  const upsell: Record<string, any> = a.upsell && typeof a.upsell === 'object' ? a.upsell : {};
+  const upsellText: string | undefined =
+    upsell.cashback_upsell_button_text || a.cashback_upsell_button_text || undefined;
+  const upsellExpiry: string | undefined =
+    upsell.cashback_expiry_date || a.cashback_expiry_date || undefined;
   const benefits: string[] = Array.isArray(a.benefit_card_short_description)
     ? a.benefit_card_short_description.filter((b: unknown) => typeof b === 'string' && b.trim())
     : [];
@@ -403,9 +411,23 @@ export function mapOfferStore(res: any): OfferStoreDetail | null {
     termsCards: termsBullets.map((t, i) => ({ text: t, icon: TC_ICONS[i % TC_ICONS.length] })),
     cashbackUrl: a.cashback_url ? String(a.cashback_url).trim() : undefined,
     upsellText,
+    upsellExpiry,
     ratingValue: a.rating_value || undefined,
     ratingCount: a.rating_count || undefined,
     banners,
     faq,
   };
+}
+
+/**
+ * Upsell expiry (ISO) → the Timer value "dd:hh:mm". Undefined when there is no
+ * expiry, it is unreadable, or it has passed (the caller then keeps the default).
+ */
+export function upsellTimerValue(expiryISO: string | undefined, now: number = Date.now()): string | undefined {
+  if (!expiryISO) return undefined;
+  const end = new Date(expiryISO).getTime();
+  if (!Number.isFinite(end) || end <= now) return undefined;
+  const mins = Math.floor((end - now) / 60000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(mins / 1440))}:${pad(Math.floor((mins % 1440) / 60))}:${pad(mins % 60)}`;
 }

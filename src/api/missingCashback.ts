@@ -141,34 +141,91 @@ export async function getExitClickDates(
   });
 }
 
+export type QueueStatus = 'Pending' | 'Resolved' | 'Rejected';
+
+/** One page of the claims queue. `links.next` and `meta.total_records` drive paging. */
+export interface McQueuePage {
+  data?: McClaim[];
+  meta?: { pending?: number; resolved?: number; others?: number; total_records?: number };
+  links?: { next?: string | null };
+}
+
+/** Rows per queue page, and the most pages one lookup walks (500 claims). */
+export const QUEUE_PAGE_SIZE = 50;
+export const QUEUE_MAX_PAGES = 10;
+
 /** Claims list for one status tab (Pending | Resolved | Rejected). */
 export async function getQueue(
   userToken: string,
-  status: 'Pending' | 'Resolved' | 'Rejected',
+  status: QueueStatus,
   page = 1,
-  size = 50,
-): Promise<{ data?: McClaim[]; meta?: { pending?: number; resolved?: number; others?: number } }> {
+  size = QUEUE_PAGE_SIZE,
+): Promise<McQueuePage> {
   return ck('/users/missingcashback/queue', { contract: ['mc/queue', Schemas.McQueueResponse],
     auth: { userToken },
     query: { 'filter[status]': status, 'page[number]': page, 'page[size]': size },
   });
 }
 
+/** True when the doc's paging says another page exists after `collected` rows. */
+function hasNextPage(res: McQueuePage, collected: number): boolean {
+  if (!(res.data || []).length) return false;
+  if (res.links && 'next' in res.links) return !!res.links.next;
+  const total = res.meta?.total_records;
+  return typeof total === 'number' && collected < total;
+}
+
+/**
+ * Walk the queue page by page. `visit` sees each page and may return true to
+ * stop early. Stops when `links.next` is empty (or `meta.total_records` is
+ * reached) or after QUEUE_MAX_PAGES. A failed request throws.
+ */
+async function walkQueue(
+  userToken: string,
+  status: QueueStatus,
+  visit: (res: McQueuePage) => boolean | void,
+): Promise<void> {
+  let collected = 0;
+  for (let page = 1; page <= QUEUE_MAX_PAGES; page++) {
+    const res = await getQueue(userToken, status, page, QUEUE_PAGE_SIZE);
+    if (visit(res) === true) return;
+    collected += (res.data || []).length;
+    if (!hasNextPage(res, collected)) return;
+  }
+}
+
+/**
+ * Every claim for a status, up to QUEUE_MAX_PAGES pages. `meta` is the first
+ * page's (the bucket counts). Beyond the cap the list is cut, not failed.
+ */
+export async function getQueueAll(userToken: string, status: QueueStatus): Promise<McQueuePage> {
+  let first: McQueuePage | undefined;
+  const data: McClaim[] = [];
+  await walkQueue(userToken, status, (res) => {
+    first = first || res;
+    data.push(...(res.data || []));
+  });
+  return { ...first, data };
+}
+
 /**
  * Find one queue item by id (used after submit to hydrate exit_id/store_id for
  * the invoice/ticket step). The API has no by-id GET, so we scan Pending then
- * Resolved — mirrors the prototype.
+ * Resolved, paging each until the item is found or the list ends (capped at
+ * QUEUE_MAX_PAGES pages).
  */
 export async function getQueueItem(userToken: string, queueId: string): Promise<McClaim | null> {
-  const inList = (res: { data?: McClaim[] }) =>
-    (res.data || []).find((c) => String(c.id) === String(queueId)) || null;
   // "Not in either list" returns null. A failed request throws, so the
   // caller can show a retry instead of silently losing the claim.
-  const pending = await getQueue(userToken, 'Pending', 1, 50);
-  const found = inList(pending);
-  if (found) return found;
-  const resolved = await getQueue(userToken, 'Resolved', 1, 50);
-  return inList(resolved);
+  let found: McClaim | null = null;
+  for (const status of ['Pending', 'Resolved'] as const) {
+    await walkQueue(userToken, status, (res) => {
+      found = (res.data || []).find((c) => String(c.id) === String(queueId)) || null;
+      return found !== null;
+    });
+    if (found) return found;
+  }
+  return null;
 }
 
 // ── Writes ───────────────────────────────────────────────────────────────
@@ -240,6 +297,43 @@ export async function updateQueue(
  * second ticket.
  */
 export const INVOICE_UPLOAD_TIMEOUT_MS = 60_000;
+
+/** Doc limits for ticket attachments (`02_users.md`): 3 files, 2 MB each. */
+export const INVOICE_MAX_FILES = 3;
+export const INVOICE_MAX_BYTES = 2 * 1024 * 1024;
+const INVOICE_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+const INVOICE_EXT = ['jpeg', 'jpg', 'png', 'gif', 'pdf'];
+
+/** A picked file as far as the limit check needs it. */
+export interface InvoiceCandidate {
+  name?: string | null;
+  type?: string | null;
+  /** Bytes; unknown size passes (the server still enforces the limit). */
+  size?: number | null;
+}
+
+/**
+ * Check files against the doc limits before they are added.
+ * `existingCount` is how many files are already attached. Returns a user
+ * message for the first problem, or null when every file is fine. The whole
+ * pick is refused on a problem, so nothing is attached silently.
+ */
+export function checkInvoiceFiles(existingCount: number, picked: InvoiceCandidate[]): string | null {
+  if (existingCount + picked.length > INVOICE_MAX_FILES) {
+    return `You can attach up to ${INVOICE_MAX_FILES} files.`;
+  }
+  for (const f of picked) {
+    const mime = (f.type || '').toLowerCase();
+    const ext = ((f.name || '').split('?')[0].split('.').pop() || '').toLowerCase();
+    // The MIME type wins; the extension is only used when there is no type.
+    const typeOk = mime ? INVOICE_MIME.includes(mime) : INVOICE_EXT.includes(ext);
+    if (!typeOk) return 'Only JPG, PNG, GIF or PDF files can be attached.';
+    if (typeof f.size === 'number' && f.size > INVOICE_MAX_BYTES) {
+      return 'Each file must be 2 MB or smaller.';
+    }
+  }
+  return null;
+}
 
 /**
  * True when an invoice upload that was sent ended without a clear answer:

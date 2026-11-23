@@ -71,6 +71,7 @@ import { colors, spacing } from '../tokens';
 import { useOfferStore } from '../query/useOffers';
 import { isPausedWithoutData } from '../query/paused';
 import type { TimelineTile } from '../api/offersMapper';
+import { upsellTimerValue } from '../api/offersMapper';
 import { useClickOut } from '../lib/useClickOut';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
@@ -448,6 +449,7 @@ export function OffersBrandAmazon() {
                 cashbackText={store?.cashbackKind ?? 'Cashback'}
                 subtitle={store?.cashbackDetails ?? `on eligible ${brandName} orders`}
                 bonusValue={store?.upsellText}
+                timerValue={upsellTimerValue(store?.upsellExpiry) ?? '00:00'}
                 onViewRates={openRewardRates}
                 style={{ width: '100%' }}
               />

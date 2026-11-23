@@ -1,7 +1,8 @@
 /**
  * useMissingCashback — data + actions for the Missing Cashback claim flow.
  *
- * Reads (useQuery; token refresh is handled by the API layer):
+ * Reads (useQuery; token refresh is handled by the API layer). The claims
+ * lists load every page up to the cap (QUEUE_MAX_PAGES x 50 rows):
  *   useRetailers()            — stores to claim against
  *   useExitClickDates(store)  — visit dates + order-id meta for a store
  *   useClaims(tab)            — claims list for a status tab (+ counts)
@@ -19,7 +20,7 @@ import { qk } from './keys';
 import {
   getRetailers,
   getExitClickDates,
-  getQueue,
+  getQueueAll,
   getQueueItem,
   validateClaim,
   submitQueue,
@@ -109,11 +110,11 @@ export function useClaims(tab: ClaimTab) {
       // returns 422 (verified on staging 2026-11-03), so it isn't requested.
       const runOthers = async (token: string): Promise<ClaimsResult> => {
         const settled = await Promise.allSettled([
-          getQueue(token, 'Pending'),
-          getQueue(token, 'Resolved'),
+          getQueueAll(token, 'Pending'),
+          getQueueAll(token, 'Resolved'),
         ]);
         const fulfilled = settled.filter(
-          (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof getQueue>>> => r.status === 'fulfilled',
+          (r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof getQueueAll>>> => r.status === 'fulfilled',
         );
         if (fulfilled.length === 0) {
           // Surface the first failure so the outer catch can refresh-on-401 /
@@ -139,7 +140,7 @@ export function useClaims(tab: ClaimTab) {
 
       const run = async (token: string): Promise<ClaimsResult> => {
         if (tab === 'Others') return runOthers(token);
-        const res = await getQueue(token, apiStatus);
+        const res = await getQueueAll(token, apiStatus);
         // Note: the queue API only accepts filter[status] Pending | Resolved
         // (Rejected returns 422 on staging, verified 2026-11-03), so closed-
         // without-cashback claims arrive in Resolved and are labelled

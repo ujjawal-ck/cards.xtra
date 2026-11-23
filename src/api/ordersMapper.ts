@@ -4,7 +4,7 @@
  *
  * Confirmed shapes (staging, live probe 2026-06-04):
  *
- * LIST  GET /users/orders?page[size]=N  → JSON:API
+ * LIST  GET /users/orders?page[size]=N  → JSON:API (no date, no store name, no is_delayed: detail-only)
  *   meta { total_records, page_number, page_size }
  *   data[] { type:"myorder", id, attributes:{
  *     merchant_image_url, bonus_type|null, cashback_type ("Cashback"|"Rewards"
@@ -56,14 +56,14 @@ export interface OrderListRow {
   metaValue: string;
   note?: { text: string; expandable: boolean };
   logoSrc: ImageSourcePropType;
-  /** Display name of the store this order is from. Empty when the list
-   *  payload exposes neither a merchant name nor a parseable logo slug. */
+  /** Display name of the store. Best effort: the doc's list has no name field,
+   *  so it comes from a name field if sent, else a readable logo slug, else ''. */
   merchantName: string;
   /** Stable grouping key for the Store filter (logo URL → falls back to
    *  the name, then the record id). Same store ⇒ same key. */
   merchantKey: string;
-  /** Order date (ISO) when the list payload carries `transaction_date`.
-   *  The documented list payload does not, so this is usually absent. */
+  /** Order date (ISO). The list response has no date field (`transaction_date`
+   *  is detail-only), so the list leaves this unset: one ungrouped list. */
   dateISO?: string;
 }
 
@@ -129,7 +129,7 @@ function logoFromUrl(url: unknown): ImageSourcePropType {
  * Best-effort store name from a logo URL filename (e.g.
  * ".../stores/amazon-india.png" → "Amazon India"). Returns '' for
  * placeholder/hash-like filenames so we never surface garbage labels.
- * Only used as a fallback when the payload carries no merchant name.
+ * The doc's list response has no name field, so this is best effort only.
  */
 function nameFromLogo(url: unknown): string {
   const s = str(url);
@@ -209,7 +209,6 @@ export function mapOrders(res: any): OrderListRow[] {
   return rows.map((row) => {
     const a: Record<string, unknown> = row?.attributes ?? {};
     const type = rowType(a);
-    const isDelayed = str(a.is_delayed).toLowerCase() === 'yes';
     const isReferral = type === 'referral';
 
     const metaValue =
@@ -221,9 +220,9 @@ export function mapOrders(res: any): OrderListRow[] {
 
     const comments = str(a.comments);
 
-    // Store identity. The list payload (probed) carries no merchant name —
-    // only merchant_image_url — so we read a name defensively (in case the
-    // live API does include one) and fall back to a logo-derived slug.
+    // The doc's list response has no store name (detail-only), so this read is
+    // best effort: a name field if the API sends one, else a readable logo slug.
+    // No date is read, so rows are not month-grouped.
     const merchantName =
       str(a.merchant_name) ||
       str(a.report_merchant_name) ||
@@ -235,7 +234,8 @@ export function mapOrders(res: any): OrderListRow[] {
       id: str(row?.id),
       type,
       badgeVariant: isReferral ? 'tag' : 'status',
-      status: badgeStatus(a.cashback_status, isDelayed),
+      // `is_delayed` is detail-only, so a list row never shows the delayed badge.
+      status: badgeStatus(a.cashback_status, false),
       tagLabel: isReferral ? 'Referral' : undefined,
       tagTone: isReferral ? 'success' : undefined,
       amount: money(a.cashback_amount),
@@ -247,7 +247,6 @@ export function mapOrders(res: any): OrderListRow[] {
       logoSrc: logoFromUrl(a.merchant_image_url),
       merchantName,
       merchantKey,
-      dateISO: str(a.transaction_date) || undefined,
     };
   });
 }

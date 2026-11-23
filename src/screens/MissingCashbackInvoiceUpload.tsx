@@ -5,7 +5,7 @@
  * NOT a standalone Figma frame (the attachment uploader lives only inside the
  * feedback form), so built on-brand from the component library + tokens; the
  * allowed-types/size caption matches the Figma uploader spec
- * (.jpg/.png/.jpeg/.pdf/.bmp, 2MB). Picks images via expo-image-picker.
+ * (.jpg/.png/.jpeg/.gif, up to 3 files, 2MB each; the doc also allows pdf, which the image picker cannot attach). Picks images via expo-image-picker.
  *
  * On submit: raiseTicket(exitDate, storeId, exitId, ticketData, files) →
  * MissingCashbackTicketSuccess. Hydrates a missing exit_id from the queue item
@@ -29,7 +29,7 @@ import { colors, spacing, radius, borderWidth, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { useMissingCashbackActions } from '../query/useMissingCashback';
 import type { McTicketFile } from '../api/missingCashback';
-import { isUnconfirmedUpload } from '../api/missingCashback';
+import { isUnconfirmedUpload, checkInvoiceFiles } from '../api/missingCashback';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackInvoiceUpload'>;
@@ -66,6 +66,14 @@ export function MissingCashbackInvoiceUpload() {
       quality: 0.7,
     });
     if (res.canceled) return;
+    const limitMessage = checkInvoiceFiles(
+      files.length,
+      res.assets.map((a) => ({ name: a.fileName || a.uri, type: a.mimeType, size: a.fileSize })),
+    );
+    if (limitMessage) {
+      setError(limitMessage);
+      return;
+    }
     const picked: McTicketFile[] = res.assets.map((a, i) => ({
       uri: a.uri,
       name: a.fileName || `invoice_${Date.now()}_${i}.jpg`,
@@ -181,7 +189,7 @@ export function MissingCashbackInvoiceUpload() {
                 Add screenshot
               </Text>
               <Text variant="body12Regular" color={colors.text.secondary}>
-                Allowed: .jpg, .png, .jpeg, .pdf, .bmp · Max 2MB
+                Allowed: .jpg, .jpeg, .png, .gif · Up to 3 files, 2MB each
               </Text>
             </Pressable>
 

@@ -124,6 +124,23 @@ export function parseErrorItems(body: unknown): ApiErrorItem[] {
     });
 }
 
+/**
+ * A 422 field map, `{"ticket_attachment": ["The ticket attachment must not have
+ * more than 3 files"]}`, is not JSON:API. Join its distinct messages.
+ */
+function messageFromFieldMap(body: Record<string, unknown>): string | undefined {
+  const seen: string[] = [];
+  for (const v of Object.values(body)) {
+    if (!Array.isArray(v)) continue;
+    for (const m of v) {
+      const t = typeof m === 'string' ? m.trim() : '';
+      if (t && !seen.includes(t)) seen.push(t);
+    }
+  }
+  if (seen.length === 0) return undefined;
+  return seen.map((m) => (/[.!?]$/.test(m) ? m : `${m}.`)).join(' ');
+}
+
 /** Human-readable message for an error body (shown to users as a fallback). */
 export function messageFromBody(body: unknown, status: number): string {
   const items = parseErrorItems(body);
@@ -134,6 +151,10 @@ export function messageFromBody(body: unknown, status: number): string {
     if (b.meta?.message) return String(b.meta.message);
     if (b.message) return String(b.message);
     if (b.error) return String(b.error);
+    if (status === 422) {
+      const fieldMessage = messageFromFieldMap(b);
+      if (fieldMessage) return fieldMessage;
+    }
   }
   return `Request failed (${status})`;
 }
