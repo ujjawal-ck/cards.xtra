@@ -13,8 +13,9 @@
  * useExitClickDates (meta), useMissingCashbackActions, flow helpers.
  */
 import React, { useRef, useState } from 'react';
-import { View, KeyboardAvoidingView, Platform } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StickyFooter } from '../molecules/StickyFooter';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -115,7 +116,6 @@ export function MissingCashbackEnterOrderId() {
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
       <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={{ flex: 1, gap: spacing[24] }}>
             <Header leading="back" title="Did You Shop?" onLeadingPress={() => navigation.goBack()} />
 
@@ -147,33 +147,33 @@ export function MissingCashbackEnterOrderId() {
               </View>
             </View>
 
-            <View style={{ flex: 1 }} />
-
-            <View
-              style={[
-                {
-                  backgroundColor: colors.surface.default,
-                  paddingTop: spacing[8],
-                  paddingBottom: spacing[16],
-                  paddingHorizontal: spacing[16],
-                },
-                elevation.light.up,
-              ]}
-            >
-              <Button
-                label="Continue"
-                variant="solid"
-                tone="second"
-                size={52}
-                fullWidth
-                loading={busy}
-                disabled={busy || !!formatError}
-                onPress={onContinue}
-              />
-            </View>
           </View>
-        </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <StickyFooter>
+        <View
+          style={[
+            {
+              backgroundColor: colors.surface.default,
+              paddingTop: spacing[8],
+              paddingBottom: spacing[16],
+              paddingHorizontal: spacing[16],
+            },
+            elevation.light.up,
+          ]}
+        >
+          <Button
+            label="Continue"
+            variant="solid"
+            tone="second"
+            size={52}
+            fullWidth
+            loading={busy}
+            disabled={busy || !!formatError}
+            onPress={onContinue}
+          />
+        </View>
+      </StickyFooter>
     </View>
   );
 }

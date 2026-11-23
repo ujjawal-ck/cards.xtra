@@ -50,6 +50,8 @@ import {
   borderWidth,
   iconSize,
   sizing,
+  alpha,
+  opacity,
 } from '../tokens';
 import { Text, TextVariant } from './Text';
 import { Icon, IconName } from './Icon';
@@ -147,7 +149,14 @@ type Palette = {
   bg: string;
   border?: string;
   label: string;
+  /** Fill while pressed (action.*.pressed). */
+  pressedBg: string;
+  /** Android ripple colour; a semantic alpha overlay. */
+  ripple: string;
 };
+
+// Link buttons have no fill, so pressed dims the label instead.
+const LINK_PRESSED_OPACITY = opacity[50];
 
 function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
   switch (variant) {
@@ -158,10 +167,14 @@ function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
         ? {
             bg: colors.action.accent.default,
             label: colors.action.accent.text,
+            pressedBg: colors.action.accent.pressed,
+            ripple: alpha.white[24],
           }
         : {
             bg: colors.action.primary.default,
             label: colors.action.primary.text,
+            pressedBg: colors.action.primary.pressed,
+            ripple: alpha.white[24],
           };
     case 'outline':
       // tone='main' (saffron) → saffron-toned outline.
@@ -176,33 +189,45 @@ function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
             // action.primary.hover value).
             border: colors.action.primary.border,
             label: colors.action.primary.hover,
+            pressedBg: colors.action.tertiary.pressed,
+            ripple: alpha.black[12],
           }
         : {
             bg: colors.surface.default,
             border: colors.action.secondary.border,
             label: colors.action.secondary.text,
+            pressedBg: colors.action.secondary.pressed,
+            ripple: alpha.black[12],
           };
     case 'subtle':
       return {
         bg: colors.action.secondary.default,
         border: colors.action.secondary.border,
         label: colors.action.secondary.text,
+        pressedBg: colors.action.secondary.pressed,
+        ripple: alpha.black[12],
       };
     case 'destructive':
       return {
         bg: colors.action.destructive.default,
         label: colors.action.destructive.text,
+        pressedBg: colors.action.destructive.pressed,
+        ripple: alpha.white[24],
       };
     case 'ghost':
       return {
         bg: 'transparent',
         border: colors.border.inverse,
         label: colors.text.inverse,
+        pressedBg: alpha.white[12],
+        ripple: alpha.white[24],
       };
     case 'link':
       return {
         bg: 'transparent',
         label: colors.text.link,
+        pressedBg: 'transparent',
+        ripple: alpha.black[12],
       };
     default:
       // Defensive fallback for any out-of-union value (e.g. legacy callers
@@ -210,6 +235,8 @@ function getPalette(variant: ButtonVariant, tone: ButtonTone): Palette {
       return {
         bg: colors.action.primary.default,
         label: colors.action.primary.text,
+        pressedBg: colors.action.primary.pressed,
+        ripple: alpha.white[24],
       };
   }
 }
@@ -249,7 +276,7 @@ export function Button({
     onPress?.();
   };
 
-  const containerStyle: StyleProp<ViewStyle> = [
+  const containerStyle = (pressed: boolean): StyleProp<ViewStyle> => [
     {
       alignSelf: fullWidth ? 'stretch' : 'flex-start',
       flexDirection: 'row',
@@ -263,10 +290,14 @@ export function Button({
       // padding only steals room from it ("Apply Filter" was clipped to
       // "Apply" at larger font sizes). Keep a small 16-px inset instead.
       paddingHorizontal: isLink || isIconOnly ? 0 : fullWidth ? spacing[16] : config.padH,
-      backgroundColor: palette.bg,
+      backgroundColor: pressed && !interactionBlocked && !isLink ? palette.pressedBg : palette.bg,
       borderWidth: palette.border ? borderWidth.thin : 0,
       borderColor: palette.border,
-      opacity: disabled ? DISABLED_OPACITY : 1,
+      opacity: disabled
+        ? DISABLED_OPACITY
+        : pressed && !loading && isLink
+          ? LINK_PRESSED_OPACITY
+          : 1,
     },
     style,
   ];
@@ -277,7 +308,8 @@ export function Button({
       accessibilityLabel={label}
       accessibilityState={{ disabled: interactionBlocked, busy: loading }}
       onPress={interactionBlocked ? undefined : handlePress}
-      style={containerStyle}
+      android_ripple={interactionBlocked ? undefined : { color: palette.ripple }}
+      style={({ pressed }) => containerStyle(pressed)}
     >
       {loading ? (
         <ActivityIndicator color={resolvedLabelColor} />

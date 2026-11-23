@@ -86,7 +86,7 @@ export function MissingCashbackResult() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
-      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1 }}>
         <View style={{ flex: 1 }}>
           <Header leading="back" onLeadingPress={exitToClaims} />
 

@@ -22,8 +22,9 @@
  * Demo: no live verify endpoint — any 6-digit code completes the change.
  */
 import React, { useEffect, useState } from 'react';
-import { View, KeyboardAvoidingView, Platform } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StickyFooter } from '../molecules/StickyFooter';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -62,10 +63,6 @@ export function EditContactVerifyNewScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
         <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
           <Header
             leading="back"
@@ -112,20 +109,22 @@ export function EditContactVerifyNewScreen() {
             />
           </View>
 
-          <FooterButtons
-            buttons="single"
-            color="second"
-            size={52}
-            shadow="off"
-            primaryLabel="Verify"
-            primaryDisabled={!isComplete}
-            onPrimary={() => {
-              analytics.track(Events.CONTACT_EDIT_SUBMIT, { field });
-              navigation.navigate('AccountSettings', { updated: field, newValue });
-            }}
-          />
         </SafeAreaView>
-      </KeyboardAvoidingView>
+
+      <StickyFooter>
+        <FooterButtons
+          buttons="single"
+          color="second"
+          size={52}
+          shadow="off"
+          primaryLabel="Verify"
+          primaryDisabled={!isComplete}
+          onPrimary={() => {
+            analytics.track(Events.CONTACT_EDIT_SUBMIT, { field });
+            navigation.navigate('AccountSettings', { updated: field, newValue });
+          }}
+        />
+      </StickyFooter>
     </View>
   );
 }
