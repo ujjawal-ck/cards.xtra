@@ -33,8 +33,8 @@ export interface AnalyticsSink {
   track(name: string, params: Record<string, string | number | boolean>): void;
   /** Associate subsequent events with a user. `userId` is opaque (never PII). */
   identify?(userId: string | null): void;
-  /** Set durable user-scoped properties (GA4 user properties). */
-  setUserProperties?(props: Record<string, string>): void;
+  /** Set durable user-scoped properties (GA4 user properties). null removes one. */
+  setUserProperties?(props: Record<string, string | null>): void;
 }
 
 // ── GA4 limits ───────────────────────────────────────────────
@@ -165,6 +165,22 @@ export const analytics = {
     for (const sink of sinks) {
       try {
         sink.setUserProperties?.(clean);
+      } catch {
+        /* ignore */
+      }
+    }
+  },
+
+  /**
+   * Remove user properties. GA4 keeps them on the device across sessions, and
+   * setUserProperties drops null, so a session end calls this (AUTH-06).
+   */
+  clearUserProperties(names: string[]): void {
+    const cleared: Record<string, null> = {};
+    for (const name of names) cleared[sanitiseKey(name)] = null;
+    for (const sink of sinks) {
+      try {
+        sink.setUserProperties?.(cleared);
       } catch {
         /* ignore */
       }

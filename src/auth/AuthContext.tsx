@@ -28,16 +28,18 @@ import {
   loadDisplayName,
   type Session,
 } from './tokenStore';
-import { clearSavedProfile } from '../lib/savedProfile';
-import { clearSavedSpends } from '../lib/savedSpends';
-import { resetAdvisorSession } from '../screens/advisor/advisorSession';
+import { endLocalSession, restoreSession } from './sessionEnd';
 import {
   logout as ckLogout,
   refreshTokens as ckRefreshTokens,
   getEarnings,
 } from '../api/cashkaro';
-import { configureUserSession, refreshUserToken, isExpiring } from '../api/http/tokenManager';
-import { isApiError } from '../api/http/errors';
+import {
+  configureUserSession,
+  refreshUserToken,
+  bumpSessionGeneration,
+  currentSessionGeneration,
+} from '../api/http/tokenManager';
 import { qk } from '../query/keys';
 import { fetchProfile } from '../query/useProfile';
 import { queryClient } from '../query/queryClient';
@@ -117,37 +119,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ]);
         if (!active) return;
         setDeviceId(id);
-        setDisplayNameState(name);
         // Tie analytics to the stable per-install device id (NOT PII — never
         // the phone/name). GA4 keeps its own instance id; this just gives us a
         // consistent handle that survives logout/login on the same device.
         analytics.identify(id);
-        if (saved) {
-          // Validate before trusting it: an expired access token is refreshed
-          // first. A rejected refresh token means signed out; a network
-          // failure keeps the session (the next call refreshes again).
-          let current: Session | null = saved;
-          if (isExpiring(saved.accessToken)) {
-            try {
-              const res = await ckRefreshTokens(saved.refreshToken);
-              current = { accessToken: res.accessToken, refreshToken: res.refreshToken || saved.refreshToken };
-              await saveSession(current);
-            } catch (e) {
-              const dead = isApiError(e) && e.kind === 'http' && (e.status === 401 || e.hasCode(2004));
-              if (dead) {
-                await clearSession();
-                current = null;
-              }
-            }
-          }
-          if (!active) return;
-          if (current) {
-            sessionRef.current = current;
-            setSession(current);
-            setStatus('authenticated');
-          } else {
-            setStatus('unauthenticated');
-          }
+        // Validate before trusting it: an expired access token is refreshed
+        // first. A rejected refresh token ends the local session (the same
+        // clear as a logout); a network failure keeps the session.
+        const current = saved ? await restoreSession(saved, id, ckRefreshTokens) : null;
+        if (!active || current === 'superseded') return;
+        if (current) {
+          // The name belongs to this session only (AUTH-02).
+          setDisplayNameState(name);
+          sessionRef.current = current;
+          setSession(current);
+          setStatus('authenticated');
         } else {
           setStatus('unauthenticated');
         }
@@ -168,7 +154,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   const signIn = useCallback(async (next: Session) => {
+    // A new session: a refresh still running for an older one must not write.
+    bumpSessionGeneration();
     setSessionExpiredAt(null);
+    // Never show the previous account's name or keep its stored id (AUTH-02).
+    // A signup sets the new name right after signIn.
+    setDisplayNameState(null);
+    await clearSession().catch(() => undefined);
     await saveSession(next);
     // A new login never inherits the previous user's cache.
     queryClient.clear();
@@ -189,19 +181,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sessionRef = useRef<Session | null>(null);
   sessionRef.current = session;
 
-  // End the session locally (no server call): used when the refresh token is
-  // rejected. Clears every cached query so the next user never sees this
-  // user's data.
-  const expireSession = useCallback(async () => {
-    setSessionExpiredAt(Date.now());
-    await clearSession();
+  // The one local session end (no server call) for signOut and expiry; the
+  // launch path calls endLocalSession through restoreSession. React state
+  // first, then every user-scoped key and store (see sessionEnd.ts).
+  const endSession = useCallback(async (devId: string | null) => {
     sessionRef.current = null;
     setSession(null);
     setStatus('unauthenticated');
     setDisplayNameState(null);
-    queryClient.clear();
-    if (deviceIdRef.current) analytics.identify(deviceIdRef.current);
+    await endLocalSession(devId);
   }, []);
+
+  // The refresh token was rejected: end the session and let the login sheet
+  // open itself.
+  const expireSession = useCallback(async () => {
+    setSessionExpiredAt(Date.now());
+    await endSession(deviceIdRef.current);
+  }, [endSession]);
 
   const deviceIdRef = useRef<string | null>(null);
   deviceIdRef.current = deviceId;
@@ -214,9 +210,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     configureUserSession({
       read: () => sessionRef.current,
       write: async (tokens) => {
+        const gen = currentSessionGeneration();
         const next: Session = { ...(sessionRef.current ?? tokens), ...tokens };
         sessionRef.current = next;
         await saveSession(next);
+        // The session ended while saving: never bring these tokens back (AUTH-05).
+        if (gen !== currentSessionGeneration()) {
+          if (!sessionRef.current) await clearSession().catch(() => undefined);
+          return;
+        }
         setSession(next);
       },
       onExpired: () => {
@@ -278,20 +280,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ignore — clearing local tokens is what matters
       }
     }
-    await clearSession();
-    void clearSavedProfile();
-    clearSavedSpends();
-    resetAdvisorSession();
-    sessionRef.current = null;
-    setSession(null);
-    setStatus('unauthenticated');
-    setDisplayNameState(null);
-    // Never let the next user see this user's cached earnings/orders/profile.
-    queryClient.clear();
-    // Drop the account-id identity back to the anonymous device id so later
-    // events aren't attributed to the user who just logged out.
-    if (deviceId) analytics.identify(deviceId);
-  }, [session, deviceId]);
+    // Same local end as an expiry: tokens, saved inputs, caches, analytics
+    // identity and the Cashback Reminder.
+    await endSession(deviceId);
+  }, [session, deviceId, endSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

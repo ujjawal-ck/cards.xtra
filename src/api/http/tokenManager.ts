@@ -127,11 +127,37 @@ export interface UserSessionStore {
 
 let store: UserSessionStore | null = null;
 let refreshInFlight: Promise<string> | null = null;
+/** Session epoch: a sign-in and every session end add 1 (AUTH-05). */
+let generation = 0;
 
 /** Wire the session store (AuthContext does this once on mount). */
 export function configureUserSession(s: UserSessionStore | null): void {
   store = s;
   refreshInFlight = null;
+}
+
+/** The current session epoch. Compare it before and after an async write. */
+export function currentSessionGeneration(): number {
+  return generation;
+}
+
+/**
+ * Start a new session epoch. Call it on sign-in and on every session end.
+ * A refresh still running from the older epoch then never writes its tokens
+ * and never calls onExpired, and the next refresh does not join it.
+ */
+export function bumpSessionGeneration(): void {
+  generation += 1;
+  refreshInFlight = null;
+}
+
+/**
+ * 401, or 400 code 2004 ("Invalid Refresh Token" per the CK doc), means the
+ * refresh token is dead. 403 is NOT treated as expiry: the gateway also
+ * returns 403 for a bad API key, which must not log the user out.
+ */
+export function isRefreshTokenDead(e: unknown): boolean {
+  return isApiError(e) && e.kind === 'http' && (e.status === 401 || e.hasCode(2004));
 }
 
 export class SessionExpiredError extends ApiError {
@@ -145,37 +171,44 @@ export class SessionExpiredError extends ApiError {
  * Exchange the refresh token for a new access token. Single-flight: every
  * caller during a refresh awaits the same promise. On an auth failure the
  * session is ended via `onExpired`; on a network failure it is kept (the
- * user is offline, not logged out).
+ * user is offline, not logged out). If the session ends (or a new one
+ * begins) while the refresh runs, the result is dropped: no write, no
+ * onExpired, and the caller gets SessionExpiredError.
  */
 export function refreshUserToken(): Promise<string> {
   if (refreshInFlight) return refreshInFlight;
   const s = store;
   const current = s?.read();
   if (!s || !current?.refreshToken) return Promise.reject(new SessionExpiredError());
+  const gen = generation;
 
-  refreshInFlight = (async () => {
+  const run = async (): Promise<string> => {
     try {
       const res = await s.refresh(current.refreshToken);
+      if (gen !== generation) throw new SessionExpiredError();
       const next: UserTokens = {
         accessToken: res.accessToken,
         refreshToken: res.refreshToken || current.refreshToken,
       };
       await s.write(next);
+      if (gen !== generation) throw new SessionExpiredError();
       return next.accessToken;
     } catch (e) {
-      // 401, or 400 code 2004 ("Invalid Refresh Token" per the CK doc), means
-      // the refresh token is dead. 403 is NOT treated as expiry: the gateway
-      // also returns 403 for a bad API key, which must not log the user out.
-      if (isApiError(e) && e.kind === 'http' && (e.status === 401 || e.hasCode(2004))) {
+      // An ended session never calls onExpired: it would end the next one.
+      if (gen !== generation) throw new SessionExpiredError();
+      if (isRefreshTokenDead(e)) {
         s.onExpired();
         throw new SessionExpiredError();
       }
       throw e;
-    } finally {
-      refreshInFlight = null;
     }
-  })();
-  return refreshInFlight;
+  };
+  // Clear only this refresh: after a session end a newer one may be in flight.
+  const inFlight: Promise<string> = run().finally(() => {
+    if (refreshInFlight === inFlight) refreshInFlight = null;
+  });
+  refreshInFlight = inFlight;
+  return inFlight;
 }
 
 /** A usable access token: refreshed proactively when its JWT is about to expire. */
