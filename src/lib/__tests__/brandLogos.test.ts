@@ -8,11 +8,11 @@ describe('brandLogos', () => {
     for (const key of Object.keys(BRAND_LOGOS)) expect(ids).toContain(key);
   });
 
-  it.each(['amazon', 'flipkart', 'myntra'])('has a logo for %s', (id) => {
+  it.each(['amazon', 'flipkart', 'myntra', 'nykaa', 'swiggy', 'zomato', 'blinkit', 'zepto', 'bigbasket'])('has a logo for %s', (id) => {
     expect(brandLogoFor(id)).toBeDefined();
   });
 
-  it.each(['ajio', 'nykaa', 'swiggy', 'zomato', 'blinkit', 'zepto', 'bigbasket'])('has no logo for %s', (id) => {
+  it.each(['ajio'])('has no logo for %s', (id) => {
     expect(brandLogoFor(id)).toBeUndefined();
   });
 
