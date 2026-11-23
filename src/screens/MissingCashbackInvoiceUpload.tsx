@@ -29,6 +29,7 @@ import { colors, spacing, radius, borderWidth, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { useMissingCashbackActions } from '../query/useMissingCashback';
 import type { McTicketFile } from '../api/missingCashback';
+import { isUnconfirmedUpload } from '../api/missingCashback';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackInvoiceUpload'>;
@@ -83,6 +84,7 @@ export function MissingCashbackInvoiceUpload() {
     }
     setError(null);
     setSubmitting(true);
+    let uploadSent = false;
     try {
       // Resolve the fields the ticket endpoint needs; hydrate exit_id/store_id
       // from the queue item if the draft is missing them.
@@ -104,6 +106,7 @@ export function MissingCashbackInvoiceUpload() {
         return;
       }
       const total = Number.parseFloat(String(orderAmount || '0')) || 0;
+      uploadSent = true;
       const response = await raiseTicket(
         cleanDate,
         storeId,
@@ -127,7 +130,14 @@ export function MissingCashbackInvoiceUpload() {
       const ticketId = response?.data?.id || response?.data?.attributes?.ticket_id;
       navigation.navigate('MissingCashbackTicketSuccess', { ticketId: ticketId ? String(ticketId) : undefined });
     } catch (e) {
-      setError((e as Error)?.message || 'Failed to upload the invoice. Please try again.');
+      // After the upload was sent, a timeout, a dropped connection or a gateway
+      // error (the BFF cuts slow uploads with a 504) does not mean the ticket
+      // failed: the server may have it. Say so instead of inviting a duplicate.
+      setError(
+        uploadSent && isUnconfirmedUpload(e)
+          ? 'We couldn’t confirm the upload. Check Missing Cashback, Others tab, before you try again.'
+          : (e as Error)?.message || 'Failed to upload the invoice. Please try again.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -207,6 +217,12 @@ export function MissingCashbackInvoiceUpload() {
                   </View>
                 ))}
               </View>
+            ) : null}
+
+            {submitting ? (
+              <Text variant="body14Regular" color={colors.text.secondary}>
+                Uploading. This can take up to a minute on a slow network.
+              </Text>
             ) : null}
 
             {error ? (
