@@ -13,7 +13,18 @@
  */
 import type { ImageSourcePropType } from 'react-native';
 import { images } from '../assets/images';
+import { formatINR, formatINROrDash, parseAmount } from '../lib/money';
 import type { McRetailer, McExitClick, McExitMeta, McClaim, McQueueResponse } from './missingCashback';
+
+/**
+ * A tracked cashback value for a "Hurray! Cashback of ₹X" line: "₹1,250.50",
+ * or null when it is missing, unreadable or not above 0. Callers then use
+ * the line without an amount, never "₹0.00" or the raw API string.
+ */
+function trackedAmountText(v: unknown): string | null {
+  const n = parseAmount(v);
+  return n !== null && n > 0 ? formatINR(n) : null;
+}
 
 // ── Group rules ──────────────────────────────────────────────────────────
 
@@ -64,12 +75,13 @@ export type SubmitOutcome =
 export function decideSubmitOutcome(res: McQueueResponse | null | undefined, group: McGroup): SubmitOutcome {
   const meta = res?.meta || {};
   if (meta.cashback_id) {
+    const amountText = trackedAmountText(meta.cashbackvalue);
     return {
       kind: 'tracked',
       cashbackId: meta.cashback_id,
       cashbackValue: meta.cashbackvalue,
-      message: meta.cashbackvalue
-        ? `Hurray! Cashback of ₹${meta.cashbackvalue} has been tracked.`
+      message: amountText
+        ? `Hurray! Cashback of ${amountText} has been tracked.`
         : 'Hurray! Your cashback has been tracked.',
     };
   }
@@ -184,7 +196,8 @@ export interface ExitDateOption {
 export interface ExitMonthGroup {
   /** "April" */
   label: string;
-  /** month index 0-11 (sort key) + year so labels are unique. */
+  /** "2026-09": year + zero-padded month, so a plain string sort is
+   *  chronological (an unpadded "2026-10" sorted before "2026-9"). */
   key: string;
   dates: ExitDateOption[];
 }
@@ -195,16 +208,19 @@ export function mapExitClicks(res: { data?: McExitClick[] }): ExitMonthGroup[] {
   for (const c of res.data || []) {
     const raw = c.attributes.exitclick_date || c.attributes.exit_date || '';
     if (!raw) continue;
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) continue;
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    // Read the day from the string, not from Date getters: a date-only
+    // "2022-08-09" parses as UTC midnight, so a phone west of UTC showed the
+    // 8th (and a 1st under the previous month).
+    const p = dateParts(raw);
+    if (!p || p.month < 0 || p.month > 11 || p.day < 1 || p.day > 31) continue;
+    const key = `${p.year}-${String(p.month + 1).padStart(2, '0')}`;
     if (!groups.has(key)) {
-      groups.set(key, { key, label: MONTHS[d.getMonth()], dates: [] });
+      groups.set(key, { key, label: MONTHS[p.month], dates: [] });
     }
     groups.get(key)!.dates.push({
       exitDate: raw,
       exitId: c.attributes.exit_id || str(c.id),
-      day: String(d.getDate()).padStart(2, '0'),
+      day: String(p.day).padStart(2, '0'),
     });
   }
   // Sort months chronologically; days ascending within each.
@@ -368,8 +384,10 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
     expectByDate = formatExpectBy(a.expected_resolution_date || a.status_update);
   } else if (tracked) {
     status = 'tracked';
-    const val = a.cashbackvalue || a.missing_txn_cashback;
-    title = val ? `Hurray! Cashback of ₹${val} is added to your account.` : 'Hurray! Your cashback has been tracked.';
+    const amountText = trackedAmountText(a.cashbackvalue) ?? trackedAmountText(a.missing_txn_cashback);
+    title = amountText
+      ? `Hurray! Cashback of ${amountText} is added to your account.`
+      : 'Hurray! Your cashback has been tracked.';
     ctaLabel = 'View Details';
   } else if (notTracked) {
     status = 'not-tracked';
@@ -397,6 +415,8 @@ export function mapClaimToCard(c: McClaim, now: number): ClaimCard {
     storeLogoUri: logoUrl && !/no-image/i.test(logoUrl) ? logoUrl : undefined,
     title,
     orderId: a.order_id || '—',
+    // Raw API value on purpose: HelpTicketCard adds the ₹ itself, and the
+    // need-details CTA copies it into the claim draft, which parses it.
     orderAmount: a.order_amount || '0',
     cashbackId: a.cashback_id,
     timer,
@@ -499,7 +519,6 @@ function othersStatusTone(status: string): OthersStatusTone {
 
 export function mapOthersClaim(c: McClaim): OthersClaimCard {
   const a = c.attributes;
-  const amount = a.order_amount || '0';
   // The TICKET status ("Received" → orange) is what staging shows here — not
   // the queue status (Pending/Resolved/Rejected) that bucketed the fetch.
   const ticketStatus = a.ticket_status || a.status || 'Received';
@@ -507,7 +526,8 @@ export function mapOthersClaim(c: McClaim): OthersClaimCard {
     ticketId: a.ticket_id || String(c.id),
     retailer: claimStoreName(c),
     date: formatDayMonth(a.click_date || a.status_update),
-    orderAmount: amount.startsWith('₹') ? amount : `₹${amount}`,
+    // "₹1,250.50"; a missing or unreadable amount is "—", never ₹0.
+    orderAmount: formatINROrDash(a.order_amount),
     orderReference: a.order_id || '—',
     // Staging shows the raise date here (no later status change yet); the API's
     // status_update can carry the future "expect update by" date, so don't use it.

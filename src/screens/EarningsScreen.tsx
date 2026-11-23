@@ -55,6 +55,7 @@ import type {
 import { colors, spacing, radius, elevation } from '../tokens';
 import { useEarnings } from '../query/useEarnings';
 import { useOrders } from '../query/useOrders';
+import { isPausedWithoutData } from '../query/paused';
 import type { OrdersApiFilters } from '../api/cashkaro';
 import { groupByMonth } from '../lib/groupByMonth';
 import {
@@ -92,8 +93,12 @@ export function EarningsScreen() {
   // component's `loading` prop) rather than the masthead's ₹1,500
   // default, so the screen reads as loading instead of flashing a fake
   // value that then changes.
-  const { data: earnings, isLoading, isError, refetch } = useEarnings();
+  const earningsQuery = useEarnings();
+  const { data: earnings, isLoading, isError, refetch } = earningsQuery;
   const loading = isLoading && !earnings;
+  // Opened offline with nothing cached: the query is paused, so it is
+  // neither loading nor an error. Falling through showed ₹0 everywhere.
+  const offline = isPausedWithoutData(earningsQuery);
 
 
   // Replay the All Time Earnings slot-machine roll every time the
@@ -194,9 +199,11 @@ export function EarningsScreen() {
     );
   }
 
-  // Failed to load (offline / server error) with nothing cached: say so.
-  // Falling through showed ₹0 everywhere, which reads as an empty balance.
-  if (isError && !earnings) {
+  // Offline, or failed to load (server error, unusable response) with
+  // nothing cached: say so. Falling through showed ₹0 everywhere, which
+  // reads as an empty balance. Offline wins: a paused query that failed
+  // before is also isError.
+  if (offline || (isError && !earnings)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background.muted }}>
         <StatusBar style="dark" />
@@ -214,12 +221,21 @@ export function EarningsScreen() {
             <Text variant="heading20SemiBold" color={colors.text.primary}>
               My Earnings
             </Text>
-            <ScreenState
-              title="Couldn’t load your earnings"
-              body="Check your connection and try again."
-              actionLabel="Try again"
-              onAction={() => refetch()}
-            />
+            {offline ? (
+              <ScreenState
+                title="No internet connection"
+                body="Check your connection or try again."
+                actionLabel="Try again"
+                onAction={() => refetch()}
+              />
+            ) : (
+              <ScreenState
+                title="Couldn’t load your earnings"
+                body="Check your connection and try again."
+                actionLabel="Try again"
+                onAction={() => refetch()}
+              />
+            )}
           </ScrollView>
         </SafeAreaView>
       </View>
@@ -353,6 +369,14 @@ export function EarningsScreen() {
                   <Skeleton key={i} height={spacing[80]} radius="lg" />
                 ))}
               </View>
+            ) : isPausedWithoutData(orders) ? (
+              // Balances cached but this list paused offline: not "no orders".
+              <ScreenState
+                title="No internet connection"
+                body="Check your connection or try again."
+                actionLabel="Try again"
+                onAction={() => orders.refetch()}
+              />
             ) : orders.isError && !orders.data ? (
               <ScreenState
                 title="Couldn’t load your transactions"

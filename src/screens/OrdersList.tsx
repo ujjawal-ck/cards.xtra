@@ -99,12 +99,20 @@ import {
 import { images } from '../assets/images';
 import type { OrdersFilterTab, OrderStoreOption } from '../organisms';
 import { useOrders } from '../query/useOrders';
+import { isPausedWithoutData } from '../query/paused';
 import type { OrdersApiFilters } from '../api/cashkaro';
 import { colors, spacing, radius, iconSize, borderWidth, sizing, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'OrdersList'>;
+
+/**
+ * "Never Miss Cashback" (CashbackGuard) entry: the floating pip below.
+ * Hidden: the CashKaro app has no such feature, and its alerts open links
+ * that are not tracked to the user. The code stays; flip to bring it back.
+ */
+const SHOW_CASHBACK_GUARD = false;
 
 /** 24px chevron — no `chevron-right` in the Icon registry (inline glyph). */
 function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
@@ -196,8 +204,12 @@ export function OrdersList() {
     return f;
   }, [applied]);
 
+  const ordersQuery = useOrders(apiFilters);
   const { data: rows, isLoading, isError, refetch, isFetching, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useOrders(apiFilters);
+    ordersQuery;
+  // Opened offline with nothing cached: paused, so neither loading nor an
+  // error. Falling through showed "No orders yet".
+  const offline = isPausedWithoutData(ordersQuery);
 
   // Load the next page of 20 when the user nears the bottom of the list.
   const onScroll = useCallback(
@@ -314,6 +326,29 @@ export function OrdersList() {
     ),
     [draftCount, applyFilters, clearFilters, insets.bottom]
   );
+
+  // Offline with nothing cached: the full-screen "no internet" state (the
+  // CashKaro pattern), keeping only the header so Back still works.
+  if (offline) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background.default }}>
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+          <Header
+            leading="back"
+            title="My Order Details"
+            onLeadingPress={() => navigation.goBack()}
+          />
+          <ScreenState
+            title="No internet connection"
+            body="Check your connection or try again."
+            actionLabel="Try again"
+            onAction={() => refetch()}
+          />
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -499,12 +534,15 @@ export function OrdersList() {
 
       {/* Draggable "Never miss your cashback" pip — floats over the screen,
           collapses to a right-edge notch (genie), and links to the
-          Never-Miss-Cashback setup. Android-only; renders nothing elsewhere. */}
-      <CashbackPip
-        onPress={() => navigation.navigate('CashbackGuard')}
-        // Stay a side notch over the empty state so it doesn't cover the copy.
-        autoExpand={(rows?.length ?? 0) > 0}
-      />
+          Never-Miss-Cashback setup. Android-only; renders nothing elsewhere.
+          Hidden while SHOW_CASHBACK_GUARD is false. */}
+      {SHOW_CASHBACK_GUARD ? (
+        <CashbackPip
+          onPress={() => navigation.navigate('CashbackGuard')}
+          // Stay a side notch over the empty state so it doesn't cover the copy.
+          autoExpand={(rows?.length ?? 0) > 0}
+        />
+      ) : null}
     </View>
   );
 }

@@ -25,7 +25,11 @@
  *
  * Notes:
  *   • merchant_image_url is sometimes ".../no-image.jpg" — treated as absent.
- *   • Money strings are decimal ("684.50"); formatted to "₹684.5" / "₹4,563".
+ *   • Money strings are decimal ("684.50"); formatted with lib/money to
+ *     "₹684.50" / "₹4,563" / "-₹50". A missing or unreadable amount shows
+ *     "—", never ₹0.
+ *   • A body with no `data` array (a proxy page, a captive-portal HTML) is
+ *     not an empty list: mapOrders throws, so the screen shows its error.
  *   • The OrderRow `type` drives both the meta line ("Order ID:"/"Bonus Type:"
  *     /"Referral Name:") and the badge variant (referral → Tag, else Status).
  */
@@ -34,6 +38,7 @@ import type { OrderRowType, OrderRowBadgeVariant, TimelineStep } from '../organi
 import type { StatusBadgeStatus } from '../atoms';
 import type { ToneName } from '../tokens';
 import { images } from '../assets/images';
+import { formatINROrDash } from '../lib/money';
 
 // Timeline status key (a subset of StatusBadgeStatus the detail visuals cover).
 export type OrderStatusKey = 'pending' | 'delayed' | 'cancelled' | 'confirmed' | 'paid';
@@ -88,26 +93,8 @@ function str(v: unknown): string {
   return v === null || v === undefined ? '' : String(v);
 }
 
-/** Indian digit grouping: 1234567 → "12,34,567". */
-function groupIndian(n: number): string {
-  const s = Math.round(Math.abs(n)).toString();
-  if (s.length <= 3) return s;
-  const last3 = s.slice(-3);
-  const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-  return `${rest},${last3}`;
-}
-
-/** Decimal string → "₹684.5" (drops trailing zero paise, keeps real paise). */
-function money(v: unknown): string {
-  const n = Number(str(v).replace(/[^\d.-]/g, ''));
-  if (!isFinite(n)) return '₹0';
-  const whole = Math.trunc(n);
-  const paise = Math.round((Math.abs(n) - Math.abs(whole)) * 100);
-  if (paise === 0) return `₹${groupIndian(whole)}`;
-  // Trim a trailing zero so "684.50" → "₹684.5" (matches earnings styling).
-  const frac = paise % 10 === 0 ? String(paise / 10) : String(paise).padStart(2, '0');
-  return `₹${groupIndian(whole)}.${frac}`;
-}
+/** Decimal string → "₹684.50" / "-₹50" (the shared formatter), "—" when missing. */
+const money = formatINROrDash;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -213,7 +200,12 @@ const META_LABEL: Record<OrderRowType, string> = {
 // ── list ─────────────────────────────────────────────────────────────────
 
 export function mapOrders(res: any): OrderListRow[] {
-  const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+  // `{ data: [] }` is a real empty list. A body without a `data` array is
+  // unusable: showing "No orders yet" for it would be a false empty state.
+  if (!Array.isArray(res?.data)) {
+    throw new Error('Orders response had no data list');
+  }
+  const rows: any[] = res.data;
   return rows.map((row) => {
     const a: Record<string, unknown> = row?.attributes ?? {};
     const type = rowType(a);

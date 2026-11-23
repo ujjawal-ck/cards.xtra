@@ -7,7 +7,7 @@
  *   confirmed/pending/paid_cashback · confirmed/pending/paid_rewards
  *   (also: payment_threshold, firstname/email — not shown here).
  */
-import { formatINR } from '../lib/money';
+import { formatINR, parseAmount } from '../lib/money';
 interface EarningsValues {
   /** "₹1,500" — all-time / total earnings (masthead headline). */
   totalEarnings: string;
@@ -49,17 +49,9 @@ interface EarningsValues {
   hasData: boolean;
 }
 
-function toAmount(v: unknown): number | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
-  const t = String(v).trim();
-  // Only a plain (optionally signed, comma-grouped) decimal counts. "",
-  // "N/A", "1e3", "12.34.56" are NOT amounts — they used to read as 0, 13
-  // or 0 and still mark the response as "hasData". The minus sign is kept
-  // (it was stripped, so a -₹50 reversal showed as ₹50).
-  const m = t.replace(/[₹,\s]/g, '').match(/^-?\d+(\.\d+)?$/);
-  return m ? Number(m[0]) : null;
-}
+// Strict amount parse (lib/money): "", "N/A", "1e3" are not amounts, so they
+// cannot mark the response as "hasData". The minus sign is kept.
+const toAmount = parseAmount;
 
 const money = formatINR;
 
@@ -112,6 +104,24 @@ export function mapEarnings(res: any): EarningsValues {
     combinedNum: (confirmed ?? 0) + (confirmedRewards ?? 0),
     hasData,
   };
+}
+
+/**
+ * mapEarnings for the query: throws when the response has no usable amount.
+ *
+ * The transport returns a non-JSON 200 body (captive-portal Wi-Fi, a proxy
+ * page) as plain text, and `{ data: [] }` maps to all zeros. Returning that
+ * as data showed ₹0 balances as if real (cached 5 min) and made the withdraw
+ * gate say "cashback not confirmed". Throwing makes the screen show its
+ * error state with Try again. A plain Error gets the query client's one
+ * automatic retry (an ApiError gets none); a portal page may clear by then.
+ */
+export function requireEarnings(res: unknown): EarningsValues {
+  const mapped = mapEarnings(res);
+  if (!mapped.hasData) {
+    throw new Error('Earnings response had no usable amounts');
+  }
+  return mapped;
 }
 
 export type { EarningsValues };

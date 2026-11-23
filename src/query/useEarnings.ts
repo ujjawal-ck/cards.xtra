@@ -5,7 +5,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { getEarnings } from '../api/cashkaro';
-import { mapEarnings, type EarningsValues } from '../api/earningsMapper';
+import { requireEarnings, type EarningsValues } from '../api/earningsMapper';
 import { useAuth } from '../auth/AuthContext';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
 import { qk } from './keys';
@@ -15,7 +15,9 @@ export function useEarnings() {
   const query = useQuery<EarningsValues>({
     queryKey: qk.user.earnings(),
     enabled: !!accessToken,
-    queryFn: async ({ signal }) => mapEarnings(await getEarnings(accessToken as string, signal)),
+    // An unusable body (no amount at all) throws, so the screen shows its
+    // error state and Try again instead of ₹0 balances.
+    queryFn: async ({ signal }) => requireEarnings(await getEarnings(accessToken as string, signal)),
   });
   // Refresh the balances every time the Earnings tab regains focus.
   useRefetchOnFocus(query);

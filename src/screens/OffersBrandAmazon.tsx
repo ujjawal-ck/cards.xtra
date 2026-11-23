@@ -69,6 +69,7 @@ import {
 } from '../data/amazonOffers';
 import { colors, spacing } from '../tokens';
 import { useOfferStore } from '../query/useOffers';
+import { isPausedWithoutData } from '../query/paused';
 import type { TimelineTile } from '../api/offersMapper';
 import { useClickOut } from '../lib/useClickOut';
 import { analytics, Events } from '../analytics';
@@ -101,7 +102,11 @@ export function OffersBrandAmazon() {
   // Live store from the CK offers API (by slug). Floors fall back to the
   // existing Amazon static content while loading / if no slug was passed.
   const slug = route.params?.slug ?? null;
-  const { data: store, isLoading, refetch } = useOfferStore(slug);
+  const storeQuery = useOfferStore(slug);
+  const { data: store, isLoading, refetch } = storeQuery;
+  // Opened offline with nothing cached: paused, so neither loading nor an
+  // error. Show "no internet", not "Couldn't load this store".
+  const storeOffline = isPausedWithoutData(storeQuery);
   // Logged-in user id — injected into the cashback click-out so CashKaro
   // attributes the exit click (and the store shows up in Missing Cashback).
   // Shop & Earn click-out: login-to-earn for guests, user id on the link,
@@ -145,6 +150,12 @@ export function OffersBrandAmazon() {
   // used to render for any store with coupons, with a sample headline
   // ("Upto 90% Off across categories"), "See +5 Offers" and code MCCK300.
   const showOfferDetails = !showBenefits && !!store?.hasHowTo;
+  // The store's own rate rows. Empty exactly when it has no headline rate
+  // and no category rates: the Cashback Details floor is then hidden (it
+  // would read "Flat Cashback Cashback" with a rates link to nothing), and
+  // the Amazon sample rates are never shown for a real store.
+  const storeRates = store?.rewardRates ?? [];
+  const showCashbackDetails = storeRates.length > 0;
 
   const noop = () => undefined;
 
@@ -271,13 +282,17 @@ export function OffersBrandAmazon() {
         store?.cashbackKind === 'Rewards' ? 'Reward Rates' : 'Cashback Rates',
         'rate-list',
         {
+          // A real store (slug) never gets the Amazon sample: same guard as
+          // the terms sheet. The floor that opens this is hidden when empty.
           rewardRates:
             store?.rewardRates && store.rewardRates.length > 0
               ? store.rewardRates
+              : slug
+              ? []
               : AMAZON_RATE_ROWS,
         }
       ),
-    [presentSheet, store]
+    [presentSheet, store, slug]
   );
 
   // "View All T&C" (Terms & Conditions floor) → terms-conditions sheet.
@@ -361,6 +376,15 @@ export function OffersBrandAmazon() {
           >
             <ActivityIndicator color={colors.action.primary.default} />
           </View>
+        ) : storeOffline ? (
+          // Offline with nothing cached: the CashKaro "no internet" state.
+          <ScreenState
+            title="No internet connection"
+            body="Check your connection or try again."
+            actionLabel="Try again"
+            onAction={() => refetch()}
+            style={{ paddingTop: insets.top + spacing[80] }}
+          />
         ) : storeMissing ? (
           <ScreenState
             title="Couldn’t load this store"
@@ -410,20 +434,27 @@ export function OffersBrandAmazon() {
           <Divider style="section" />
 
           {/* 3. Store / Cashback Details — Off state */}
-          {/* Upsell-timer variant adds the bonus/countdown card. */}
-          <StoreCashbackDetails
-            bonusOffer={store?.isUpsell ?? false}
-            flatText={store?.cashbackPrefix ?? 'Upto'}
-            strikeText={store?.cashbackStrikeValue}
-            percentText={store?.cashbackValue ?? '5%'}
-            cashbackText={store?.cashbackKind ?? 'Cashback'}
-            subtitle={store?.cashbackDetails ?? 'on mobile, fashion, beauty and more'}
-            bonusValue={store?.upsellText}
-            onViewRates={openRewardRates}
-            style={{ width: '100%' }}
-          />
+          {/* Upsell-timer variant adds the bonus/countdown card. Hidden
+              (with its divider) when the store has no rate rows. Every text
+              prop is an explicit string: an undefined one falls back to the
+              organism's Figma sample copy and rate. */}
+          {showCashbackDetails ? (
+            <>
+              <StoreCashbackDetails
+                bonusOffer={store?.isUpsell ?? false}
+                flatText={store?.cashbackPrefix ?? 'Upto'}
+                strikeText={store?.cashbackStrikeValue}
+                percentText={store?.cashbackValue ?? ''}
+                cashbackText={store?.cashbackKind ?? 'Cashback'}
+                subtitle={store?.cashbackDetails ?? `on eligible ${brandName} orders`}
+                bonusValue={store?.upsellText}
+                onViewRates={openRewardRates}
+                style={{ width: '100%' }}
+              />
 
-          <Divider style="section" />
+              <Divider style="section" />
+            </>
+          ) : null}
 
           {/* 4. Benefits block (benefit-list stores like Jaypore) OR the
               Offer/How-to block (coupon / how-to stores). A store with

@@ -29,3 +29,31 @@ export function formatINR(amount: number): string {
     ? `${sign}₹${groupIndian(whole)}.${String(frac).padStart(2, '0')}`
     : `${sign}₹${groupIndian(whole)}`;
 }
+
+/** Shown in place of an amount the API did not send or sent unreadable. */
+export const MONEY_DASH = '—';
+
+/**
+ * An API amount → number, or null when it is not an amount.
+ *
+ * Only a plain (optionally signed, comma-grouped, ₹-prefixed) decimal counts.
+ * "", "N/A", "abc", "1e3", "12.34.56", null and NaN are NOT amounts: they
+ * used to read as 0 (shown as a real "₹0") or 13. The minus sign is kept, so
+ * a -₹50 reversal never reads as a ₹50 credit.
+ */
+export function parseAmount(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const t = String(v).trim();
+  const m = t.replace(/[₹,\s]/g, '').match(/^-?\d+(\.\d+)?$/);
+  return m ? Number(m[0]) : null;
+}
+
+/**
+ * An API amount → "₹1,234.50" / "-₹50", or the dash when it is missing or
+ * unreadable. For display only; never for a value the user can withdraw.
+ */
+export function formatINROrDash(v: unknown): string {
+  const n = parseAmount(v);
+  return n === null ? MONEY_DASH : formatINR(n);
+}
