@@ -111,6 +111,8 @@ import {
 } from '../atoms';
 import { Accordion, ListRow, TabsSecondary, InlineMessage } from '../molecules';
 import { analytics, Events } from '../analytics';
+import { getEligibilityGateVariant } from '../experiments';
+import { pickResultPlace, inlineResultParams } from '../lib/inlineEligibility';
 import type { CardModel } from '../molecules';
 import type { IconName } from '../atoms';
 import { icons } from '../assets/icons';
@@ -916,10 +918,11 @@ export function RecommendedCards({
       id: c.id,
       image: c.cardImage,
       name: c.name,
-      // Mapped cards carry "Flat|Upto ₹X Rewards" in `cashback`; show it as-is
-      // (prefix split handles the leading word). Sample cards keep "Upto".
+      // With a CashKaro amount: "<Flat|Upto> ₹X Rewards". With none: the card's
+      // reward label alone ("Rewards" or the server text) and no prefix: '' (not
+      // undefined) keeps CreditCardOffer from adding its "Upto" default.
       cashback: c.cashbackValue ? `${c.cashbackValue} Rewards` : c.cashback,
-      prefix: c.rewardPrefix ?? 'Flat',
+      prefix: c.cashbackValue ? (c.rewardPrefix ?? 'Flat') : '',
     }));
   // No other real cards → no section (it used to fall back to sample cards).
   if (items.length === 0) return null;
@@ -2451,8 +2454,20 @@ const CardDetailSheetIOS = forwardRef<
         o.eligibleCardAliases,
         parseIncome(o.income)
       );
-      if (hadDefaultsRef.current) {
+      const place = pickResultPlace({
+        hadDefaults: hadDefaultsRef.current,
+        hasSheetHandler: !!onShowResultSheet,
+      });
+      if (place === 'inline') {
         setEligibilityResult(outcome);
+        // Home logs ELIGIBILITY_RESULT itself when it presents its sheet.
+        // Inline results are logged here, only when the host has no handler.
+        if (!onShowResultSheet) {
+          analytics.track(
+            Events.ELIGIBILITY_RESULT,
+            inlineResultParams(card?.id, outcome, getEligibilityGateVariant())
+          );
+        }
       } else {
         onShowResultSheet?.(outcome);
       }
