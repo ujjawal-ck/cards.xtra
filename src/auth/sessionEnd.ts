@@ -9,11 +9,15 @@
  *
  * Cleared, because it belongs to the user:
  *   - secure store: ck_access_token, ck_refresh_token, ck_display_name,
- *     ck_name_pending, ck_user_id (clearSession); cardsxtra.profile.v1 (PIN
- *     code, income, income type, applied cards); cardsxtra.toolSpends.v1;
- *     never_miss_cashback_enabled (the Cashback Reminder opt-in);
+ *     ck_name_pending, ck_user_id, ck_segment_ids,
+ *     ck_new_user_segment_expiry_sec, ck_user_joined_at (clearSession);
+ *     cardsxtra.profile.v1 (PIN code, income, income type, applied cards);
+ *     cardsxtra.toolSpends.v1; never_miss_cashback_enabled (the Cashback
+ *     Reminder opt-in)
  *   - memory: the React Query cache, the saved spends, the advisor chat, the
- *     memory copy of the payout cool-down (its saved value stays, see below)
+ *     segment copy (clearSession drops it before its first await, so the next
+ *     offers call sends no segment), the memory copy of the payout cool-down
+ *     (its saved value stays, see below)
  *   - analytics: the ck_user_id user property; the user id goes back to the
  *     device id
  *   - the Cashback Reminder service is stopped

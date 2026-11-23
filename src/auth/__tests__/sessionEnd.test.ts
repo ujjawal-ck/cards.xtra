@@ -3,6 +3,7 @@
  * DATA-11). Storage is an in-memory secure store.
  */
 import { endLocalSession, restoreSession } from '../sessionEnd';
+import { currentSegment, loadSegment } from '../tokenStore';
 import { getAdvisorSession } from '../../screens/advisor/advisorSession';
 import { useSavedSpends } from '../../lib/savedSpends';
 import { queryClient } from '../../query/queryClient';
@@ -46,6 +47,10 @@ const USER_KEYS: Record<string, string> = {
   ck_display_name: 'Asha',
   ck_name_pending: '1',
   ck_user_id: '42',
+  // The CashKaro segment from login / refresh (AC-24, M11).
+  ck_segment_ids: JSON.stringify(['1629794787', '888888888']),
+  ck_new_user_segment_expiry_sec: '86400',
+  ck_user_joined_at: '2026-11-01T00:00:00Z',
   'cardsxtra.profile.v1': JSON.stringify({
     eligibility: { pincode: '110001', income: '50000', incomeType: 'salaried' },
     applied: [{ alias: 'hdfc-millennia', at: '2026-11-01T00:00:00.000Z' }],
@@ -113,6 +118,20 @@ describe('endLocalSession', () => {
     expect(sinkProps).toContainEqual({ ck_user_id: null });
     expect(sinkIds[sinkIds.length - 1]).toBe('dev-1');
     expect(CashbackGuard.stopGuard).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the segment from memory as well as the store, so the next offers call sends none (AC-24)', async () => {
+    await loadSegment();
+    expect(currentSegment()?.ids).toEqual(['1629794787', '888888888']);
+    const ending = endLocalSession('dev-1');
+    // Memory first: gone before the store work finishes.
+    expect(currentSegment()).toBeNull();
+    await ending;
+    expect(currentSegment()).toBeNull();
+    expect(await loadSegment()).toBeNull();
+    for (const k of ['ck_user_id', 'ck_segment_ids', 'ck_new_user_segment_expiry_sec', 'ck_user_joined_at']) {
+      expect(mockStore.has(k)).toBe(false);
+    }
   });
 
   describe('payout cool-down across a session end (log out and in is no way round it)', () => {

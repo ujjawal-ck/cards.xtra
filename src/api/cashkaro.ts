@@ -98,6 +98,88 @@ function buildDeviceInfo(deviceId: string): Record<string, string> {
   };
 }
 
+// ── Who signed in: user id and segment (/login, /signupV1, /refreshtoken) ──
+
+/** The segment fields of an auth response (`01_auth.md`). A field the
+ *  response leaves out is undefined, so a refresh keeps the stored value. */
+export interface UserSegment {
+  /** `segment_id[]`, as strings. An empty list is a value (no segments). */
+  ids?: string[];
+  /** `new_user_segment_expiry_time_sec`: how long 888888888 lasts after joining. */
+  newUserExpirySec?: number;
+  /** `user_joined_at` (ISO date). */
+  joinedAt?: string;
+}
+
+/** The user id and segment that /login, /signupV1 and /refreshtoken return. */
+export interface AuthIdentity {
+  /** `data.id`: the CashKaro user id, the `id=` slot of a click-out. */
+  userId?: string;
+  segment: UserSegment;
+}
+
+/** Read the user id and the segment fields of an auth response. */
+function parseAuthIdentity(res: any): AuthIdentity {
+  const rawId = res?.data?.id;
+  const attrs = res?.data?.attributes ?? {};
+  const segment: UserSegment = {};
+  if (Array.isArray(attrs.segment_id)) {
+    segment.ids = attrs.segment_id.map((s: unknown) => String(s ?? '').trim()).filter(Boolean);
+  }
+  const expiry = attrs.new_user_segment_expiry_time_sec;
+  if (expiry !== null && expiry !== undefined && expiry !== '' && Number.isFinite(Number(expiry))) {
+    segment.newUserExpirySec = Number(expiry);
+  }
+  if (typeof attrs.user_joined_at === 'string' && attrs.user_joined_at.trim()) {
+    segment.joinedAt = attrs.user_joined_at.trim();
+  }
+  const userId = rawId === null || rawId === undefined ? '' : String(rawId).trim();
+  return { userId: userId || undefined, segment };
+}
+
+/** The new-user segment (`01_auth.md`, segment_id). */
+export const NEW_USER_SEGMENT_ID = '888888888';
+
+/**
+ * The `filter[segmentid]` value: the segment ids joined with commas (the
+ * `openapi-mini.json` example is "1629794856,1629794721"). 888888888 is the
+ * new-user segment: it expires `new_user_segment_expiry_time_sec` after
+ * `user_joined_at`, so it is dropped after that. If either field is missing
+ * or not readable, the ids are sent as given. No ids → undefined (no param).
+ */
+export function segmentFilterValue(segment: UserSegment | null | undefined, nowMs: number): string | undefined {
+  const ids = segment?.ids ?? [];
+  const joinedMs = segment?.joinedAt ? Date.parse(segment.joinedAt) : NaN;
+  const expirySec = segment?.newUserExpirySec;
+  const newUserExpired =
+    Number.isFinite(joinedMs) && typeof expirySec === 'number' && Number.isFinite(expirySec)
+      ? nowMs >= joinedMs + expirySec * 1000
+      : false;
+  const active = ids.filter((id) => !(id === NEW_USER_SEGMENT_ID && newUserExpired));
+  const unique = [...new Set(active)];
+  return unique.length ? unique.join(',') : undefined;
+}
+
+/** Where the offers calls read the signed-in user's segment. AuthContext sets
+ *  it; unset, or a null result, means a guest and no segment is sent. */
+let segmentSource: (() => UserSegment | null) | null = null;
+
+export function configureSegmentSource(source: (() => UserSegment | null) | null): void {
+  segmentSource = source;
+}
+
+/** `{ 'filter[segmentid]': ... }` when a segment is known, else `{}`. */
+function segmentQuery(): Record<string, string> {
+  let segment: UserSegment | null = null;
+  try {
+    segment = segmentSource ? segmentSource() : null;
+  } catch {
+    segment = null;
+  }
+  const value = segmentFilterValue(segment, Date.now());
+  return value ? { 'filter[segmentid]': value } : {};
+}
+
 // ── Login (OTP) ──────────────────────────────────────────────────────────
 
 /** Request a login OTP; returns the otp_guid needed to verify. */
@@ -113,13 +195,13 @@ export async function loginOtp(mobileNumber: string): Promise<LoginOtpResult> {
   return { otpGuid, otpExpireSec: Number(res?.data?.attributes?.otp_expire_sec) || undefined };
 }
 
-/** Verify the login OTP; returns the user session tokens. */
+/** Verify the login OTP; returns the session tokens, the user id and the segment. */
 export async function login(params: {
   mobileNumber: string;
   otpGuid: string;
   otp: string;
   deviceId: string;
-}): Promise<AuthSession> {
+}): Promise<AuthSession & AuthIdentity> {
   const res = await ck<any>('/login', { contract: ['login', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
@@ -138,7 +220,7 @@ export async function login(params: {
   });
   const attrs = res?.data?.attributes;
   if (!attrs?.access_token) throw new ApiError('Login failed. Please check the OTP and try again.', 0, res);
-  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token };
+  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token, ...parseAuthIdentity(res) };
 }
 
 // ── Signup (OTP) ─────────────────────────────────────────────────────────
@@ -160,7 +242,7 @@ export async function signupOtp(mobileNumber: string): Promise<LoginOtpResult> {
   return { otpGuid, otpExpireSec: Number(res?.data?.attributes?.otp_expire_sec) || undefined };
 }
 
-/** Complete signup with OTP; returns the user session tokens. */
+/** Complete signup with OTP; returns the session tokens, the user id and the segment. */
 export async function signup(params: {
   fullname: string;
   email: string;
@@ -170,7 +252,7 @@ export async function signup(params: {
   otp: string;
   deviceId: string;
   referralUser?: string | null;
-}): Promise<AuthSession> {
+}): Promise<AuthSession & AuthIdentity> {
   const res = await ck<any>('/signupV1', { contract: ['signupV1', Schemas.AuthTokensResponse],
     method: 'POST',
     auth: 'aws',
@@ -195,18 +277,19 @@ export async function signup(params: {
   });
   const attrs = res?.data?.attributes;
   if (!attrs?.access_token) throw new ApiError('Signup failed. Please try again.', 0, res);
-  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token };
+  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token, ...parseAuthIdentity(res) };
 }
 
 // ── Session maintenance ──────────────────────────────────────────────────
 
 /**
  * Exchange a refresh token for a fresh access token. Returns the rotated
- * refresh token too when CashKaro issues one (keep it, or the next refresh fails).
+ * refresh token too when CashKaro issues one (keep it, or the next refresh fails),
+ * and the user id and segment fields the response carries (AuthContext keeps them).
  */
 export async function refreshTokens(
   refreshToken: string,
-): Promise<{ accessToken: string; refreshToken?: string }> {
+): Promise<{ accessToken: string; refreshToken?: string } & AuthIdentity> {
   const res = await ck<any>('/refreshtoken', {
     method: 'POST',
     auth: 'aws',
@@ -215,7 +298,7 @@ export async function refreshTokens(
   });
   const attrs = res?.data?.attributes;
   if (!attrs?.access_token) throw new ApiError('Session expired. Please log in again.', 401, res);
-  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token || undefined };
+  return { accessToken: attrs.access_token, refreshToken: attrs.refresh_token || undefined, ...parseAuthIdentity(res) };
 }
 
 
@@ -278,18 +361,22 @@ export async function getProfile(userToken: string, signal?: AbortSignal): Promi
   // `data` is an array of one `user` row (same shape as /users/earnings).
   const row = Array.isArray(res?.data) ? res.data[0] : res?.data;
   const attrs = row?.attributes ?? {};
+  // Attributes first: an attribute named `id` must never replace the row id
+  // (the CashKaro user id that click-outs carry).
   return {
+    ...attrs,
     id: row?.id,
     fullname: attrs.fullname,
     email: attrs.email,
     mobileNumber: attrs.mobile_number,
-    ...attrs,
   };
 }
 
 // ── Offers (stores / cashback) ─────────────────────────────────────────────
 // All use the aws-token (pre-login). JSON:API envelopes returned raw; the
-// offers mapper unwraps data/attributes.
+// offers mapper unwraps data/attributes. /offers/category/* and /offers/{slug}
+// add `filter[segmentid]` for a signed-in user with a known segment (a
+// segmented store is returned only for its segment); a guest sends none.
 
 /** All offer categories (33; filter to real top-level ones in the mapper).
  *  Fallback for the Offers strip when the miniapp category tree is empty. */
@@ -309,7 +396,7 @@ export async function getCategoryOffers(categoryPath: string): Promise<any> {
     auth: 'aws',
     // Default page size is 10 — request a large page so the grid shows the
     // full category (e.g. fashion has 39 stores, not 10).
-    query: { device: CK.device, 'page[size]': 100 },
+    query: { device: CK.device, 'page[size]': 100, ...segmentQuery() },
   });
 }
 
@@ -323,7 +410,7 @@ export async function getCategoryOffers(categoryPath: string): Promise<any> {
 export async function getOfferCategoryTree(parentSlug: string): Promise<any> {
   return ck(`/offers/category/${encodeURIComponent(parentSlug)}`, {
     auth: 'aws',
-    query: { device: CK.device, 'page[size]': 1, include: 'categories' },
+    query: { device: CK.device, 'page[size]': 1, include: 'categories', ...segmentQuery() },
   });
 }
 
@@ -331,7 +418,7 @@ export async function getOfferCategoryTree(parentSlug: string): Promise<any> {
 export async function getOfferStore(storeSlug: string): Promise<any> {
   return ck(`/offers/${encodeURIComponent(storeSlug)}`, { contract: ['offers/:slug', Schemas.MerchantOfferResponse],
     auth: 'aws',
-    query: { device: CK.device, include: 'coupons,secondary_cashback,related_offers' },
+    query: { device: CK.device, include: 'coupons,secondary_cashback,related_offers', ...segmentQuery() },
   });
 }
 
@@ -351,10 +438,12 @@ const CARD_RATE_CATEGORY = 'home-categories-exclusive';
  */
 export async function getCardRateStores(): Promise<any[]> {
   const all: any[] = [];
+  // One segment for every page, so the pages agree.
+  const segment = segmentQuery();
   for (let page = 1; page <= 20; page++) {
     const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, { contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
       auth: 'aws',
-      query: { device: CK.device, 'page[size]': 100, 'page[number]': page },
+      query: { device: CK.device, 'page[size]': 100, 'page[number]': page, ...segment },
     });
     const rows: any[] = Array.isArray(res?.data) ? res.data : [];
     all.push(...rows);

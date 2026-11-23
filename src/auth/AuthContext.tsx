@@ -23,15 +23,22 @@ import {
   loadSession,
   saveSession,
   clearSession,
+  clearIdentity,
   getDeviceId,
   saveDisplayName,
   loadDisplayName,
+  saveUserId,
+  saveSegment,
+  loadSegment,
+  currentSegment,
   type Session,
 } from './tokenStore';
 import { endLocalSession, restoreSession } from './sessionEnd';
 import {
   logout as ckLogout,
   refreshTokens as ckRefreshTokens,
+  configureSegmentSource,
+  type AuthIdentity,
 } from '../api/cashkaro';
 import {
   configureUserSession,
@@ -60,8 +67,9 @@ interface AuthContextValue {
    *  fullname (there's no profile-update API): captured on the post-OTP
    *  NameInput screen for a fresh signup. */
   displayName: string | null;
-  /** Persist a session after a successful login/signup OTP verify. */
-  signIn: (session: Session) => Promise<void>;
+  /** Persist a session after a successful login/signup OTP verify, with the
+   *  CashKaro user id and segment the response carried. */
+  signIn: (session: Session & Partial<AuthIdentity>) => Promise<void>;
   /** Save the name the user chose on the post-OTP NameInput screen. */
   setDisplayName: (name: string) => Promise<void>;
   /** End the session (best-effort server logout, then clear local tokens). */
@@ -101,6 +109,18 @@ function warmUserCache(accessToken: string): void {
     .catch(() => undefined);
 }
 
+/**
+ * Save the CashKaro user id (`ck_user_id`, the click-out `id=`) and the
+ * segment of a login, signup or refresh response. A field the response left
+ * out keeps its stored value.
+ */
+async function keepIdentity(identity: Partial<AuthIdentity>): Promise<void> {
+  await Promise.all([
+    identity.userId ? saveUserId(identity.userId) : undefined,
+    identity.segment ? saveSegment(identity.segment) : undefined,
+  ]);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [session, setSession] = useState<Session | null>(null);
@@ -124,10 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // the phone/name). GA4 keeps its own instance id; this just gives us a
         // consistent handle that survives logout/login on the same device.
         analytics.identify(id);
+        // The stored segment goes to memory first, so a launch refresh
+        // updates it instead of being overwritten by it.
+        if (saved) await loadSegment().catch(() => null);
+        if (!active) return;
         // Validate before trusting it: an expired access token is refreshed
         // first. A rejected refresh token ends the local session (the same
         // clear as a logout); a network failure keeps the session.
-        const current = saved ? await restoreSession(saved, id, ckRefreshTokens) : null;
+        const current = saved ? await restoreSession(saved, id, refreshKeepingIdentity) : null;
         if (!active || current === 'superseded') return;
         if (current) {
           // The name belongs to this session only (AUTH-02).
@@ -154,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     analytics.setUserProperties({ logged_in: status === 'authenticated' });
   }, [status]);
 
-  const signIn = useCallback(async (next: Session) => {
+  const signIn = useCallback(async (next: Session & Partial<AuthIdentity>) => {
     // A new session: a refresh still running for an older one must not write.
     bumpSessionGeneration();
     setSessionExpiredAt(null);
@@ -162,14 +186,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // A signup sets the new name right after signIn.
     setDisplayNameState(null);
     await clearSession().catch(() => undefined);
-    await saveSession(next);
+    // Only the tokens are session state; the id and segment are stored apart.
+    const tokens: Session = { accessToken: next.accessToken, refreshToken: next.refreshToken };
+    await saveSession(tokens);
+    // The new user id (click-out attribution reads it right after) and
+    // segment, before the cache clear so refetched offers carry the segment.
+    await keepIdentity(next).catch(() => undefined);
     // A new login never inherits the previous user's cache.
     queryClient.clear();
-    sessionRef.current = next;
-    setSession(next);
+    sessionRef.current = tokens;
+    setSession(tokens);
     setStatus('authenticated');
     // Warm earnings/profile so those tabs open instantly (non-blocking).
-    warmUserCache(next.accessToken);
+    warmUserCache(tokens.accessToken);
   }, []);
 
   const setDisplayName = useCallback(async (name: string) => {
@@ -181,6 +210,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Mirror of `session` for the token manager, which reads it outside React.
   const sessionRef = useRef<Session | null>(null);
   sessionRef.current = session;
+
+  // POST /refreshtoken for the launch check and the token manager. Keeps the
+  // user id and segment the response carries (a field it leaves out keeps
+  // its stored value). Nothing is kept once the session that asked has ended
+  // (AUTH-05).
+  const refreshKeepingIdentity = useCallback(async (refreshToken: string) => {
+    const gen = currentSessionGeneration();
+    const res = await ckRefreshTokens(refreshToken);
+    if (gen === currentSessionGeneration()) {
+      await keepIdentity(res).catch(() => undefined);
+      // The session ended while saving: never bring this user's id or segment back.
+      if (gen !== currentSessionGeneration() && !sessionRef.current) {
+        await clearIdentity().catch(() => undefined);
+      }
+    }
+    return res;
+  }, []);
+
+  // The offers calls send this user's segment (filter[segmentid]); a guest
+  // sends none.
+  useEffect(() => {
+    configureSegmentSource(() => (sessionRef.current ? currentSegment() : null));
+    return () => configureSegmentSource(null);
+  }, []);
 
   // The one local session end (no server call) for signOut and expiry; the
   // launch path calls endLocalSession through restoreSession. React state
@@ -225,10 +278,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onExpired: () => {
         void expireSession();
       },
-      refresh: (refreshToken) => ckRefreshTokens(refreshToken),
+      refresh: (refreshToken) => refreshKeepingIdentity(refreshToken),
     });
     return () => configureUserSession(null);
-  }, [expireSession]);
+  }, [expireSession, refreshKeepingIdentity]);
 
   const refreshSession = useCallback(async (): Promise<string | null> => {
     if (!sessionRef.current?.refreshToken) return null;

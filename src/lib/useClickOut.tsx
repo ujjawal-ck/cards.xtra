@@ -6,9 +6,11 @@
  *     login sheet opens over this screen, and the link opens attributed as
  *     soon as the user is in), or continue without cashback (the link opens
  *     unattributed; never a dead end).
- *   • Signed in → resolve the CashKaro user id from the profile (refetching it
- *     if it hasn't loaded yet) and refuse to open an unattributed link if it
- *     still can't be resolved.
+ *   • Signed in → the CashKaro user id saved at login (`ck_user_id`, from the
+ *     login or signup response) comes first; only when none is saved does it
+ *     fall back to the profile (refetching it if it hasn't loaded yet). A
+ *     failed profile call never blocks a click when the id is saved. If no id
+ *     can be found, it refuses to open an unattributed link.
  *   • Builds the link with buildClickOutUrl (CashKaro `id=` or partner
  *     `{user_id}` / `{click_id}`), logs CLICK_OUT, then opens it.
  *
@@ -27,6 +29,7 @@ import { EarnLoginSheet } from '../organisms/EarnLoginSheet';
 import type { EarnLoginKind, EarnLoginSheetRef } from '../organisms/EarnLoginSheet';
 import { useAuth } from '../auth/AuthContext';
 import { useLoginSheet } from '../auth/LoginSheetProvider';
+import { loadUserId } from '../auth/tokenStore';
 import { fetchProfile, useProfile } from '../query/useProfile';
 import { queryClient } from '../query/queryClient';
 import { qk } from '../query/keys';
@@ -59,6 +62,12 @@ export interface ClickOutTarget {
   source?: ClickOutSource;
   /** Card alias. Saved as "applied" when the bank link opens (cards only). */
   alias?: string;
+}
+
+/** The CashKaro user id saved at login (tokenStore), or null when none is saved. */
+async function storedUserId(): Promise<string | null> {
+  const id = await loadUserId().catch(() => null);
+  return id && id.trim() ? id.trim() : null;
 }
 
 export function useClickOut() {
@@ -109,7 +118,7 @@ export function useClickOut() {
       }
 
       await flight.run(async () => {
-        let userId = profileQ.data?.id;
+        let userId: string | number | undefined = (await storedUserId()) ?? profileQ.data?.id;
         if (!userId) {
           try {
             userId = (await profileQ.refetch()).data?.id;
@@ -131,20 +140,23 @@ export function useClickOut() {
     [status, profileQ, launch, flight]
   );
 
-  // After "Log in to earn": resolve the new user's CashKaro id with the fresh
-  // token and open the link attributed, so the apply continues by itself.
+  // After "Log in to earn": the new user's CashKaro id (saved by signIn from
+  // the login response; else the profile with the fresh token), then the link
+  // opens attributed, so the apply continues by itself.
   const launchAfterLogin = useCallback(
     async (target: ClickOutTarget, accessToken: string) => {
       await flight.run(async () => {
-        let userId: string | number | undefined;
-        try {
-          const profile = await queryClient.fetchQuery({
-            queryKey: qk.user.profile(),
-            queryFn: ({ signal }) => fetchProfile(accessToken, signal),
-          });
-          userId = profile?.id;
-        } catch {
-          userId = undefined;
+        let userId: string | number | undefined = (await storedUserId()) ?? undefined;
+        if (userId == null) {
+          try {
+            const profile = await queryClient.fetchQuery({
+              queryKey: qk.user.profile(),
+              queryFn: ({ signal }) => fetchProfile(accessToken, signal),
+            });
+            userId = profile?.id;
+          } catch {
+            userId = undefined;
+          }
         }
         if (userId == null) {
           Alert.alert(
