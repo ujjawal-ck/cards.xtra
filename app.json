@@ -7,7 +7,7 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://u.expo.dev/64b72278-5c46-4e92-8d5f-f547507fe7a5"
+      "url": "https://u.expo.dev/1ce6682e-bb3d-41a2-9c69-fcff5918d03e"
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -74,11 +74,11 @@
         }
       ]
     ],
+    "owner": "ujjawal-ck",
     "extra": {
       "eas": {
-        "projectId": "64b72278-5c46-4e92-8d5f-f547507fe7a5"
+        "projectId": "1ce6682e-bb3d-41a2-9c69-fcff5918d03e"
       }
-    },
-    "owner": "cashkaro"
+    }
   }
 }
