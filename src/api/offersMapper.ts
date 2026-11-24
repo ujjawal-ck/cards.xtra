@@ -132,6 +132,8 @@ function extractSecondaryCashback(res: any): OfferCashback[] {
 
 export interface OfferStoreSummary {
   slug: string;
+  /** The CashKaro store id (the row `id`, as a string). The card-store exclusion matches on it (src/lib/cardStores.ts). */
+  storeId?: string;
   name: string;
   image?: string;
   ctaLabel: string;
@@ -160,8 +162,10 @@ export function mapCategoryOffers(res: any): OfferStoreSummary[] {
       const a = row?.attributes ?? {};
       const slug = a.unique_identifier ?? row?.id;
       if (!slug) return null;
+      const storeId = row?.id == null ? '' : String(row.id).trim();
       return {
         slug: String(slug),
+        storeId: storeId || undefined,
         name: a.name ?? '',
         image: publicAssetUrl(a.image_url),
         ctaLabel: cashbackCtaLabel(

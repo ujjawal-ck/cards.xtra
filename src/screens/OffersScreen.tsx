@@ -30,6 +30,7 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -84,7 +85,17 @@ const NAV_REVEAL_THRESHOLD = 1;
 
 // Default-state placeholder ticker — cycles store names to invite a tap.
 const SEARCH_TICKER = ['Search for Amazon', 'Search for Flipkart', 'Search for Ajio'];
+
+// Tile window (contract C9): the grid renders this many tiles first and adds
+// this many more each time the user scrolls near the end. "More" has ~1500
+// stores; rendering them all at once in the ScrollView would stall the screen.
+const TILE_WINDOW = 100;
+
+// A recent store chip carries only a label and a slug, so before the store
+// index loads only the name rule of the card-store check can run on it.
+const NO_CARD_STORE_IDS: ReadonlySet<string> = new Set();
 import { useAllOfferStores, useCategoryOffers, useOfferCategories } from '../query/useOffers';
+import { isCardStore } from '../lib/cardStores';
 import { isPausedWithoutData } from '../query/paused';
 import { DEFAULT_OFFER_CATEGORY_PATH } from '../data/offerCategories';
 import type { RootStackParamList } from '../navigation/types';
@@ -146,6 +157,38 @@ export function OffersScreen() {
     isRefetching,
     refetch,
   } = storesQ;
+  // ----- Tile window (C9) ------------------------------------------------------
+  // Render the first 100 tiles of the category; add 100 more each time the
+  // user scrolls near the end. The count belongs to one category path. A
+  // category change resets it to 100 during render (no effect, so no frame of
+  // the new category at the old count), also when the user comes back to a
+  // category they had scrolled far into.
+  // Scroll events arrive every 16 ms: grow at most once per content height,
+  // so one pass near the end adds 100 tiles, not several hundred.
+  const grownAt = useRef('');
+  const [tileWindow, setTileWindow] = useState<{ path: string | null; count: number }>({
+    path: categoryPath,
+    count: TILE_WINDOW,
+  });
+  if (tileWindow.path !== categoryPath) {
+    // Clear the guard too: back at 100 tiles, the content height can equal
+    // the one of the last growth, which would block the next growth.
+    grownAt.current = '';
+    setTileWindow({ path: categoryPath, count: TILE_WINDOW });
+  }
+  const tileCount = tileWindow.path === categoryPath ? tileWindow.count : TILE_WINDOW;
+  const hasMoreTiles = stores.length > tileCount;
+  const growTilesNearEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!hasMoreTiles) return;
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const nearEnd =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - layoutMeasurement.height;
+    const at = `${categoryPath}:${contentSize.height}`;
+    if (!nearEnd || grownAt.current === at) return;
+    grownAt.current = at;
+    setTileWindow({ path: categoryPath, count: tileCount + TILE_WINDOW });
+  };
+
   // Opened offline with nothing cached. A paused query is neither loading
   // nor an error, so the grid fell to "No offers here yet". On a cold start
   // the strip is the paused one (no category yet, so the stores query is
@@ -236,12 +279,26 @@ export function OffersScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Global store index — every category's stores, deduped. Fetched only while
-  // the search overlay is open, so search spans ALL offers (not just the
-  // category currently shown in the grid).
-  const { stores: allStores } = useAllOfferStores(
+  // Global store index — every category's stores, deduped, without the
+  // credit-card stores (D-B). Fetched only while the search overlay is open,
+  // so search spans ALL offers (not just the category currently shown in the grid).
+  const { stores: allStores, isComplete: storeIndexComplete } = useAllOfferStores(
     searchOpen,
     useMemo(() => categories.map((c) => c.path), [categories])
+  );
+  const liveStoreSlugs = useMemo(() => new Set(allStores.map((s) => s.slug)), [allStores]);
+  // A recent store may show and open only when it is not a card store (D-B).
+  // The name rule runs at once. Once every category has loaded, the store must
+  // also be in the index, which holds no card store (this also drops a store
+  // CashKaro no longer lists). Before that, a store is not hidden only because
+  // its category is still loading.
+  const isRecentStoreAllowed = useCallback(
+    (label: string, slug: string | undefined) => {
+      if (isCardStore({ name: label }, NO_CARD_STORE_IDS)) return false;
+      if (storeIndexComplete && (!slug || !liveStoreSlugs.has(slug))) return false;
+      return true;
+    },
+    [storeIndexComplete, liveStoreSlugs]
   );
 
   const searchCategories = useMemo(() => {
@@ -297,10 +354,12 @@ export function OffersScreen() {
   const recentSearchStore = useRecentSearches('offers');
   const rememberSearch = recentSearchStore.remember;
   // A category the strip no longer has is hidden (tapping it did nothing).
+  // A card store, or a store the loaded index no longer has, is hidden too.
   const searchHistoryChips = useMemo<SearchTopSheetRecent[]>(() => {
     const out: SearchTopSheetRecent[] = [];
     for (const r of recentSearchStore.recent) {
       if (r.kind === 'store') {
+        if (!isRecentStoreAllowed(r.label, r.id)) continue;
         out.push({ label: r.label, image: r.image ? { uri: r.image } : undefined });
       } else if (r.kind === 'category') {
         const cat = categories.find((c) => c.label === r.label);
@@ -308,7 +367,7 @@ export function OffersScreen() {
       }
     }
     return out;
-  }, [recentSearchStore.recent, categories]
+  }, [recentSearchStore.recent, categories, isRecentStoreAllowed]
   );
   // Popular chips minus anything already shown under Recent searches.
   const searchPopularChips = useMemo(() => {
@@ -386,6 +445,8 @@ export function OffersScreen() {
       const item = recentSearchStore.recent.find((r) => r.label === chip.label);
       if (!item) return;
       if (item.kind === 'store' && item.id) {
+        // Same check as the chip list: a card store never opens from recents.
+        if (!isRecentStoreAllowed(item.label, item.id)) return;
         const live = allStores.find((s) => s.slug === item.id);
         rememberSearch(item);
         setSearchOpen(false);
@@ -402,6 +463,7 @@ export function OffersScreen() {
     [
       recentSearchStore.recent,
       allStores,
+      isRecentStoreAllowed,
       rememberSearch,
       navigation,
       categoryLabel,
@@ -409,10 +471,10 @@ export function OffersScreen() {
     ]
   );
 
-  // Map stores → Grid 'brand-1x2' items; tap opens the brand page.
+  // Map the windowed stores → Grid 'brand-1x2' items; tap opens the brand page.
   const offerItems = useMemo(
     () =>
-      stores.map((s) => ({
+      stores.slice(0, tileCount).map((s) => ({
         image: { uri: s.image ?? '' },
         ctaLabel: s.ctaLabel,
         onPress: () => {
@@ -428,7 +490,7 @@ export function OffersScreen() {
           });
         },
       })),
-    [stores, navigation, categoryLabel]
+    [stores, tileCount, navigation, categoryLabel]
   );
 
   // Chunk into rows of 2 so each row can be its own StaggeredEntrance step —
@@ -454,7 +516,10 @@ export function OffersScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
+        onScroll={(e) => {
+          handleScroll(e);
+          growTilesNearEnd(e);
+        }}
         scrollEventThrottle={16}
         // Pin child index 1 (the category strip). Child 0 (search row)
         // scrolls off first, so the search bar hides and the strip locks
@@ -558,11 +623,20 @@ export function OffersScreen() {
               onAction={reloadOffers}
             />
           ) : offerRows.length > 0 ? (
-            <StaggeredEntrance key={categoryPath} style={{ gap: spacing[8] }}>
-              {offerRows.map((row, ri) => (
-                <Grid key={ri} variant="brand-1x2" items={row} />
-              ))}
-            </StaggeredEntrance>
+            <>
+              <StaggeredEntrance key={categoryPath} style={{ gap: spacing[8] }}>
+                {offerRows.map((row, ri) => (
+                  <Grid key={ri} variant="brand-1x2" items={row} />
+                ))}
+              </StaggeredEntrance>
+              {/* More tiles to add (the CK app's LoadMoreIndicator): the next
+                  100 are added when the user scrolls near here. */}
+              {hasMoreTiles ? (
+                <View style={{ paddingVertical: spacing[16], alignItems: 'center' }}>
+                  <ActivityIndicator color={colors.action.primary.default} />
+                </View>
+              ) : null}
+            </>
           ) : (
             // A way forward instead of a dead end: the cards on Home are
             // live even while this category has no stores.

@@ -3,14 +3,23 @@
  *   useOfferCategories()    → the Offers strip (miniapp parent + sub-categories)
  *   useCategoryOffers(slug) → stores in a category (Offers grid)
  *   useOfferStore(slug)     → a single store/brand page
+ *   useAllOfferStores()     → every category's stores (Offers search)
+ *
+ * Credit-card stores never show on Offers (owner rule D-B, 2026-11-24). The
+ * cache keeps the full category list; the grid and search hooks drop the card
+ * stores when they read it (src/lib/cardStores.ts). The BankKaro card store
+ * ids come from the raw card list Home already downloads. Until it loads, or
+ * if it fails, only the name rule runs (Q4): Offers never waits on BankKaro.
  */
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   getCategoryOffers,
   getOfferCategories,
   getOfferCategoryTree,
   getOfferStore,
 } from '../api/cashkaro';
+import { getCards } from '../api/bankkaro';
 import { ApiError } from '../api/client';
 import {
   mapCategoryOffers,
@@ -24,8 +33,38 @@ import {
   buildOfferCategoriesFromTopLevel,
   type OfferCategory,
 } from '../data/offerCategories';
+import { cardStoreIdsFrom, excludeCardStores } from '../lib/cardStores';
 import { useRefetchOnFocus } from './useRefetchOnFocus';
+import { rawCardsQueryKey } from './useCards';
 import { qk } from './keys';
+
+/** No BankKaro ids yet (loading or failed): one shared empty set, so memos stay stable. */
+const NO_CARD_STORE_IDS: ReadonlySet<string> = new Set();
+
+/**
+ * The BankKaro card store ids, read from the raw card list (one observer of
+ * `rawCardsQueryKey`, the download Home already makes). `staleTime: Infinity`:
+ * Offers never starts a refetch of the 3.3 MB list itself (the Offers tab stays
+ * mounted, so a default observer would refetch on every app foreground). It
+ * fetches only when nothing is cached yet. The set keeps its reference while
+ * the ids are the same, so a Home refetch does not re-filter the Offers lists.
+ */
+function useCardStoreIds(): ReadonlySet<string> {
+  const { data } = useQuery({
+    queryKey: rawCardsQueryKey,
+    queryFn: getCards,
+    staleTime: Infinity,
+    select: cardStoreIdsFrom,
+  });
+  const key = data && data.size > 0 ? [...data].sort().join(',') : '';
+  return useMemo(() => (key ? new Set(key.split(',')) : NO_CARD_STORE_IDS), [key]);
+}
+
+/** `select` for a category query: the stores without the card stores. Stable while the ids are the same. */
+function useWithoutCardStores(): (stores: OfferStoreSummary[]) => OfferStoreSummary[] {
+  const ids = useCardStoreIds();
+  return useCallback((stores: OfferStoreSummary[]) => excludeCardStores(stores, ids), [ids]);
+}
 
 /**
  * The Offers strip, driven by the CashKaro "CK MINI APP" parent category. One
@@ -54,11 +93,14 @@ export function useOfferCategories() {
   return query;
 }
 
+/** Stores in a category for the Offers grid, without the credit-card stores. The cache keeps every store. */
 export function useCategoryOffers(categorySlug: string | null) {
-  const query = useQuery<OfferStoreSummary[]>({
+  const withoutCardStores = useWithoutCardStores();
+  const query = useQuery<OfferStoreSummary[], Error, OfferStoreSummary[]>({
     queryKey: qk.offers.category(categorySlug ?? ''),
     enabled: !!categorySlug,
     queryFn: async () => mapCategoryOffers(await getCategoryOffers(categorySlug as string)),
+    select: withoutCardStores,
   });
   useRefetchOnFocus(query);
   return query;
@@ -74,31 +116,9 @@ export function useOfferStore(storeSlug: string | null) {
   return query;
 }
 
-/**
- * Global store index for Offers search — every category's stores, merged and
- * deduped by slug (CashKaro has no store-search endpoint). `paths` is the live
- * set of category paths from useOfferCategories (the miniapp parent + its
- * sub-categories). Each per-category query reuses the SAME cache key as
- * useCategoryOffers, so a category the user already browsed is served from
- * cache; the rest fetch in parallel. `enabled` gates the whole fan-out so it
- * only fires when the search overlay opens.
- */
-export function useAllOfferStores(
-  enabled: boolean,
-  paths: string[]
-): {
-  stores: OfferStoreSummary[];
-  isLoading: boolean;
-} {
-  const results = useQueries({
-    queries: paths.map((path) => ({
-      queryKey: qk.offers.category(path),
-      enabled,
-      staleTime: 5 * 60 * 1000,
-      queryFn: async () => mapCategoryOffers(await getCategoryOffers(path)),
-    })),
-  });
-
+/** Merge the per-category results (already without card stores), deduped by slug.
+ *  Module level, so `useQueries` keeps the merged result while no query changes. */
+function mergeCategoryStores(results: UseQueryResult<OfferStoreSummary[], Error>[]) {
   const bySlug = new Map<string, OfferStoreSummary>();
   for (const r of results) {
     for (const s of r.data ?? []) {
@@ -107,8 +127,47 @@ export function useAllOfferStores(
   }
   return {
     stores: Array.from(bySlug.values()),
+    allLoading: results.every((r) => r.isLoading),
+    allLoaded: results.length > 0 && results.every((r) => r.isSuccess),
+  };
+}
+
+/**
+ * Global store index for Offers search — every category's stores, merged and
+ * deduped by slug (CashKaro has no store-search endpoint), without the
+ * credit-card stores. `paths` is the live set of category paths from
+ * useOfferCategories (the miniapp parent + its sub-categories). Each
+ * per-category query reuses the SAME cache key as useCategoryOffers, so a
+ * category the user already browsed is served from cache; the rest fetch in
+ * parallel. `enabled` gates the whole fan-out so it only fires when the search
+ * overlay opens.
+ */
+export function useAllOfferStores(
+  enabled: boolean,
+  paths: string[]
+): {
+  stores: OfferStoreSummary[];
+  isLoading: boolean;
+  /** Every category has loaded: a slug missing from `stores` is not a live, non-card store. */
+  isComplete: boolean;
+} {
+  const withoutCardStores = useWithoutCardStores();
+  const merged = useQueries({
+    queries: paths.map((path) => ({
+      queryKey: qk.offers.category(path),
+      enabled,
+      staleTime: 5 * 60 * 1000,
+      queryFn: async () => mapCategoryOffers(await getCategoryOffers(path)),
+      select: withoutCardStores,
+    })),
+    combine: mergeCategoryStores,
+  });
+
+  return {
+    stores: merged.stores,
     // Loading until the first category resolves — search can render results
     // progressively as the rest stream in, rather than blocking on all.
-    isLoading: enabled && results.every((r) => r.isLoading),
+    isLoading: enabled && merged.allLoading,
+    isComplete: enabled && merged.allLoaded,
   };
 }
