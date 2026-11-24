@@ -12,29 +12,24 @@
  * category (the card stores live there). We index those rows by store id and by
  * a normalised name, then resolve each BankKaro card:
  *
- *   1. by `ck_store_id` (primary) — exact, and the only mechanism that holds in
+ *   1. by `ck_store_id` (primary) — exact, and the main mechanism in
  *      production.
- *   2. by normalised name (fallback) — recovers staging-only "twin" stores
- *      whose id differs from the production `ck_store_id` BankKaro carries
- *      (e.g. SBI Cashback's tracking id 24756 vs the staging offer 26519
- *      "SBI Cashback Credit Card CG May"). Only used when the name is
- *      unambiguous, so it never silently maps to the wrong card.
+ *   2. by normalised name (fallback) — recovers "twin" stores whose id differs
+ *      from the `ck_store_id` BankKaro carries (e.g. SBI Cashback's tracking id
+ *      24756 vs the staging offer 26519 "SBI Cashback Credit Card CG May"; in
+ *      production 3 cards matched by name only on 2026-11-24). Only used when
+ *      the name is unambiguous, so it never silently maps to the wrong card.
  *
  * Every store row counts, also a row with amount 0: CashKaro then shows the
  * server's `cashback_button_text` in place of an amount (parity J), kept here
  * as `label`.
  *
- * "Filter once mapped" (decision 2026-11-23), the one rule (`isCardShown`):
- *   - Filter ON when at least one catalogue card matches a CashKaro store row
- *     (`isCkFilterOn`). Then only matched cards show. A row for a store that is
- *     not a card never turns it on.
- *   - Filter OFF (no card matches, or the index is empty or failed): the rule
- *     from before the decision, "commissionable only": a card shows when it has
- *     a CashKaro amount or a BankKaro commission above 0. That commission is
- *     read internally and never displayed, so the shown set never grows.
- * Production returns 0 card stores for the app key today, so the filter is off
- * and no card shows an amount; it turns on by itself once CashKaro maps the
- * card stores.
+ * Mapped only (owner rule D-A, 2026-11-24), the one rule (`isCardShown`): a
+ * card shows only when it matches a CashKaro store row, by id or by the
+ * unambiguous name fallback. There is no fallback to unmapped cards: a BankKaro
+ * commission never makes a card show. When the rows fail to load or match no
+ * card, useCards keeps the last good rows; with none, the card list is an
+ * error (src/query/useCards.ts).
  */
 import { isRupeeCashback } from './offersMapper';
 
@@ -59,7 +54,7 @@ interface RateEntry extends CkRate {
 export interface CardRateIndex {
   byId: Map<string, RateEntry>;
   byName: Map<string, RateEntry>;
-  /** Store rows indexed. 0 = empty or failed to load: the filter is off. */
+  /** Store rows indexed. 0 = empty: no card matches. */
   size: number;
 }
 
@@ -188,50 +183,21 @@ export function resolveCkRate(
 export interface CardRuleInput {
   ck_store_id?: number | string | null;
   name?: string;
-  commission?: unknown;
-  bk_commission?: unknown;
 }
 
 /**
- * BankKaro commission above 0, parsed exactly as before 2026-11-23
- * (`commission`, else `bk_commission`). Internal: the rule reads it to keep
- * today's card set; it is never displayed.
+ * THE card rule (owner rule D-A, 2026-11-24, mapped only): a card shows only
+ * when it matches a CashKaro store row (resolveCkRate is not null). A match
+ * with amount 0 counts. Input pickers (the user's own card) do not apply it.
  */
-function hasBkCommission(card: CardRuleInput): boolean {
-  const raw = card.commission || card.bk_commission || '';
-  const n = Number(String(raw).replace(/[^\d.]/g, ''));
-  return isFinite(n) && n > 0;
-}
-
-/**
- * True when the CashKaro card filter is on: at least one catalogue card matches
- * a store row (by id or by the unambiguous name). An index with only non-card
- * stores, an empty index or a failed load leaves it off.
- */
-export function isCkFilterOn(index: CardRateIndex, cards: CardRuleInput[]): boolean {
-  if (index.size === 0) return false;
-  return (cards ?? []).some((c) => !!c && resolveCkRate(c.ck_store_id, c.name, index) !== null);
-}
-
-/**
- * THE card rule (decision 2026-11-23, "filter once mapped"). `filterOn` comes
- * from isCkFilterOn over the same catalogue.
- *   - On: a card shows only when it matches a CashKaro store row.
- *   - Off: "commissionable only", as before: a CashKaro amount or a BankKaro
- *     commission above 0 (internal, never displayed).
- * Input pickers (the user's own card) do not apply it.
- */
-export function isCardShown(card: CardRuleInput, index: CardRateIndex, filterOn: boolean): boolean {
-  const rate = resolveCkRate(card.ck_store_id, card.name, index);
-  if (filterOn) return rate !== null;
-  return (!!rate && rate.amount > 0) || hasBkCommission(card);
+export function isCardShown(card: CardRuleInput, index: CardRateIndex): boolean {
+  return resolveCkRate(card.ck_store_id, card.name, index) !== null;
 }
 
 /** The shown cards, for a card-tool league (see leagueForDisplay). */
 export interface ShownCards {
   /** Ids of the app cards isCardShown keeps. */
   ids: ReadonlySet<string>;
-  filterOn: boolean;
 }
 
 /**
@@ -239,11 +205,8 @@ export interface ShownCards {
  * "cards that beat yours" lists). Display only: never narrow the league itself.
  *
  *   - `shown` null (the card list is not known yet): every row as it is.
- *   - Filter on: a row stays only when its app card is shown. A row with no app
+ *   - Otherwise a row stays only when its app card is shown. A row with no app
  *     card stays out: no CashKaro store row can match it.
- *   - Filter off: every row stays (repo D27), but a row whose app card is not
- *     shown loses its `card`, so it reads as a card the app does not list (no
- *     Apply, no card page), as before 2026-11-23.
  *   - The row of `keepAlias` (the user's own card) always stays as it is.
  */
 export function leagueForDisplay<T extends { savings: { alias: string }; card?: { id: string } }>(
@@ -253,19 +216,7 @@ export function leagueForDisplay<T extends { savings: { alias: string }; card?: 
 ): T[] {
   if (!Array.isArray(rows)) return [];
   if (!shown) return rows;
-  const out: T[] = [];
-  for (const r of rows) {
-    const mine = !!keepAlias && r.savings.alias === keepAlias;
-    if (mine || (!!r.card && shown.ids.has(r.card.id))) {
-      out.push(r);
-    } else if (!shown.filterOn) {
-      if (!r.card) {
-        out.push(r);
-      } else {
-        const { card: _notListed, ...rest } = r;
-        out.push(rest as T);
-      }
-    }
-  }
-  return out;
+  return rows.filter(
+    (r) => (!!keepAlias && r.savings.alias === keepAlias) || (!!r.card && shown.ids.has(r.card.id)),
+  );
 }

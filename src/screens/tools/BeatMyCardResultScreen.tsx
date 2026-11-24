@@ -10,10 +10,10 @@
  * card is found in the full list, so a filter never hides it. Apply never shows for the user's own
  * card, and never for a card the app does not list.
  *
- * FILTERED includes the card rule (leagueForDisplay, decision 2026-11-23): once CashKaro maps card
- * stores, the opponent and the "cards that beat yours" lists hold only cards that match a CashKaro
- * store row; until then a card the app does not sell reads as not listed (no Apply). The user's own
- * card needs no CashKaro rate: it always gets its verdict.
+ * FILTERED includes the card rule (leagueForDisplay, owner rule D-A, 2026-11-24, mapped only): the
+ * opponent and the "cards that beat yours" lists hold only cards that match a CashKaro store row. The
+ * user's own card needs no CashKaro rate: it always gets its verdict. When the cards list fails with
+ * nothing cached (cardsError), the screen shows an error, never the unfiltered league.
  *
  * Under the hero, "Based on <categories>" (the categories picked on the spends page that have a spend)
  * opens the edit sheet with only those categories' questions; its "+ Add a category" row goes back to
@@ -180,10 +180,13 @@ export function BeatMyCardResultScreen() {
   const editKeys = useMemo(() => keysForCategories(categories), [categories]);
   const basedOn = basedOnText(categories, answers);
 
-  const { league, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league, shown, isLoading, isOffline, isError, cardsError, refetch, loadMs } = useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
-  const loaded = !isLoading && !isOffline && !isError;
+  // The app lists no card at all (mapped only): there is no opponent.
+  const noShownCards = !!shown && shown.ids.size === 0;
+  // cardsError: the card rule cannot run. Either state: no verdict (and no verdict event).
+  const loaded = !isLoading && !isOffline && !isError && !cardsError && !noShownCards;
   // The card rule first (display only), then the chips. The user's own card always stays.
   const filtered = useMemo(
     () => filterLeague(leagueForDisplay(league, shown, cardAlias), filters),
@@ -299,6 +302,25 @@ export function BeatMyCardResultScreen() {
       <ScreenState
         title="Couldn't compare cards"
         body="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    );
+  } else if (cardsError) {
+    content = (
+      <ScreenState
+        title="Couldn't load cards"
+        body="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    );
+  } else if (noShownCards) {
+    // Not a filter result: "Clear filters" would not help.
+    content = (
+      <ScreenState
+        title="No cards are available right now"
+        body="Please check back a little later."
         actionLabel="Try again"
         onAction={() => refetch()}
       />

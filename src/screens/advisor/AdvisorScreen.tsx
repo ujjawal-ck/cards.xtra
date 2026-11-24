@@ -442,7 +442,14 @@ export function AdvisorScreen() {
       />
     );
   } else if (!advisor.hasCards) {
-    body = <ScreenState title="No cards are available right now" body="Please check back a little later." />;
+    body = (
+      <ScreenState
+        title="No cards are available right now"
+        body="Please check back a little later."
+        actionLabel="Try again"
+        onAction={() => advisor.refetch()}
+      />
+    );
   } else {
     body = (
       <Animated.View style={[{ flex: 1 }, keyboardPadding]}>
