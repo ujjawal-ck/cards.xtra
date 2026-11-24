@@ -1,11 +1,11 @@
 /**
  * ToolResultsScreen: the league table, one screen for all four card tools.
  *
- * Every card BankKaro returns for the spends, in one FlatList (219 on UAT),
- * also cards the app does not list (no Apply, no card page for those), while
- * the CashKaro card filter is off. Once CashKaro maps card stores, only the
- * cards that match a CashKaro store row show (leagueForDisplay, decision
- * 2026-11-23); the user's own card (highlightAlias) always stays.
+ * The cards BankKaro returns for the spends, in one FlatList. Only the cards
+ * that match a CashKaro store row show (leagueForDisplay, owner rule D-A,
+ * 2026-11-24, mapped only); the user's own card (highlightAlias) always stays.
+ * While the cards list loads, the loading state shows; when it fails with
+ * nothing cached (cardsError), an error. Never the unfiltered league.
  * Reads its result from useCardSavings(spends); only spends and answers arrive
  * through navigation.
  *
@@ -189,12 +189,15 @@ export function ToolResultsScreen() {
   const [spends, setSpends] = useState(() => params.spends);
   const { save } = useSavedSpends();
 
-  const { league: fullLeague, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league: fullLeague, shown, isLoading, isOffline, isError, cardsError, cardsNoMatch, refetch, loadMs } =
+    useCardSavings(spends);
   // The card rule, display only. The user's own card always stays.
   const league = useMemo(
     () => leagueForDisplay(fullLeague, shown, highlightAlias),
     [fullLeague, shown, highlightAlias],
   );
+  // The app lists no card at all (mapped only): not the spends, not a filter.
+  const noShownCards = !!shown && shown.ids.size === 0;
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
@@ -252,7 +255,8 @@ export function ToolResultsScreen() {
     }
   }, [isError, tool]);
   useEffect(() => {
-    if (!isLoading && !isOffline && !isError && league.length > 0 && !viewTracked.current) {
+    const listShown = !isLoading && !isOffline && !isError && !cardsError && !noShownCards;
+    if (listShown && league.length > 0 && !viewTracked.current) {
       viewTracked.current = true;
       // loadMs is undefined when the result came from the cache: leave load_ms out.
       analytics.track(Events.TOOL_RESULT_VIEW, {
@@ -261,7 +265,7 @@ export function ToolResultsScreen() {
         ...(loadMs !== undefined ? { load_ms: loadMs } : {}),
       });
     }
-  }, [isLoading, isOffline, isError, league.length, tool, rows.length, loadMs]);
+  }, [isLoading, isOffline, isError, cardsError, noShownCards, league.length, tool, rows.length, loadMs]);
 
   // ── Scrolling to a row ────────────────────────────────────────────────────
   const retries = useRef(0);
@@ -577,6 +581,32 @@ export function ToolResultsScreen() {
       <ScreenState
         title="Couldn't load your cards"
         body="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    );
+  } else if (cardsError) {
+    // cardsNoMatch: no card matched a CashKaro store; not the connection.
+    content = cardsNoMatch ? (
+      <ScreenState
+        title="Cards aren't available right now"
+        body="Please try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    ) : (
+      <ScreenState
+        title="Couldn't load cards"
+        body="Check your connection and try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    );
+  } else if (noShownCards) {
+    content = (
+      <ScreenState
+        title="No cards are available right now"
+        body="Please check back a little later."
         actionLabel="Try again"
         onAction={() => refetch()}
       />

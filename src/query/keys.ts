@@ -32,5 +32,7 @@ export const qk = {
   cards: {
     list: ['bk', 'cards'] as const,
     benefits: (alias: string) => ['bk', 'card-benefits', alias] as const,
+    /** The last good CashKaro card-rate rows (useCards). Public data. */
+    rateStores: ['ck', 'card-rate-stores'] as const,
   },
 };

@@ -105,7 +105,7 @@ import {
   iconSize,
 } from '../tokens';
 import { images } from '../assets/images';
-import { useCards } from '../query/useCards';
+import { isNoMappedCardsError, useCards } from '../query/useCards';
 import { useOnSessionEnd } from '../auth/useOnSessionEnd';
 import { rewardLabel, selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
@@ -351,7 +351,8 @@ export function HomeScreen() {
   // Live card catalog from BankKaro (mapped to CardModel). While the
   // request is in flight the skeleton stays up; on failure an inline
   // retry block replaces the lists.
-  const { data: cards = [], isLoading, isError, refetch } = useCards();
+  const cardsQuery = useCards();
+  const { data: cards = [], isLoading, isError, isSuccess, refetch } = cardsQuery;
   // The logged-in user id fills the empty `id=` slot on the CashKaro tracker so
   // the apply click is attributed to this user (same as the offers flow).
   // Card "Apply Now" click-outs: login-to-earn for guests, user + click id
@@ -1476,6 +1477,15 @@ export function HomeScreen() {
   }, [cards, appliedFilters, eligibilityFilterActive, eligibleAliases, sortKey]);
   const anyFilterActive =
     hasActiveFilters(appliedFilters) || eligibilityFilterActive;
+  // The catalog itself has no card to show (mapped only, owner rule D-A): not
+  // a filter result. `isSuccess`, not `!isLoading`: a query paused offline has
+  // no data and is not "empty".
+  const catalogEmpty = isSuccess && cards.length === 0 && !anyFilterActive;
+  // No list at all: the catalog failed with nothing cached, or it is empty.
+  // The "N cards" results line hides then.
+  const noCardList = (isError && !cardsQuery.data) || catalogEmpty;
+  // The catalog failed because no card matched a CashKaro store: not the connection.
+  const cardsNoMatch = isError && isNoMappedCardsError(cardsQuery.error);
 
   // Per-chip counts driving the FilterRow chips' selected-with-count state.
   // A non-zero count flips that chip into the Chip `tab` default treatment
@@ -2236,8 +2246,9 @@ export function HomeScreen() {
         ) : null}
 
         {/* Error state — replaces the card lists when the catalog
-            request fails. Static sections (carousel) still render. */}
-        {isError ? (
+            request fails. Static sections (carousel) still render.
+            Empty state — the catalog loaded with no card to show. */}
+        {isError || catalogEmpty ? (
           <View
             style={{
               paddingHorizontal: spacing[16],
@@ -2247,14 +2258,22 @@ export function HomeScreen() {
             }}
           >
             <Text variant="body16SemiBold" color={colors.text.primary}>
-              Couldn’t load cards
+              {cardsNoMatch
+                ? 'Cards aren’t available right now'
+                : isError
+                ? 'Couldn’t load cards'
+                : 'No cards are available right now'}
             </Text>
             <Text
               variant="body12Regular"
               color={colors.text.secondary}
               align="center"
             >
-              Check your connection and try again.
+              {cardsNoMatch
+                ? 'Please try again.'
+                : isError
+                ? 'Check your connection and try again.'
+                : 'Please check back a little later.'}
             </Text>
             <Pressable
               onPress={() => refetch()}
@@ -2276,7 +2295,7 @@ export function HomeScreen() {
         ) : null}
 
         {/* Results line — card count + sort toggle. */}
-        {!categoryFetching && !bankRefreshing && !noResults ? (
+        {!categoryFetching && !bankRefreshing && !noResults && !noCardList ? (
           <View
             onLayout={(e) => {
               resultsLineY.current = e.nativeEvent.layout.y;

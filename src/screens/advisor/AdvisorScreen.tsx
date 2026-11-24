@@ -23,6 +23,7 @@ import Animated from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import type { RootStackParamList } from '../../navigation/types';
@@ -42,6 +43,7 @@ import type { ChatMessage } from '../../lib/advisor/chatTypes';
 import { ADVISOR_CONFIG } from '../../lib/advisor/config';
 import { NOTE_SAME, answerPills } from '../../lib/advisor/engine';
 import { answersLost } from '../../lib/advisor/transcript';
+import { cardsQueryKey, isNoMappedCardsError } from '../../query/useCards';
 import { useAdvisor } from './useAdvisor';
 import { AdvisorChatHeader } from './AdvisorChatHeader';
 import { AdvisorBubble, AdvisorEarlierLine, AdvisorTipBubble, UserAnswerBubble } from './AdvisorChatBubble';
@@ -91,6 +93,10 @@ export function AdvisorScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
   const advisor = useAdvisor(params?.source);
+  // Why the cards query failed. Read from the cache: useAdvisor's own cards
+  // observer re-renders this screen whenever that query changes.
+  const queryClient = useQueryClient();
+  const cardsNoMatch = isNoMappedCardsError(queryClient.getQueryState(cardsQueryKey)?.error);
   const { openCard, sheets } = useCardDetailSheet(SOURCE);
   const keyboardPadding = useKeyboardPadding();
   const reduceMotion = useReduceMotion();
@@ -433,16 +439,24 @@ export function AdvisorScreen() {
   if (advisor.isLoading) {
     body = <SkeletonTranscript />;
   } else if (advisor.isError) {
+    // cardsNoMatch: no card matched a CashKaro store; not the connection.
     body = (
       <ScreenState
-        title="Couldn't load cards"
-        body="Check your connection and try again."
+        title={cardsNoMatch ? "Cards aren't available right now" : "Couldn't load cards"}
+        body={cardsNoMatch ? 'Please try again.' : 'Check your connection and try again.'}
         actionLabel="Try again"
         onAction={() => advisor.refetch()}
       />
     );
   } else if (!advisor.hasCards) {
-    body = <ScreenState title="No cards are available right now" body="Please check back a little later." />;
+    body = (
+      <ScreenState
+        title="No cards are available right now"
+        body="Please check back a little later."
+        actionLabel="Try again"
+        onAction={() => advisor.refetch()}
+      />
+    );
   } else {
     body = (
       <Animated.View style={[{ flex: 1 }, keyboardPadding]}>
