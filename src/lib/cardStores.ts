@@ -41,6 +41,25 @@ export function isCardStore(s: { storeId?: string; name: string }, ids: Readonly
   return CARD_STORE_NAME.test(s.name ?? '');
 }
 
+/**
+ * A saved recent store (Offers search history) is a card store when:
+ *   - its saved `storeId` or its label passes isCardStore (runs as soon as
+ *     the BankKaro ids load; no store list needed), or
+ *   - a loaded category row with the same slug is a card store (for an older
+ *     recent saved without a `storeId`).
+ * `storeId` is read defensively: it comes from device storage.
+ */
+export function isCardStoreRecent(
+  recent: { label: string; id?: string; storeId?: unknown },
+  ids: ReadonlySet<string>,
+  loadedBySlug: ReadonlyMap<string, { storeId?: string; name: string }>,
+): boolean {
+  const storeId = typeof recent.storeId === 'string' && recent.storeId ? recent.storeId : undefined;
+  if (isCardStore({ storeId, name: recent.label }, ids)) return true;
+  const row = recent.id ? loadedBySlug.get(recent.id) : undefined;
+  return !!row && isCardStore(row, ids);
+}
+
 /** The list without its credit-card stores (isCardStore). Keeps the order. */
 export function excludeCardStores<T extends { storeId?: string; name: string }>(
   list: T[],

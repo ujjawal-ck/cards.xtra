@@ -42,6 +42,29 @@ import { qk } from './keys';
 const NO_CARD_STORE_IDS: ReadonlySet<string> = new Set();
 
 /**
+ * How long a category list stays fresh. "More" is 4 calls (~1.47 MB raw), so
+ * the grid and search index refetch on screen focus or app foreground only
+ * when their data is older than this. Pull-to-refresh still forces a refetch.
+ */
+const CATEGORY_FRESH_MS = 10 * 60 * 1000;
+
+/**
+ * useRefetchOnFocus, but only when the data is older than `maxAgeMs` (or there
+ * is none, as after an error). useRefetchOnFocus itself is unchanged: other
+ * screens use it.
+ */
+function useRefetchOnFocusIfOlder(
+  query: { refetch: () => unknown; isFetched: boolean; isFetching: boolean; dataUpdatedAt: number },
+  maxAgeMs: number,
+): void {
+  useRefetchOnFocus({
+    isFetched: query.isFetched,
+    isFetching: query.isFetching,
+    refetch: () => (Date.now() - query.dataUpdatedAt >= maxAgeMs ? query.refetch() : undefined),
+  });
+}
+
+/**
  * The BankKaro card store ids, read from the raw card list (one observer of
  * `rawCardsQueryKey`, the download Home already makes). `staleTime: Infinity`:
  * Offers never starts a refetch of the 3.3 MB list itself (the Offers tab stays
@@ -93,16 +116,21 @@ export function useOfferCategories() {
   return query;
 }
 
-/** Stores in a category for the Offers grid, without the credit-card stores. The cache keeps every store. */
+/**
+ * Stores in a category for the Offers grid, without the credit-card stores.
+ * The cache keeps every store. Fresh for 10 minutes: a focus or app foreground
+ * refetches only older data; `refetch()` (pull-to-refresh) always runs.
+ */
 export function useCategoryOffers(categorySlug: string | null) {
   const withoutCardStores = useWithoutCardStores();
   const query = useQuery<OfferStoreSummary[], Error, OfferStoreSummary[]>({
     queryKey: qk.offers.category(categorySlug ?? ''),
     enabled: !!categorySlug,
+    staleTime: CATEGORY_FRESH_MS,
     queryFn: async () => mapCategoryOffers(await getCategoryOffers(categorySlug as string)),
     select: withoutCardStores,
   });
-  useRefetchOnFocus(query);
+  useRefetchOnFocusIfOlder(query, CATEGORY_FRESH_MS);
   return query;
 }
 
@@ -116,7 +144,7 @@ export function useOfferStore(storeSlug: string | null) {
   return query;
 }
 
-/** Merge the per-category results (already without card stores), deduped by slug.
+/** Merge the per-category results (every store, card stores too), deduped by slug.
  *  Module level, so `useQueries` keeps the merged result while no query changes. */
 function mergeCategoryStores(results: UseQueryResult<OfferStoreSummary[], Error>[]) {
   const bySlug = new Map<string, OfferStoreSummary>();
@@ -126,7 +154,7 @@ function mergeCategoryStores(results: UseQueryResult<OfferStoreSummary[], Error>
     }
   }
   return {
-    stores: Array.from(bySlug.values()),
+    all: Array.from(bySlug.values()),
     allLoading: results.every((r) => r.isLoading),
     allLoaded: results.length > 0 && results.every((r) => r.isSuccess),
   };
@@ -140,7 +168,8 @@ function mergeCategoryStores(results: UseQueryResult<OfferStoreSummary[], Error>
  * per-category query reuses the SAME cache key as useCategoryOffers, so a
  * category the user already browsed is served from cache; the rest fetch in
  * parallel. `enabled` gates the whole fan-out so it only fires when the search
- * overlay opens.
+ * overlay opens. Fresh for 10 minutes, like the grid: opening search or an app
+ * foreground refetches only older categories.
  */
 export function useAllOfferStores(
   enabled: boolean,
@@ -150,24 +179,31 @@ export function useAllOfferStores(
   isLoading: boolean;
   /** Every category has loaded: a slug missing from `stores` is not a live, non-card store. */
   isComplete: boolean;
+  /** Every loaded store by slug, card stores too: lets an old recent (no saved store id) be checked. */
+  loadedBySlug: ReadonlyMap<string, OfferStoreSummary>;
+  /** The BankKaro card store ids (empty until they load, or if BankKaro fails). */
+  cardStoreIds: ReadonlySet<string>;
 } {
-  const withoutCardStores = useWithoutCardStores();
+  const cardStoreIds = useCardStoreIds();
   const merged = useQueries({
     queries: paths.map((path) => ({
       queryKey: qk.offers.category(path),
       enabled,
-      staleTime: 5 * 60 * 1000,
+      staleTime: CATEGORY_FRESH_MS,
       queryFn: async () => mapCategoryOffers(await getCategoryOffers(path)),
-      select: withoutCardStores,
     })),
     combine: mergeCategoryStores,
   });
+  const stores = useMemo(() => excludeCardStores(merged.all, cardStoreIds), [merged.all, cardStoreIds]);
+  const loadedBySlug = useMemo(() => new Map(merged.all.map((s) => [s.slug, s] as const)), [merged.all]);
 
   return {
-    stores: merged.stores,
+    stores,
     // Loading until the first category resolves — search can render results
     // progressively as the rest stream in, rather than blocking on all.
     isLoading: enabled && merged.allLoading,
     isComplete: enabled && merged.allLoaded,
+    loadedBySlug,
+    cardStoreIds,
   };
 }

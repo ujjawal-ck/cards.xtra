@@ -403,7 +403,8 @@ export const CATEGORY_MAX_PAGES = 20;
  * Rows are deduped by row `id`. The same `query` goes on every page.
  * Page 1 failure throws. A later page failure (or a later page with no `data`
  * list) throws too, unless `partialOk`: then the rows of the pages read so far
- * are returned (and the error is reported).
+ * are returned (and the error is reported). Without `partialOk`, a list that
+ * ends below a known total also throws.
  * Returns page 1's envelope with `data` replaced by all the rows. A page 1 body
  * with no `data` list is returned as is, so the mapper can tell an empty
  * category from a broken body.
@@ -454,6 +455,14 @@ async function getCategoryPages(
     } else if (pageRows.length < CATEGORY_PAGE_SIZE) {
       break;
     }
+  }
+  // The loop can end below a known total (an empty page, a page with no new
+  // row, the cap). Without `partialOk` that short list is a failure, not a
+  // good list: a short card-rate list would hide cards.
+  if (!opts.partialOk && Number.isFinite(total) && rows.length < total) {
+    throw new ApiError(`Offers category ended at ${rows.length} of ${total} rows`, 0, undefined, {
+      kind: 'http',
+    });
   }
   return { ...first, data: rows };
 }
