@@ -1,8 +1,9 @@
 /**
- * Contract C8: one paging helper for the category calls. Page size 500; read
- * pages until the rows reach `meta.total_records`, or a page is short or
- * empty; cap 10 pages; dedupe by row id; `links.next` does not decide the
- * stop. getCategoryOffers keeps the loaded pages when a later page fails;
+ * Contract C8: one paging helper for the category calls. Page size 500. With
+ * a known `meta.total_records`, read pages until the unique rows reach it (a
+ * short page does not stop: the server may cap the page size); with no total,
+ * stop on a short page. Always stop on an empty page, a page with no new row,
+ * or 20 pages. Dedupe by row id; `links.next` does not decide the stop. getCategoryOffers keeps the loaded pages when a later page fails;
  * getCardRateStores throws. Rows are dummies with no amounts.
  */
 // Set before the module loads: env.ts reads the BFF URL at import time.
@@ -33,10 +34,12 @@ const row = (n: number) => ({
 });
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 
-/** A server that pages `ids` (duplicates allowed) and says `total` stores; `links.next` is always set. */
-function pagedServer(ids: number[], total: number | null = ids.length) {
+/** A server that pages `ids` (duplicates allowed) and says `total` stores; `links.next` is always set.
+ *  `cap` is the server's own page size limit, applied to every page. */
+function pagedServer(ids: number[], total: number | null = ids.length, cap = Infinity) {
   return (call: Call): Reply => {
-    const slice = ids.slice((call.page - 1) * call.size, call.page * call.size);
+    const size = Math.min(call.size, cap);
+    const slice = ids.slice((call.page - 1) * size, call.page * size);
     return {
       body: {
         data: slice.map(row),
@@ -130,11 +133,34 @@ describe('getCategoryOffers pages through a category (C8)', () => {
     expect(res.data).toHaveLength(730);
   });
 
-  it('reads at most 10 pages', async () => {
+  it('reads at most 20 pages', async () => {
     replyFor = (call) => ({ body: { data: range((call.page - 1) * 500 + 1, call.page * 500).map(row) } });
     const res = await ck.getCategoryOffers('fashion');
-    expect(pages()).toEqual(range(1, 10));
-    expect(res.data).toHaveLength(5000);
+    expect(pages()).toEqual(range(1, 20));
+    expect(res.data).toHaveLength(10000);
+  });
+
+  it('with a known total, a server that caps a page at 100 still reaches 1573 rows in 16 calls', async () => {
+    replyFor = pagedServer(range(1, 1573), 1573, 100);
+    const res = await ck.getCategoryOffers('more-category-offers');
+    expect(pages()).toEqual(range(1, 16));
+    expect(calls.every((c) => c.size === 500)).toBe(true);
+    expect(res.data).toHaveLength(1573);
+    expect(new Set(res.data.map((r: any) => r.id)).size).toBe(1573);
+  });
+
+  it('stops after 2 calls when the server ignores page[number] (page 2 adds no new row)', async () => {
+    replyFor = () => ({ body: { data: range(1, 100).map(row), meta: { total_records: 1573 } } });
+    const res = await ck.getCategoryOffers('more-category-offers');
+    expect(pages()).toEqual([1, 2]);
+    expect(res.data).toHaveLength(100);
+  });
+
+  it('with a known total, stops on an empty page before the total', async () => {
+    replyFor = pagedServer(range(1, 1200), 1573);
+    const res = await ck.getCategoryOffers('more-category-offers');
+    expect(pages()).toEqual([1, 2, 3, 4]);
+    expect(res.data).toHaveLength(1200);
   });
 
   it('returns the rows of page 1 when page 2 fails, and reports it (Q6)', async () => {

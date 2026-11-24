@@ -387,13 +387,18 @@ export async function getOfferCategories(): Promise<any> {
 
 /** Rows per category page. The API default is 10; production honours at least 2000 (2026-11-24). */
 export const CATEGORY_PAGE_SIZE = 500;
-/** Most pages one category call reads (5000 rows). */
-export const CATEGORY_MAX_PAGES = 10;
+/** Most pages one category call reads: 10000 rows at 500 a page, 2000 if the server caps a page at 100. */
+export const CATEGORY_MAX_PAGES = 20;
 
 /**
  * Read every page of `/offers/category/<path>` (contract C8). Pages are read
- * one after another, page size 500, until the rows read reach
- * `meta.total_records`, a page is short or empty, or 10 pages are read.
+ * one after another with page size 500. The loop stops:
+ *   - when `meta.total_records` is known: at the total (unique rows). A short
+ *     page does NOT stop it: the server may cap the page size below 500, and
+ *     it caps every page the same, so the page numbers stay consistent;
+ *   - when the total is unknown: at a short page;
+ *   - always: at an empty page, a page that adds no new row (a server that
+ *     ignores `page[number]`), or 20 pages.
  * `links.next` is not used to stop: production sets it on the last page too.
  * Rows are deduped by row `id`. The same `query` goes on every page.
  * Page 1 failure throws. A later page failure (or a later page with no `data`
@@ -408,9 +413,9 @@ async function getCategoryPages(
   opts: { query: Record<string, string | number>; contract: [string, ZodTypeAny]; partialOk: boolean },
 ): Promise<any> {
   let first: any;
+  let total = NaN; // meta.total_records of page 1; NaN when unknown
   const rows: any[] = [];
   const seen = new Set<string>();
-  let read = 0; // rows read before dedupe, compared with total_records
   for (let page = 1; page <= CATEGORY_MAX_PAGES; page++) {
     let res: any;
     try {
@@ -430,9 +435,11 @@ async function getCategoryPages(
     if (page === 1) {
       first = res;
       if (!Array.isArray(res?.data)) return res;
+      const raw = res?.meta?.total_records;
+      if (raw !== null && raw !== undefined && raw !== '') total = Number(raw);
     }
     const pageRows: any[] = res.data;
-    read += pageRows.length;
+    const before = rows.length;
     for (const row of pageRows) {
       const id = row?.id == null ? '' : String(row.id);
       if (id) {
@@ -441,9 +448,12 @@ async function getCategoryPages(
       }
       rows.push(row);
     }
-    const total = Number(first?.meta?.total_records);
-    if (pageRows.length < CATEGORY_PAGE_SIZE) break;
-    if (Number.isFinite(total) && read >= total) break;
+    if (pageRows.length === 0 || rows.length === before) break; // empty, or nothing new
+    if (Number.isFinite(total)) {
+      if (rows.length >= total) break;
+    } else if (pageRows.length < CATEGORY_PAGE_SIZE) {
+      break;
+    }
   }
   return { ...first, data: rows };
 }
