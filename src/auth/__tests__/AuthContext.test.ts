@@ -90,6 +90,7 @@ jest.mock('../../query/queryClient', () => ({
       Promise.resolve(queryFn({})),
     ),
   },
+  clearQueryCache: jest.fn(),
 }));
 jest.mock('../../../modules/cashback-guard', () => ({
   isSupported: true,

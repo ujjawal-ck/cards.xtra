@@ -6,7 +6,7 @@ import { endLocalSession, restoreSession } from '../sessionEnd';
 import { currentSegment, loadSegment } from '../tokenStore';
 import { getAdvisorSession } from '../../screens/advisor/advisorSession';
 import { useSavedSpends } from '../../lib/savedSpends';
-import { queryClient } from '../../query/queryClient';
+import { clearQueryCache } from '../../query/queryClient';
 import { analytics } from '../../analytics';
 import { bumpSessionGeneration, __setClock } from '../../api/http/tokenManager';
 import { base64Encode } from '../../api/http/client';
@@ -25,7 +25,7 @@ jest.mock('expo-secure-store', () => ({
   }),
 }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid' }));
-jest.mock('../../query/queryClient', () => ({ queryClient: { clear: jest.fn() } }));
+jest.mock('../../query/queryClient', () => ({ clearQueryCache: jest.fn() }));
 jest.mock('../../../modules/cashback-guard', () => ({
   isSupported: true,
   stopGuard: jest.fn(),
@@ -114,7 +114,7 @@ describe('endLocalSession', () => {
     expect(useSavedSpends().answers).toEqual({});
     expect(getAdvisorSession().formDraft).toBeNull();
     expect(getAdvisorSession().state.answers).toEqual({});
-    expect(queryClient.clear).toHaveBeenCalled();
+    expect(clearQueryCache).toHaveBeenCalled();
     expect(sinkProps).toContainEqual({ ck_user_id: null });
     expect(sinkIds[sinkIds.length - 1]).toBe('dev-1');
     expect(CashbackGuard.stopGuard).toHaveBeenCalledTimes(1);

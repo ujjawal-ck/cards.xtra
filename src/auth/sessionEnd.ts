@@ -38,7 +38,7 @@ import {
   isExpiring,
   isRefreshTokenDead,
 } from '../api/http/tokenManager';
-import { queryClient } from '../query/queryClient';
+import { clearQueryCache } from '../query/queryClient';
 import { analytics } from '../analytics';
 import * as CashbackGuard from '../../modules/cashback-guard';
 
@@ -58,7 +58,8 @@ export async function endLocalSession(deviceId: string | null): Promise<void> {
   // A refresh still running drops its tokens (AUTH-05).
   bumpSessionGeneration();
   // Cached earnings, orders and profile. This also cancels their fetches.
-  queryClient.clear();
+  // The public card-rate rows stay (clearQueryCache).
+  clearQueryCache();
   clearSavedSpends();
   resetAdvisorSession();
   // AUTH-06: GA4 keeps user properties on the device.
