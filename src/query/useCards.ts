@@ -61,6 +61,22 @@ const selectAll = (d: CardCatalog): CardModel[] => d.all;
 /** How long the card-rate rows stay fresh: a catalog run inside this window does not call CashKaro again. */
 export const CARD_RATE_STALE_MS = 10 * 60 * 1000;
 
+/**
+ * The card-rate rows loaded but matched no active card, and no last good rows
+ * exist. Not a network or server failure: screens use their own copy for it.
+ */
+export class NoMappedCardsError extends Error {
+  constructor(rowCount: number) {
+    super(`card-rate rows match no card (${rowCount} rows)`);
+    this.name = 'NoMappedCardsError';
+  }
+}
+
+/** True when the cards query failed because no card matched (NoMappedCardsError). */
+export function isNoMappedCardsError(error: unknown): boolean {
+  return error instanceof NoMappedCardsError;
+}
+
 /** The active BankKaro rows: the catalogue the card rule runs on. */
 function activeRows(cardsRes: any): BkCard[] {
   const list: BkCard[] = Array.isArray(cardsRes?.data) ? cardsRes.data : [];
@@ -81,7 +97,7 @@ async function fetchRateRows(queryClient: QueryClient, cardsP: Promise<any>): Pr
         const [rows, cardsRes] = await Promise.all([getCardRateStores(), cardsP]);
         const index = buildCardRateIndex(rows);
         if (!activeRows(cardsRes).some((c) => isCardShown(c, index))) {
-          throw new Error(`card-rate rows match no card (${index.size} rows)`);
+          throw new NoMappedCardsError(index.size);
         }
         return rows;
       },

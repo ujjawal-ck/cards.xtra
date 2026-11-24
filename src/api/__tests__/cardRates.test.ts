@@ -214,8 +214,11 @@ describe('league for display (leagueForDisplay)', () => {
   const rows = [lr('a', '1'), lr('b', '2'), lr('not-in-app'), lr('mine', '9')];
   const aliases = (xs: Array<{ savings: { alias: string } }>) => xs.map((r) => r.savings.alias);
 
-  it('keeps every row as it is while the card list is not known', () => {
-    expect(leagueForDisplay(rows, null)).toBe(rows);
+  it('a null shown set (cards loading or failed) returns no unmapped row; only the own card stays', () => {
+    expect(leagueForDisplay(rows, null)).toEqual([]);
+    const out = leagueForDisplay(rows, null, 'mine');
+    expect(aliases(out)).toEqual(['mine']);
+    expect((out[0] as { card?: { id: string } }).card?.id).toBe('9');
   });
 
   it('only rows whose app card is shown; rows with no app card drop out', () => {

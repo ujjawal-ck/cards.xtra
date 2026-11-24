@@ -12,8 +12,9 @@
  *
  * FILTERED includes the card rule (leagueForDisplay, owner rule D-A, 2026-11-24, mapped only): the
  * opponent and the "cards that beat yours" lists hold only cards that match a CashKaro store row. The
- * user's own card needs no CashKaro rate: it always gets its verdict. When the cards list fails with
- * nothing cached (cardsError), the screen shows an error, never the unfiltered league.
+ * user's own card needs no CashKaro rate: it always gets its verdict. While the cards list loads, the
+ * loading state shows; when it fails with nothing cached (cardsError), an error. Never the unfiltered
+ * league.
  *
  * Under the hero, "Based on <categories>" (the categories picked on the spends page that have a spend)
  * opens the edit sheet with only those categories' questions; its "+ Add a category" row goes back to
@@ -180,7 +181,8 @@ export function BeatMyCardResultScreen() {
   const editKeys = useMemo(() => keysForCategories(categories), [categories]);
   const basedOn = basedOnText(categories, answers);
 
-  const { league, shown, isLoading, isOffline, isError, cardsError, refetch, loadMs } = useCardSavings(spends);
+  const { league, shown, isLoading, isOffline, isError, cardsError, cardsNoMatch, refetch, loadMs } =
+    useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   // The app lists no card at all (mapped only): there is no opponent.
@@ -307,7 +309,15 @@ export function BeatMyCardResultScreen() {
       />
     );
   } else if (cardsError) {
-    content = (
+    // cardsNoMatch: no card matched a CashKaro store; not the connection.
+    content = cardsNoMatch ? (
+      <ScreenState
+        title="Cards aren't available right now"
+        body="Please try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    ) : (
       <ScreenState
         title="Couldn't load cards"
         body="Check your connection and try again."

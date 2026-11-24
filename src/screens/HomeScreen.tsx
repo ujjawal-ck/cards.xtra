@@ -105,7 +105,7 @@ import {
   iconSize,
 } from '../tokens';
 import { images } from '../assets/images';
-import { useCards } from '../query/useCards';
+import { isNoMappedCardsError, useCards } from '../query/useCards';
 import { useOnSessionEnd } from '../auth/useOnSessionEnd';
 import { rewardLabel, selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
@@ -1484,6 +1484,8 @@ export function HomeScreen() {
   // No list at all: the catalog failed with nothing cached, or it is empty.
   // The "N cards" results line hides then.
   const noCardList = (isError && !cardsQuery.data) || catalogEmpty;
+  // The catalog failed because no card matched a CashKaro store: not the connection.
+  const cardsNoMatch = isError && isNoMappedCardsError(cardsQuery.error);
 
   // Per-chip counts driving the FilterRow chips' selected-with-count state.
   // A non-zero count flips that chip into the Chip `tab` default treatment
@@ -2256,14 +2258,22 @@ export function HomeScreen() {
             }}
           >
             <Text variant="body16SemiBold" color={colors.text.primary}>
-              {isError ? 'Couldn’t load cards' : 'No cards are available right now'}
+              {cardsNoMatch
+                ? 'Cards aren’t available right now'
+                : isError
+                ? 'Couldn’t load cards'
+                : 'No cards are available right now'}
             </Text>
             <Text
               variant="body12Regular"
               color={colors.text.secondary}
               align="center"
             >
-              {isError ? 'Check your connection and try again.' : 'Please check back a little later.'}
+              {cardsNoMatch
+                ? 'Please try again.'
+                : isError
+                ? 'Check your connection and try again.'
+                : 'Please check back a little later.'}
             </Text>
             <Pressable
               onPress={() => refetch()}

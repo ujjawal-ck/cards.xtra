@@ -4,8 +4,8 @@
  * The cards BankKaro returns for the spends, in one FlatList. Only the cards
  * that match a CashKaro store row show (leagueForDisplay, owner rule D-A,
  * 2026-11-24, mapped only); the user's own card (highlightAlias) always stays.
- * When the cards list fails with nothing cached (cardsError), the screen shows
- * an error, never the unfiltered league.
+ * While the cards list loads, the loading state shows; when it fails with
+ * nothing cached (cardsError), an error. Never the unfiltered league.
  * Reads its result from useCardSavings(spends); only spends and answers arrive
  * through navigation.
  *
@@ -189,7 +189,7 @@ export function ToolResultsScreen() {
   const [spends, setSpends] = useState(() => params.spends);
   const { save } = useSavedSpends();
 
-  const { league: fullLeague, shown, isLoading, isOffline, isError, cardsError, refetch, loadMs } =
+  const { league: fullLeague, shown, isLoading, isOffline, isError, cardsError, cardsNoMatch, refetch, loadMs } =
     useCardSavings(spends);
   // The card rule, display only. The user's own card always stays.
   const league = useMemo(
@@ -586,8 +586,15 @@ export function ToolResultsScreen() {
       />
     );
   } else if (cardsError) {
-    // Without the cards list the card rule cannot run: never the unfiltered league.
-    content = (
+    // cardsNoMatch: no card matched a CashKaro store; not the connection.
+    content = cardsNoMatch ? (
+      <ScreenState
+        title="Cards aren't available right now"
+        body="Please try again."
+        actionLabel="Try again"
+        onAction={() => refetch()}
+      />
+    ) : (
       <ScreenState
         title="Couldn't load cards"
         body="Check your connection and try again."

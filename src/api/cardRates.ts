@@ -204,9 +204,10 @@ export interface ShownCards {
  * The same rule on a card-tool league (the four Home tools' table, and the
  * "cards that beat yours" lists). Display only: never narrow the league itself.
  *
- *   - `shown` null (the card list is not known yet): every row as it is.
- *   - Otherwise a row stays only when its app card is shown. A row with no app
- *     card stays out: no CashKaro store row can match it.
+ *   - A row stays only when its app card is shown. A row with no app card
+ *     stays out: no CashKaro store row can match it.
+ *   - `shown` null (the card list is loading or failed): no card is known to be
+ *     mapped, so no row stays. Never the unfiltered league.
  *   - The row of `keepAlias` (the user's own card) always stays as it is.
  */
 export function leagueForDisplay<T extends { savings: { alias: string }; card?: { id: string } }>(
@@ -215,8 +216,7 @@ export function leagueForDisplay<T extends { savings: { alias: string }; card?: 
   keepAlias?: string,
 ): T[] {
   if (!Array.isArray(rows)) return [];
-  if (!shown) return rows;
   return rows.filter(
-    (r) => (!!keepAlias && r.savings.alias === keepAlias) || (!!r.card && shown.ids.has(r.card.id)),
+    (r) => (!!keepAlias && r.savings.alias === keepAlias) || (!!shown && !!r.card && shown.ids.has(r.card.id)),
   );
 }

@@ -5,6 +5,7 @@
  *   - A failed call, or a call that matches no card, keeps the last good rows.
  *   - With no last good rows the catalog run throws (screens show an error with Retry).
  *   - `cardsError` (cardsQueryFailed) is false while cached cards exist and a refetch fails.
+ *   - The tools' loading flag (savingsFlags) stays true until the cards list resolves or fails.
  * Amounts are dummy values.
  */
 jest.mock('@react-navigation/native', () => ({
@@ -21,12 +22,12 @@ jest.mock('../../api/cashkaro', () => ({
   getCardRateStores: jest.fn(),
 }));
 
-import { QueryClient, QueryObserver } from '@tanstack/react-query';
+import { QueryClient, QueryObserver, onlineManager } from '@tanstack/react-query';
 import { getCards, initBundle } from '../../api/bankkaro';
 import { getCardRateStores } from '../../api/cashkaro';
 import { setHandledErrorReporter } from '../../api/http/report';
-import { cardsQueryKey, fetchCatalog, type CardCatalog } from '../useCards';
-import { cardsQueryFailed } from '../useCardSavings';
+import { cardsQueryKey, fetchCatalog, isNoMappedCardsError, type CardCatalog } from '../useCards';
+import { cardsQueryFailed, savingsFlags } from '../useCardSavings';
 import { qk } from '../keys';
 
 const mockGetCards = getCards as jest.MockedFunction<typeof getCards>;
@@ -76,13 +77,16 @@ const expire = () => qc.invalidateQueries({ queryKey: qk.cards.rateStores });
 describe('fetchCatalog: last good card-rate rows', () => {
   it('cold failure: the run throws and nothing is cached', async () => {
     mockRates.mockRejectedValueOnce(new Error('network'));
-    await expect(fetchCatalog(qc)).rejects.toThrow('network');
+    const error = await fetchCatalog(qc).catch((e) => e);
+    expect(error.message).toBe('network');
+    expect(isNoMappedCardsError(error)).toBe(false); // the screens say "Check your connection"
     expect(qc.getQueryData(qk.cards.rateStores)).toBeUndefined();
   });
 
   it('cold success with 0 shown cards: the run throws and nothing is cached', async () => {
     mockRates.mockResolvedValueOnce(nonCardRows);
-    await expect(fetchCatalog(qc)).rejects.toThrow(/match no card/);
+    const error = await fetchCatalog(qc).catch((e) => e);
+    expect(isNoMappedCardsError(error)).toBe(true); // the screens say "Cards aren't available"
     expect(qc.getQueryData(qk.cards.rateStores)).toBeUndefined();
   });
 
@@ -182,5 +186,78 @@ describe('cardsError (cardsQueryFailed) on a real cards query', () => {
     expect(r.data).toBeUndefined();
     expect(cardsQueryFailed(r)).toBe(true);
     unsubscribe();
+  });
+});
+
+describe('savingsFlags: the tools wait for the cards list (no unmapped row, no empty flash)', () => {
+  afterEach(() => onlineManager.setOnline(true));
+
+  const calcDone = { data: { list: [] }, isPending: false, fetchStatus: 'idle' as const };
+  const cardsObserver = () => {
+    const observer = new QueryObserver<CardCatalog>(qc, {
+      queryKey: cardsQueryKey,
+      queryFn: () => fetchCatalog(qc),
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    return { observer, unsubscribe };
+  };
+  /** Resolves once the cards query is no longer pending. */
+  const settled = (observer: QueryObserver<CardCatalog>) =>
+    new Promise<void>((resolve) => {
+      const unsubscribe = observer.subscribe((r) => {
+        if (!r.isPending) {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+  it('loading while the catalog is pending; not loading after it resolves', async () => {
+    let resolveCards: (v: unknown) => void = () => undefined;
+    mockGetCards.mockReturnValueOnce(new Promise((r) => (resolveCards = r)));
+    mockRates.mockResolvedValue(goodRows);
+    const { observer, unsubscribe } = cardsObserver();
+    const done = settled(observer);
+
+    expect(observer.getCurrentResult().isPending).toBe(true);
+    expect(savingsFlags(true, calcDone, observer.getCurrentResult())).toEqual({ isLoading: true, isOffline: false });
+
+    resolveCards(cardsResponse);
+    await done;
+    expect(observer.getCurrentResult().isSuccess).toBe(true);
+    expect(savingsFlags(true, calcDone, observer.getCurrentResult())).toEqual({ isLoading: false, isOffline: false });
+    unsubscribe();
+  });
+
+  it('not loading after the catalog fails (the error state shows)', async () => {
+    let rejectCards: (e: unknown) => void = () => undefined;
+    mockGetCards.mockReturnValueOnce(new Promise((_r, j) => (rejectCards = j)));
+    mockRates.mockResolvedValue(goodRows);
+    const { observer, unsubscribe } = cardsObserver();
+    const done = settled(observer);
+    expect(savingsFlags(true, calcDone, observer.getCurrentResult()).isLoading).toBe(true);
+
+    rejectCards(new Error('bk down'));
+    await done;
+    const r = observer.getCurrentResult();
+    expect(savingsFlags(true, calcDone, r)).toEqual({ isLoading: false, isOffline: false });
+    expect(cardsQueryFailed(r)).toBe(true);
+    unsubscribe();
+  });
+
+  it('the cards list paused offline with no data is offline, not loading', () => {
+    onlineManager.setOnline(false);
+    const { observer, unsubscribe } = cardsObserver();
+    const r = observer.getCurrentResult();
+    expect(r.fetchStatus).toBe('paused');
+    expect(savingsFlags(true, calcDone, r)).toEqual({ isLoading: false, isOffline: true });
+    unsubscribe();
+  });
+
+  it('the calculate call still gates the flags; an idle hook is neither', () => {
+    const cardsDone = { data: { all: [], shown: [] }, isPending: false, fetchStatus: 'idle' as const };
+    const calcPending = { data: undefined, isPending: true, fetchStatus: 'fetching' as const };
+    expect(savingsFlags(true, calcPending, cardsDone)).toEqual({ isLoading: true, isOffline: false });
+    expect(savingsFlags(false, calcPending, calcPending)).toEqual({ isLoading: false, isOffline: false });
   });
 });
