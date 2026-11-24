@@ -26,7 +26,7 @@ jest.mock('../../api/cashkaro', () => ({
 
 import { QueryClient, QueryObserver, onlineManager } from '@tanstack/react-query';
 import { getCards, initBundle } from '../../api/bankkaro';
-import { getCardRateStores } from '../../api/cashkaro';
+import { CardRateShortListError, getCardRateStores } from '../../api/cashkaro';
 import { setHandledErrorReporter } from '../../api/http/report';
 import {
   __resetCardRateReport,
@@ -36,7 +36,7 @@ import {
   isNoMappedCardsError,
   type CardCatalog,
 } from '../useCards';
-import { defaultQueryRetry, queryClient as appQueryClient } from '../queryClient';
+import { clearQueryCache, defaultQueryRetry, queryClient as appQueryClient } from '../queryClient';
 import { ApiError } from '../../api/http/errors';
 import { cardsQueryFailed, savingsFlags } from '../useCardSavings';
 import { qk } from '../keys';
@@ -66,6 +66,7 @@ const newRows = [store('20', 'Beta Store', '200')];
 const nonCardRows = [store('16919', 'Some Fashion Store', '100')];
 
 const shownIds = (c: CardCatalog) => c.shown.map((x) => x.id);
+const cardRateReports = () => reported.filter((r) => r.startsWith('ck card-rate stores'));
 
 let qc: QueryClient;
 const reported: string[] = [];
@@ -336,5 +337,51 @@ describe('catalog retry (catalogQueryOptions) on the app default retry', () => {
     mockRates.mockRejectedValue(new ApiError('down', 500));
     await settle(appClient());
     expect(mockGetCards).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a short card-rate list (CardRateShortListError)', () => {
+  it('with last good rows: the last good rows are used and the short rows are not saved', async () => {
+    mockRates.mockResolvedValueOnce(goodRows);
+    await fetchCatalog(qc);
+    await expire();
+    mockRates.mockRejectedValueOnce(new CardRateShortListError(newRows, 1, 2));
+    const c = await fetchCatalog(qc);
+    expect(shownIds(c)).toEqual(['1']);
+    expect(qc.getQueryData(qk.cards.rateStores)).toEqual(goodRows);
+    expect(cardRateReports()).toHaveLength(1);
+  });
+
+  it('cold: the short rows are used, reported once, and not saved as last good', async () => {
+    mockRates.mockRejectedValueOnce(new CardRateShortListError(newRows, 1, 2));
+    const c = await fetchCatalog(qc);
+    expect(shownIds(c)).toEqual(['2']);
+    expect(qc.getQueryData(qk.cards.rateStores)).toBeUndefined();
+    expect(cardRateReports()).toEqual(['ck card-rate stores (short list: 1 of 2 rows)']);
+
+    // Not saved: the next run calls CashKaro again, and a failure then has no rows to fall back to.
+    mockRates.mockRejectedValueOnce(new Error('network'));
+    await expect(fetchCatalog(qc)).rejects.toThrow('network');
+    expect(mockRates).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('a card-rate fetch cancelled by the cache clear', () => {
+  it('is not reported and does not mute the next real failure', async () => {
+    mockRates.mockResolvedValueOnce(goodRows);
+    await fetchCatalog(qc);
+    await expire();
+    mockRates.mockReturnValueOnce(new Promise(() => undefined)); // still in flight at the clear
+    const run = fetchCatalog(qc);
+    await new Promise((r) => setTimeout(r, 0)); // the cards call resolves, the rate fetch starts
+    clearQueryCache(qc); // sign-in or session end
+    const c = await run;
+    expect(shownIds(c)).toEqual(['1']); // the kept last good rows
+    expect(cardRateReports()).toHaveLength(0);
+
+    await expire();
+    mockRates.mockRejectedValueOnce(new Error('network'));
+    await fetchCatalog(qc);
+    expect(cardRateReports()).toHaveLength(1);
   });
 });

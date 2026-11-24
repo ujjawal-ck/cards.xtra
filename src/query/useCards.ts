@@ -23,9 +23,9 @@
  * the app session. A no-match failure is never retried (catalogRetry), and a
  * covered card-rate failure is reported once until the next good run.
  */
-import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { isCancelledError, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { getCards, initBundle } from '../api/bankkaro';
-import { getCardRateStores } from '../api/cashkaro';
+import { CardRateShortListError, getCardRateStores } from '../api/cashkaro';
 import {
   mapBkCardToCardModel,
   buildBankDirectory,
@@ -112,7 +112,12 @@ function activeRows(cardsRes: any): BkCard[] {
  * The card-rate rows for this run. A good run (the call succeeds and at least
  * one active card matches) replaces the cached rows. A failed run, or one that
  * matches no card, throws inside the query function, so React Query keeps the
- * last good rows; this returns them. With none, it throws.
+ * last good rows; this returns them. With none, it throws, except:
+ *   - a short list (CardRateShortListError) with no last good rows returns the
+ *     short rows (a short list hides some cards, a throw hides all). They are
+ *     never saved as last good.
+ *   - a cancelled fetch (the cache clear at sign-in or session end) is no
+ *     card-rate failure: never reported, and the report flag stays as it is.
  */
 async function fetchRateRows(queryClient: QueryClient, cardsP: Promise<any>): Promise<any[]> {
   try {
@@ -138,12 +143,19 @@ async function fetchRateRows(queryClient: QueryClient, cardsP: Promise<any>): Pr
     // A failed cards call fails the catalog anyway: nothing to keep or report here.
     if (await cardsP.then(() => false, () => true)) throw error;
     const last = queryClient.getQueryData<any[]>(qk.cards.rateStores);
-    if (!last) throw error;
-    if (!rateFailureReported) {
+    const short = error instanceof CardRateShortListError ? error : null;
+    const rows = last ?? short?.rows;
+    if (!rows) throw error;
+    if (!isCancelledError(error) && !rateFailureReported) {
       rateFailureReported = true;
-      reportHandled(error, 'ck card-rate stores (kept the last good rows)');
+      reportHandled(
+        error,
+        last
+          ? 'ck card-rate stores (kept the last good rows)'
+          : `ck card-rate stores (short list: ${short?.rows.length} of ${short?.total} rows)`,
+      );
     }
-    return last;
+    return rows;
   }
 }
 

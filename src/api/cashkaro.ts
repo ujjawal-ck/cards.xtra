@@ -391,11 +391,30 @@ export const CATEGORY_PAGE_SIZE = 500;
 export const CATEGORY_MAX_PAGES = 20;
 
 /**
+ * A card-rate list (`partialOk: false`) that ends below the server's
+ * `meta.total_records`. Carries the rows that did load (deduped by id) and the
+ * total, so the caller can choose: last good rows, else these short rows (a
+ * short list hides some cards, a throw hides all). Never saved as last good.
+ */
+export class CardRateShortListError extends Error {
+  readonly rows: any[];
+  readonly total: number;
+  constructor(rows: any[], rawCount: number, total: number) {
+    super(`Offers category ended at ${rawCount} of ${total} rows`);
+    this.name = 'CardRateShortListError';
+    this.rows = rows;
+    this.total = total;
+  }
+}
+
+/**
  * Read every page of `/offers/category/<path>` (contract C8). Pages are read
  * one after another with page size 500. The loop stops:
- *   - when `meta.total_records` is known: at the total (unique rows). A short
- *     page does NOT stop it: the server may cap the page size below 500, and
- *     it caps every page the same, so the page numbers stay consistent;
+ *   - when `meta.total_records` is known: at the total, counted in RAW rows
+ *     (before the dedupe), so a duplicate store id never makes the list look
+ *     short. A short page does NOT stop it: the server may cap the page size
+ *     below 500, and it caps every page the same, so the page numbers stay
+ *     consistent;
  *   - when the total is unknown: at a short page;
  *   - always: at an empty page, a page that adds no new row (a server that
  *     ignores `page[number]`), or 20 pages.
@@ -403,8 +422,10 @@ export const CATEGORY_MAX_PAGES = 20;
  * Rows are deduped by row `id`. The same `query` goes on every page.
  * Page 1 failure throws. A later page failure (or a later page with no `data`
  * list) throws too, unless `partialOk`: then the rows of the pages read so far
- * are returned (and the error is reported). Without `partialOk`, a list that
- * ends below a known total also throws.
+ * are returned (and the error is reported). Without `partialOk`, a list whose
+ * raw rows end below a known total throws CardRateShortListError. A page that
+ * adds no new row does not count toward the raw rows (a server that ignores
+ * `page[number]` repeats page 1).
  * Returns page 1's envelope with `data` replaced by all the rows. A page 1 body
  * with no `data` list is returned as is, so the mapper can tell an empty
  * category from a broken body.
@@ -416,6 +437,7 @@ async function getCategoryPages(
   let first: any;
   let total = NaN; // meta.total_records of page 1; NaN when unknown
   const rows: any[] = [];
+  let rawCount = 0; // rows of the pages that added a new row, before the dedupe
   const seen = new Set<string>();
   for (let page = 1; page <= CATEGORY_MAX_PAGES; page++) {
     let res: any;
@@ -450,19 +472,18 @@ async function getCategoryPages(
       rows.push(row);
     }
     if (pageRows.length === 0 || rows.length === before) break; // empty, or nothing new
+    rawCount += pageRows.length;
     if (Number.isFinite(total)) {
-      if (rows.length >= total) break;
+      if (rawCount >= total) break;
     } else if (pageRows.length < CATEGORY_PAGE_SIZE) {
       break;
     }
   }
   // The loop can end below a known total (an empty page, a page with no new
-  // row, the cap). Without `partialOk` that short list is a failure, not a
-  // good list: a short card-rate list would hide cards.
-  if (!opts.partialOk && Number.isFinite(total) && rows.length < total) {
-    throw new ApiError(`Offers category ended at ${rows.length} of ${total} rows`, 0, undefined, {
-      kind: 'http',
-    });
+  // row, the cap). Without `partialOk` that short list is no good list: a
+  // short card-rate list would hide cards. The caller decides (useCards).
+  if (!opts.partialOk && Number.isFinite(total) && rawCount < total) {
+    throw new CardRateShortListError(rows, rawCount, total);
   }
   return { ...first, data: rows };
 }
@@ -521,7 +542,8 @@ const CARD_RATE_CATEGORY = 'home-categories-exclusive';
  * All stores in the card-rate category. Reads every page with the shared
  * paging helper (page size 500; 289 rows = 1 page in production, 2026-11-24).
  * Any page failure throws: a partial list would hide cards, so the caller
- * keeps its last good rows instead (contract C8).
+ * keeps its last good rows instead (contract C8). A list that ends below the
+ * total throws CardRateShortListError, which carries the rows that loaded.
  * Returns the flat `data[]` of offer rows, deduped by id; cardRates.ts builds the index.
  */
 export async function getCardRateStores(): Promise<any[]> {

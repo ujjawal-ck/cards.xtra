@@ -1,6 +1,6 @@
 /**
  * Contract C8: one paging helper for the category calls. Page size 500. With
- * a known `meta.total_records`, read pages until the unique rows reach it (a
+ * a known `meta.total_records`, read pages until the raw rows reach it (a
  * short page does not stop: the server may cap the page size); with no total,
  * stop on a short page. Always stop on an empty page, a page with no new row,
  * or 20 pages. Dedupe by row id; `links.next` does not decide the stop. getCategoryOffers keeps the loaded pages when a later page fails;
@@ -240,6 +240,24 @@ describe('a list that ends below a known total (partialOk)', () => {
     replyFor = pagedServer(range(1, 289), 289, 100);
     expect(await ck.getCardRateStores()).toHaveLength(289);
     expect(pages()).toEqual([1, 2, 3]);
+  });
+});
+
+describe('short list rule: raw rows against the total (card-rate)', () => {
+  it('289 raw rows with one duplicate id and total 289: no throw, 288 rows', async () => {
+    replyFor = pagedServer([...range(1, 288), 5], 289);
+    const rows = await ck.getCardRateStores();
+    expect(pages()).toEqual([1]);
+    expect(rows).toHaveLength(288);
+  });
+
+  it('total 300 with 289 raw rows: throws CardRateShortListError with the 289 rows', async () => {
+    replyFor = pagedServer(range(1, 289), 300);
+    const error = await ck.getCardRateStores().catch((e) => e);
+    expect(error).toBeInstanceOf(ck.CardRateShortListError);
+    expect(error.rows).toHaveLength(289);
+    expect(error.total).toBe(300);
+    expect(pages()).toEqual([1, 2]);
   });
 });
 

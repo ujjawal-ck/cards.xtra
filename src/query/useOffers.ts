@@ -12,7 +12,7 @@
  * if it fails, only the name rule runs (Q4): Offers never waits on BankKaro.
  */
 import { useCallback, useMemo } from 'react';
-import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient, type QueryKey, type UseQueryResult } from '@tanstack/react-query';
 import {
   getCategoryOffers,
   getOfferCategories,
@@ -49,18 +49,36 @@ const NO_CARD_STORE_IDS: ReadonlySet<string> = new Set();
 const CATEGORY_FRESH_MS = 10 * 60 * 1000;
 
 /**
+ * The focus refetch decision: refetch when the cached data is older than
+ * `maxAgeMs`, or when there is none (`dataUpdatedAt` 0 or unknown: never
+ * loaded, an error, or the cache clear at sign-in or sign-out dropped it).
+ */
+export function shouldRefetchOnFocus(dataUpdatedAt: number | undefined, now: number, maxAgeMs: number): boolean {
+  const at = dataUpdatedAt ?? 0;
+  return at === 0 || now - at >= maxAgeMs;
+}
+
+/**
  * useRefetchOnFocus, but only when the data is older than `maxAgeMs` (or there
- * is none, as after an error). useRefetchOnFocus itself is unchanged: other
+ * is none). The age is read from the cache AT FOCUS TIME, not from the last
+ * render: after the cache clear at sign-in or sign-out the screen still holds
+ * the dropped query's recent `dataUpdatedAt`, and the grid would stay on the
+ * previous session's stores. useRefetchOnFocus itself is unchanged: other
  * screens use it.
  */
 function useRefetchOnFocusIfOlder(
-  query: { refetch: () => unknown; isFetched: boolean; isFetching: boolean; dataUpdatedAt: number },
+  query: { refetch: () => unknown; isFetched: boolean; isFetching: boolean },
+  queryKey: QueryKey,
   maxAgeMs: number,
 ): void {
+  const queryClient = useQueryClient();
   useRefetchOnFocus({
     isFetched: query.isFetched,
     isFetching: query.isFetching,
-    refetch: () => (Date.now() - query.dataUpdatedAt >= maxAgeMs ? query.refetch() : undefined),
+    refetch: () =>
+      shouldRefetchOnFocus(queryClient.getQueryState(queryKey)?.dataUpdatedAt, Date.now(), maxAgeMs)
+        ? query.refetch()
+        : undefined,
   });
 }
 
@@ -123,14 +141,15 @@ export function useOfferCategories() {
  */
 export function useCategoryOffers(categorySlug: string | null) {
   const withoutCardStores = useWithoutCardStores();
+  const queryKey = qk.offers.category(categorySlug ?? '');
   const query = useQuery<OfferStoreSummary[], Error, OfferStoreSummary[]>({
-    queryKey: qk.offers.category(categorySlug ?? ''),
+    queryKey,
     enabled: !!categorySlug,
     staleTime: CATEGORY_FRESH_MS,
     queryFn: async () => mapCategoryOffers(await getCategoryOffers(categorySlug as string)),
     select: withoutCardStores,
   });
-  useRefetchOnFocusIfOlder(query, CATEGORY_FRESH_MS);
+  useRefetchOnFocusIfOlder(query, queryKey, CATEGORY_FRESH_MS);
   return query;
 }
 
