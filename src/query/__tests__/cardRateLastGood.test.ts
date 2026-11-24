@@ -6,6 +6,8 @@
  *   - With no last good rows the catalog run throws (screens show an error with Retry).
  *   - `cardsError` (cardsQueryFailed) is false while cached cards exist and a refetch fails.
  *   - The tools' loading flag (savingsFlags) stays true until the cards list resolves or fails.
+ *   - A covered card-rate failure is reported once until the next good run.
+ *   - The catalog query never retries a NoMappedCardsError (app default retry otherwise).
  * Amounts are dummy values.
  */
 jest.mock('@react-navigation/native', () => ({
@@ -26,7 +28,16 @@ import { QueryClient, QueryObserver, onlineManager } from '@tanstack/react-query
 import { getCards, initBundle } from '../../api/bankkaro';
 import { getCardRateStores } from '../../api/cashkaro';
 import { setHandledErrorReporter } from '../../api/http/report';
-import { cardsQueryKey, fetchCatalog, isNoMappedCardsError, type CardCatalog } from '../useCards';
+import {
+  __resetCardRateReport,
+  cardsQueryKey,
+  catalogQueryOptions,
+  fetchCatalog,
+  isNoMappedCardsError,
+  type CardCatalog,
+} from '../useCards';
+import { defaultQueryRetry, queryClient as appQueryClient } from '../queryClient';
+import { ApiError } from '../../api/http/errors';
 import { cardsQueryFailed, savingsFlags } from '../useCardSavings';
 import { qk } from '../keys';
 
@@ -65,6 +76,7 @@ beforeEach(() => {
   mockInit.mockResolvedValue(null);
   reported.length = 0;
   setHandledErrorReporter((_e, context) => reported.push(context));
+  __resetCardRateReport();
 });
 
 afterEach(() => {
@@ -259,5 +271,70 @@ describe('savingsFlags: the tools wait for the cards list (no unmapped row, no e
     const calcPending = { data: undefined, isPending: true, fetchStatus: 'fetching' as const };
     expect(savingsFlags(true, calcPending, cardsDone)).toEqual({ isLoading: true, isOffline: false });
     expect(savingsFlags(false, calcPending, calcPending)).toEqual({ isLoading: false, isOffline: false });
+  });
+});
+
+describe('card-rate failure report: once until the next good run', () => {
+  const rateReports = () => reported.filter((r) => r.startsWith('ck card-rate stores')).length;
+
+  it('an outage reports once, still calls CashKaro on every stale run, and a good run re-arms it', async () => {
+    mockRates.mockResolvedValueOnce(goodRows);
+    await fetchCatalog(qc);
+    for (let i = 0; i < 3; i++) {
+      await expire();
+      mockRates.mockRejectedValueOnce(new Error('network'));
+      await fetchCatalog(qc);
+    }
+    expect(mockRates).toHaveBeenCalledTimes(4);
+    expect(rateReports()).toBe(1);
+
+    await expire();
+    mockRates.mockResolvedValueOnce(goodRows);
+    await fetchCatalog(qc);
+    await expire();
+    mockRates.mockResolvedValueOnce(nonCardRows); // a zero-match run is a failure too
+    await fetchCatalog(qc);
+    expect(rateReports()).toBe(2);
+  });
+});
+
+describe('catalog retry (catalogQueryOptions) on the app default retry', () => {
+  // The app's real default retry; no delay, so a retry runs at once.
+  const appClient = () => new QueryClient({ defaultOptions: { queries: { retry: defaultQueryRetry, retryDelay: 0 } } });
+
+  const settle = async (client: QueryClient) => {
+    const observer = new QueryObserver<CardCatalog>(client, catalogQueryOptions(client));
+    const result = await new Promise<ReturnType<typeof observer.getCurrentResult>>((resolve) => {
+      const unsubscribe = observer.subscribe((r) => {
+        if (r.status !== 'pending' && r.fetchStatus === 'idle') {
+          unsubscribe();
+          resolve(r);
+        }
+      });
+    });
+    client.clear();
+    return result;
+  };
+
+  it('the app client uses defaultQueryRetry', () => {
+    expect(appQueryClient.getDefaultOptions().queries?.retry).toBe(defaultQueryRetry);
+  });
+
+  it('a cold no-match run is not retried: the BankKaro list downloads once', async () => {
+    mockRates.mockResolvedValue(nonCardRows);
+    const r = await settle(appClient());
+    expect(isNoMappedCardsError(r.error)).toBe(true);
+    expect(mockGetCards).toHaveBeenCalledTimes(1);
+  });
+
+  it('another error keeps the default: a plain error is retried once, an ApiError never', async () => {
+    mockRates.mockRejectedValue(new Error('network'));
+    await settle(appClient());
+    expect(mockGetCards).toHaveBeenCalledTimes(2);
+
+    mockGetCards.mockClear();
+    mockRates.mockRejectedValue(new ApiError('down', 500));
+    await settle(appClient());
+    expect(mockGetCards).toHaveBeenCalledTimes(1);
   });
 });
