@@ -3,7 +3,7 @@
  * Contract C6: a store is a card store when its CashKaro id is a BankKaro
  * `ck_store_id` OR its name matches /credit\s*card/i. Ids and names are dummies.
  */
-import { cardStoreIdsFrom, excludeCardStores, isCardStore } from '../cardStores';
+import { cardStoreIdsFrom, excludeCardStores, isCardStore, isCardStoreRecent } from '../cardStores';
 
 const BK_RAW = {
   data: [
@@ -97,5 +97,37 @@ describe('excludeCardStores', () => {
       'myntra',
       'ajio',
     ]);
+  });
+});
+
+describe('isCardStoreRecent (Offers recent search chips)', () => {
+  const ids = cardStoreIdsFrom(BK_RAW);
+  const none = new Set<string>();
+  const noRows = new Map<string, { storeId?: string; name: string }>();
+
+  it('hides a recent with a saved BankKaro store id as soon as the ids load, with no store list', () => {
+    const recent = { label: 'SalaryPay', id: 'salarypay', storeId: '90002' };
+    expect(isCardStoreRecent(recent, ids, noRows)).toBe(true);
+    // Before the ids load: only the name rule, so it is not hidden yet.
+    expect(isCardStoreRecent(recent, none, noRows)).toBe(false);
+  });
+
+  it('hides a recent by its label (name rule) with no ids and no rows', () => {
+    expect(isCardStoreRecent({ label: 'Bank D Novio Credit Card', id: 'novio' }, none, noRows)).toBe(true);
+  });
+
+  it('an older recent with no saved id: hidden when a loaded row with its slug is a card store', () => {
+    const recent = { label: 'SalaryPay', id: 'salarypay' };
+    const rows = new Map([['salarypay', { storeId: '90002', name: 'SalaryPay' }]]);
+    expect(isCardStoreRecent(recent, ids, rows)).toBe(true);
+    expect(isCardStoreRecent(recent, ids, noRows)).toBe(false);
+    expect(isCardStoreRecent(recent, none, rows)).toBe(false);
+  });
+
+  it('keeps a shopping store, and ignores a saved store id that is not a string', () => {
+    const rows = new Map([['flipkart', { storeId: '80010', name: 'Flipkart' }]]);
+    expect(isCardStoreRecent({ label: 'Flipkart', id: 'flipkart', storeId: '80010' }, ids, rows)).toBe(false);
+    expect(isCardStoreRecent({ label: 'Flipkart', id: 'flipkart', storeId: 90002 }, ids, noRows)).toBe(false);
+    expect(isCardStoreRecent({ label: 'Flipkart' }, ids, rows)).toBe(false);
   });
 });

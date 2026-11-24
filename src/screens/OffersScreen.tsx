@@ -59,7 +59,7 @@ import {
 } from '../organisms';
 import type { SearchTopSheetRecent } from '../organisms';
 import { images } from '../assets/images';
-import { useRecentSearches } from '../lib/recentSearches';
+import { useRecentSearches, type RecentSearch } from '../lib/recentSearches';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 import { colors, spacing, radius } from '../tokens';
@@ -91,11 +91,17 @@ const SEARCH_TICKER = ['Search for Amazon', 'Search for Flipkart', 'Search for A
 // stores; rendering them all at once in the ScrollView would stall the screen.
 const TILE_WINDOW = 100;
 
-// A recent store chip carries only a label and a slug, so before the store
-// index loads only the name rule of the card-store check can run on it.
-const NO_CARD_STORE_IDS: ReadonlySet<string> = new Set();
+// The entrance animation plays on the first rows only (6 tiles, about one
+// screen). Rows below render plain, so a refocus after a deep scroll does not
+// replay hundreds of tile animations.
+const ANIMATED_ROWS = 3;
+
+// A recent Offers store also saves the CashKaro store id, so the card-store
+// check can run on it as soon as the BankKaro ids load. recentSearches.ts keeps
+// extra fields as they are (spread on add, JSON on save, filter on read).
+type OfferRecent = RecentSearch & { storeId?: string };
 import { useAllOfferStores, useCategoryOffers, useOfferCategories } from '../query/useOffers';
-import { isCardStore } from '../lib/cardStores';
+import { isCardStoreRecent } from '../lib/cardStores';
 import { isPausedWithoutData } from '../query/paused';
 import { DEFAULT_OFFER_CATEGORY_PATH } from '../data/offerCategories';
 import type { RootStackParamList } from '../navigation/types';
@@ -282,23 +288,30 @@ export function OffersScreen() {
   // Global store index — every category's stores, deduped, without the
   // credit-card stores (D-B). Fetched only while the search overlay is open,
   // so search spans ALL offers (not just the category currently shown in the grid).
-  const { stores: allStores, isComplete: storeIndexComplete } = useAllOfferStores(
+  const {
+    stores: allStores,
+    isComplete: storeIndexComplete,
+    loadedBySlug,
+    cardStoreIds,
+  } = useAllOfferStores(
     searchOpen,
     useMemo(() => categories.map((c) => c.path), [categories])
   );
   const liveStoreSlugs = useMemo(() => new Set(allStores.map((s) => s.slug)), [allStores]);
   // A recent store may show and open only when it is not a card store (D-B).
-  // The name rule runs at once. Once every category has loaded, the store must
-  // also be in the index, which holds no card store (this also drops a store
-  // CashKaro no longer lists). Before that, a store is not hidden only because
-  // its category is still loading.
+  // The card-store check runs at once, with no wait for the index: the name
+  // rule, the saved store id against the BankKaro ids (when loaded), and for an
+  // older recent with no saved id, a loaded category row with its slug. Once
+  // every category has loaded, the store must also be in the index (this also
+  // drops a store CashKaro no longer lists). Before that, a store is not hidden
+  // only because its category is still loading.
   const isRecentStoreAllowed = useCallback(
-    (label: string, slug: string | undefined) => {
-      if (isCardStore({ name: label }, NO_CARD_STORE_IDS)) return false;
-      if (storeIndexComplete && (!slug || !liveStoreSlugs.has(slug))) return false;
+    (r: OfferRecent) => {
+      if (isCardStoreRecent(r, cardStoreIds, loadedBySlug)) return false;
+      if (storeIndexComplete && (!r.id || !liveStoreSlugs.has(r.id))) return false;
       return true;
     },
-    [storeIndexComplete, liveStoreSlugs]
+    [cardStoreIds, loadedBySlug, storeIndexComplete, liveStoreSlugs]
   );
 
   const searchCategories = useMemo(() => {
@@ -350,7 +363,8 @@ export function OffersScreen() {
 
   // The user's recent picks on Offers (categories and stores), kept on the
   // device separately from Home's. Stores carry their slug + logo URL, since
-  // the all-stores index only loads while search is open.
+  // the all-stores index only loads while search is open, and the CashKaro
+  // store id (OfferRecent) for the card-store check.
   const recentSearchStore = useRecentSearches('offers');
   const rememberSearch = recentSearchStore.remember;
   // A category the strip no longer has is hidden (tapping it did nothing).
@@ -359,7 +373,7 @@ export function OffersScreen() {
     const out: SearchTopSheetRecent[] = [];
     for (const r of recentSearchStore.recent) {
       if (r.kind === 'store') {
-        if (!isRecentStoreAllowed(r.label, r.id)) continue;
+        if (!isRecentStoreAllowed(r)) continue;
         out.push({ label: r.label, image: r.image ? { uri: r.image } : undefined });
       } else if (r.kind === 'category') {
         const cat = categories.find((c) => c.label === r.label);
@@ -398,12 +412,14 @@ export function OffersScreen() {
         item_id: store.slug,
         source: 'search',
       });
-      rememberSearch({
+      const recent: OfferRecent = {
         label: store.name,
         kind: 'store',
         id: store.slug,
         image: store.image ?? undefined,
-      });
+        storeId: store.storeId,
+      };
+      rememberSearch(recent);
       setSearchOpen(false);
       setSearchQuery('');
       navigation.navigate('OffersBrandAmazon', {
@@ -446,9 +462,12 @@ export function OffersScreen() {
       if (!item) return;
       if (item.kind === 'store' && item.id) {
         // Same check as the chip list: a card store never opens from recents.
-        if (!isRecentStoreAllowed(item.label, item.id)) return;
+        if (!isRecentStoreAllowed(item)) return;
         const live = allStores.find((s) => s.slug === item.id);
-        rememberSearch(item);
+        // An older recent gains the store id when its store is loaded.
+        const saved: OfferRecent =
+          live?.storeId && !(item as OfferRecent).storeId ? { ...item, storeId: live.storeId } : item;
+        rememberSearch(saved);
         setSearchOpen(false);
         setSearchQuery('');
         navigation.navigate('OffersBrandAmazon', {
@@ -624,11 +643,16 @@ export function OffersScreen() {
             />
           ) : offerRows.length > 0 ? (
             <>
-              <StaggeredEntrance key={categoryPath} style={{ gap: spacing[8] }}>
-                {offerRows.map((row, ri) => (
-                  <Grid key={ri} variant="brand-1x2" items={row} />
+              <View style={{ gap: spacing[8] }}>
+                <StaggeredEntrance key={categoryPath} style={{ gap: spacing[8] }}>
+                  {offerRows.slice(0, ANIMATED_ROWS).map((row, ri) => (
+                    <Grid key={ri} variant="brand-1x2" items={row} />
+                  ))}
+                </StaggeredEntrance>
+                {offerRows.slice(ANIMATED_ROWS).map((row, ri) => (
+                  <Grid key={ANIMATED_ROWS + ri} variant="brand-1x2" items={row} />
                 ))}
-              </StaggeredEntrance>
+              </View>
               {/* More tiles to add (the CK app's LoadMoreIndicator): the next
                   100 are added when the user scrolls near here. */}
               {hasMoreTiles ? (

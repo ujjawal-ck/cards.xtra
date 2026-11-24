@@ -212,6 +212,37 @@ describe('getCategoryOffers pages through a category (C8)', () => {
   });
 });
 
+describe('a list that ends below a known total (partialOk)', () => {
+  // total 289, the server caps a page at 100: page 1 has 100 rows.
+  const page1 = pagedServer(range(1, 289), 289, 100);
+
+  it('page 2 empty: the card-rate call throws, the category call returns page 1', async () => {
+    replyFor = (call) => (call.page === 1 ? page1(call) : { body: { data: [], meta: { total_records: 289 } } });
+    await expect(ck.getCardRateStores()).rejects.toThrow(/100 of 289/);
+    expect(pages()).toEqual([1, 2]);
+    calls.length = 0;
+    const res = await ck.getCategoryOffers('fashion');
+    expect(pages()).toEqual([1, 2]);
+    expect(res.data).toHaveLength(100);
+  });
+
+  it('page 2 repeats page 1: the card-rate call throws, the category call returns page 1', async () => {
+    replyFor = (call) => page1({ ...call, page: 1 });
+    await expect(ck.getCardRateStores()).rejects.toThrow(/100 of 289/);
+    expect(pages()).toEqual([1, 2]);
+    calls.length = 0;
+    const res = await ck.getCategoryOffers('fashion');
+    expect(pages()).toEqual([1, 2]);
+    expect(res.data).toHaveLength(100);
+  });
+
+  it('the card-rate call returns the list when it reaches the total', async () => {
+    replyFor = pagedServer(range(1, 289), 289, 100);
+    expect(await ck.getCardRateStores()).toHaveLength(289);
+    expect(pages()).toEqual([1, 2, 3]);
+  });
+});
+
 describe('getCardRateStores pages with the same helper (C8)', () => {
   it('returns the flat rows of one short page (links.next set) with one call', async () => {
     replyFor = pagedServer(range(1, 289));
