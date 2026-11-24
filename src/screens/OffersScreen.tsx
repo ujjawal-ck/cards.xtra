@@ -99,7 +99,7 @@ const ANIMATED_ROWS = 3;
 // A recent Offers store also saves the CashKaro store id, so the card-store
 // check can run on it as soon as the BankKaro ids load. recentSearches.ts keeps
 // extra fields as they are (spread on add, JSON on save, filter on read).
-type OfferRecent = RecentSearch & { storeId?: string };
+type OfferRecent = RecentSearch;
 import { useAllOfferStores, useCategoryOffers, useOfferCategories } from '../query/useOffers';
 import { isCardStoreRecent } from '../lib/cardStores';
 import { isPausedWithoutData } from '../query/paused';

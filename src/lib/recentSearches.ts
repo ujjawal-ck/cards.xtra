@@ -22,6 +22,8 @@ export interface RecentSearch {
   id?: string;
   /** Remote logo URL, for items whose catalog is not loaded up front. */
   image?: string;
+  /** CashKaro store id of an Offers store, so a card store can be hidden. */
+  storeId?: string;
 }
 
 /** One history per screen: Home (banks/cards) and Offers (categories/stores). */
@@ -44,7 +46,8 @@ function parse(raw: string | null): RecentSearch[] {
           typeof d.label === 'string' &&
           KINDS.includes(d.kind) &&
           (d.id === undefined || typeof d.id === 'string') &&
-          (d.image === undefined || typeof d.image === 'string')
+          (d.image === undefined || typeof d.image === 'string') &&
+          (d.storeId === undefined || typeof d.storeId === 'string')
       )
       .slice(0, MAX_RECENT_SEARCHES);
   } catch {
