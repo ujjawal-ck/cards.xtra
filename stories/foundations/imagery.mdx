@@ -1,50 +1,40 @@
 import { Meta, Canvas } from '@storybook/addon-docs/blocks';
 import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import { ImageryGallery } from '../../storybook/blocks/ImageryGallery';
 import * as Imagery from './imagery.stories';
 
 <Meta of={Imagery} />
 
 <PageHeader title="Imagery" meta="Foundations · assets">
-  Raster and SVG art the app ships: card art, store and brand logos, categories, illustrations, backgrounds and the app wordmark.
-  The component pages are under Components / Media.
+  Every visual asset the app ships in one place: card art, store and brand logos, payment marks, categories,
+  illustrations, backgrounds, all icons (buttons, rows, steppers, tabs), animations and the app icon. Switch
+  between <b>Grouped</b> and <b>One list</b>. Hover a tile for two actions: <b>Path</b> copies the
+  `images.*` registry key (or the file path), and <b>PNG</b> copies the bitmap, ready to paste into Figma.
+  Search by file name or key.
 </PageHeader>
 
-Source: `src/assets/images/index.ts` (the `images` registry), `src/assets/logos.ts`.
+<ImageryGallery />
+
+## How images reach a screen
 
 <Anatomy parts={[
-  { part: 'Registry', token: 'images.<group>.<name>', note: 'Every file is listed by hand, because Metro needs a string-literal require().' },
-  { part: 'Card art', token: 'images.cards.*', note: 'Key is the filename without the card- prefix, in camelCase.' },
-  { part: 'Logo height', token: 'mediaSize[n]', note: 'Pick the frame from Components / Media.' },
-  { part: 'Wordmark', token: 'logos.lightSmall, darkSmall, …', note: 'SVG components.' },
+  { part: 'Registry', token: 'images.<group>.<name>', note: 'src/assets/images/index.ts. Every file is listed by hand, because Metro needs a string-literal require().' },
+  { part: 'Card art', token: 'images.cards.*', note: 'Key is the file name without the card- prefix, in camelCase. Remote card art from BankKaro is used when the API sends a URL.' },
+  { part: 'Icons', token: 'Icon name="..."', note: 'src/atoms/Icon.tsx maps each name to a file in src/assets/icons. The icon grid with names is on Foundations / Icons.' },
+  { part: 'Payment and partner marks', token: 'src/assets/icons/raster', note: 'Withdraw method and marketplace marks.' },
+  { part: 'Logo frame', token: 'mediaSize[n]', note: 'Pick the frame on Components / Media (BrandLogoTile, LogoContainer, BrandLogo).' },
+  { part: 'Wordmark', token: 'logos.lightSmall, darkSmall, lightBig, darkBig', note: 'SVG components in src/assets/logos.ts.' },
 ]} />
 
-## Card art
+A tile marked "Not in the images registry" is a file in `src/assets/images` that no `images.*` key points to: it is used by a direct `require()` or it is unused.
 
-<Canvas of={Imagery.CardArt} />
-
-## Store and brand logos
-
-<Canvas of={Imagery.StoreAndBrandLogos} />
-
-## Categories and filters
-
-<Canvas of={Imagery.Categories} />
-
-## Illustrations
-
-<Canvas of={Imagery.Illustrations} />
-
-Only three illustrations exist for `ScreenState` today: `appOrders`, `tracking`, `confirmation`. Figma has "Connection lost" and "Something didn't go as planned" frames that are not exported yet (a gap, see the Patterns pages).
-
-## Backgrounds
-
-<Canvas of={Imagery.Backgrounds} />
+Only three illustrations exist for `ScreenState` today: `appOrders`, `tracking`, `confirmation`. Figma has "Connection lost" and "Something didn't go as planned" frames that are not exported yet.
 
 ## App wordmark
 
 <Canvas of={Imagery.AppLogo} />
 
 <DoDont
-  dos={['Import from the `images` registry.', 'Use the `light*` logo on dark surfaces and `dark*` on light ones.', 'Add a new file to the registry and the manifest together.']}
-  donts={['Do not `require()` a path in a screen.', 'Do not stretch art. Use `resizeMode="contain"` in a sized box.', 'Do not use a card image as a logo.']}
+  dos={['Import from the `images` registry.', 'Use the `light*` wordmark on dark surfaces and `dark*` on light ones.', 'Add a new file to the registry and IMAGE_MANIFEST.md together.', 'Ship WebP for photos and large art (see commit 5b2c192).']}
+  donts={['Do not `require()` an image path inside a screen.', 'Do not stretch art. Use resizeMode="contain" in a sized box.', 'Do not use card art as a logo.']}
 />
