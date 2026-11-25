@@ -201,7 +201,7 @@ function LeagueCardRowImpl({
 
       {onApply && card ? (
         <View style={{ alignItems: 'flex-end' }}>
-          <Button label="Apply now" size={36} onPress={() => onApply(row)} />
+          <Button label="Apply now" size={36} icon="trailing" iconName="chevron-right" onPress={() => onApply(row)} />
         </View>
       ) : null}
     </Pressable>

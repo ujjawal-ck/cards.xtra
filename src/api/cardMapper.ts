@@ -5,8 +5,9 @@
  * the Home tile + CardDetailSheet only need a handful. This module pins down
  * that subset and the transforms the raw data needs:
  *
- *   - cashback badge ← `commission` (NOT a user-cashback field; product chose
- *     it). Rendered as "Flat ₹<commission> Rewards" — see docs/archive/INTEGRATION.md.
+ *   - reward badge ← CashKaro's store rate for the card ONLY (cardRates.ts).
+ *     BankKaro's `commission` / `bk_commission` is never the user's reward
+ *     (decision 2026-11-23). No CashKaro rate → no amount ("Rewards").
  *   - fees ← joining_fee_text / annual_fee_text (raw numbers like "3500"/"0").
  *   - feeType is derived (no API field): both fees 0 → lifetime-free,
  *     status:false → discontinued, else with-fees.
@@ -195,15 +196,21 @@ function deriveFeeType(bk: BkCard): CardModel['feeType'] {
   return 'with-fees';
 }
 
-/** Commission → "₹1,400" for the cashback badge value. Empty when absent. */
-function commissionValue(bk: BkCard): string {
-  const raw = bk.commission || bk.bk_commission || '';
-  const n = Number(String(raw).replace(/[^\d.]/g, ''));
-  return isFinite(n) && n > 0 ? `₹${groupIndian(n)}` : '';
+/** The reward label of a card with no amount. */
+export const NO_REWARD_LABEL = 'Rewards';
+
+/**
+ * The card's reward text when it says something: "Flat ₹X Rewards", "Upto ₹X
+ * Rewards", or the server's text for a CashKaro row with amount 0. Empty when
+ * the card has no CashKaro reward (the bare NO_REWARD_LABEL).
+ */
+export function rewardLabel(card?: { cashback?: string } | null): string {
+  const t = (card?.cashback ?? '').trim();
+  return t === NO_REWARD_LABEL ? '' : t;
 }
 
-/** A resolved CashKaro reward → badge value, e.g. {amount:1200} → "₹1,200",
- *  {amount:5,unit:'percent'} → "5%". Empty when unusable. */
+/** A resolved CashKaro reward → badge value: "₹X" for a rupee rate, "X%" for a
+ *  percent rate. Empty when unusable or 0. */
 function ckRateValue(rate?: CkRate | null): string {
   if (!rate || !isFinite(rate.amount) || rate.amount <= 0) return '';
   if (rate.unit === 'percent') return `${String(parseFloat(rate.amount.toFixed(2)))}%`;
@@ -392,9 +399,19 @@ function safeNum(raw: unknown): number {
   return isFinite(n) && n > 0 ? n : 0;
 }
 
-/** ₹ the user is shown as Rewards: the CashKaro ₹ rate, else the commission
- *  (same fallback as the badge). 0 when none, or when the rate is a percent. */
-function crossSellReward(bk: BkCard, ckRate?: CkRate | null): number {
+/** ₹ the user is shown as Rewards: the CashKaro rupee rate only. 0 when there
+ *  is none, when it is 0, or when it is a percent. Never the BankKaro commission. */
+function crossSellReward(ckRate?: CkRate | null): number {
+  if (ckRate && isFinite(ckRate.amount) && ckRate.amount > 0) {
+    return ckRate.unit === 'inr' ? ckRate.amount : 0;
+  }
+  return 0;
+}
+
+/** INTERNAL reward for the cross-sell and rejection gates and ranking: the value
+ *  before 2026-11-23, the CashKaro rupee rate, else the BankKaro commission. 0
+ *  when the rate is a percent. Never displayed. */
+function crossSellInternalReward(bk: BkCard, ckRate?: CkRate | null): number {
   if (ckRate && isFinite(ckRate.amount) && ckRate.amount > 0) {
     return ckRate.unit === 'inr' ? ckRate.amount : 0;
   }
@@ -440,7 +457,8 @@ function buildCrossSell(
     joiningFee,
     annualFee,
     inviteOnly: !!bk.invite_only,
-    reward: crossSellReward(bk, ckRate),
+    reward: crossSellReward(ckRate),
+    internalReward: crossSellInternalReward(bk, ckRate),
     earn: safeNum(bk.bk_commission),
     incomeLpa: safeNum(bk.income_salaried),
     incomeSelfEmpLpa: safeNum(bk.income_self_emp),
@@ -454,16 +472,19 @@ export function mapBkCardToCardModel(
   bankDir: BankDirectory = {},
   ckRate?: CkRate | null,
 ): CardModel {
-  // The displayed reward is CashKaro's (e.g. SBI Cashback = ₹1200), resolved
-  // from the card's ck_store_id; BankKaro's `commission` is only the fallback
-  // when the card has no CashKaro store match (see cardRates.ts).
-  const cashbackValue = ckRateValue(ckRate) || commissionValue(bk);
+  // The displayed reward is CashKaro's ONLY, resolved from the card's
+  // ck_store_id (see cardRates.ts). No CashKaro rate → no amount; BankKaro's
+  // `commission` is never shown (decision 2026-11-23).
+  const cashbackValue = ckRateValue(ckRate);
   // "Upto" when CashKaro has lower secondary tiers for this card, else "Flat"
   // (same rule as cashkaro.com). The organism CardTile renders
   // "<rewardPrefix> <value> Rewards"; the CardDetailSheet splits `cashback` on
   // its leading word — so both stay in sync.
   const rewardPrefix: 'Flat' | 'Upto' = ckRate?.upto ? 'Upto' : 'Flat';
-  const cashback = cashbackValue ? `${rewardPrefix} ${cashbackValue} Rewards` : 'Rewards';
+  // A CashKaro row with amount 0 shows the server's button text (parity J).
+  const cashback = cashbackValue
+    ? `${rewardPrefix} ${cashbackValue} Rewards`
+    : ckRate?.label || NO_REWARD_LABEL;
 
   const tags = (bk.tags ?? [])
     .map((t) => t?.name)

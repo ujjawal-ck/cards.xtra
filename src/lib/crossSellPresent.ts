@@ -5,7 +5,7 @@
  * Mirrors bandText / statsFor / iconFor in the approved prototype.
  */
 import type { IconName } from '../atoms';
-import { inr, isLtf } from './crossSell';
+import { inr, isLtf, shownRewardGain } from './crossSell';
 import type { CrossSellCard, CrossSellPick } from './crossSell';
 
 export interface PickStat {
@@ -36,7 +36,13 @@ export function shortCardName(name: string): string {
 export interface PickRewardDisplay {
   cashbackValue: string;
   rewardPrefix?: 'Flat' | 'Upto';
+  /** The card's reward label (CardModel.cashback). With no amount it is the server's
+   *  CashKaro text or "Rewards"; shown then, with no Flat / Upto prefix. */
+  cashback?: string;
 }
+
+/** The reward word when a card has no CashKaro amount and no server text. */
+const NO_REWARD_TEXT = 'Rewards';
 
 const TAG_ICONS: Record<string, IconName> = {
   Fuel: 'feat-fuel-outline',
@@ -56,8 +62,11 @@ export function bandParts(src: CrossSellCard, p: CrossSellPick): { text: string;
       if (src.annualFee - c.annualFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.annualFee - c.annualFee), text: 'less a year' };
       if (src.joiningFee - c.joiningFee >= SAME_RUPEE_THRESHOLD) return { amount: inr(src.joiningFee - c.joiningFee), text: 'lower joining fee' };
       return { text: 'Similar fee' };
-    case 'moreRewards':
-      return { amount: inr(c.reward - src.reward), text: 'more Rewards' };
+    case 'moreRewards': {
+      // The amount reads the displayed reward only: none when a card shows no amount.
+      const gain = shownRewardGain(src, c);
+      return gain > 0 ? { amount: inr(gain), text: 'more Rewards' } : { text: 'More rewards' };
+    }
     case 'easier':
       return { text: 'Easier to get' };
     case 'eligible':
@@ -125,7 +134,9 @@ function feeStat(src: CrossSellCard, c: CrossSellCard): PickStat {
 }
 
 function rewardStat(src: CrossSellCard, c: CrossSellCard, d: PickRewardDisplay): PickStat {
-  const value = d.cashbackValue ? (d.rewardPrefix === 'Upto' ? 'Upto ' : '') + d.cashbackValue : 'None';
+  const value = d.cashbackValue
+    ? (d.rewardPrefix === 'Upto' ? 'Upto ' : '') + d.cashbackValue
+    : d.cashback?.trim() || NO_REWARD_TEXT;
   return { label: 'Rewards', value, ...compare(c.reward, src.reward, false, inr, sameRupees) };
 }
 

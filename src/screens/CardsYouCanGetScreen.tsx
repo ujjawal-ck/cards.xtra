@@ -40,12 +40,12 @@ import { CompareCard, COMPARE_CARD_W } from '../molecules';
 import type { CardModel } from '../molecules';
 import { CardTile, CardDetailSheet, CardListSkeleton, Header, ScreenState } from '../organisms';
 import { colors, spacing, radius, borderWidth } from '../tokens';
-import { useCards } from '../query/useCards';
+import { useCardCatalog } from '../query/useCards';
 import { selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
 import { haptics } from '../lib/haptics';
 import { analytics, Events } from '../analytics';
-import { band } from '../lib/crossSell';
+import { band, rankReward } from '../lib/crossSell';
 import type { CrossSellCard, CrossSellPick } from '../lib/crossSell';
 import { presentPick, shortCardName } from '../lib/crossSellPresent';
 import {
@@ -61,6 +61,7 @@ type Rt = RouteProp<RootStackParamList, 'CardsYouCanGet'>;
 
 const SOURCE = 'cards_you_can_get';
 const NO_CATEGORY_IDS: number[] = [];
+const NO_CARDS: CardModel[] = [];
 const SORT_OPTIONS: Array<{ key: EligibleSort; label: string }> = [
   { key: 'closest', label: 'Closest match' },
   { key: 'reward', label: 'Highest Rewards' },
@@ -74,7 +75,7 @@ const STRIP_ART_ASPECT = 132 / 84;
 function pickFor(c: CrossSellCard, tag: ContextTag): CrossSellPick {
   return {
     card: c, lens: 'similar', label: tag.text, tone: tag.tone, delta: tag.text, sim: 0,
-    band: band(c), eligible: true, seenBefore: false, earn: c.earn, paid: c.reward, net: c.earn - c.reward,
+    band: band(c), eligible: true, seenBefore: false, earn: c.earn, paid: rankReward(c), net: c.earn - rankReward(c),
   };
 }
 
@@ -112,6 +113,7 @@ const EligibleTile = React.memo(function EligibleTile({ card, tag, onPress }: El
           cardName={card.name}
           cashbackText={card.cashbackValue}
           rewardPrefix={card.rewardPrefix}
+          rewardText={card.cashback}
           inviteOnly={card.inviteOnly}
           tags={card.tags}
           benefits={benefits}
@@ -132,10 +134,13 @@ export function CardsYouCanGetScreen() {
   // after the user left a card. The page says which one brought them (see `why` below).
   const isBounce = source === 'bounce';
   const insets = useSafeAreaInsets();
-  const { data: cards = [], isLoading, isError, refetch } = useCards();
+  // The list holds only the cards the app shows (CashKaro filter, isCardShown). The card the user
+  // wanted is looked up in every active card, so the page never loses its anchor.
+  const { data: catalog, isLoading, isError, refetch } = useCardCatalog();
+  const cards = catalog?.shown ?? NO_CARDS;
   const { openClickOut, clickOutSheets } = useClickOut();
 
-  const rejected = useMemo(() => cards.find((c) => c.id === rejectedCardId), [cards, rejectedCardId]);
+  const rejected = useMemo(() => catalog?.all.find((c) => c.id === rejectedCardId), [catalog, rejectedCardId]);
   const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
   // Filters. `userCategories` null = still the preset; [] = the user cleared it.

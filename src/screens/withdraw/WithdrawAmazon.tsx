@@ -7,7 +7,7 @@
  * (10 digits) and the T&C is checked; the number itself is validated
  * server-side at submit.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Alert, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useKeyboardPadding } from '../../lib/useKeyboardInset';
@@ -23,9 +23,11 @@ import { colors, spacing, radius } from '../../tokens';
 import type { WithdrawStackParamList } from '../../navigation/types';
 import { useAuth } from '../../auth/AuthContext';
 import { usePaymentInfo } from '../../query/usePaymentInfo';
-import { sendPaymentRequestOTP } from '../../api/payments';
+import { requirePaymentMethodId, sendPaymentRequestOTP } from '../../api/payments';
 import { formatRupees } from './amount';
 import { withdrawTitle, withdrawSubtitle } from './labels';
+import { useOfflineSubmitGuard } from './useOfflineSubmitGuard';
+import { blockIfPayoutPending } from './payoutPending';
 import { normalizeIndianMobile, PHONE_INPUT_MAX_LENGTH } from '../../lib/phone';
 
 type Nav = NativeStackNavigationProp<WithdrawStackParamList, 'WithdrawAmazon'>;
@@ -60,11 +62,15 @@ export function WithdrawAmazon() {
   const keyboardPad = useKeyboardPadding();
   const { accessToken } = useAuth();
   const { data: info } = usePaymentInfo();
+  const { blockIfOffline, offlineToast } = useOfflineSubmitGuard();
 
   const [mobile, setMobile] = useState('');
   const [confirm, setConfirm] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [sending, setSending] = useState(false);
+  // Synchronous guard: `sending` is React state, so a fast double tap could
+  // pass the check twice, send two OTP SMS and push two OTP screens.
+  const sendingRef = useRef(false);
 
   const valid = /^[6-9]\d{9}$/.test(mobile) && mobile === confirm;
   // Inline error on the first field (Figma 3283:52824): flagged once the user
@@ -80,16 +86,24 @@ export function WithdrawAmazon() {
     confirm.length > 0 && confirm !== mobile.slice(0, confirm.length);
 
   const handleGetPaid = async () => {
-    if (!accessToken || sending) return;
+    if (!accessToken || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
+      // Offline: send nothing, keep what the user typed.
+      if (await blockIfOffline()) return;
+      // An earlier payout's outcome is still unknown: send no OTP (R-06).
+      if (await blockIfPayoutPending(navigation)) return;
+      // No built-in fallback id: if the API did not list this method, stop
+      // here, before an OTP is sent.
+      const paymentMethodId = requirePaymentMethodId(info?.methodIds, 'amazon');
       const { otpGuid, sentToMobile } = await sendPaymentRequestOTP(accessToken);
       navigation.navigate('WithdrawVerifyOTP', {
         draft: {
           method: 'amazon',
           paymentType: params.paymentType,
           amount: params.amount,
-          paymentMethodId: info?.methodIds.amazon ?? 12,
+          paymentMethodId,
           mobile,
         },
         otpGuid,
@@ -98,6 +112,7 @@ export function WithdrawAmazon() {
     } catch (e: any) {
       Alert.alert('Could not send OTP', e?.message ?? 'Please try again.');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -146,6 +161,7 @@ export function WithdrawAmazon() {
                 maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="next"
                 state={mobileInvalid ? 'error' : undefined}
+                hintIcon={mobileInvalid ? 'desc-exclamation' : undefined}
                 hint={mobileInvalid ? 'Invalid mobile number' : undefined}
               />
               <Input
@@ -157,6 +173,7 @@ export function WithdrawAmazon() {
                 maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="done"
                 state={confirmMismatch ? 'error' : undefined}
+                hintIcon={confirmMismatch ? 'desc-exclamation' : undefined}
                 hint={confirmMismatch ? 'Mobile numbers do not match' : undefined}
               />
               <NoteBox>
@@ -173,6 +190,7 @@ export function WithdrawAmazon() {
           nothing on Android under edge-to-edge (see useKeyboardInset.ts),
           so the keys covered the CTA and T&C checkbox. */}
       <Animated.View style={keyboardPad}>
+        {offlineToast}
         <FooterButtons
           buttons="single"
           size={52}

@@ -10,11 +10,11 @@
  * and the screen and the results subtitle say so.
  *
  * `route.params.brandId` (a TOOL_BRANDS id) starts with that brand picked.
- * Design system gaps: no brand logos exist, so brand tiles are text only (BrandLogoTile needs an image).
+ * Brand logos: 9 of the 10 tiles show a clean logo (src/lib/brandLogos.ts). Ajio has no logo file yet, so its tile is text only.
  * Not run on a device: check at 360 dp and 130% font.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, ScrollView, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, Image, BackHandler, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -25,8 +25,9 @@ import type { RootStackParamList } from '../../navigation/types';
 import { Text, Chip, Input } from '../../atoms';
 import { SpendCard, InlineMessage, Choice, TabPrimary } from '../../molecules';
 import { Header, FooterButtons } from '../../organisms';
-import { colors, spacing, radius, borderWidth } from '../../tokens';
+import { colors, spacing, radius, borderWidth, mediaSize } from '../../tokens';
 import { analytics, Events } from '../../analytics';
+import { brandLogoFor } from '../../lib/brandLogos';
 import { MAX_BRANDS, TOOL_BRANDS, TOOL_CATEGORIES, spendsFromBrands } from '../../lib/cardTools';
 import type { ToolBrand, ToolCategoryId } from '../../lib/cardTools';
 import {
@@ -186,6 +187,7 @@ export function BestForBrandsScreen() {
                   {visible.map((b) => {
                     const on = selected.includes(b.id);
                     const disabled = !on && limitReached;
+                    const logo = brandLogoFor(b.id);
                     return (
                       <Choice
                         key={b.id}
@@ -193,6 +195,18 @@ export function BestForBrandsScreen() {
                         checked={on}
                         disabled={disabled}
                         label={b.name}
+                        leading={
+                          logo ? (
+                            // Decorative: the label already names the brand. Disabled dimming comes from Choice's row opacity.
+                            <Image
+                              source={logo}
+                              resizeMode="contain"
+                              accessibilityElementsHidden
+                              importantForAccessibility="no-hide-descendants"
+                              style={{ width: '100%', height: mediaSize[40], borderRadius: radius.sm }}
+                            />
+                          ) : undefined
+                        }
                         onChange={() => setSelected((cur) => toggleBrand(cur, b.id))}
                         style={{
                           flexGrow: 1,
@@ -255,7 +269,7 @@ export function BestForBrandsScreen() {
                 );
               })}
               {showEmpty ? (
-                <InlineMessage tone="warning" message="Add a spend above 0 for at least one brand." />
+                <InlineMessage tone="warning" icon="desc-exclamation" message="Add a spend above 0 for at least one brand." />
               ) : null}
             </ScrollView>
             {footer('See my cards', onSeeCards)}

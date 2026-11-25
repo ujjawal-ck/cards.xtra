@@ -14,7 +14,9 @@
  *   4. Instruction band (node 4049:131919) — full-bleed Section-Orange tint.
  *   5. Order list — vertical stack of <OrderCard> timeline cards (Figma
  *      orders/list-v2-timeline 6194:26502): status-tinted strip + logo/amount
- *      + meta row + optional expandable note, per card.
+ *      + meta row + optional expandable note, per card. Grouped under month
+ *      headings as each row's detail date arrives (useOrderDates); a failed
+ *      detail call puts the row under "Other".
  *
  * Token map (per property):
  *   screen bg          → colors.background.default
@@ -72,7 +74,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import Svg, { Path } from 'react-native-svg';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -83,7 +84,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Chip } from '../atoms';
+import { Text, Chip, Icon } from '../atoms';
 import {
   Header,
   OrderCard,
@@ -98,29 +99,22 @@ import {
 } from '../organisms';
 import { images } from '../assets/images';
 import type { OrdersFilterTab, OrderStoreOption } from '../organisms';
-import { useOrders } from '../query/useOrders';
+import { useOrders, useOrderDates } from '../query/useOrders';
+import { groupOrdersByMonth } from '../api/ordersMapper';
+import { isPausedWithoutData } from '../query/paused';
 import type { OrdersApiFilters } from '../api/cashkaro';
-import { colors, spacing, radius, iconSize, borderWidth, sizing, elevation } from '../tokens';
+import { colors, spacing, radius, iconSize, sizing, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'OrdersList'>;
 
-/** 24px chevron — no `chevron-right` in the Icon registry (inline glyph). */
-function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6 L15 12 L9 18"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
+/**
+ * "Never Miss Cashback" (CashbackGuard) entry: the floating pip below.
+ * Hidden: the CashKaro app has no such feature, and its alerts open links
+ * that are not tracked to the user. The code stays; flip to bring it back.
+ */
+const SHOW_CASHBACK_GUARD = false;
 
 interface OrdersFilter {
   statusIndices: number[];
@@ -196,8 +190,12 @@ export function OrdersList() {
     return f;
   }, [applied]);
 
+  const ordersQuery = useOrders(apiFilters);
   const { data: rows, isLoading, isError, refetch, isFetching, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useOrders(apiFilters);
+    ordersQuery;
+  // Opened offline with nothing cached: paused, so neither loading nor an
+  // error. Falling through showed "No orders yet".
+  const offline = isPausedWithoutData(ordersQuery);
 
   // Load the next page of 20 when the user nears the bottom of the list.
   const onScroll = useCallback(
@@ -278,6 +276,15 @@ export function OrdersList() {
     return rows.filter((r) => applied.storeKeys.includes(r.merchantKey));
   }, [rows, applied.storeKeys]);
 
+  // Month sections. The list has no date, so each shown row's detail is
+  // fetched in the background (4 at a time); the list shows at once and
+  // groups as the dates arrive.
+  const datesById = useOrderDates(filteredRows);
+  const sections = useMemo(
+    () => groupOrdersByMonth(filteredRows ?? [], datesById),
+    [filteredRows, datesById]
+  );
+
   const appliedCount = filterCount(applied);
   const draftCount = filterCount(draft);
   // The two filter chips split the applied set so neither double-counts:
@@ -314,6 +321,29 @@ export function OrdersList() {
     ),
     [draftCount, applyFilters, clearFilters, insets.bottom]
   );
+
+  // Offline with nothing cached: the full-screen "no internet" state (the
+  // CashKaro pattern), keeping only the header so Back still works.
+  if (offline) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background.default }}>
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
+          <Header
+            leading="back"
+            title="My Order Details"
+            onLeadingPress={() => navigation.goBack()}
+          />
+          <ScreenState
+            title="No internet connection"
+            body="Check your connection or try again."
+            actionLabel="Try again"
+            onAction={() => refetch()}
+          />
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
@@ -359,7 +389,7 @@ export function OrdersList() {
                 <Text variant="body14SemiBold" color={colors.text.inverse}>
                   Don’t see your order here?
                 </Text>
-                <ChevronRightGlyph size={iconSize[24]} color={colors.text.inverse} />
+                <Icon name="chevron-right" size={iconSize[24]} color={colors.text.inverse} />
               </ImageBackground>
             </Pressable>
           </View>
@@ -431,26 +461,39 @@ export function OrdersList() {
           ) : (
             // Revamped list — a stack of timeline-style cards (Figma
             // orders/list-v2-timeline). px16 gutter, spacing[12] between cards.
+            // Month headings use the Earnings style. One flat list of keyed
+            // children, so a card that moves into its month is not remounted.
             <View style={{ paddingHorizontal: spacing[16], paddingTop: spacing[12], gap: spacing[12] }}>
-              {(filteredRows ?? []).map(({ id, type, status, amount, metaValue, note, logoSrc, showAmountChevron }) => (
-                <OrderCard
-                  key={id}
-                  type={type}
-                  status={status ?? 'pending'}
-                  amount={amount}
-                  metaValue={metaValue}
-                  note={note}
-                  logoSrc={logoSrc}
-                  onPress={
-                    showAmountChevron
-                      ? () => {
-                          analytics.track(Events.ORDER_SELECT, { order_id: id, status });
-                          navigation.navigate('OrdersDetail', { id });
-                        }
-                      : undefined
-                  }
-                />
-              ))}
+              {sections.flatMap((section) => [
+                section.label ? (
+                  <Text
+                    key={`section-${section.key}`}
+                    variant="body14SemiBold"
+                    color={colors.text.secondary}
+                  >
+                    {section.label}
+                  </Text>
+                ) : null,
+                ...section.rows.map(({ id, type, status, amount, metaValue, note, logoSrc, showAmountChevron }) => (
+                  <OrderCard
+                    key={id}
+                    type={type}
+                    status={status ?? 'pending'}
+                    amount={amount}
+                    metaValue={metaValue}
+                    note={note}
+                    logoSrc={logoSrc}
+                    onPress={
+                      showAmountChevron
+                        ? () => {
+                            analytics.track(Events.ORDER_SELECT, { order_id: id, status });
+                            navigation.navigate('OrdersDetail', { id });
+                          }
+                        : undefined
+                    }
+                  />
+                )),
+              ])}
               {isFetchingNextPage ? (
                 <View style={{ paddingVertical: spacing[16], alignItems: 'center' }}>
                   <ActivityIndicator color={colors.action.primary.default} />
@@ -499,12 +542,15 @@ export function OrdersList() {
 
       {/* Draggable "Never miss your cashback" pip — floats over the screen,
           collapses to a right-edge notch (genie), and links to the
-          Never-Miss-Cashback setup. Android-only; renders nothing elsewhere. */}
-      <CashbackPip
-        onPress={() => navigation.navigate('CashbackGuard')}
-        // Stay a side notch over the empty state so it doesn't cover the copy.
-        autoExpand={(rows?.length ?? 0) > 0}
-      />
+          Never-Miss-Cashback setup. Android-only; renders nothing elsewhere.
+          Hidden while SHOW_CASHBACK_GUARD is false. */}
+      {SHOW_CASHBACK_GUARD ? (
+        <CashbackPip
+          onPress={() => navigation.navigate('CashbackGuard')}
+          // Stay a side notch over the empty state so it doesn't cover the copy.
+          autoExpand={(rows?.length ?? 0) > 0}
+        />
+      ) : null}
     </View>
   );
 }

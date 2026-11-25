@@ -6,14 +6,21 @@
  *     login sheet opens over this screen, and the link opens attributed as
  *     soon as the user is in), or continue without cashback (the link opens
  *     unattributed; never a dead end).
- *   • Signed in → resolve the CashKaro user id from the profile (refetching it
- *     if it hasn't loaded yet) and refuse to open an unattributed link if it
- *     still can't be resolved.
+ *   • Signed in → the CashKaro user id saved at login (`ck_user_id`, from the
+ *     login or signup response) comes first; only when none is saved does it
+ *     fall back to the profile (refetching it if it hasn't loaded yet). A
+ *     failed profile call never blocks a click when the id is saved. If no id
+ *     can be found, it refuses to open an unattributed link.
  *   • Builds the link with buildClickOutUrl (CashKaro `id=` or partner
  *     `{user_id}` / `{click_id}`), logs CLICK_OUT, then opens it.
  *
- * Returns `openClickOut` (call from the CTA) and `clickOutSheets` (render once
- * in the screen tree) — same shape as useWithdrawGate.
+ * Only `https:` links open. A missing link, an unconfirmed user, a refused
+ * scheme or a failed open shows "Couldn't open this link" and logs nothing.
+ * While one click-out is opening, a second tap is ignored (`busy`).
+ *
+ * Returns `openClickOut` (call from the CTA), `busy` (true while a click-out is
+ * opening; callers may show `loading`) and `clickOutSheets` (render once in
+ * the screen tree) — same shape as useWithdrawGate.
  */
 import React, { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
@@ -22,11 +29,12 @@ import { EarnLoginSheet } from '../organisms/EarnLoginSheet';
 import type { EarnLoginKind, EarnLoginSheetRef } from '../organisms/EarnLoginSheet';
 import { useAuth } from '../auth/AuthContext';
 import { useLoginSheet } from '../auth/LoginSheetProvider';
+import { loadUserId } from '../auth/tokenStore';
 import { fetchProfile, useProfile } from '../query/useProfile';
 import { queryClient } from '../query/queryClient';
 import { qk } from '../query/keys';
 import { analytics, Events } from '../analytics';
-import { openUrl } from './openUrl';
+import { createSingleFlight, openUrl, showOpenLinkError } from './openUrl';
 import { buildClickOutUrl, newClickId } from './clickOut';
 import { addAppliedCard } from './savedProfile';
 
@@ -56,6 +64,12 @@ export interface ClickOutTarget {
   alias?: string;
 }
 
+/** The CashKaro user id saved at login (tokenStore), or null when none is saved. */
+async function storedUserId(): Promise<string | null> {
+  const id = await loadUserId().catch(() => null);
+  return id && id.trim() ? id.trim() : null;
+}
+
 export function useClickOut() {
   const { status } = useAuth();
   const { open: openLogin } = useLoginSheet();
@@ -63,12 +77,20 @@ export function useClickOut() {
   const sheetRef = useRef<EarnLoginSheetRef>(null);
   const pending = useRef<ClickOutTarget | null>(null);
   const [sheetKind, setSheetKind] = useState<EarnLoginKind>('card');
+  const [busy, setBusy] = useState(false);
+  const flight = useRef(createSingleFlight()).current;
 
-  const launch = useCallback((target: ClickOutTarget, userId?: string) => {
+  const launch = useCallback(async (target: ClickOutTarget, userId?: string) => {
     const raw = (target.url ?? '').trim();
-    if (!raw) return;
+    if (!raw) {
+      showOpenLinkError();
+      return;
+    }
     const clickId = newClickId();
     const built = buildClickOutUrl(raw, { userId, clickId });
+    // Open first: the click is logged only when the link really opened.
+    const opened = await openUrl(built.url, { httpsOnly: true });
+    if (!opened) return;
     analytics.track(Events.CLICK_OUT, {
       kind: target.kind,
       item_id: target.itemId != null ? String(target.itemId) : undefined,
@@ -79,12 +101,14 @@ export function useClickOut() {
       source: target.source ?? 'unknown',
     });
     if (target.kind === 'card' && target.alias) void addAppliedCard(target.alias);
-    openUrl(built.url);
   }, []);
 
   const openClickOut = useCallback(
     async (target: ClickOutTarget) => {
-      if (!(target.url ?? '').trim()) return;
+      if (!(target.url ?? '').trim()) {
+        showOpenLinkError();
+        return;
+      }
 
       if (status === 'unauthenticated') {
         pending.current = target;
@@ -93,51 +117,58 @@ export function useClickOut() {
         return;
       }
 
-      let userId = profileQ.data?.id;
-      if (!userId) {
-        try {
-          userId = (await profileQ.refetch()).data?.id;
-        } catch {
-          userId = undefined;
+      await flight.run(async () => {
+        let userId: string | number | undefined = (await storedUserId()) ?? profileQ.data?.id;
+        if (!userId) {
+          try {
+            userId = (await profileQ.refetch()).data?.id;
+          } catch {
+            userId = undefined;
+          }
         }
-      }
-      if (!userId) {
-        // Opening now would send a click nobody gets cashback for.
-        Alert.alert(
-          'Couldn’t open this right now',
-          'We couldn’t confirm your account, so the cashback wouldn’t be tracked. Check your connection and try again.'
-        );
-        return;
-      }
-      launch(target, String(userId));
+        if (!userId) {
+          // Opening now would send a click nobody gets cashback for.
+          Alert.alert(
+            'Couldn’t open this right now',
+            'We couldn’t confirm your account, so the cashback wouldn’t be tracked. Check your connection and try again.'
+          );
+          return;
+        }
+        await launch(target, String(userId));
+      }, setBusy);
     },
-    [status, profileQ, launch]
+    [status, profileQ, launch, flight]
   );
 
-  // After "Log in to earn": resolve the new user's CashKaro id with the fresh
-  // token and open the link attributed, so the apply continues by itself.
+  // After "Log in to earn": the new user's CashKaro id (saved by signIn from
+  // the login response; else the profile with the fresh token), then the link
+  // opens attributed, so the apply continues by itself.
   const launchAfterLogin = useCallback(
     async (target: ClickOutTarget, accessToken: string) => {
-      let userId: string | number | undefined;
-      try {
-        const profile = await queryClient.fetchQuery({
-          queryKey: qk.user.profile(),
-          queryFn: ({ signal }) => fetchProfile(accessToken, signal),
-        });
-        userId = profile?.id;
-      } catch {
-        userId = undefined;
-      }
-      if (userId == null) {
-        Alert.alert(
-          'Couldn’t open this right now',
-          'We couldn’t confirm your account, so the cashback wouldn’t be tracked. Check your connection and try again.'
-        );
-        return;
-      }
-      launch(target, String(userId));
+      await flight.run(async () => {
+        let userId: string | number | undefined = (await storedUserId()) ?? undefined;
+        if (userId == null) {
+          try {
+            const profile = await queryClient.fetchQuery({
+              queryKey: qk.user.profile(),
+              queryFn: ({ signal }) => fetchProfile(accessToken, signal),
+            });
+            userId = profile?.id;
+          } catch {
+            userId = undefined;
+          }
+        }
+        if (userId == null) {
+          Alert.alert(
+            'Couldn’t open this right now',
+            'We couldn’t confirm your account, so the cashback wouldn’t be tracked. Check your connection and try again.'
+          );
+          return;
+        }
+        await launch(target, String(userId));
+      }, setBusy);
     },
-    [launch]
+    [launch, flight]
   );
 
   const clickOutSheets = (
@@ -157,10 +188,10 @@ export function useClickOut() {
       onContinue={() => {
         const target = pending.current;
         pending.current = null;
-        if (target) launch(target);
+        if (target) void flight.run(() => launch(target), setBusy);
       }}
     />
   );
 
-  return { openClickOut, clickOutSheets };
+  return { openClickOut, busy, clickOutSheets };
 }

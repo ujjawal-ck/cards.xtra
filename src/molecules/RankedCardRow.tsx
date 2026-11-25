@@ -96,7 +96,7 @@ export function RankedCardRow({
       {eligibility !== 'unknown' ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}>
           <Icon
-            name="check-circle-outline"
+            name={eligibility === 'eligible' ? 'check-circle-outline' : 'desc-exclamation'}
             size={iconSize[16]}
             color={eligibility === 'eligible' ? colors.feedback.success.text : colors.feedback.warning.text}
           />
@@ -127,7 +127,7 @@ export function RankedCardRow({
           ) : (
             <View />
           )}
-          {onApply ? <Button label="Apply now" size={36} onPress={onApply} /> : null}
+          {onApply ? <Button label="Apply now" size={36} icon="trailing" iconName="chevron-right" onPress={onApply} /> : null}
         </View>
       ) : null}
     </Pressable>

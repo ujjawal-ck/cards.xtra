@@ -73,6 +73,8 @@ interface Snapshot {
 
 let snapshot: Snapshot = { answers: {}, loaded: !canPersist };
 let reading = false;
+/** Counts clears, so a read that started before a clear drops what it read. */
+let clears = 0;
 const listeners = new Set<() => void>();
 
 function setSnapshot(next: Snapshot) {
@@ -83,9 +85,11 @@ function setSnapshot(next: Snapshot) {
 function readOnce() {
   if (snapshot.loaded || reading) return;
   reading = true;
+  const at = clears;
   SecureStore.getItemAsync(STORAGE_KEY)
-    // A save before the read finished wins over the stored value.
-    .then((raw) => mergeAnswers(parseSavedSpends(raw), snapshot.answers))
+    // A save before the read finished wins over the stored value. After a
+    // clear (session end), the stored value belongs to the previous user.
+    .then((raw) => (at === clears ? mergeAnswers(parseSavedSpends(raw), snapshot.answers) : snapshot.answers))
     .catch(() => snapshot.answers)
     .then((answers) => setSnapshot({ answers, loaded: true }));
 }
@@ -109,6 +113,7 @@ function saveAnswers(next: SpendAnswers) {
 
 /** Remove the saved answers (also called on logout: the spends belong to the user who entered them). */
 export function clearSavedSpends() {
+  clears += 1;
   setSnapshot({ ...snapshot, answers: {} });
   void write({});
 }

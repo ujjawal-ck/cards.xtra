@@ -45,6 +45,7 @@ import { CardsYouCanGetScreen } from '../screens/CardsYouCanGetScreen';
 import { SpendQuizScreen } from '../screens/tools/SpendQuizScreen';
 import { ToolResultsScreen } from '../screens/tools/ToolResultsScreen';
 import { BeatMyCardPickScreen } from '../screens/tools/BeatMyCardPickScreen';
+import { BeatMyCardSpendsScreen } from '../screens/tools/BeatMyCardSpendsScreen';
 import { BeatMyCardResultScreen } from '../screens/tools/BeatMyCardResultScreen';
 import { BestForBrandsScreen } from '../screens/tools/BestForBrandsScreen';
 import { BestForCategoryScreen } from '../screens/tools/BestForCategoryScreen';
@@ -226,6 +227,7 @@ export function RootNavigator() {
       <Stack.Screen name="SpendQuiz" component={SpendQuizScreen} />
       <Stack.Screen name="ToolResults" component={ToolResultsScreen} />
       <Stack.Screen name="BeatMyCardPick" component={BeatMyCardPickScreen} />
+      <Stack.Screen name="BeatMyCardSpends" component={BeatMyCardSpendsScreen} />
       <Stack.Screen name="BeatMyCardResult" component={BeatMyCardResultScreen} />
       <Stack.Screen name="BestForBrands" component={BestForBrandsScreen} />
       <Stack.Screen name="BestForCategory" component={BestForCategoryScreen} />

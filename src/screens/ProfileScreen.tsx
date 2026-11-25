@@ -46,6 +46,10 @@ import { SUPPORT_PHONE_URL } from '../config/support';
 import { maskEmail, maskMobileShort } from '../lib/mask';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
+// Hidden: the CashKaro app has no "Never Miss Cashback" feature (parity item D;
+// findings PM-08, DATA-11, AUTH-03). Flip to true to bring the entry back.
+const SHOW_NEVER_MISS_CASHBACK = false;
+
 // Profile sits inside the bottom-tab navigator, which is itself a screen of
 // the root stack. To push a root-stack route (MissingCashbackDidYouShop or
 // ReviewUs) the screen needs both nav contexts stitched together.
@@ -218,13 +222,17 @@ export function ProfileScreen() {
                 elevation.light.xs,
               ]}
             >
-              <ListRow
-                type="menu-option"
-                icon="feat-rewards-outline"
-                title="Never Miss Cashback"
-                onPress={onMenu('cashback_guard', () => navigation.navigate('CashbackGuard'))}
-              />
-              <Divider style="solid" />
+              {SHOW_NEVER_MISS_CASHBACK ? (
+                <>
+                  <ListRow
+                    type="menu-option"
+                    icon="feat-rewards-outline"
+                    title="Never Miss Cashback"
+                    onPress={onMenu('cashback_guard', () => navigation.navigate('CashbackGuard'))}
+                  />
+                  <Divider style="solid" />
+                </>
+              ) : null}
               <ListRow
                 type="menu-option"
                 // Figma 4448:23859: chat bubble (was a headset).

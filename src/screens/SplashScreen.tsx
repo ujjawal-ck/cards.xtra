@@ -1,7 +1,7 @@
 /**
  * SplashScreen — Lottie splash that plays once on app launch.
  *
- * On `onAnimationFinish` (or, defensively, on a 7-second safety
+ * On `onAnimationFinish` (or, defensively, on a 3.5-second safety
  * timeout — some Lottie/Expo Go combos drop the callback) the screen
  * `navigation.replace('Onboarding')`s itself so the user can't swipe
  * back to the splash. Sequence: Splash → Onboarding → Login.
@@ -14,7 +14,7 @@
  * Resize mode: `cover` so the 720×1600 portrait fills the device
  * without letterboxing on any aspect ratio.
  */
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -29,10 +29,12 @@ import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
 
-// 7 s — animation runs ~6.5 s, this is the safety hatch in case the
-// Lottie's onAnimationFinish never fires (known issue on some
-// Expo Go builds).
-const SPLASH_SAFETY_MS = 7000;
+// BUILD-06 / parity H: CashKaro plays one ~3 s splash with no hold. The Lottie
+// is 6.53 s at 1x (392 frames @ 60 fps), so play it at 2.2x (~3.0 s).
+const SPLASH_SPEED = 2.2;
+// Hard cap: leave the splash by now even if onAnimationFinish never fires or
+// the session is still loading (was 7000 ms).
+const SPLASH_SAFETY_MS = 3500;
 
 export function SplashScreen() {
   const navigation = useNavigation<Nav>();
@@ -65,12 +67,22 @@ export function SplashScreen() {
     );
   }, [navigation, status]);
 
+  // The animation ending only hands over once the session load is known
+  // (short wait, bounded by the cap below); the cap leaves regardless.
+  const [animDone, setAnimDone] = useState(false);
   useEffect(() => {
-    safetyRef.current = setTimeout(goNext, SPLASH_SAFETY_MS);
+    if (animDone && status !== 'loading') goNext();
+  }, [animDone, status, goNext]);
+
+  // Cap timer starts once (not on every status change); it calls the latest goNext.
+  const goNextRef = useRef(goNext);
+  goNextRef.current = goNext;
+  useEffect(() => {
+    safetyRef.current = setTimeout(() => goNextRef.current(), SPLASH_SAFETY_MS);
     return () => {
       if (safetyRef.current) clearTimeout(safetyRef.current);
     };
-  }, [goNext]);
+  }, []);
 
   return (
     <View
@@ -89,9 +101,10 @@ export function SplashScreen() {
         source={require('../assets/animations/splash-animation.json')}
         autoPlay
         loop={false}
+        speed={SPLASH_SPEED}
         resizeMode="cover"
         style={{ flex: 1 }}
-        onAnimationFinish={goNext}
+        onAnimationFinish={() => setAnimDone(true)}
       />
     </View>
   );

@@ -6,6 +6,7 @@ import {
   getUserAccessToken,
   withUserToken,
   jwtExpiryMs,
+  bumpSessionGeneration,
   __setClock,
   SessionExpiredError,
   type UserTokens,
@@ -171,5 +172,79 @@ describe('user session', () => {
 
   it('throws SessionExpiredError when signed out', async () => {
     await expect(getUserAccessToken()).rejects.toBeInstanceOf(SessionExpiredError);
+  });
+});
+
+describe('session end during a refresh (AUTH-05)', () => {
+  /** A store whose refresh waits until the test resolves or rejects it. */
+  function pendingSetup() {
+    type Res = { accessToken: string; refreshToken?: string };
+    const write = jest.fn();
+    const onExpired = jest.fn();
+    const calls: { resolve: (v: Res) => void; reject: (e: unknown) => void }[] = [];
+    const refresh = jest.fn(() => new Promise<Res>((resolve, reject) => calls.push({ resolve, reject })));
+    configureUserSession({ read: () => ({ accessToken: 'a', refreshToken: 'r1' }), write, onExpired, refresh });
+    /** Settle the n-th refresh call (default: the first). */
+    return {
+      write,
+      onExpired,
+      refresh,
+      resolve: (v: Res, n = 0) => calls[n].resolve(v),
+      reject: (e: unknown, n = 0) => calls[n].reject(e),
+    };
+  }
+
+  it('a refresh that resolves after the session ended writes nothing', async () => {
+    const s = pendingSetup();
+    const pending = refreshUserToken();
+    bumpSessionGeneration(); // logout while the refresh is in flight
+    s.resolve({ accessToken: 'late', refreshToken: 'r2' });
+    await expect(pending).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(s.write).not.toHaveBeenCalled();
+    expect(s.onExpired).not.toHaveBeenCalled();
+  });
+
+  it('a late 401 from the ended session does not call onExpired (it would end the next session)', async () => {
+    const s = pendingSetup();
+    const pending = refreshUserToken();
+    bumpSessionGeneration();
+    s.reject(unauthorized());
+    await expect(pending).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(s.onExpired).not.toHaveBeenCalled();
+  });
+
+  it('a new refresh after the session end does not join the old one, and the old one does not clear it', async () => {
+    const s = pendingSetup();
+    const first = refreshUserToken();
+    bumpSessionGeneration();
+    const second = refreshUserToken();
+    expect(second).not.toBe(first);
+    expect(s.refresh).toHaveBeenCalledTimes(2);
+    s.resolve({ accessToken: 'late' }, 0);
+    await expect(first).rejects.toBeInstanceOf(SessionExpiredError);
+    // The old refresh settled: the new one is still the shared in-flight refresh.
+    expect(refreshUserToken()).toBe(second);
+    s.resolve({ accessToken: 'b2' }, 1);
+    await expect(second).resolves.toBe('b2');
+    expect(s.write).toHaveBeenCalledTimes(1);
+    expect(s.write).toHaveBeenCalledWith({ accessToken: 'b2', refreshToken: 'r1' });
+  });
+
+  it('a session end during the write makes the caller fail instead of using the old token', async () => {
+    let finishWrite!: () => void;
+    const write = jest.fn(() => new Promise<void>((r) => (finishWrite = r)));
+    configureUserSession({
+      read: () => ({ accessToken: 'a', refreshToken: 'r1' }),
+      write,
+      onExpired: jest.fn(),
+      refresh: async () => ({ accessToken: 'b' }),
+    });
+    const pending = refreshUserToken();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(write).toHaveBeenCalledTimes(1);
+    bumpSessionGeneration();
+    finishWrite();
+    await expect(pending).rejects.toBeInstanceOf(SessionExpiredError);
   });
 });

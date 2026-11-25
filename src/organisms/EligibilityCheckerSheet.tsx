@@ -500,6 +500,7 @@ export const EligibilityCheckerSheet = forwardRef<
               value={pincode}
               state={pinError ? 'error' : undefined}
               hint={pinError ?? undefined}
+              hintIcon={pinError ? 'desc-exclamation' : undefined}
               onChangeText={(t) => {
                 setPincode(t.replace(/[^0-9]/g, ''));
                 if (pinError) setPinError(null);
@@ -514,6 +515,7 @@ export const EligibilityCheckerSheet = forwardRef<
               value={income}
               state={incomeError ? 'error' : undefined}
               hint={incomeError ?? undefined}
+              hintIcon={incomeError ? 'desc-exclamation' : undefined}
               onChangeText={(t) => {
                 // Re-group into the Indian (lakh) format on every keystroke.
                 setIncome(formatIndianIncome(t));

@@ -95,14 +95,14 @@ const HELP_BUTTON_LABEL = 'Need Help';
 
 // Reusable timeline fragments — copy/dates verified live against Figma
 // (3873:52573 + state variants 3919:40017/40150/40310/40701).
-//   • "Order placed"   → cart-filled, success soft, dated "Sep 19,2025"
+//   • "Order placed"   → cart-outline, success soft, dated "Sep 19,2025"
 //   • "Cashback tracked" → Figma "right-circle" (an OUTLINE check-in-circle);
 //      substituted with the registered check-circle-outline, success soft.
 // Every step in every state is dated "Sep 19,2025" in Figma.
 const STEP_DATE = 'Sep 19,2025';
 
 const STEP_PLACED: TimelineStep = {
-  iconName: 'cart-filled',
+  iconName: 'cart-outline',
   title: 'Order placed',
   date: STEP_DATE,
   fill: 'soft',
@@ -147,7 +147,7 @@ const STATUS_CONFIG: Record<OrderStatus, StatusConfig> = {
     steps: [
       STEP_PLACED,
       STEP_TRACKED,
-      { iconName: 'desc-cross', title: CONFIRMATION, date: STEP_DATE, fill: 'solid', tone: 'error' },
+      { iconName: 'close', title: CONFIRMATION, date: STEP_DATE, fill: 'solid', tone: 'error' },
     ],
   },
   confirmed: {

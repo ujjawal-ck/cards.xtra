@@ -14,17 +14,15 @@
  *   card fill      → gradients.dark (token; the Figma "gradient/dark" style)
  *   card padding   → px spacing[20] / py spacing[16]
  *   label          → typography.body16Medium / colors.text.inverse
- *   chevron        → iconSize[20] / colors.icon.inverse · borderWidth.thick
+ *   chevron        → iconSize[20] / colors.icon.inverse
  *
- * Imports: Text atom + react-native-svg (inline chevron — no `chevron-right`
- * ships in the Icon registry; Header-organism precedent for missing glyphs).
+ * Imports: Text and Icon atoms.
  */
 import React from 'react';
 import { View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
-import { Text } from '../atoms';
-import { colors, spacing, radius, iconSize, borderWidth, gradients } from '../tokens';
+import { Text, Icon } from '../atoms';
+import { colors, spacing, radius, iconSize, gradients } from '../tokens';
 
 export interface TrackMoreBannerProps {
   label?: string;
@@ -32,19 +30,9 @@ export interface TrackMoreBannerProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Right-pointing chevron — inline (no `chevron-right` in the Icon registry). */
+/** Right-pointing chevron (chevron-right icon). */
 function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Path
-        d="M7 5 L13 10 L7 15"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={size} color={color} />;
 }
 
 export function TrackMoreBanner({

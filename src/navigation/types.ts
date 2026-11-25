@@ -5,7 +5,7 @@
  */
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { CalculateSpends } from '../api/types';
-import type { SpendKey } from '../lib/cardTools';
+import type { SpendKey, ToolCategoryId } from '../lib/cardTools';
 
 /**
  * Accumulating state for one Missing Cashback claim, threaded through the flow
@@ -139,7 +139,7 @@ export type RootStackParamList = {
   // ── Card tools (Home tools row). Results are read from useCardSavings, keyed
   // by `spends`; a result is never passed through navigation. `answers` are the
   // user's answers in question units, behind `spends`, for the edit sheet. ──
-  /** Spend questions. 'ultimate' ends on ToolResults, 'beat' on BeatMyCardPick. */
+  /** Spend questions. 'ultimate' ends on ToolResults. 'beat' (no longer opened: Beat my card starts on BeatMyCardPick) ends on BeatMyCardPick. */
   SpendQuiz: { next: 'ultimate' | 'beat' };
   /** The league table for one spend profile. `tool` names the entry for analytics and copy. */
   ToolResults: {
@@ -155,18 +155,17 @@ export type RootStackParamList = {
     /** Beat tool: the user's card, highlighted in the list. */
     highlightAlias?: string;
   };
-  /** Beat my card: pick the card the user has. */
-  BeatMyCardPick: {
-    spends: CalculateSpends;
-    answers: Partial<Record<SpendKey, number>>;
-    /** true when the spend quiz opened this screen: the quiz already sent TOOL_START. */
-    fromQuiz?: boolean;
-  };
+  /** Beat my card, step 1: pick the card the user has. No spends needed. */
+  BeatMyCardPick: undefined;
+  /** Beat my card, step 2: one spends page (category chips + spend cards) for the picked card. */
+  BeatMyCardSpends: { cardAlias: string };
   /** Beat my card, result: the user's card against the best other card. */
   BeatMyCardResult: {
     cardAlias: string;
     spends: CalculateSpends;
     answers: Partial<Record<SpendKey, number>>;
+    /** The categories selected on the spends page, for the "Based on" line and the edit sheet keys. */
+    categories: ToolCategoryId[];
   };
   /** Best card for brands. `brandId` (a TOOL_BRANDS id) preselects the brand the Home tile was showing. */
   BestForBrands: { brandId?: string } | undefined;

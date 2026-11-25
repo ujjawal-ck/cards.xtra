@@ -11,7 +11,9 @@
  *
  * Three withdrawable buckets, each a heading (amount + info-circle that
  * toggles a tooltip) over a card of payment-method rows. Every amount is
- * live from useEarnings — nothing hardcoded.
+ * live from usePaymentInfo (GET /payment/payment, as in the CashKaro app) —
+ * nothing hardcoded. An amount the API did not give shows "Balance
+ * unavailable", never ₹0 (see ./withdraw/balances).
  *
  * Routing per method:
  *   Cashback · "UPI payments"            → WithdrawEnterUPI (UPI flow)
@@ -39,10 +41,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Text } from '../atoms';
 import { Tooltip } from '../molecules';
-import { Header, Masthead } from '../organisms';
+import { Header, Masthead, ScreenState } from '../organisms';
 import { colors, spacing, mediaSize } from '../tokens';
 import { analytics, Events } from '../analytics';
-import { useEarnings } from '../query/useEarnings';
+import { usePaymentInfo } from '../query/usePaymentInfo';
+import { formatINR } from '../lib/money';
 import type { WithdrawStackParamList } from '../navigation/types';
 import {
   MethodCard,
@@ -51,13 +54,17 @@ import {
   type MethodRowItem,
 } from './withdraw/methodRow';
 import { formatRupees } from './withdraw/amount';
+import {
+  bucketAmount,
+  payoutBlockedText,
+  resolveWithdrawView,
+  type WithdrawBucket,
+} from './withdraw/balances';
 
 type Nav = NativeStackNavigationProp<
   WithdrawStackParamList,
   'WithdrawMethodSelect'
 >;
-
-type WithdrawBucket = 'cashback' | 'rewards' | 'combined';
 
 // Row height of the heading (body16 line-height ≈ 24) — used to drop the
 // tooltip just below the row, with its up-arrow pointing back at the icon.
@@ -178,21 +185,28 @@ export function WithdrawScreen() {
   >().params?.bucket;
   const [openTip, setOpenTip] = useState<number | null>(null);
 
-  // Live withdrawable amounts from /users/earnings (the same source the
-  // Earnings tab uses). Payment-method ids are read separately inside each
-  // detail screen (usePaymentInfo) and fall back to defaults if unavailable.
-  const { data: earnings, isLoading } = useEarnings();
-  const loading = isLoading && !earnings;
+  // Live withdrawable amounts from /payment/payment, the endpoint the payout
+  // itself uses (the CashKaro app reads the same one for withdraw).
+  // Payment-method ids are read inside each detail screen.
+  const paymentQ = usePaymentInfo();
+  const payment = paymentQ.data;
+  const view = resolveWithdrawView(paymentQ, entryBucket);
+  const blocked = payoutBlockedText(payment);
 
-  // Numeric amount threaded into the next screen's params.
-  const amountNum = (bucket: WithdrawBucket): number => {
-    if (bucket === 'cashback') return earnings?.confirmedNum ?? 0;
-    if (bucket === 'rewards') return earnings?.rewardsNum ?? 0;
-    return earnings?.combinedNum ?? 0;
-  };
+  // Numeric amount threaded into the next screen's params. null = unknown.
+  const amountNum = (bucket: WithdrawBucket): number | null =>
+    bucketAmount(payment, bucket);
   // Display string per bucket ("—" until the first fetch resolves).
-  const amountText = (bucket: WithdrawBucket): string =>
-    loading ? '—' : formatRupees(amountNum(bucket));
+  const amountText = (bucket: WithdrawBucket): string => {
+    const n = amountNum(bucket);
+    return n === null ? '—' : formatRupees(n);
+  };
+  // Opens the next step only with a known amount: never forward a ₹0
+  // placeholder.
+  const withAmount = (bucket: WithdrawBucket, go: (amount: number) => void) => {
+    const n = amountNum(bucket);
+    if (n !== null) go(n);
+  };
 
   // Which section(s) to show. The buckets aren't independent — "combined" is
   // just cashback + rewards — so showing all three is redundant whenever only
@@ -202,9 +216,9 @@ export function WithdrawScreen() {
   //   both           → Cashback (UPI / gift card) AND Cashback + Reward
   //                      (combined; gift-card-only). Showing only the combined
   //                      section hid UPI from anyone with even ₹5 of rewards.
-  // Until earnings resolve, default to Cashback (amounts read 0).
-  const hasCashback = amountNum('cashback') > 0;
-  const hasRewards = amountNum('rewards') > 0;
+  // Until the amounts resolve, default to Cashback.
+  const hasCashback = (amountNum('cashback') ?? 0) > 0;
+  const hasRewards = (amountNum('rewards') ?? 0) > 0;
   const visibleBuckets: WithdrawBucket[] = entryBucket
     ? [entryBucket]
     : hasCashback && hasRewards
@@ -221,16 +235,17 @@ export function WithdrawScreen() {
         {
           icon: 'pay-UPI',
           label: 'UPI payments',
-          onPress: () => {
-            analytics.track(Events.WITHDRAW_METHOD_SELECT, {
-              method: 'upi',
-              payment_type: 'cashback',
-            });
-            navigation.navigate('WithdrawEnterUPI', {
-              amount: amountNum('cashback'),
-              paymentType: 'cashback',
-            });
-          },
+          onPress: () =>
+            withAmount('cashback', (amount) => {
+              analytics.track(Events.WITHDRAW_METHOD_SELECT, {
+                method: 'upi',
+                payment_type: 'cashback',
+              });
+              navigation.navigate('WithdrawEnterUPI', {
+                amount,
+                paymentType: 'cashback',
+              });
+            }),
         },
         // Bank Transfer has no Figma design / payout API wiring yet, so it
         // shows as unavailable instead of a tappable row that does nothing.
@@ -245,16 +260,17 @@ export function WithdrawScreen() {
         {
           glyph: <GiftCardGlyph />,
           label: 'Amazon / Flipkart Gift Card',
-          onPress: () => {
-            analytics.track(Events.WITHDRAW_METHOD_SELECT, {
-              method: 'gift_card',
-              payment_type: 'cashback',
-            });
-            navigation.navigate('WithdrawGiftCard', {
-              amount: amountNum('cashback'),
-              variant: 'cashback',
-            });
-          },
+          onPress: () =>
+            withAmount('cashback', (amount) => {
+              analytics.track(Events.WITHDRAW_METHOD_SELECT, {
+                method: 'gift_card',
+                payment_type: 'cashback',
+              });
+              navigation.navigate('WithdrawGiftCard', {
+                amount,
+                variant: 'cashback',
+              });
+            }),
         },
       ];
     }
@@ -264,16 +280,17 @@ export function WithdrawScreen() {
       {
         glyph: <GiftCardGlyph />,
         label: 'Amazon / Flipkart Gift Card',
-        onPress: () => {
-          analytics.track(Events.WITHDRAW_METHOD_SELECT, {
-            method: 'gift_card',
-            payment_type: variant,
-          });
-          navigation.navigate('WithdrawGiftCard', {
-            amount: amountNum(bucket),
-            variant,
-          });
-        },
+        onPress: () =>
+          withAmount(bucket, (amount) => {
+            analytics.track(Events.WITHDRAW_METHOD_SELECT, {
+              method: 'gift_card',
+              payment_type: variant,
+            });
+            navigation.navigate('WithdrawGiftCard', {
+              amount,
+              variant,
+            });
+          }),
       },
     ];
   };
@@ -296,14 +313,54 @@ export function WithdrawScreen() {
             onLeadingPress={() => navigation.goBack()}
           />
 
-          {/* Masthead headline = total available (confirmed cashback +
-              rewards) from live earnings. Self-pads 16. */}
-          <Masthead
-            variant="payment"
-            amount={amountText(entryBucket ?? 'combined')}
-          />
+          {/* No amounts to show: an honest state, never ₹0. */}
+          {view === 'offline' ? (
+            <ScreenState
+              title="You’re offline"
+              body="Connect to the internet and try again."
+              actionLabel="Try again"
+              onAction={() => paymentQ.refetch()}
+            />
+          ) : view === 'error' ? (
+            <ScreenState
+              title="Couldn’t load your balance"
+              body="Check your connection and try again."
+              actionLabel={paymentQ.isFetching ? 'Retrying…' : 'Try again'}
+              onAction={() => paymentQ.refetch()}
+            />
+          ) : view === 'unavailable' ? (
+            <ScreenState
+              title="Balance unavailable"
+              body="Something went wrong. Please try again."
+              actionLabel={paymentQ.isFetching ? 'Retrying…' : 'Try again'}
+              onAction={() => paymentQ.refetch()}
+            />
+          ) : (view === 'processing' ||
+              view === 'rate_limited' ||
+              view === 'payments_disabled') &&
+            blocked ? (
+            // Code 5002: a payout pending, the 30-minute rule, or payouts
+            // off after a contact change. Never "₹0".
+            <ScreenState title={blocked.title} body={blocked.body} />
+          ) : view === 'below_minimum' && payment ? (
+            <ScreenState
+              title={`Minimum ${formatINR(payment.paymentThreshold)} to withdraw`}
+              body={`You can withdraw once your balance reaches ${formatINR(
+                payment.paymentThreshold
+              )}. Keep shopping to earn more!`}
+            />
+          ) : null}
 
-          {sections.map((section, i) => (
+          {/* Masthead headline = the entry bucket, or the total available
+              (cashback + rewards) from /payment/payment. Self-pads 16. */}
+          {view === 'ready' || view === 'loading' ? (
+            <Masthead
+              variant="payment"
+              amount={amountText(entryBucket ?? 'combined')}
+            />
+          ) : null}
+
+          {(view === 'ready' || view === 'loading' ? sections : []).map((section, i) => (
             <View key={section.label} style={{ gap: 0 }}>
               <SectionHeading
                 label={section.label}

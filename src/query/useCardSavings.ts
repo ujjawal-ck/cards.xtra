@@ -15,6 +15,12 @@
  * `card` set only when the join finds one. It needs only the calculate call:
  * while the cards list loads, or when it fails, rows come without `card`.
  * `isLoading`, `isOffline` and `isError` follow the calculate call only.
+ *
+ * The join uses EVERY active app card, not only the shown ones: the Beat my
+ * card picker lists the league, and the user's own card is an input, not a
+ * card we sell. The league is never narrowed here. Screens that list cards to
+ * sell apply the card rule for display with `shown` (leagueForDisplay in
+ * src/api/cardRates.ts).
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -33,7 +39,8 @@ import {
   type CardSavings,
   type LeagueRowOf,
 } from '../lib/cardTools';
-import { useCards } from './useCards';
+import { useCardCatalog } from './useCards';
+import type { ShownCards } from '../api/cardRates';
 
 /** What the calculate query caches: the ranked list and how long the call took. */
 interface CalculateResult {
@@ -56,6 +63,12 @@ export interface UseCardSavingsResult {
   /** Every calculate row in rank order. `card` is set only when the join finds one. Empty until loaded. */
   league: LeagueRow[];
   /**
+   * The app cards the card rule shows (isCardShown) and whether the CashKaro
+   * filter is on, for display only (leagueForDisplay). null while the cards
+   * list is not known (loading or failed).
+   */
+  shown: ShownCards | null;
+  /**
    * true while the calculate call has no data and is fetching.
    * false while paused offline (see `isOffline`).
    */
@@ -77,10 +90,17 @@ export interface UseCardSavingsResult {
   loadMs?: number;
 }
 
-/** Pass null (or an all-zero profile) to keep the hook idle. */
-export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsResult {
+/**
+ * Pass null (or an all-zero profile) to keep the hook idle.
+ * `keepForSession`: the result never goes stale and is never dropped while the app runs (the Beat my
+ * card picker's probe list, spec 9.3). Every caller of that profile must pass it.
+ */
+export function useCardSavings(
+  spends: CalculateSpends | null,
+  opts?: { keepForSession?: boolean },
+): UseCardSavingsResult {
   const enabled = spends !== null && hasAnySpend(spends);
-  const cards = useCards();
+  const cards = useCardCatalog();
 
   const calc = useQuery<CalculateResult>({
     queryKey: ['bk', 'calculate', enabled && spends ? spendsKey(spends) : 'idle'],
@@ -92,7 +112,8 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
       return { list: rankByNetValue(mapCalculateResponse(raw)), loadMs };
     },
     enabled,
-    staleTime: CALCULATE_STALE_MS,
+    staleTime: opts?.keepForSession ? Infinity : CALCULATE_STALE_MS,
+    ...(opts?.keepForSession ? { gcTime: Infinity } : null),
     // calculateSavings already retries once in the transport; no second layer here.
     retry: false,
   });
@@ -100,8 +121,14 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
   const league = useMemo<LeagueRow[]>(() => {
     const list = calc.data?.list;
     if (!list) return [];
-    return buildLeague(list, cards.data, SHOW_CARDS_NOT_IN_APP);
+    return buildLeague(list, cards.data?.all, SHOW_CARDS_NOT_IN_APP);
   }, [calc.data, cards.data]);
+
+  const catalog = cards.data;
+  const shown = useMemo<ShownCards | null>(
+    () => (catalog ? { ids: new Set(catalog.shown.map((c) => c.id)), filterOn: catalog.filterOn } : null),
+    [catalog],
+  );
 
   const calcRefetch = calc.refetch;
   const cardsRefetch = cards.refetch;
@@ -126,6 +153,7 @@ export function useCardSavings(spends: CalculateSpends | null): UseCardSavingsRe
 
   return {
     league,
+    shown,
     isLoading,
     isOffline,
     isError: enabled && calc.isError,

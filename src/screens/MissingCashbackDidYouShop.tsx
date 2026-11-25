@@ -30,9 +30,8 @@ import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatus
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { Path } from 'react-native-svg';
 
-import { Text, Divider, StatusBadge } from '../atoms';
+import { Text, Divider, StatusBadge, Icon } from '../atoms';
 import {
   Header,
   MissingCashbackSummarySheet,
@@ -44,15 +43,7 @@ import { HelpTicketCard, TrackMoreBanner } from '../molecules';
 import { useClaims, type ClaimTab } from '../query/useMissingCashback';
 import type { ClaimCard, OthersClaimCard } from '../api/missingCashbackMapper';
 import type { RootStackParamList, McClaimDraft } from '../navigation/types';
-import { colors, spacing, radius, iconSize, borderWidth } from '../tokens';
-
-function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Path d="M7 5 L13 10 L7 15" stroke={color} strokeWidth={borderWidth.thick} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
+import { colors, spacing, radius, iconSize } from '../tokens';
 
 // One row inside a flat "Others" card — label left, value right.
 function OthersRow({ label, value }: { label: string; value: string }) {
@@ -90,7 +81,7 @@ function OthersCard({ card, onView }: { card: OthersClaimCard; onView: () => voi
         <Text variant="body14SemiBold" color={colors.text.primary} style={{ flex: 1 }}>Info</Text>
         <Pressable onPress={onView} accessibilityRole="button" accessibilityLabel="View ticket details" hitSlop={spacing[8]} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[4] }}>
           <Text variant="body14Medium" color={colors.text.link}>View</Text>
-          <ChevronRightGlyph size={iconSize[20]} color={colors.text.link} />
+          <Icon name="chevron-right" size={iconSize[20]} color={colors.text.link} />
         </Pressable>
       </View>
     </View>

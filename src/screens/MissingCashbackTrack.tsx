@@ -36,9 +36,8 @@ import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatus
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { Path } from 'react-native-svg';
 
-import { Text } from '../atoms';
+import { Text, Icon } from '../atoms';
 import { Header } from '../organisms';
 import { HelpTicketCard } from '../molecules';
 import { images } from '../assets/images';
@@ -49,30 +48,10 @@ import {
   radius,
   iconSize,
   sizing,
-  borderWidth,
   gradients,
 } from '../tokens';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MissingCashbackTrack'>;
-
-/**
- * Right-pointing chevron — same inline glyph the "Did You Shop?" CTA uses
- * (no `chevron-right` ships in the Icon registry yet). Replace with
- * <Icon name="chevron-right" …> once that SVG lands.
- */
-function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Path
-        d="M7 5 L13 10 L7 15"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
 
 // Demo "trackable purchase" rows. The logo is a DELIBERATE placeholder:
 // our assets carry no "HDFC BizBlack" art, so the closest shipped store
@@ -163,7 +142,7 @@ export function MissingCashbackTrack() {
                 >
                   Can’t find your purchase? Raise it manually
                 </Text>
-                <ChevronRightGlyph size={iconSize[20]} color={colors.icon.inverse} />
+                <Icon name="chevron-right" size={iconSize[20]} color={colors.icon.inverse} />
               </LinearGradient>
             </Pressable>
           </View>

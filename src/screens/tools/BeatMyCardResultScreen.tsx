@@ -10,11 +10,20 @@
  * card is found in the full list, so a filter never hides it. Apply never shows for the user's own
  * card, and never for a card the app does not list.
  *
+ * FILTERED includes the card rule (leagueForDisplay, decision 2026-11-23): once CashKaro maps card
+ * stores, the opponent and the "cards that beat yours" lists hold only cards that match a CashKaro
+ * store row; until then a card the app does not sell reads as not listed (no Apply). The user's own
+ * card needs no CashKaro rate: it always gets its verdict.
+ *
+ * Under the hero, "Based on <categories>" (the categories picked on the spends page that have a spend)
+ * opens the edit sheet with only those categories' questions; its "+ Add a category" row goes back to
+ * the spends page, where the chips are. An edit here keeps the categories as they were.
+ *
  * Analytics: the result view once (verdict, load_ms), the error once, a select on card details.
  * Never a spend amount and never the name or id of the user's card.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,6 +39,8 @@ import { EditSpendsSheet, Header, ScreenState, CARD_THUMB_ASPECT } from '../../o
 import type { EditSpendsSheetHandle } from '../../organisms';
 import { colors, spacing, radius, borderWidth } from '../../tokens';
 import { useCardSavings } from '../../query/useCardSavings';
+import { leagueForDisplay } from '../../api/cardRates';
+import { rewardLabel } from '../../api/cardMapper';
 import type { LeagueRow } from '../../query/useCardSavings';
 import { useSavedSpends } from '../../lib/savedSpends';
 import {
@@ -56,6 +67,8 @@ import {
 import type { ClickOutSource } from '../../lib/useClickOut';
 import { useCardDetailSheet } from '../../lib/useCardDetailSheet';
 import { formatINR } from '../../lib/money';
+import { basedOnText } from '../../lib/beatFlow';
+import { keysForCategories } from '../../lib/toolFlows';
 import { shortCardName } from '../../lib/crossSellPresent';
 import { analytics, Events } from '../../analytics';
 
@@ -150,7 +163,7 @@ function CategoryCompare({
 export function BeatMyCardResultScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Rt>();
-  const { cardAlias } = params;
+  const { cardAlias, categories } = params;
   const insets = useSafeAreaInsets();
 
   const [answers, setAnswers] = useState(params.answers);
@@ -163,12 +176,19 @@ export function BeatMyCardResultScreen() {
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
   const { save } = useSavedSpends();
   const editRef = useRef<EditSpendsSheetHandle>(null);
+  // Memoized: the sheet rebuilds its list when the `keys` array changes.
+  const editKeys = useMemo(() => keysForCategories(categories), [categories]);
+  const basedOn = basedOnText(categories, answers);
 
-  const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const loaded = !isLoading && !isOffline && !isError;
-  const filtered = useMemo(() => filterLeague(league, filters), [league, filters]);
+  // The card rule first (display only), then the chips. The user's own card always stays.
+  const filtered = useMemo(
+    () => filterLeague(leagueForDisplay(league, shown, cardAlias), filters),
+    [league, shown, cardAlias, filters],
+  );
   const mineRow = useMemo(() => league.find((r) => r.savings.alias === cardAlias), [league, cardAlias]);
   const result = useMemo(
     () =>
@@ -242,7 +262,7 @@ export function BeatMyCardResultScreen() {
   );
 
   // Back to the pick screen with the spends as they are now (they may have been edited here).
-  const tryAnother = () => navigation.popTo('BeatMyCardPick', { spends, answers });
+  const tryAnother = () => navigation.popTo('BeatMyCardPick');
 
   let content: React.ReactNode;
   if (noSpend) {
@@ -378,6 +398,20 @@ export function BeatMyCardResultScreen() {
             ) : null}
           </Animated.View>
 
+          {basedOn ? (
+            <Pressable
+              onPress={() => editRef.current?.present()}
+              accessibilityRole="button"
+              accessibilityLabel={`${basedOn}. Edit spends`}
+              hitSlop={spacing[8]}
+              style={{ alignSelf: 'center' }}
+            >
+              <Text variant="body14SemiBold" color={colors.text.link} align="center">
+                {basedOn}
+              </Text>
+            </Pressable>
+          ) : null}
+
           <View style={{ gap: spacing[8] }}>
             <PodiumCompare
               title="Annual savings"
@@ -429,13 +463,13 @@ export function BeatMyCardResultScreen() {
           <View style={{ gap: spacing[8] }}>
             {kind === 'other_wins' && otherRow.card ? (
               <>
-                {otherRow.card.cashback ? (
+                {rewardLabel(otherRow.card) ? (
                   <View style={{ gap: spacing[2] }}>
                     <Text variant="caption10Medium" color={colors.text.secondary}>
                       CashKaro Rewards
                     </Text>
                     <Text variant="body14SemiBold" color={colors.text.primary}>
-                      {otherRow.card.cashback}
+                      {rewardLabel(otherRow.card)}
                     </Text>
                   </View>
                 ) : null}
@@ -446,6 +480,8 @@ export function BeatMyCardResultScreen() {
                     variant="solid"
                     tone="main"
                     size={52}
+                    icon="trailing"
+                    iconName="chevron-right"
                     fullWidth
                     onPress={() => otherRow.card && applyCard(otherRow.card)}
                   />
@@ -476,6 +512,8 @@ export function BeatMyCardResultScreen() {
                       variant="solid"
                       tone="main"
                       size={52}
+                      icon="trailing"
+                      iconName="chevron-right"
                       fullWidth
                       onPress={() => applyRow.card && applyCard(applyRow.card)}
                     />
@@ -541,7 +579,16 @@ export function BeatMyCardResultScreen() {
       <Header leading="back" title="Beat my card" onLeadingPress={() => navigation.goBack()} />
       {content}
       {sheets}
-      <EditSpendsSheet ref={editRef} answers={answers} onSubmit={onSubmitSpends} />
+      <EditSpendsSheet
+        ref={editRef}
+        keys={editKeys}
+        answers={answers}
+        onSubmit={onSubmitSpends}
+        onAddCategory={() => {
+          editRef.current?.dismiss();
+          navigation.goBack();
+        }}
+      />
     </SafeAreaView>
   );
 }

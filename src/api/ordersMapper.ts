@@ -4,7 +4,7 @@
  *
  * Confirmed shapes (staging, live probe 2026-06-04):
  *
- * LIST  GET /users/orders?page[size]=N  → JSON:API
+ * LIST  GET /users/orders?page[size]=N  → JSON:API (no date, no store name, no is_delayed: detail-only)
  *   meta { total_records, page_number, page_size }
  *   data[] { type:"myorder", id, attributes:{
  *     merchant_image_url, bonus_type|null, cashback_type ("Cashback"|"Rewards"
@@ -25,15 +25,24 @@
  *
  * Notes:
  *   • merchant_image_url is sometimes ".../no-image.jpg" — treated as absent.
- *   • Money strings are decimal ("684.50"); formatted to "₹684.5" / "₹4,563".
+ *   • Money strings are decimal ("684.50"); formatted with lib/money to
+ *     "₹684.50" / "₹4,563" / "-₹50". A missing or unreadable amount shows
+ *     "—", never ₹0.
+ *   • A body with no `data` array (a proxy page, a captive-portal HTML) is
+ *     not an empty list: mapOrders throws, so the screen shows its error.
  *   • The OrderRow `type` drives both the meta line ("Order ID:"/"Bonus Type:"
  *     /"Referral Name:") and the badge variant (referral → Tag, else Status).
+ *   • Month grouping: the list has no date, so OrdersList fetches each shown
+ *     row's detail (useOrderDates) and groups by its `transaction_date`
+ *     (groupOrdersByMonth below).
  */
 import type { ImageSourcePropType } from 'react-native';
 import type { OrderRowType, OrderRowBadgeVariant, TimelineStep } from '../organisms';
 import type { StatusBadgeStatus } from '../atoms';
 import type { ToneName } from '../tokens';
 import { images } from '../assets/images';
+import { formatINROrDash } from '../lib/money';
+import { groupByMonth, type MonthSection } from '../lib/groupByMonth';
 
 // Timeline status key (a subset of StatusBadgeStatus the detail visuals cover).
 export type OrderStatusKey = 'pending' | 'delayed' | 'cancelled' | 'confirmed' | 'paid';
@@ -51,14 +60,15 @@ export interface OrderListRow {
   metaValue: string;
   note?: { text: string; expandable: boolean };
   logoSrc: ImageSourcePropType;
-  /** Display name of the store this order is from. Empty when the list
-   *  payload exposes neither a merchant name nor a parseable logo slug. */
+  /** Display name of the store. Best effort: the doc's list has no name field,
+   *  so it comes from a name field if sent, else a readable logo slug, else ''. */
   merchantName: string;
   /** Stable grouping key for the Store filter (logo URL → falls back to
    *  the name, then the record id). Same store ⇒ same key. */
   merchantKey: string;
-  /** Order date (ISO) when the list payload carries `transaction_date`.
-   *  The documented list payload does not, so this is usually absent. */
+  /** Order date (ISO). The list response has no date field (`transaction_date`
+   *  is detail-only), so the list leaves this unset. OrdersList groups by the
+   *  detail's date instead (groupOrdersByMonth). */
   dateISO?: string;
 }
 
@@ -78,6 +88,8 @@ export interface OrderDetailModel {
   orderAmount: string;
   orderId: string;
   transactionDate: string;
+  /** Raw `transaction_date` (ISO), for the Orders list's month grouping. */
+  transactionDateISO?: string;
   /** Cashback-journey timeline. */
   steps: TimelineStep[];
 }
@@ -88,26 +100,8 @@ function str(v: unknown): string {
   return v === null || v === undefined ? '' : String(v);
 }
 
-/** Indian digit grouping: 1234567 → "12,34,567". */
-function groupIndian(n: number): string {
-  const s = Math.round(Math.abs(n)).toString();
-  if (s.length <= 3) return s;
-  const last3 = s.slice(-3);
-  const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',');
-  return `${rest},${last3}`;
-}
-
-/** Decimal string → "₹684.5" (drops trailing zero paise, keeps real paise). */
-function money(v: unknown): string {
-  const n = Number(str(v).replace(/[^\d.-]/g, ''));
-  if (!isFinite(n)) return '₹0';
-  const whole = Math.trunc(n);
-  const paise = Math.round((Math.abs(n) - Math.abs(whole)) * 100);
-  if (paise === 0) return `₹${groupIndian(whole)}`;
-  // Trim a trailing zero so "684.50" → "₹684.5" (matches earnings styling).
-  const frac = paise % 10 === 0 ? String(paise / 10) : String(paise).padStart(2, '0');
-  return `₹${groupIndian(whole)}.${frac}`;
-}
+/** Decimal string → "₹684.50" / "-₹50" (the shared formatter), "—" when missing. */
+const money = formatINROrDash;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -142,7 +136,7 @@ function logoFromUrl(url: unknown): ImageSourcePropType {
  * Best-effort store name from a logo URL filename (e.g.
  * ".../stores/amazon-india.png" → "Amazon India"). Returns '' for
  * placeholder/hash-like filenames so we never surface garbage labels.
- * Only used as a fallback when the payload carries no merchant name.
+ * The doc's list response has no name field, so this is best effort only.
  */
 function nameFromLogo(url: unknown): string {
   const s = str(url);
@@ -213,11 +207,15 @@ const META_LABEL: Record<OrderRowType, string> = {
 // ── list ─────────────────────────────────────────────────────────────────
 
 export function mapOrders(res: any): OrderListRow[] {
-  const rows: any[] = Array.isArray(res?.data) ? res.data : [];
+  // `{ data: [] }` is a real empty list. A body without a `data` array is
+  // unusable: showing "No orders yet" for it would be a false empty state.
+  if (!Array.isArray(res?.data)) {
+    throw new Error('Orders response had no data list');
+  }
+  const rows: any[] = res.data;
   return rows.map((row) => {
     const a: Record<string, unknown> = row?.attributes ?? {};
     const type = rowType(a);
-    const isDelayed = str(a.is_delayed).toLowerCase() === 'yes';
     const isReferral = type === 'referral';
 
     const metaValue =
@@ -229,9 +227,9 @@ export function mapOrders(res: any): OrderListRow[] {
 
     const comments = str(a.comments);
 
-    // Store identity. The list payload (probed) carries no merchant name —
-    // only merchant_image_url — so we read a name defensively (in case the
-    // live API does include one) and fall back to a logo-derived slug.
+    // The doc's list response has no store name (detail-only), so this read is
+    // best effort: a name field if the API sends one, else a readable logo slug.
+    // No date is read here: the month comes from the detail (groupOrdersByMonth).
     const merchantName =
       str(a.merchant_name) ||
       str(a.report_merchant_name) ||
@@ -243,7 +241,8 @@ export function mapOrders(res: any): OrderListRow[] {
       id: str(row?.id),
       type,
       badgeVariant: isReferral ? 'tag' : 'status',
-      status: badgeStatus(a.cashback_status, isDelayed),
+      // `is_delayed` is detail-only, so a list row never shows the delayed badge.
+      status: badgeStatus(a.cashback_status, false),
       tagLabel: isReferral ? 'Referral' : undefined,
       tagTone: isReferral ? 'success' : undefined,
       amount: money(a.cashback_amount),
@@ -255,14 +254,13 @@ export function mapOrders(res: any): OrderListRow[] {
       logoSrc: logoFromUrl(a.merchant_image_url),
       merchantName,
       merchantKey,
-      dateISO: str(a.transaction_date) || undefined,
     };
   });
 }
 
 // ── detail ─────────────────────────────────────────────────────────────────
 
-const STEP_PLACED_ICON = 'cart-filled' as const;
+const STEP_PLACED_ICON = 'cart-outline' as const;
 const STEP_TRACKED_ICON = 'check-circle-outline' as const;
 
 /** Footer "expected/confirmed/paid on …" line per status. */
@@ -328,7 +326,7 @@ function buildSteps(statusKey: OrderStatusKey, a: Record<string, unknown>): Time
       return [
         placed,
         tracked,
-        { iconName: 'desc-cross', title: 'Cashback cancelled', date: longDate(a.cancelled_date) || expDate, fill: 'solid', tone: 'error' },
+        { iconName: 'close', title: 'Cashback cancelled', date: longDate(a.cancelled_date) || expDate, fill: 'solid', tone: 'error' },
       ];
     case 'delayed':
       // Timeline has no orange tone; warning (amber) is the closest available.
@@ -377,6 +375,46 @@ export function mapOrderDetail(res: any): OrderDetailModel {
     orderAmount: money(a.order_amount),
     orderId: str(a.order_id) || '—',
     transactionDate: shortDate(a.transaction_date) || '—',
+    transactionDateISO: str(a.transaction_date) || undefined,
     steps: buildSteps(statusKey, a),
   };
+}
+
+// ── month grouping ─────────────────────────────────────────────────────────
+
+/** Row id → its detail's `transaction_date` (ISO), or null when the detail
+ *  call failed or sent no date. No key: the detail is not fetched yet. */
+export type OrderDatesById = Record<string, string | null>;
+
+/**
+ * Orders list rows → sections for the screen. The list response has no date,
+ * so the month comes from each row's detail (`datesById`):
+ *   • no row has its detail yet → one section with no heading (the plain list);
+ *   • dated rows → "Month YYYY" sections, newest first, server order inside;
+ *   • rows still waiting for their detail → one section with no heading;
+ *   • failed detail call, or no usable date → "Other", last.
+ */
+export function groupOrdersByMonth(
+  rows: OrderListRow[],
+  datesById: OrderDatesById
+): MonthSection<OrderListRow>[] {
+  if (rows.length === 0) return [];
+  const dated: { row: OrderListRow; dateISO: string }[] = [];
+  const waiting: OrderListRow[] = [];
+  const other: OrderListRow[] = [];
+  for (const row of rows) {
+    const iso = datesById[row.id];
+    if (iso === undefined) waiting.push(row);
+    else if (iso && !isNaN(new Date(iso).getTime())) dated.push({ row, dateISO: iso });
+    else other.push(row);
+  }
+  if (waiting.length === rows.length) return [{ key: 'waiting', label: '', rows }];
+  const sections: MonthSection<OrderListRow>[] = groupByMonth(dated).map((s) => ({
+    key: s.key,
+    label: s.label,
+    rows: s.rows.map((d) => d.row),
+  }));
+  if (waiting.length) sections.push({ key: 'waiting', label: '', rows: waiting });
+  if (other.length) sections.push({ key: 'other', label: 'Other', rows: other });
+  return sections;
 }

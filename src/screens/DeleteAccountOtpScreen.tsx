@@ -22,8 +22,9 @@
  *   submit footer    → <FooterButtons buttons="single" color="second">
  */
 import React, { useEffect, useState } from 'react';
-import { View, KeyboardAvoidingView, Platform } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StickyFooter } from '../molecules/StickyFooter';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -67,10 +68,6 @@ export function DeleteAccountOtpScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.default }}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
         <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
           <Header
             leading="back"
@@ -117,21 +114,22 @@ export function DeleteAccountOtpScreen() {
             />
           </View>
 
-          {/* Sticky Submit — cobalt/accent, disabled until 4 digits entered. */}
-          <FooterButtons
-            buttons="single"
-            color="second"
-            size={52}
-            shadow="off"
-            primaryLabel="Submit"
-            primaryDisabled={!isComplete}
-            onPrimary={() => {
-              analytics.track(Events.ACCOUNT_DELETE_SUBMIT);
-              navigation.navigate('AccountDeleted');
-            }}
-          />
         </SafeAreaView>
-      </KeyboardAvoidingView>
+
+      <StickyFooter>
+        <FooterButtons
+          buttons="single"
+          color="second"
+          size={52}
+          shadow="off"
+          primaryLabel="Submit"
+          primaryDisabled={!isComplete}
+          onPrimary={() => {
+            analytics.track(Events.ACCOUNT_DELETE_SUBMIT);
+            navigation.navigate('AccountDeleted');
+          }}
+        />
+      </StickyFooter>
     </View>
   );
 }

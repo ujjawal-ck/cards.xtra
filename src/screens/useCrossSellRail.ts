@@ -22,6 +22,7 @@
  *   - Holdout arm of the experiment (src/experiments) never shows the rail.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useOnSessionEnd } from '../auth/useOnSessionEnd';
 import { LayoutAnimation } from 'react-native';
 import type { CardModel } from '../molecules';
 import {
@@ -92,6 +93,17 @@ export function useCrossSellRail({ cards, eligibleAliases, listedCards }: Args) 
   const visitRef = useRef<Visit | null>(null);
   const pickTapRef = useRef<{ anchor: CardModel } | null>(null);
   const rejectionTapRef = useRef(false);
+
+  // A session that ends while mounted: drop the last user's applied and viewed cards.
+  useOnSessionEnd(() => {
+    session.current = {
+      expanded: new Set<string>(),
+      applied: new Set<string>(),
+      viewedAliases: [],
+      viewedIds: new Set<string>(),
+      shown: {},
+    };
+  });
 
   // Cards applied to on an earlier day: never a rail for them (rule above).
   useEffect(() => {

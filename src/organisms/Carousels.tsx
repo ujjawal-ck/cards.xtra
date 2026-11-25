@@ -834,6 +834,7 @@ export function CardCarousel({
               hitSlop={spacing[8]}
               accessibilityRole="button"
               accessibilityLabel="View all"
+              style={{ flexDirection: 'row', alignItems: 'center' }}
             >
               <Text
                 variant="body14Medium"
@@ -841,6 +842,11 @@ export function CardCarousel({
               >
                 View all
               </Text>
+              <Icon
+                name="chevron-right"
+                size={iconSize[16]}
+                color={colors.action.accent.default}
+              />
             </Pressable>
           ) : null}
         </View>

@@ -100,6 +100,9 @@ import {
   type EligibilityOutcome,
 } from './CardDetailSheet';
 import { images } from '../assets/images';
+import { analytics, Events } from '../analytics';
+import { getEligibilityGateVariant } from '../experiments';
+import { pickResultPlace, inlineResultParams } from '../lib/inlineEligibility';
 import { colors, spacing, radius, opacity, borderWidth, iconSize } from '../tokens';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
@@ -1050,8 +1053,19 @@ export const CardDetailScreenAndroid = forwardRef<
           o.eligibleCardAliases,
           parseIncome(o.income)
         );
-        if (hadDefaultsRef.current) {
+        const place = pickResultPlace({
+          hadDefaults: hadDefaultsRef.current,
+          hasSheetHandler: !!onShowResultSheet,
+        });
+        if (place === 'inline') {
           setEligibilityResult(outcome);
+          // Home logs ELIGIBILITY_RESULT itself when it presents its sheet.
+          if (!onShowResultSheet) {
+            analytics.track(
+              Events.ELIGIBILITY_RESULT,
+              inlineResultParams(card?.id, outcome, getEligibilityGateVariant())
+            );
+          }
         } else {
           onShowResultSheet?.(outcome);
         }

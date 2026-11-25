@@ -6,6 +6,9 @@
  * every time it opens. "Update results" calls `onSubmit` with the full new
  * answers (`answers` with the edits on top) and closes the sheet.
  * `present(focusKey)` opens the sheet and scrolls to that question.
+ * Optional `onAddCategory`: when set, a "+ Add a category" row ends the list
+ * and calls it after submitting the edits in the sheet (the screen decides
+ * where the user adds the category).
  *
  * The list is a BottomSheetFlatList, so only the rulers near the screen are
  * mounted (21 rulers at a few hundred ticks each are too many views at once).
@@ -21,7 +24,7 @@
  * check the ruler drag inside the sheet.
  */
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -46,6 +49,8 @@ export interface EditSpendsSheetProps {
   answers: Partial<Record<SpendKey, number>>;
   /** Called with the full new answers when the user confirms. The sheet closes itself. */
   onSubmit: (answers: Partial<Record<SpendKey, number>>) => void;
+  /** When set, the list ends with a "+ Add a category" row that calls it. */
+  onAddCategory?: () => void;
 }
 
 export interface EditSpendsSheetHandle {
@@ -102,7 +107,7 @@ const QuestionItem = React.memo(function QuestionItem({
 });
 
 export const EditSpendsSheet = forwardRef<EditSpendsSheetHandle, EditSpendsSheetProps>(function EditSpendsSheet(
-  { keys, answers, onSubmit },
+  { keys, answers, onSubmit, onAddCategory },
   ref,
 ) {
   const insets = useSafeAreaInsets();
@@ -246,6 +251,25 @@ export const EditSpendsSheet = forwardRef<EditSpendsSheetHandle, EditSpendsSheet
         onScrollToIndexFailed={onScrollToIndexFailed}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        ListFooterComponent={
+          onAddCategory ? (
+            <Pressable
+              onPress={() => {
+                // Keep the edits made in the sheet: submit them (this closes the sheet), then leave.
+                submit();
+                onAddCategory();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Add a category"
+              hitSlop={spacing[8]}
+              style={{ paddingHorizontal: spacing[16], paddingVertical: spacing[12] }}
+            >
+              <Text variant="body14SemiBold" color={colors.text.link}>
+                + Add a category
+              </Text>
+            </Pressable>
+          ) : null
+        }
         contentContainerStyle={{ paddingBottom: CTA_H + spacing[24] + insets.bottom + spacing[24] }}
       />
     </BottomSheetModal>

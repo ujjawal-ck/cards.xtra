@@ -6,6 +6,28 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D33. Copy the CashKaro app for profile edit, reminder, login consent, splash and payout OTP
+2026-11-23 [claude] · user decision ("look at the CashKaro app for these decisions, we copy that") · branch `claude/audit-fixes`
+
+Source: static teardown of the CashKaro app 4.6 and 4.7 beta, `mini appas/discovery/audit-2026-11-23/ck-parity.md`.
+- Profile edit. CashKaro saves the name with `PUT users/profile` and changes email or mobile with OTP steps. The mini-app API has only `GET users/profile`, so name, email and mobile are read-only (flag `SHOW_PROFILE_EDIT`). The screens stay in the code.
+- Never Miss Cashback. CashKaro has no such feature, so it is hidden in three places (Profile, the Orders pip and the Home nudge). The native module stays.
+- Login consent: "By continuing, you agree to CashKaro's terms & conditions and privacy policy". Both are tappable, with no checkbox.
+- Splash: about 3 s for every launch, as in CashKaro.
+- Payout OTP. CashKaro submits on the last digit and shows no destination, so Cards.xtra does the same. Safety is NOT copied. CashKaro retries a payout 5xx blindly. Cards.xtra re-checks and fails closed (see the payout bullet in D32).
+- Signup keeps D16 (the static password), by the user's choice. CashKaro asks for a real email, which Cards.xtra does not copy.
+- Not applicable: eligibility wording and card catalogue behaviour (CashKaro has no cards flow).
+
+## D32. Card reward comes only from CashKaro; cards are filtered once CashKaro maps card stores
+2026-11-23 [claude] · user decision · branch `claude/audit-fixes`. Replaces part of D27.
+
+- Displayed reward: only the CashKaro card-store rate (`home-categories-exclusive`, matched by `ck_store_id`). Never a BankKaro `commission` or `bk_commission` field. A card with no rate shows "Rewards" with no amount, or the server `cashback_button_text`.
+- Filter (`isCkFilterOn`, `isCardShown` in `src/api/cardRates.ts`). The filter is on only when at least one catalogue card matches a CashKaro store row. Then only matched cards show. While it is off (production today: 0 card stores for the app key, fact M10), the old set shows: cards with a CashKaro rate or a BankKaro commission above 0, with no amount.
+- Tools: the league table and the beat result use the same filter (`leagueForDisplay`). D27 "lists every card" no longer holds once the filter is on. The beat picker and the user's own card are never filtered.
+- Internal maths: `internalReward` (CashKaro rate, else commission) keeps the cross-sell gates, rejection picks and the "Highest Rewards" sort as before. It is never displayed.
+- Payout safety (audit W1). Only a 4xx is a rejection. Any other failure re-checks `payment/payment` and reports "Couldn't confirm". New payouts are then blocked app-wide for 10 minutes.
+- Cost: until CashKaro maps card stores to the app key, no card shows a reward amount. Owner action: map the card stores.
+
 ## D31. Advisor chat: results page, end menu, one eligibility form, multi-select
 2026-11-19 · branch `claude/advisor` (`b81a901`, `83ebeb9`, `5fff29c`, `956c42e` and the commit after it)
 

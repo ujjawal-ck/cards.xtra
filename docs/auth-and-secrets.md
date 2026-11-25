@@ -1,49 +1,54 @@
 # Auth, tokens and secrets
 
-How a person logs in or signs up, which tokens the app holds, where secrets live, and what still needs a decision. Code: `src/api/cashkaro.ts`, `src/api/bankkaro.ts`, `src/auth/AuthContext.tsx`, `src/auth/tokenStore.ts`, `src/screens/OnboardingScreen.tsx`, `src/config/env.ts`.
+> **Last updated 2026-11-23:** Rewritten for the BFF (decision 2026-11-17). Checked against the code at `e4d37a1`. The Firebase section was not re-checked.
+
+How a person logs in or signs up, which tokens exist, where secrets live, and what still needs a decision. Code: `src/api/cashkaro.ts`, `src/api/http/tokenManager.ts`, `src/auth/AuthContext.tsx`, `src/auth/tokenStore.ts`, `src/auth/LoginSheetProvider.tsx`, `src/config/env.ts`, `bff/src/proxy.js`, `bff/src/tokens.js`.
+
+## The rule in one line
+
+The app calls only the cards.xtra BFF. A call with an `Authorization` header carries the user token, and the BFF forwards it unchanged. A call without one is a guest call, and the BFF adds its own CashKaro site token. The BFF adds `x-api-key` to every CashKaro call and `partner-token` to every BankKaro call.
 
 ## Login and signup, end to end
 
 Login is optional (see `decision.md` D12). The phone + OTP sheet opens from onboarding ("Already on CashKaro? Log in") or from any "Log in" prompt.
 
-1. **App token.** Before any call that doesn't need a user, the app gets a CashKaro app token: `GET /token` with header `x-api-key` (Basic auth optional on production). Response `data.attributes.token`. Kept **in memory** for 30 minutes; re-fetched after that or after a restart.
-2. **Request OTP.** `POST /loginotp?device=App`, body `{ data: { type: "user_otp", attributes: { mobile_number } } }`. Response `data.id` = `otp_guid`, `data.attributes.otp_expire_sec` (180 s seen on production). The backend sends the code by SMS.
-3. **New number.** If `/loginotp` fails with "not registered", the app calls `POST /signupotp` with the same body and switches to signup mode. Any other error is shown to the user.
-4. **Enter code.** 6-digit OTP. Pasted text ("OTP: 123456", "123 456") is cleaned to digits. "Resend OTP" unlocks after 30 s and calls the same OTP endpoint again (one request at a time; the newest `otp_guid` wins).
-5. **Signup details.** For a new number the same step asks for full name and email (validated). Signup also needs the device's public IP (see below).
-6. **Verify.**
-   - Existing user: `POST /login`, attributes `mobile_number`, `otp_guid`, `otp`, `device_info`.
-   - New user: `POST /signupV1`, attributes `fullname`, `email`, `password` (generated, never typed: login is OTP-only), `mobile_number`, `otp_guid`, `otp`, `ip_address`, `device_info`.
+1. **Request OTP.** `POST /ck/loginotp?device=App` (guest), body `{ data: { type: "user_otp", attributes: { mobile_number } } }`. Response `data.id` = `otp_guid`, `data.attributes.otp_expire_sec` (180 s seen on production). The backend sends the code by SMS. The BFF limits OTP routes to 30 per IP and 5 per mobile number in 10 minutes (429 with `Retry-After: 600`).
+2. **New number.** If `/loginotp` fails with "not registered", the app calls `POST /ck/signupotp` with the same body and switches to signup mode. Any other error is shown to the user.
+3. **Enter code.** 6-digit OTP. Pasted text ("OTP: 123456", "123 456") is cleaned to digits. "Resend OTP" unlocks after 30 s and calls the same OTP endpoint again (one request at a time; the newest `otp_guid` wins). The OTP is sent as a digit string, so a leading zero is kept.
+4. **Signup details.** For a new number the same step asks for a name only. The app generates the email (`dummyEmail`) and a random password (D16). Nobody types either.
+5. **Verify.**
+   - Existing user: `POST /ck/login`, attributes `mobile_number`, `otp_guid`, `otp`, `device_info`.
+   - New user: `POST /ck/signupV1`, attributes `fullname`, `email`, `password`, `mobile_number`, `otp_guid`, `otp`, `referral_user`, `device_info`. The BFF sets `ip_address` from `x-forwarded-for` and, when `SIGNUP_PASSWORD` is set, replaces the password with it.
    - Response `data.attributes.access_token` and `refresh_token`.
-7. **Session saved.** Both tokens go to `expo-secure-store` (Android Keystore / iOS Keychain). Returning users go back to where they started; new users see the greeting.
+6. **Session saved.** Both tokens go to `expo-secure-store` (Android Keystore / iOS Keychain). Profile and earnings are prefetched. Returning users go back to where they started; new users see the greeting.
 
-Failure cases the user sees: invalid or expired code ("Could not verify OTP…" or the API message), network failure, number rejected by `/loginotp` for another reason. Getting a new code clears the old one.
+Failure cases the user sees: invalid or expired code ("Could not verify OTP…" or the API message), network failure, too many OTP requests (429), number rejected by `/loginotp` for another reason. Getting a new code clears the old one.
 
-## Tokens the app holds
+## Tokens
 
-| Token | How it's obtained | Stored | Lifetime / refresh |
-|---|---|---|---|
-| CashKaro app token ("aws") | `GET /token` with `x-api-key` | Memory | 30 min cache in the app |
-| User access token | `/login` or `/signupV1` | Secure store | ~15 min; on `401`/`403` the app calls `POST /refreshtoken` once (de-duplicated) and retries |
-| User refresh token | Same | Secure store | If `/refreshtoken` itself returns `401`/`403`, the session is ended and the user is signed out |
-| BankKaro partner token | `POST /token` on BankKaro with the partner key | Memory | Re-minted on `401` |
+| Token | Who holds it | How it's obtained | Stored | Lifetime / refresh |
+|---|---|---|---|---|
+| CashKaro site token | BFF | `GET /token` with `x-api-key` (Basic auth if set) | BFF memory, per running copy | Until JWT `exp` − 2 min (fallback 25 min). On a 401 about the token: re-mint once and retry |
+| BankKaro partner JWT | BFF | `POST /token` with the partner key in the body | BFF memory, per running copy | Until `exp` − 2 min (fallback 50 min). On 401/403: re-mint once and retry |
+| User access token | App | `/login` or `/signupV1` | Secure store | Refreshed when its JWT `exp` is less than 2 min away, and on any user-call 401 (refresh once, retry once) |
+| User refresh token | App | Same | Secure store | `POST /refreshtoken` is single-flight. A rotated refresh token is kept. If refresh returns 401 or code 2004, the session ends and the user is signed out. A 403 does not sign out (the gateway also sends 403 for a bad API key). A network failure keeps the session |
 
-Also in secure store: a random per-install device id (used in `device_info` and as the analytics identity), the display name, and the "onboarding seen" flag. Logout calls `POST /users/logout` and clears tokens and display name (the device id and onboarding flag stay).
+Also in secure store: a random per-install device id (used in `device_info` and as the analytics identity), the CashKaro user id, the display name, the "name pending" flag and the "onboarding seen" flag. Logout calls `POST /ck/users/logout`, then clears the tokens, user id, display name, saved profile and saved spend answers. The device id and onboarding flag stay.
 
 ## Where secrets live
 
-- `.env` (gitignored; template `.env.example`) holds `EXPO_PUBLIC_STAGE`, `EXPO_PUBLIC_CK_API_KEY`, `EXPO_PUBLIC_CK_BASIC_USER`, `EXPO_PUBLIC_CK_BASIC_PASS`, `EXPO_PUBLIC_BK_PARTNER_KEY`.
-- **Risk:** every `EXPO_PUBLIC_*` value is compiled into the JavaScript bundle inside the APK. Anyone with the APK can extract the CashKaro API key and the BankKaro partner key. Keeping `.env` out of git keeps them out of the repo, not out of the app.
-- **Recommendation before a public release:** ask CashKaro and BankKaro for client-scoped keys (rate-limited, revocable, limited to what the app needs), or put token minting behind a small server the app calls instead.
-- Never commit real keys, phone numbers or emails (a code comment with a real test number was removed from history before the branch was pushed).
+- **BFF** (Vercel sensitive environment variables; `bff/.env.local` for local runs; template `bff/.env.example`): `CK_BASE_URL`, `CK_API_KEY`, `CK_APP_VERSION`, `CK_BASIC_USER`, `CK_BASIC_PASS`, `BK_BASE_URL`, `BK_PARTNER_KEY`, `SIGNUP_PASSWORD`.
+- **App** (`.env`, gitignored; template `.env.example`): `EXPO_PUBLIC_STAGE`, `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_CK_TRACKING_HOST`, `EXPO_PUBLIC_CK_APP_VERSION`. None of these is a secret. Every `EXPO_PUBLIC_*` value is compiled into the bundle, so a secret must never go there.
+- The BFF never exposes `/token` and forwards only the allowlisted routes in `bff/src/routes.js`. It logs method, route, status and time only, never bodies or tokens.
+- Never commit real keys, phone numbers or emails.
 
 ## Device info sent at login and signup
 
-`device_info` is validated by the backend and rejects empty values, so the app fills fields it can't read with placeholders: `fcm_id`, `imei_number` and `advertising_id` are the per-install device id; `device_brand` and `device_model` are the OS name; `latitude`/`longitude` are `0.0`; `network_type` is always `wifi`. **Follow-up:** confirm with the CK mini-app team which of these fields they actually use, and whether placeholders are acceptable (no location or advertising id is collected, which is the privacy-friendly default).
+`device_info` (`buildDeviceInfo` in `src/api/cashkaro.ts`) sends only the documented fields: `fcm_id` and `device_unique_id` are the per-install device id (there is no FCM registration yet), `imei_number` is the documented zeros placeholder, `device_client` is the real OS, plus `app_version` and `os_version`. No location, network type or advertising id is sent. Staging `/login` accepts this block.
 
 ## Signup IP field
 
-`/signupV1` requires `ip_address` (login doesn't). A managed Expo app can't read its own public IP, so the app asks the third-party service `api.ipify.org` once (5 s timeout, cached) and falls back to `0.0.0.0`. **Follow-up:** ask the CK mini-app team what uses this field (fraud checks? signup source?). If it's for fraud, the server should read the IP from the request itself; then the app can drop the ipify call and the third-party dependency.
+`/signupV1` requires `ip_address`. The BFF sets it from the caller's `x-forwarded-for`. The app no longer calls `api.ipify.org`.
 
 ## Firebase Analytics
 
@@ -53,11 +58,8 @@ Also in secure store: a random per-install device id (used in `device_info` and 
 
 ## Open items
 
-- Token handling gaps (code):
-  - `/refreshtoken` reads only the new `access_token`; if the backend rotates the refresh token, the app keeps the old one. Confirm whether refresh tokens rotate.
-  - The CashKaro app token is cached 30 min and never re-fetched on `401` (`resetAwsToken` exists but is unused), so a revoked app token fails until the cache expires.
-  - `/users/sendotp`, `/users/verify` and `/payment/paymentV1` don't refresh-and-retry on `401` like the other user calls; an expired session there shows an error instead.
+- Rate limit: the BFF keeps OTP counts in memory per running copy, so the real limit is higher. Move to a shared store before launch.
+- Hosting: the BFF runs on a personal Vercel Hobby account. Move it to a company team before launch.
+- Signup password: with `SIGNUP_PASSWORD` set, every new account gets the same password. Confirm with CashKaro that password login cannot be used on these accounts.
 - SMS: OTPs are sent through the backend's SMS gateway; the mini app's own sender is pending, plus a way to switch SMS off for test numbers.
-- Client-safe keys or a token server (above).
-- What the signup IP and the placeholder `device_info` fields are used for.
 - Real Firebase project and event plan.

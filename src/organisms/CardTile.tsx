@@ -74,9 +74,13 @@ export interface CardTileProps {
   type?: CardTileType;
   cardImage: ImageSourcePropType;
   cardName: string;
+  /** CashKaro reward amount, e.g. "₹X". Empty when the card has none. */
   cashbackText: string;
-  /** Badge lead-in: "Flat" (default) or "Upto". */
+  /** Badge lead-in: "Flat" (default) or "Upto". Only shown with an amount. */
   rewardPrefix?: 'Flat' | 'Upto';
+  /** Badge text when `cashbackText` is empty: the card's reward label
+   *  (CardModel.cashback: the server's CashKaro text, or "Rewards"). Default "Rewards". */
+  rewardText?: string;
   inviteOnly?: boolean;
   tags?: string[];
   benefits?: CardTileBenefit[];
@@ -86,6 +90,9 @@ export interface CardTileProps {
   onApply?: () => void;
   style?: StyleProp<ViewStyle>;
 }
+
+/** Badge text for a card with no CashKaro amount and no server text. */
+const NO_REWARD_TEXT = 'Rewards';
 
 // Card image dims — component-spec; not in spacing scale.
 const CARD_IMG_W = 132;
@@ -143,6 +150,7 @@ export function CardTile({
   cardName,
   cashbackText,
   rewardPrefix = 'Flat',
+  rewardText,
   inviteOnly = false,
   tags = [],
   benefits = [],
@@ -152,6 +160,7 @@ export function CardTile({
   style,
 }: CardTileProps) {
   const isFull = type === 'full';
+  const rewardAmount = (cashbackText ?? '').trim();
 
   return (
     <View
@@ -189,11 +198,12 @@ export function CardTile({
             {cardName}
           </Text>
           {/* CashKaro reward: "Flat ₹X Rewards", or "Upto ₹X Rewards" when
-              the card has lower secondary tiers (rewardPrefix). */}
+              the card has lower secondary tiers (rewardPrefix). No amount:
+              the reward label alone ("Rewards" or the server text), no prefix. */}
           <CashbackBadge
             size="sm"
-            prefix={rewardPrefix}
-            value={`${cashbackText} Rewards`}
+            prefix={rewardAmount ? rewardPrefix : undefined}
+            value={rewardAmount ? `${rewardAmount} Rewards` : rewardText?.trim() || NO_REWARD_TEXT}
           />
         </View>
       </View>

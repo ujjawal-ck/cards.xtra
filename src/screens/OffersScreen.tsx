@@ -85,6 +85,7 @@ const NAV_REVEAL_THRESHOLD = 1;
 // Default-state placeholder ticker — cycles store names to invite a tap.
 const SEARCH_TICKER = ['Search for Amazon', 'Search for Flipkart', 'Search for Ajio'];
 import { useAllOfferStores, useCategoryOffers, useOfferCategories } from '../query/useOffers';
+import { isPausedWithoutData } from '../query/paused';
 import { DEFAULT_OFFER_CATEGORY_PATH } from '../data/offerCategories';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -137,13 +138,19 @@ export function OffersScreen() {
   // Undefined until a category is tapped (the default set has no clean card
   // category, so the brand page falls back to top cards).
   const [categoryLabel, setCategoryLabel] = useState<string | undefined>(undefined);
+  const storesQ = useCategoryOffers(categoryPath);
   const {
     data: stores = [],
     isLoading,
     isError,
     isRefetching,
     refetch,
-  } = useCategoryOffers(categoryPath);
+  } = storesQ;
+  // Opened offline with nothing cached. A paused query is neither loading
+  // nor an error, so the grid fell to "No offers here yet". On a cold start
+  // the strip is the paused one (no category yet, so the stores query is
+  // idle, not paused); after a category tap it can be the stores query.
+  const offline = isPausedWithoutData(catQ) || isPausedWithoutData(storesQ);
   // Pull-to-refresh / "Try again" reload both the category strip and stores.
   const reloadOffers = () => {
     catQ.refetch();
@@ -519,7 +526,17 @@ export function OffersScreen() {
             backgroundColor: colors.surface.default,
           }}
         >
-          {isLoading || catQ.isLoading ? (
+          {offline ? (
+            // Offline with nothing cached: the CashKaro "no internet" state,
+            // in place of a false "No offers here yet". Paused queries also
+            // resume on their own when the connection returns.
+            <ScreenState
+              title="No internet connection"
+              body="Check your connection or try again."
+              actionLabel="Try again"
+              onAction={reloadOffers}
+            />
+          ) : isLoading || catQ.isLoading ? (
             // Skeleton in the shape of the 2-column store grid (was a bare
             // spinner) so the page reads as "offers loading here".
             <View style={{ gap: spacing[8] }}>

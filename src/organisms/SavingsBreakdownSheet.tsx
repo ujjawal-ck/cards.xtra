@@ -165,7 +165,7 @@ export const SavingsBreakdownSheet = forwardRef<SavingsBreakdownSheetHandle, Sav
                 borderTopColor: colors.border.subtle3,
               }}
             >
-              <Button label="Apply now" size={CTA_H} fullWidth onPress={() => onApply?.(card)} />
+              <Button label="Apply now" size={CTA_H} fullWidth icon="trailing" iconName="chevron-right" onPress={() => onApply?.(card)} />
             </View>
           </BottomSheetFooter>
         ) : null,

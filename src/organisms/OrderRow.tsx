@@ -40,8 +40,7 @@
  *   right column width      → 208 (Figma-confirmed component width; off-scale literal)
  *   badge 'status'          → <StatusBadge size="pill"> — REUSED atom
  *   badge 'tag'             → <Tag size="xs" pill> — REUSED atom (Badges/Tags)
- *   amount chevron          → inline 24px glyph (no chevron-right in Icon
- *                             registry) / colors.icon.actions (slate900, matches
+ *   amount chevron          → chevron-right Icon 24px / colors.icon.actions (slate900, matches
  *                             Figma "Action" 24px dark chevron)
  *   amount-line gap / padTop→ spacing[8] / spacing[8]
  *   amount-line label color → colors.text.secondary (#5c5c5c)
@@ -76,8 +75,7 @@ import {
   ViewStyle,
   ImageSourcePropType,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { Text, StatusBadge, Tag, LogoContainer } from '../atoms';
+import { Text, Icon, StatusBadge, Tag, LogoContainer } from '../atoms';
 import type { StatusBadgeStatus } from '../atoms';
 import { haptics } from '../lib/haptics';
 import {
@@ -124,20 +122,9 @@ const TYPE_LABEL: Record<OrderRowType, string> = {
   bonus: 'Bonus:',
 };
 
-/** 24px right-pointing Action chevron — no `chevron-right` in the Icon
- *  registry, so drawn inline (Header-organism precedent). */
+/** 24px right-pointing Action chevron (chevron-right icon). */
 function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6 L15 12 L9 18"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={size} color={color} />;
 }
 
 export function OrderRow({

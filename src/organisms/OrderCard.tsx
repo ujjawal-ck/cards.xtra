@@ -25,7 +25,8 @@
  * Status → strip tint + glyph (reuses the app's lifecycle tokens, so the
  * card stays in lockstep with <StatusBadge>):
  *   pending/requested/delayed → amber/violet/saffron tint, clock-outline
- *   confirmed/paid            → fern/cobalt tint, check-circle-outline
+ *   confirmed                 → fern tint, check-circle-outline
+ *   paid                      → cobalt tint, wallet-outline
  *   cancelled/expired         → ruby/slate tint, desc-cross
  *
  * Token map (per property):
@@ -56,7 +57,6 @@ import {
   ViewStyle,
   ImageSourcePropType,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { Text, Icon, LogoContainer } from '../atoms';
 import type { IconName, StatusBadgeStatus } from '../atoms';
 import { haptics } from '../lib/haptics';
@@ -102,7 +102,7 @@ const STATUS_ICON: Record<StatusBadgeStatus, IconName> = {
   delayed: 'clock-outline',
   cancelled: 'desc-cross',
   confirmed: 'check-circle-outline',
-  paid: 'check-circle-outline',
+  paid: 'wallet-outline',
   expired: 'desc-cross',
 };
 
@@ -122,19 +122,9 @@ const META_LABEL: Record<OrderRowType, string> = {
   bonus: 'Bonus Type',
 };
 
-/** 20px right-pointing chevron — no `chevron-right` in the Icon registry. */
+/** 20px right-pointing chevron — chevron-right icon. */
 function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6 L15 12 L9 18"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={size} color={color} />;
 }
 
 export function OrderCard({

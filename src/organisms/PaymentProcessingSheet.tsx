@@ -67,7 +67,7 @@ export interface PaymentProcessingSheetProps {
 export const PaymentProcessingSheet = forwardRef<
   BottomSheetModalRef,
   PaymentProcessingSheetProps
->(function PaymentProcessingSheet({ amount = '₹0', onBrowseDeals }, ref) {
+>(function PaymentProcessingSheet({ amount, onBrowseDeals }, ref) {
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheetModalRef>(null);
   useImperativeHandle(ref, () => sheetRef.current as BottomSheetModalRef);
@@ -166,8 +166,9 @@ export const PaymentProcessingSheet = forwardRef<
                 color={colors.text.secondary}
                 align="center"
               >
-                We've already got your payment request of {amount}, which will be
-                done within 5 min to 72 hours.
+                {amount
+                  ? `We've already got your payment request of ${amount}, which will be done within 5 min to 72 hours.`
+                  : 'A withdrawal is already in process. It will be done within 5 min to 72 hours.'}
               </Text>
             </View>
             <Text

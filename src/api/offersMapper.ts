@@ -5,7 +5,8 @@
  *   - OffersScreen grid: a category's stores → { slug, name, image, ctaLabel }.
  *   - OffersBrandAmazon: a single store → { name, logo, banner, cashback, ... }.
  *
- * Cashback comes as `{ payment_type: 'percent'|'flat', amount: '5.20' }`. We
+ * Cashback comes as `{ payment_type: 'percent'|'flat'|'currency', amount:
+ * '5.20' }` ('flat' and 'currency' are both rupees, see isRupeeCashback). We
  * format it into the "Shop & Earn upto X" CTA the tile already uses.
  */
 
@@ -33,6 +34,30 @@ interface OfferCashback {
 }
 
 /**
+ * True when a cashback row is in rupees, not a percent.
+ *
+ * CashKaro sends a rupee cashback as `payment_type: 'currency'` (with
+ * `currency: 'INR'`, see the `outzidr-coupons` row in
+ * `__fixtures__/staging.offer_store.json`); older rows use `'flat'`. Checking
+ * only 'flat' showed a "₹X" cashback as "X%". Do not key on `currency`:
+ * nothing says a percent row never carries it. Shared with cardRates.
+ */
+export function isRupeeCashback(cb?: { payment_type?: string | null } | null): boolean {
+  const t = String(cb?.payment_type ?? '').trim().toLowerCase();
+  return t === 'flat' || t === 'currency';
+}
+
+/** "5.2%" or "₹500" for a rate amount, in the row's unit. */
+function rateUnitText(cb: OfferCashback | undefined, amount: number): string {
+  // Trim a trailing ".0"/".00" so "5.00" → "5", but keep "5.20" → "5.2".
+  const pretty = String(parseFloat(amount.toFixed(2)));
+  return isRupeeCashback(cb) ? `₹${pretty}` : `${pretty}%`;
+}
+
+/** CTA for a store with no rate amount (amount 0 or missing). */
+const NO_RATE_CTA = 'Shop & Earn Cashback';
+
+/**
  * "Shop & Earn Flat 80%" / "Shop & Earn Upto 5.2%" / "Shop & Earn Flat ₹500".
  * Flat-vs-Upto is decided SOLELY by whether the store has category-wise
  * secondary rates: secondaryCount > 0 → the headline is the MAX of several
@@ -40,23 +65,26 @@ interface OfferCashback {
  * `cashback_type` ('Rewards' vs 'Cashback') is NOT used here — a Rewards store
  * with no secondary rates is still a single flat rate. `payment_type` only
  * decides the UNIT (₹ vs %), NOT the Flat/Upto word.
+ *
+ * Amount 0 or missing: the row's server text `cashback_button_text` (a
+ * sibling of `cashback` on the row's attributes, e.g. "Earn Rewards on
+ * Amazon"), as the CashKaro app does; the generic CTA only when that is blank.
  */
-function cashbackCtaLabel(cb?: OfferCashback, secondaryCount = 0): string {
+function cashbackCtaLabel(cb?: OfferCashback, secondaryCount = 0, buttonText?: unknown): string {
   const amt = Number(cb?.amount ?? 0);
-  if (!isFinite(amt) || amt <= 0) return 'Shop & Earn Cashback';
-  // Trim a trailing ".0"/".00" so "5.00" → "5", but keep "5.20" → "5.2".
-  const pretty = String(parseFloat(amt.toFixed(2)));
+  if (!isFinite(amt) || amt <= 0) {
+    const serverText = typeof buttonText === 'string' ? buttonText.replace(/\s+/g, ' ').trim() : '';
+    return serverText || NO_RATE_CTA;
+  }
   const prefix = secondaryCount > 0 ? 'Upto' : 'Flat';
-  const unit = cb?.payment_type === 'flat' ? `₹${pretty}` : `${pretty}%`;
-  return `Shop & Earn ${prefix} ${unit}`;
+  return `Shop & Earn ${prefix} ${rateUnitText(cb, amt)}`;
 }
 
 /** Just the value, e.g. "5.2%" / "₹500", for the brand-page cashback floor. */
 export function cashbackValueText(cb?: OfferCashback): string {
   const amt = Number(cb?.amount ?? 0);
   if (!isFinite(amt) || amt <= 0) return 'Cashback';
-  const pretty = String(parseFloat(amt.toFixed(2)));
-  return cb?.payment_type === 'flat' ? `₹${pretty}` : `${pretty}%`;
+  return rateUnitText(cb, amt);
 }
 
 /**
@@ -68,8 +96,7 @@ export function cashbackValueText(cb?: OfferCashback): string {
 export function cashbackStrikeText(cb?: OfferCashback): string {
   const strike = Number(cb?.strike_out_value ?? 0);
   if (!isFinite(strike) || strike <= 0) return '';
-  const pretty = String(parseFloat(strike.toFixed(2)));
-  return cb?.payment_type === 'flat' ? `₹${pretty}` : `${pretty}%`;
+  return rateUnitText(cb, strike);
 }
 
 /**
@@ -81,8 +108,7 @@ export function cashbackStrikeText(cb?: OfferCashback): string {
 function rateRowText(cb?: OfferCashback): string {
   const amt = Number(cb?.amount ?? 0);
   if (!isFinite(amt)) return 'Cashback';
-  const pretty = String(parseFloat(amt.toFixed(2)));
-  return cb?.payment_type === 'flat' ? `₹${pretty}` : `${pretty}%`;
+  return rateUnitText(cb, amt);
 }
 
 /**
@@ -113,9 +139,22 @@ export interface OfferStoreSummary {
   couponsCount: number;
 }
 
-/** Map `GET /offers/category/<slug>` → grid store summaries. */
+/**
+ * Map `GET /offers/category/<slug>` → grid store summaries.
+ * `{ data: [] }` is a real empty category, and so is a JSON:API body that
+ * counts 0 stores (`meta.total_records: 0`) with no `data` list or a null one
+ * (review R-10; the production shape of an empty category is not captured).
+ * Any other body without a `data` array (a proxy page, captive-portal HTML)
+ * throws, so the grid shows its error state instead of a false "No offers
+ * here yet".
+ */
 export function mapCategoryOffers(res: any): OfferStoreSummary[] {
-  const data: any[] = Array.isArray(res?.data) ? res.data : [];
+  if (!Array.isArray(res?.data)) {
+    const total = res?.meta?.total_records;
+    if (res?.data == null && (total === 0 || total === '0')) return [];
+    throw new Error('Offers category response had no data list');
+  }
+  const data: any[] = res.data;
   return data
     .map((row): OfferStoreSummary | null => {
       const a = row?.attributes ?? {};
@@ -128,6 +167,7 @@ export function mapCategoryOffers(res: any): OfferStoreSummary[] {
         ctaLabel: cashbackCtaLabel(
           a.cashback,
           Number(a.secondary_cashback_count ?? 0) || 0,
+          a.cashback_button_text,
         ),
         couponsCount: Number(a.coupons_count ?? 0) || 0,
       };
@@ -183,6 +223,8 @@ export interface OfferStoreDetail {
   /** True when the store has an upsell offer (bonus card + timer). */
   isUpsell: boolean;
   upsellText?: string;
+  /** Upsell cashback expiry (ISO) from `attributes.upsell.cashback_expiry_date`. */
+  upsellExpiry?: string;
   timelineTiles: TimelineTile[];
   rewardRates: { rate: string; description: string }[];
   termsIntro?: string;
@@ -287,7 +329,13 @@ export function mapOfferStore(res: any): OfferStoreDetail | null {
     a.special_terms_conditions,
   );
 
-  const upsellText: string | undefined = a.cashback_upsell_button_text || undefined;
+  // The store endpoint nests the upsell under `attributes.upsell{}`; the top-level
+  // `cashback_upsell_button_text` exists only on list rows (kept as the fallback).
+  const upsell: Record<string, any> = a.upsell && typeof a.upsell === 'object' ? a.upsell : {};
+  const upsellText: string | undefined =
+    upsell.cashback_upsell_button_text || a.cashback_upsell_button_text || undefined;
+  const upsellExpiry: string | undefined =
+    upsell.cashback_expiry_date || a.cashback_expiry_date || undefined;
   const benefits: string[] = Array.isArray(a.benefit_card_short_description)
     ? a.benefit_card_short_description.filter((b: unknown) => typeof b === 'string' && b.trim())
     : [];
@@ -363,9 +411,23 @@ export function mapOfferStore(res: any): OfferStoreDetail | null {
     termsCards: termsBullets.map((t, i) => ({ text: t, icon: TC_ICONS[i % TC_ICONS.length] })),
     cashbackUrl: a.cashback_url ? String(a.cashback_url).trim() : undefined,
     upsellText,
+    upsellExpiry,
     ratingValue: a.rating_value || undefined,
     ratingCount: a.rating_count || undefined,
     banners,
     faq,
   };
+}
+
+/**
+ * Upsell expiry (ISO) → the Timer value "dd:hh:mm". Undefined when there is no
+ * expiry, it is unreadable, or it has passed (the caller then keeps the default).
+ */
+export function upsellTimerValue(expiryISO: string | undefined, now: number = Date.now()): string | undefined {
+  if (!expiryISO) return undefined;
+  const end = new Date(expiryISO).getTime();
+  if (!Number.isFinite(end) || end <= now) return undefined;
+  const mins = Math.floor((end - now) / 60000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(Math.floor(mins / 1440))}:${pad(Math.floor((mins % 1440) / 60))}:${pad(mins % 60)}`;
 }

@@ -29,11 +29,11 @@
  *   border.default at borderWidth.thin — the spec's 0.71px lands on
  *   `thin` in this token scale; see note inline).
  *
- * Icons (none of these ship as SVGs in src/assets/icons):
- *   - SearchGlyph, BackGlyph, CloseGlyph, ChevronRightGlyph are all
- *     drawn inline via react-native-svg at exact stroke weights from
- *     borderWidth.* tokens. Stroke colour tracks the `color` prop so
- *     each one tints with its token.
+ * Icons:
+ *   - SearchGlyph, CloseGlyph, ChevronRightGlyph render the search-outline,
+ *     close and chevron-right icons, tinted by the `color` prop.
+ *   - BackGlyph has no registry icon and stays drawn inline via
+ *     react-native-svg.
  *
  * Hex → token:
  *   #ffffff → colors.surface.default
@@ -54,7 +54,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   Easing,
   Extrapolation,
@@ -64,7 +64,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { Text } from '../atoms';
+import { Text, Icon } from '../atoms';
 import { play } from '../lib/haptics';
 import {
   colors,
@@ -126,28 +126,11 @@ const ROW_H = 72;
 const LOGO_SLOT = 40;
 
 // ----------------------------------------------------------------------------
-// Inline glyphs — no search/back/close/chevron SVGs ship in
-// src/assets/icons, so they're drawn inline. Stroke widths use
-// borderWidth.* tokens so the weights stay token-bound.
+// Glyphs — search, close and chevron use registry icons; the back arrow
+// has no registry icon, so it is drawn inline with a borderWidth.* stroke.
 // ----------------------------------------------------------------------------
 function SearchGlyph({ size = iconSize[20], color }: { size?: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Circle
-        cx={9}
-        cy={9}
-        r={5.5}
-        stroke={color}
-        strokeWidth={borderWidth.iconDefault}
-      />
-      <Path
-        d="M13.5 13.5 L17 17"
-        stroke={color}
-        strokeWidth={borderWidth.iconDefault}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Icon name="search-outline" size={size} color={color} />;
 }
 
 function BackGlyph({ size = iconSize[20], color }: { size?: number; color: string }) {
@@ -165,30 +148,11 @@ function BackGlyph({ size = iconSize[20], color }: { size?: number; color: strin
 }
 
 function CloseGlyph({ size = iconSize[20], color }: { size?: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Path
-        d="M5 5 L15 15 M15 5 L5 15"
-        stroke={color}
-        strokeWidth={borderWidth.heavy}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Icon name="close" size={size} color={color} />;
 }
 
 function ChevronRightGlyph({ size = iconSize[20], color }: { size?: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-      <Path
-        d="M8 5 L13 10 L8 15"
-        stroke={color}
-        strokeWidth={borderWidth.heavy}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={size} color={color} />;
 }
 
 // ----------------------------------------------------------------------------

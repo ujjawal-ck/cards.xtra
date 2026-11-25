@@ -54,7 +54,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 import { Text, Chip, Switch, Icon, Divider } from '../atoms';
-import { InlineFilterQuestion } from '../molecules';
+import { HeroVideo, InlineFilterQuestion } from '../molecules';
 import type { CardModel, SearchResultSection } from '../molecules';
 import {
   BottomSheetHeader,
@@ -93,9 +93,7 @@ import type {
   ToolId,
 } from '../organisms';
 import { NeverMissCashbackNudge } from '../organisms/NeverMissCashbackNudge';
-import { HOME_MASTHEAD_COMPACT_H } from '../organisms/Masthead';
-import { categoryIdForWord, brandIdForWord, buildSpends, hasAnySpend } from '../lib/cardTools';
-import { useSavedSpends } from '../lib/savedSpends';
+import { categoryIdForWord, brandIdForWord } from '../lib/cardTools';
 import {
   colors,
   primitives,
@@ -108,7 +106,8 @@ import {
 } from '../tokens';
 import { images } from '../assets/images';
 import { useCards } from '../query/useCards';
-import { selectTileBenefits } from '../api/cardMapper';
+import { useOnSessionEnd } from '../auth/useOnSessionEnd';
+import { rewardLabel, selectTileBenefits } from '../api/cardMapper';
 import { useClickOut } from '../lib/useClickOut';
 import type { ClickOutSource } from '../lib/useClickOut';
 import { loadSavedProfile, saveEligibilityInputs } from '../lib/savedProfile';
@@ -141,10 +140,10 @@ import type { InlineRow, InlineChip } from '../lib/inlineFilters';
 import { useBottomNavVisibility } from '../navigation/TabNavigator';
 import { useFloatingNavClearance } from '../navigation/floatingNav';
 
-// Scroll Y at which the frosted scrolled HomeHeader starts to appear: the
-// compact masthead's height, so the bar fades in once the masthead has
-// scrolled out of view. Follows HOME_MASTHEAD_COMPACT_H if it changes.
-const FROSTED_HEADER_FADE_IN = HOME_MASTHEAD_COMPACT_H;
+// Scroll Y at which the frosted scrolled HomeHeader starts to appear. The
+// hero masthead is ≈ 408 tall; the bar fades in once most of it has scrolled
+// out of view (the value used with the hero before D24).
+const FROSTED_HEADER_FADE_IN = 220;
 // Fade length in scroll px (the same 60 the old 220 → 280 ramp used).
 const FROSTED_HEADER_FADE_RAMP = 60;
 const FROSTED_HEADER_FADE_FULL = FROSTED_HEADER_FADE_IN + FROSTED_HEADER_FADE_RAMP;
@@ -330,6 +329,7 @@ const HomeCardTile = React.memo(function HomeCardTile({
         cardName={card.name}
         cashbackText={card.cashbackValue}
         rewardPrefix={card.rewardPrefix}
+        rewardText={card.cashback}
         inviteOnly={card.inviteOnly}
         tags={card.tags}
         benefits={benefits}
@@ -826,6 +826,14 @@ export function HomeScreen() {
   useEffect(() => {
     loadSavedProfile().then((p) => setSavedEligibilityPrefill(p.eligibility ?? null));
   }, []);
+  // A session that ends while Home is mounted (expiry opens the login sheet
+  // over this screen) must not leave the last user's PIN code and income here.
+  useOnSessionEnd(() => {
+    setEligibilityDetails(null);
+    setEligibleAliases(null);
+    setEligibilityOn(false);
+    setSavedEligibilityPrefill(null);
+  });
 
   // Commit an eligibility result (from either checker) → store details for
   // prefill + the eligible set, and switch the toggle on.
@@ -889,9 +897,6 @@ export function HomeScreen() {
     eligibilityCheckerRef.current?.present();
   }, []);
 
-  // The spends the user saved in an earlier tool run (on this device only).
-  const { answers: savedSpendAnswers } = useSavedSpends();
-
   // Tools row tile → track, then open the tool.
   // `word` is what the tile showed at the tap; the tool opens with it picked.
   const handleToolPress = useCallback(
@@ -905,19 +910,10 @@ export function HomeScreen() {
         case 'category':
           navigation.navigate('BestForCategory', { categoryId: categoryIdForWord(word) });
           return;
-        case 'beat': {
-          // Spends come first: the full card list exists only after the calculation.
-          // Saved spends skip the quiz; the pick screen lets the user edit them.
-          // A tap before the saved spends are read (`loaded` false) opens the quiz. That is safe:
-          // the quiz shows the saved answers as soon as the read lands.
-          const savedSpendBody = buildSpends(savedSpendAnswers);
-          if (hasAnySpend(savedSpendBody)) {
-            navigation.navigate('BeatMyCardPick', { spends: savedSpendBody, answers: savedSpendAnswers });
-          } else {
-            navigation.navigate('SpendQuiz', { next: 'beat' });
-          }
+        case 'beat':
+          // Card first: the pick screen needs no spends; the spends page comes after the pick.
+          navigation.navigate('BeatMyCardPick');
           return;
-        }
         case 'ultimate':
           navigation.navigate('SpendQuiz', { next: 'ultimate' });
           return;
@@ -926,7 +922,7 @@ export function HomeScreen() {
           return;
       }
     },
-    [navigation, savedSpendAnswers]
+    [navigation]
   );
 
   // "Clear" inside the checker → wipe saved details + filter + toggle, then
@@ -2018,12 +2014,12 @@ export function HomeScreen() {
             SearchTopSheet). */}
         <Masthead
           variant="home"
-          // Compact: header row + SearchBar only, over the plain brand
-          // gradient (no image, no hero video).
-          size="compact"
           // No unread badge: there's no notifications feed yet (it was a
           // hard-coded "1" that never cleared).
           notificationCount={0}
+          background={
+            <HeroVideo source={require('../assets/videos/home-hero.mp4')} />
+          }
           onSearchPress={() => setSearchOpen(true)}
           onMessagePress={() => undefined}
           onBellPress={() => {
@@ -2779,11 +2775,9 @@ export function HomeScreen() {
             <EligibleSheet
               showConfetti
               cardImage={resultHeroCard?.cardImage}
-              rewardHeadline={
-                resultHeroCard?.cashbackValue
-                  ? `${resultHeroCard.cashbackValue} Rewards`
-                  : undefined
-              }
+              // The card's CashKaro reward ("Flat ₹X Rewards" / "Upto ₹X Rewards" /
+              // the server text). None → the sheet hides the reward block.
+              rewardHeadline={rewardLabel(resultHeroCard) || undefined}
               pincode={eligibilityDisplay?.pincode}
               amount={eligibilityDisplay?.amount}
               occupation={eligibilityDisplay?.occupation}

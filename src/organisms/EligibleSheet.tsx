@@ -9,6 +9,8 @@
  *   - Reward text block — vertical, gap spacing[4], alignItems center:
  *       headline   heading24Bold, text.primary, align center
  *       subtext    body14Regular, text.primary, align center
+ *     Shown only when the caller passes a headline (the card's CashKaro reward);
+ *     the subtext only when the caller passes it. No sample text (audit PM-01).
  *
  * Hex → token: every value sourced from src/tokens.
  *   #ffffff → colors.surface.default
@@ -36,9 +38,9 @@ import {
 } from '../tokens';
 
 export interface EligibleSheetProps {
-  /** Headline beneath the masthead — default "Flat ₹1400 Rewards". */
+  /** Headline beneath the masthead: the card's CashKaro reward. No headline → no reward block. */
   rewardHeadline?: string;
-  /** Subtext beneath the headline — default "On Card Activation". */
+  /** Subtext beneath the headline. Shown only when passed (and a headline shows). */
   rewardSubtext?: string;
   /** Footer CTA label — default "Apply Now". */
   ctaLabel?: string;
@@ -131,9 +133,24 @@ function ConfettiBlast() {
   );
 }
 
+/**
+ * What the reward block shows: null hides it (hideReward, or no headline).
+ * Pure, so the rule is testable without rendering.
+ */
+export function eligibleRewardBlock(
+  rewardHeadline?: string,
+  rewardSubtext?: string,
+  hideReward = false,
+): { headline: string; subtext?: string } | null {
+  const headline = (rewardHeadline ?? '').trim();
+  if (hideReward || !headline) return null;
+  const subtext = (rewardSubtext ?? '').trim();
+  return subtext ? { headline, subtext } : { headline };
+}
+
 export function EligibleSheet({
-  rewardHeadline = 'Flat ₹1400 Rewards',
-  rewardSubtext = 'On Card Activation',
+  rewardHeadline,
+  rewardSubtext,
   ctaLabel = 'Apply Now',
   onApply,
   message,
@@ -147,6 +164,7 @@ export function EligibleSheet({
   showConfetti = true,
   style,
 }: EligibleSheetProps) {
+  const reward = eligibleRewardBlock(rewardHeadline, rewardSubtext, hideReward);
   return (
     <View
       style={[
@@ -185,8 +203,9 @@ export function EligibleSheet({
       />
 
       {/* 2. Reward text block — hidden in the multi-card Home flow where
-          there's no single card's reward to celebrate. */}
-      {hideReward ? null : (
+          there's no single card's reward to celebrate, and when the card has
+          no CashKaro reward. */}
+      {!reward ? null : (
         <View
           style={{
             gap: spacing[4],
@@ -200,21 +219,23 @@ export function EligibleSheet({
             color={colors.text.primary}
             align="center"
           >
-            {rewardHeadline}
+            {reward.headline}
           </Text>
-          <Text
-            variant="body14Regular"
-            color={colors.text.primary}
-            align="center"
-          >
-            {rewardSubtext}
-          </Text>
+          {reward.subtext ? (
+            <Text
+              variant="body14Regular"
+              color={colors.text.primary}
+              align="center"
+            >
+              {reward.subtext}
+            </Text>
+          ) : null}
         </View>
       )}
 
       {/* Spacer — keeps the CTA off the card stack when the reward block
           is hidden (the reward block otherwise provides this gap). */}
-      {hideReward ? <View style={{ height: spacing[24] }} /> : null}
+      {!reward ? <View style={{ height: spacing[24] }} /> : null}
 
       {/* 3. Footer — REUSED */}
       <FooterButtons

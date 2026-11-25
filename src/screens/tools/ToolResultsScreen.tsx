@@ -2,7 +2,10 @@
  * ToolResultsScreen: the league table, one screen for all four card tools.
  *
  * Every card BankKaro returns for the spends, in one FlatList (219 on UAT),
- * also cards the app does not list (no Apply, no card page for those).
+ * also cards the app does not list (no Apply, no card page for those), while
+ * the CashKaro card filter is off. Once CashKaro maps card stores, only the
+ * cards that match a CashKaro store row show (leagueForDisplay, decision
+ * 2026-11-23); the user's own card (highlightAlias) always stays.
  * Reads its result from useCardSavings(spends); only spends and answers arrive
  * through navigation.
  *
@@ -21,7 +24,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, FlatList, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -39,6 +42,7 @@ import {
 } from '../../organisms';
 import { colors, spacing, radius, borderWidth, iconSize, opacity } from '../../tokens';
 import { useCardSavings, type LeagueRow } from '../../query/useCardSavings';
+import { leagueForDisplay } from '../../api/cardRates';
 import {
   DEFAULT_LEAGUE_FILTERS,
   buildSpends,
@@ -59,6 +63,7 @@ import {
   topByKey,
 } from '../../lib/leagueView';
 import { useSavedSpends } from '../../lib/savedSpends';
+import { defaultSelection } from '../../lib/beatFlow';
 import { formatINR } from '../../lib/money';
 import type { ClickOutSource } from '../../lib/useClickOut';
 import { useCardDetailSheet } from '../../lib/useCardDetailSheet';
@@ -184,7 +189,12 @@ export function ToolResultsScreen() {
   const [spends, setSpends] = useState(() => params.spends);
   const { save } = useSavedSpends();
 
-  const { league, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  const { league: fullLeague, shown, isLoading, isOffline, isError, refetch, loadMs } = useCardSavings(spends);
+  // The card rule, display only. The user's own card always stays.
+  const league = useMemo(
+    () => leagueForDisplay(fullLeague, shown, highlightAlias),
+    [fullLeague, shown, highlightAlias],
+  );
   const { openCard, applyCard, sheets } = useCardDetailSheet(SOURCE);
 
   const [filters, setFilters] = useState<LeagueFilters>(DEFAULT_LEAGUE_FILTERS);
@@ -336,17 +346,40 @@ export function ToolResultsScreen() {
       setCursor(0);
       // Brand runs are not saved to the profile.
       if (tool !== 'brands') save(next);
+      // Beat tool: give the new spends to the result screen under this one now, so every way back
+      // (header arrow, Android Back, iOS swipe) shows the verdict for the new spends (audit NAV-04).
+      if (tool === 'beat' && highlightAlias) {
+        const state = navigation.getState();
+        const prev = state.routes[state.index - 1];
+        if (prev?.name === 'BeatMyCardResult') {
+          navigation.dispatch({
+            ...CommonActions.setParams({
+              cardAlias: highlightAlias,
+              spends: buildSpends(next),
+              answers: next,
+              categories: defaultSelection(next),
+            }),
+            source: prev.key,
+          });
+        }
+      }
     },
-    [tool, save],
+    [tool, save, highlightAlias, navigation],
   );
 
   const openEdit = useCallback(() => editRef.current?.present(), []);
 
   // Beat tool: after an edit, Back takes the new spends to the result screen.
-  // `answers` is a new object only after an edit.
+  // `answers` is a new object only after an edit. This sheet lists all 21 questions, so the
+  // categories go back as the ones with a spend above 0 now.
   const onBack = () => {
     if (tool === 'beat' && highlightAlias && answers !== params.answers) {
-      navigation.popTo('BeatMyCardResult', { cardAlias: highlightAlias, spends, answers });
+      navigation.popTo('BeatMyCardResult', {
+        cardAlias: highlightAlias,
+        spends,
+        answers,
+        categories: defaultSelection(answers),
+      });
     } else {
       navigation.goBack();
     }

@@ -8,9 +8,14 @@
  * App differences from the prototype (all deliberate, see the brief):
  *   - Fees arrive GST-inclusive (what the tile shows) and every amount shown is
  *     GST-inclusive. Fee BANDS use the base fee (fee / gst), as the prototype does.
- *   - `reward` is the ₹ the user is shown as Rewards; "earns revenue" = reward > 0.
- *   - Earning gate: blocked when reward <= 0, or when earn is known (> 0) and
- *     earn - reward < minNet. An unknown earn (0) is NOT blocked by the net rule.
+ *   - `reward` is the ₹ the user is shown as Rewards (CashKaro only). Every
+ *     displayed amount uses it, e.g. "₹X more Rewards" (shownRewardGain).
+ *   - `internalReward` (rankReward) is never displayed: the CashKaro rate, else
+ *     the BankKaro commission (decision 2026-11-23). The earning gate, the net,
+ *     the business tie-break and which cards the "More rewards" lens picks, in
+ *     which order, read it, exactly as before that decision (review R-04).
+ *   - Earning gate: blocked when rankReward <= 0, or when earn is known (> 0) and
+ *     earn - rankReward < minNet. An unknown earn (0) is NOT blocked by the net rule.
  *   - Everything is keyed by card alias (BankKaro `card_alias`), as before.
  *
  * Lens = one reason to prefer another card. New lens = one entry in lensDefs().
@@ -30,7 +35,9 @@ export interface CrossSellCard {
   joiningFee: number; // ₹, as the catalogue sends it
   annualFee: number;
   inviteOnly: boolean;
-  reward: number; // ₹ shown as Rewards (CashKaro rate, else commission). 0 when none or a percent.
+  reward: number; // ₹ shown as Rewards: CashKaro rupee rate only. 0 when none or a percent.
+  /** INTERNAL, never displayed: CashKaro rate, else BankKaro commission. Gates and ranking only. Absent → `reward`. */
+  internalReward?: number;
   earn: number; // bk_commission in ₹, 0 when absent
   incomeLpa: number; // income_salaried (lakh per year), 0 when absent / "N/A"
   incomeSelfEmpLpa?: number; // income_self_emp (lakh per year), 0 or undefined when absent / "N/A"
@@ -154,11 +161,22 @@ export function cost(c: CrossSellCard): number {
   return Math.max(c.joiningFee, c.annualFee);
 }
 const earnOf = (c: CrossSellCard): number => c.earn;
-const paidOf = (c: CrossSellCard): number => c.reward;
+/** The reward the gates and ranking read (internal, never displayed). See CrossSellCard.internalReward. */
+export const rankReward = (c: CrossSellCard): number => c.internalReward ?? c.reward;
+const paidOf = (c: CrossSellCard): number => rankReward(c);
+/**
+ * The displayed Rewards gain of `c` over `src`, for a text with an amount ("₹X more Rewards").
+ * 0 when either card shows no reward amount (no CashKaro rate) or `c` shows no more: the text
+ * then has no amount.
+ */
+export function shownRewardGain(src: CrossSellCard, c: CrossSellCard): number {
+  if (src.reward <= 0 || c.reward <= 0) return 0;
+  return Math.max(0, c.reward - src.reward);
+}
 const netOf = (c: CrossSellCard): number => earnOf(c) - paidOf(c);
 /** Earning gate: the user gets Rewards on the card and, when the earn is known, the net is not negative. */
 export function passesEarningGate(c: CrossSellCard, cfg: CrossSellConfig = CONFIG): boolean {
-  return !(cfg.requireRevenue && (c.reward <= 0 || (c.earn > 0 && netOf(c) < cfg.minNet)));
+  return !(cfg.requireRevenue && (rankReward(c) <= 0 || (c.earn > 0 && netOf(c) < cfg.minNet)));
 }
 const lpa = (n: number): string => '₹' + n + 'L';
 export function inr(n: number): string {
@@ -216,14 +234,14 @@ function lensDefs(
   eligKnown: boolean,
 ): LensDef[] {
   const sb = bandIdx(src);
-  const rs = src.reward;
+  const rs = rankReward(src);
   const ltf = isLtf(src);
   const bucket = (c: CrossSellCard) => Math.round(S(c) * 10);
   // Business tie-break: among equally relevant cards, the one that nets more goes first.
   // cfg.rankBy: 'reward' = the card that pays the user more (default), 'net' = the card that nets us more.
   const biz = (a: CrossSellCard, b: CrossSellCard) => {
     const n = netOf(b) - netOf(a);
-    const r = b.reward - a.reward;
+    const r = rankReward(b) - rankReward(a);
     return (cfg.rankBy === 'net' ? n || r : r || n) || a.priority - b.priority;
   };
   return [
@@ -273,8 +291,10 @@ function lensDefs(
       tone: 'brand',
       applies: true,
       // Only cards that cost the same or less: more Rewards with no extra fee.
-      filter: (c) => c.reward >= rs + cfg.minRewardGain && cost(c) <= cost(src) * cfg.feeTolerance,
-      sort: (a, b) => b.reward - a.reward || S(b) - S(a) || biz(a, b),
+      // Which cards, in which order: the internal reward (rankReward), as at e4d37a1.
+      // The amount in the text reads the displayed `reward` only (shownRewardGain).
+      filter: (c) => rankReward(c) >= rs + cfg.minRewardGain && cost(c) <= cost(src) * cfg.feeTolerance,
+      sort: (a, b) => rankReward(b) - rankReward(a) || S(b) - S(a) || biz(a, b),
       delta: (c) => {
         const fee = isLtf(c)
           ? ltf
@@ -283,7 +303,8 @@ function lensDefs(
           : cost(c) < cost(src) * 0.95
             ? 'lower fee'
             : 'same fee';
-        return inr(c.reward - rs) + ' more Rewards, ' + fee;
+        const gain = shownRewardGain(src, c);
+        return (gain > 0 ? inr(gain) + ' more Rewards, ' : 'More rewards, ') + fee;
       },
     },
     {

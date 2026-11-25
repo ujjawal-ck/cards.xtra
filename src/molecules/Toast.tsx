@@ -12,14 +12,12 @@
  *
  * Icons:
  *   leading — Icon atom (outline, tinted tone.text)
- *   dismiss — Unicode '×' rendered via raw RN Text so it can tint to
- *             tone.text (no plain X icon ships in src/assets/icons).
+ *   dismiss — close Icon, tinted tone.text
  */
 import React from 'react';
 import {
   View,
   Pressable,
-  Text as RNText,
   StyleProp,
   ViewStyle,
 } from 'react-native';
@@ -41,10 +39,6 @@ export interface ToastProps {
   onDismiss?: () => void;
   style?: StyleProp<ViewStyle>;
 }
-
-// Dismiss glyph is rendered via raw Text at a fixed 18px (the Figma
-// spec) since iconSize tokens skip from 16 → 20.
-const DISMISS_SIZE = 18;
 
 export function Toast({
   message,
@@ -109,15 +103,7 @@ export function Toast({
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >
-          <RNText
-            style={{
-              fontSize: DISMISS_SIZE,
-              lineHeight: DISMISS_SIZE,
-              color: t.text,
-            }}
-          >
-            ×
-          </RNText>
+          <Icon name="close" size={iconSize[16]} color={t.text} />
         </Pressable>
       ) : null}
     </View>

@@ -20,6 +20,7 @@
  *   label           shown next to the control
  *   description     optional secondary line (body12Regular, text.secondary)
  *   showDescription render the description line when true
+ *   leading         optional element shown above the label (e.g. a brand logo)
  *   disabled        dims everything and blocks tap
  *   onChange        receives the next boolean state
  */
@@ -38,6 +39,8 @@ export interface ChoiceProps {
   label: string;
   description?: string;
   showDescription?: boolean;
+  /** Optional element rendered above the label. Omitted = no change. */
+  leading?: React.ReactNode;
   disabled?: boolean;
   onChange?: (next: boolean) => void;
   style?: StyleProp<ViewStyle>;
@@ -51,6 +54,7 @@ export function Choice({
   label,
   description,
   showDescription = false,
+  leading,
   disabled = false,
   onChange,
   style,
@@ -117,6 +121,7 @@ export function Choice({
       </View>
 
       <View style={{ flex: 1, gap: spacing[2] }}>
+        {leading ? <View style={{ marginBottom: spacing[6] }}>{leading}</View> : null}
         <Text
           variant={isOn ? 'body14Medium' : 'body14Regular'}
           color={isOn ? colors.border.focussed : colors.text.primary}
