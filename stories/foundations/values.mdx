@@ -1,0 +1,43 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Values from './values.stories';
+
+<Meta of={Values} />
+
+<PageHeader title="Values" meta="Foundations · tokens">
+  The numbers behind layout: spacing, radius, border width and opacity. All come from the Figma "values" collection.
+</PageHeader>
+
+Source: `src/tokens/spacing.ts`, `src/tokens/opacity.ts`. Icon, avatar, media and touch sizes are on the Sizes page.
+
+<Anatomy parts={[
+  { part: 'Padding, margin, gap', token: 'spacing[n]', note: '0 to 128 px, 18 steps.' },
+  { part: 'Corner', token: 'radius.xs … radius.full', note: '4 to 48 px, and 10000 for a pill.' },
+  { part: 'Stroke', token: 'borderWidth.hairline … extra', note: '0.5 to 3 px.' },
+  { part: 'Transparency', token: 'opacity[n], alpha.black[n], alpha.white[n]', note: 'Named by the percentage.' },
+]} />
+
+## Spacing
+
+<Canvas of={Values.Spacing} />
+
+## Radius
+
+<Canvas of={Values.Radius} />
+
+## Border width
+
+<Canvas of={Values.BorderWidth} />
+
+## Opacity and alpha
+
+<Canvas of={Values.Opacity} />
+
+## In use
+
+<Canvas of={Values.InUse} />
+
+<DoDont
+  dos={['Pick the nearest step: `spacing[12]`, `radius.lg`.', 'Use `opacity[40]` for a disabled look.', 'Use `alpha.black[50]` for a modal scrim.']}
+  donts={['Do not type `margin: 13`.', 'Do not mix a raw number with a token in one style.', 'Do not invent a step. Ask for a token.']}
+/>

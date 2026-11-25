@@ -1,0 +1,59 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './otp-entry.stories';
+
+<Meta of={S} />
+
+<PageHeader title="OTP entry" meta="Pattern">
+  Six boxes (D19), one resend timer, and one error line under the boxes. Login and withdraw use the same input.
+</PageHeader>
+
+## The rule
+
+- Six digits, because CashKaro production sends six (D19). Figma still draws four.
+- The resend control has three states: hidden while verifying, a countdown, then "ready".
+- A wrong or expired code sets `state="error"` and a short hint: "Enter a valid OTP" or "OTP is expired" (`src/screens/withdraw/WithdrawVerifyOTP.tsx:211`).
+- While the code is being verified or the payment is being made, the input is blocked (`WithdrawVerifyOTP.tsx:297`).
+- Open risk (R20): the rate limit (5 per number, 10 per IP in 10 minutes) shows the raw API message with no time to retry. The audit has no copy for it, so none is shown here.
+- Edit contact and Delete account accept any six digits today (R5). They are demos.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'OtpInput', id: 'components-input-fields-otpinput--docs', note: 'six boxes, hint, resend timer.' },
+  { name: 'OtpBox', id: 'components-input-fields-otpbox--docs', note: 'one box (unused on its own).' },
+  { name: 'Timer', id: 'components-text-and-numbers-timer--docs', note: 'the countdown.' },
+  { name: 'FooterButtons', id: 'components-footers-footerbuttons--docs', note: 'the Verify CTA, with primaryLoading.' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'send failures. See Error and retry.' },
+]} />
+
+## Where it appears
+
+- Flow 1 Launch and login: Login sheet (OTP, wrong OTP, resend, rate limit not built).
+- Flow 7 Earnings and withdraw: Details, Verify OTP (entry, wrong, resend, connection problem, payment failed, unknown outcome, session expired).
+- Flow 9 Profile and account: Edit contact (demo), Delete account (hidden, demo).
+
+## Examples
+
+<Canvas of={S.Entry} />
+<Canvas of={S.WrongCode} />
+<Canvas of={S.ResendReady} />
+
+<DoDont
+  dos={['Show six boxes.', 'Put the error in the hint under the boxes.', 'Hide the resend control while verifying.']}
+  donts={['Do not show the raw API message for a rate limit.', 'Do not accept a code the server did not check (R5).', 'Do not auto-focus on web where it hides the page.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Entry with resend timer', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:520', story: 'patterns-otp-entry--entry' },
+  { state: 'Wrong or expired OTP', status: 'live', source: 'src/screens/withdraw/WithdrawVerifyOTP.tsx:214', story: 'patterns-otp-entry--wrong-code' },
+  { state: 'Resend ready', status: 'live', source: 'src/screens/withdraw/WithdrawVerifyOTP.tsx:217', story: 'patterns-otp-entry--resend-ready' },
+  { state: 'Verifying (input blocked)', status: 'live', source: 'src/screens/withdraw/WithdrawVerifyOTP.tsx:297', story: 'patterns-otp-entry--resend-ready' },
+  { state: 'Send OTP failed (login)', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:231' },
+  { state: 'Send OTP failed (withdraw: UPI, Amazon, Flipkart)', status: 'proposed', source: 'ux-states.md section 6', note: 'InlineMessage error "We couldn\'t send the OTP. Please try again." Native Alert today (WithdrawEnterUPI.tsx:75).' },
+  { state: 'Rate limit (R20)', status: 'proposed', source: 'pm-flows.md R20', note: 'Open question: copy and time to retry. Not designed.' },
+  { state: 'Edit contact: wrong OTP', status: 'proposed', source: 'ux-states.md section 8', note: 'After the API exists: error state with hint "Wrong OTP. Please try again."' },
+]} />

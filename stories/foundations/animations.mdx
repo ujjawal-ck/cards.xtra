@@ -1,0 +1,47 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Anim from './animations.stories';
+
+<Meta of={Anim} />
+
+<PageHeader title="Animations" meta="Foundations · tokens and assets">
+  Motion tokens (four durations, one easing) and the animation files the app ships. Reanimated drives the UI motion.
+  Component pages are under Components / Motion.
+</PageHeader>
+
+Source: `src/tokens/motion.ts`, `src/assets/animations`.
+
+<Anatomy parts={[
+  { part: 'Press feedback, small toggles', token: 'motion.duration.fast', note: '120 ms.' },
+  { part: 'Default transition', token: 'motion.duration.base', note: '220 ms. For example a progress fill.' },
+  { part: 'Larger movement', token: 'motion.duration.slow', note: '320 ms.' },
+  { part: 'Loading pulse', token: 'motion.duration.pulse', note: '650 ms per half-cycle.' },
+  { part: 'Easing', token: 'motion.easing.standard', note: 'Easing.inOut(Easing.quad). The one the skeletons use.' },
+]} />
+
+## Durations
+
+<Canvas of={Anim.Durations} />
+
+## Loading pulse
+
+<Canvas of={Anim.Pulse} />
+
+## Token table
+
+<Canvas of={Anim.Table} />
+
+## Animation files
+
+These files are in `src/assets/animations`. **They render empty in this Storybook**: Lottie and Rive have web stubs here, so a story shows an empty box. Check them on a device or simulator.
+
+| File | Kind | Used for |
+|---|---|---|
+| `splash-animation.json` | Lottie | Splash screen |
+| `onboarding-1.json`, `onboarding-2.json`, `onboarding-3.json` | Lottie | Onboarding slides |
+| `cat-redirecting.riv` | Rive | Filter transition overlay (the cat) |
+
+<DoDont
+  dos={['Take a duration from `motion.duration.*`.', 'Use `motion.easing.standard` for UI motion.', 'Use the Skeleton atom for the loading pulse.']}
+  donts={['Do not type a duration in ms.', 'Do not animate money values. Show a skeleton instead.', 'Do not rely on Lottie or Rive to carry meaning. They can fail to load.']}
+/>

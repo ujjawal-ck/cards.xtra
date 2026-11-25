@@ -1,0 +1,81 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/4 Shared result/Overview" />
+
+<PageHeader title="4 Shared result" meta="flow · 3 steps">The league table that ends all four tools, with the breakdown sheet (the sum and Apply) and the edit-spends sheet. Apply sits in the breakdown sheet only.</PageHeader>
+
+## Flow
+
+```
+4a / 4b / 4c / 4d  ->  League table (ToolResults)
+                          |  tap a row                      |  tap the Annual spends pill
+                          v                                 v
+                 Savings breakdown sheet           Edit spends sheet -> table reloads in place
+                   |        |
+        View card details   Apply now -> click-out (rows with an app card only)
+```
+
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+## League table
+
+<StateMatrix rows={[
+  { state: "Loading", status: 'live', story: 'flows-4-shared-result-league-table--loading', note: "Skeleton rows and the wait line." },
+  { state: "Loaded", status: 'live', story: 'flows-4-shared-result-league-table--loaded', note: "Nine fixture rows." },
+  { state: "By category", status: 'live', story: 'flows-4-shared-result-league-table--by-category', note: "One tap after mount." },
+  { state: "Offline", status: 'live', story: 'flows-4-shared-result-league-table--offline', note: "Paused query." },
+  { state: "Error", status: 'live', story: 'flows-4-shared-result-league-table--error', note: "Calculate answers 500." },
+  { state: "Empty", status: 'live', story: 'flows-4-shared-result-league-table--empty', note: "No rows returned." },
+  { state: "No filter match", status: 'live', story: 'flows-4-shared-result-league-table--no-filter-match', note: "Fixture cut to paid cards, then Lifetime free tapped." },
+  { state: "Row not in app (R7)", status: 'live', story: 'flows-4-shared-result-league-table--row-not-in-app', note: "Row tapped; sheet says it cannot be applied for." },
+  { state: "Retry after error", status: 'live', story: 'flows-4-shared-result-league-table--retry-after-error', note: "Calculate fails twice, then Try again loads the list." },
+  { state: "Recalculating after an edit", status: 'live', story: 'flows-4-shared-result-league-table--recalculating-after-edit', note: "Old list replaced by the skeleton (G8)." },
+  { state: "All spends zero", status: 'live', story: 'flows-4-shared-result-league-table--all-spends-zero', note: "Enter at least one spend." },
+  { state: "One card", status: 'live', story: 'flows-4-shared-result-league-table--one-card', note: "Header reads 1 cards (G10, app bug)." },
+  { state: "220 cards", status: 'live', story: 'flows-4-shared-result-league-table--large-league', note: "FlatList windowing; not proof of scroll cost on a phone." },
+  { state: "Search, no match", status: 'live', story: 'flows-4-shared-result-league-table--search-no-match', note: "Counter reads No match." },
+  { state: "Every card loses money", status: 'live', story: 'flows-4-shared-result-league-table--all-lose-money', note: "Negative annual figures." },
+  { state: "Card art missing", status: 'live', story: 'flows-4-shared-result-league-table--card-art-missing', note: "Empty sunken box." },
+  { state: "Null fee reads Lifetime free (G3)", status: 'live', story: 'flows-4-shared-result-league-table--null-fee-shows-lifetime-free', note: "App bug: null fee becomes 0." },
+  { state: "Null fee, proposed", status: 'proposed', story: 'flows-4-shared-result-league-table--null-fee-proposed', note: "Fee not known tag." },
+  { state: "Catalogue failed, no Apply (G1)", status: 'live', story: 'flows-4-shared-result-league-table--catalogue-failed-no-apply', note: "App bug: sheet says it cannot be applied for." },
+  { state: "Catalogue slow, no Apply", status: 'live', story: 'flows-4-shared-result-league-table--catalogue-slow-no-apply', note: "Cards call never answers." },
+  { state: "Catalogue failed, proposed", status: 'proposed', story: 'flows-4-shared-result-league-table--catalogue-failed-proposed', note: "Open question Q1." },
+  { state: "Offline with cached list", status: 'live', story: 'flows-4-shared-result-league-table--offline-with-cache', note: "Cache seeded before mount." },
+  { state: "360 dp", status: 'live', story: 'flows-4-shared-result-league-table--width-360', note: "Pinned to the Android 360 viewport, By category tab." },
+  { state: "Still checking, proposed", status: 'proposed', story: 'flows-4-shared-result-league-table--still-checking-proposed', note: "Open question Q8." },
+  { state: "Edit while offline, proposed", status: 'proposed', story: 'flows-4-shared-result-league-table--edit-offline-proposed', note: "Open question Q4." },
+]} />
+
+## Savings breakdown sheet
+
+<StateMatrix rows={[
+  { state: "Sellable card", status: 'live', story: 'flows-4-shared-result-savings-breakdown-sheet--sellable-card', note: "Apply now and View card details." },
+  { state: "Card not in the app", status: 'live', story: 'flows-4-shared-result-savings-breakdown-sheet--card-not-in-app', note: "No actions." },
+  { state: "User's own card", status: 'live', story: 'flows-4-shared-result-savings-breakdown-sheet--users-own-card', note: "hideApply." },
+  { state: "Saves nothing", status: 'live', story: 'flows-4-shared-result-savings-breakdown-sheet--saves-nothing', note: "No lines, net 0." },
+  { state: "Negative net", status: 'live', story: 'flows-4-shared-result-savings-breakdown-sheet--negative-net', note: "Fee larger than savings." },
+]} />
+
+## Edit spends sheet
+
+<StateMatrix rows={[
+  { state: "Edit", status: 'live', story: 'flows-4-shared-result-edit-spends-sheet--edit', note: "Sheet on its own." },
+  { state: "Saved", status: 'live', story: 'flows-4-shared-result-edit-spends-sheet--saved', note: "Pill, Update results, reload in place." },
+]} />
+
+## Risks
+
+- R7 (score 6): the top rows of the league can be cards the app cannot sell, with no Apply and no card page. Decision D27 is directional.
+- R11 (score 4): Apply from the tools skips the eligibility gate that Home runs. The user sees no verdict. A tool click-out has no gate.
+- R8 (score 6): no "redirecting" step and no pre-apply terms before the click-out from the breakdown sheet.
+- R1 (score 9): coming back from the bank page shows the same table. There is no "did you apply" state.
+- R6 (score 6): offline cold start. The tool results handle the paused call with "You're offline"; most other screens show a false empty state.
+
+## Open questions
+
+- League table scope (D27, directional): keep showing cards the app cannot sell, loss-making and discontinued cards, with Apply only in the breakdown sheet? Owner: product owner.
+- Should Apply from the tools run the same eligibility gate as Home? Owner: product owner.
+- What does the user see before and after a click-out (redirect step, terms, a "did you apply" return state)? Owner: product owner with the CashKaro tracking team.
+- A league of every card (about 280 rows) has not been checked for scroll cost on a device (ux-states, partial).

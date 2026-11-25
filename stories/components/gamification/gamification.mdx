@@ -1,0 +1,30 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader } from '../../../storybook/blocks';
+
+<Meta title="Components/Gamification/Overview" />
+
+<PageHeader title="Gamification" meta="0 components · reserved">
+No gamification component exists yet. This family is reserved for parts that reward repeat use, such as streaks, levels, progress toward a reward and unlocked badges. There are no stories on this page.
+</PageHeader>
+
+## What is reserved
+
+- Parts whose job is to reward the user for coming back or for finishing a goal.
+- Parts that show progress toward a reward the user can see and name.
+- The family appears in the sidebar so a new part has a place from day one.
+
+## Nearest parts today
+
+None of these is a gamification part. They show a rank or a count, and a gamification part may build on them.
+
+- `RankBadge` and `NumberBadge` in the Badge and Tag family show a rank or a count.
+- `StepProgress` and `StepIndicator` in the Steppers family show progress through a flow.
+- `MilestoneStat` in the Carousels family shows milestone images with the numbers baked into the artwork.
+
+## Open questions for product
+
+- Which reward loop comes first, and what is the reward in rupees or in access?
+- Where does it show: Home, Earnings or Profile?
+- Which measure counts toward it, and can it be gamed? Check the metric before the design.
+
+When a part is built, add its stories under `stories/components/gamification/` and replace this page with a pick table and an anatomy.

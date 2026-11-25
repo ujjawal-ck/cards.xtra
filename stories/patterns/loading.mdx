@@ -1,0 +1,64 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './loading.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Loading" meta="Pattern">
+  Show the shape of what is coming. Use a skeleton first, a wait line for long calls, and never a spinner or a fake value where money will appear.
+</PageHeader>
+
+## The rule
+
+- Use a skeleton that matches the page: `Skeleton` for a block, `AmountSkeleton` for a money value, `HomeSkeleton` and `CardListSkeleton` for Home.
+- A money value never shows a placeholder number such as ₹0 while it loads. Show `AmountSkeleton` (`src/atoms/AmountSkeleton.tsx`).
+- For a call that can take a long time, add one wait line above the skeleton rows. The tools say "up to a minute" (`src/screens/tools/ToolResultsScreen.tsx:522`).
+- Every skeleton pulses with the same timing: `motion.duration.pulse` (650 ms), opacity between `opacity[16]` and `opacity[40]`.
+- A bare spinner is the old way. Orders, Claims, Store page and All card benefits still use one (audit: PARTIAL).
+- A paused query is not a loading query: offline with no cache stays "pending" forever. See the Offline pattern.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'Skeleton', id: 'components-loading-skeleton--docs', note: 'any block: width, height, radius, tone.' },
+  { name: 'AmountSkeleton', id: 'components-loading-amountskeleton--docs', note: 'a money value, light or on a dark hero.' },
+  { name: 'HomeSkeleton, CardListSkeleton', id: 'components-loading-homeskeleton--docs', note: 'the Home layout and a card-tile list.' },
+]} />
+
+## Where it appears
+
+- Flow 2 Home and discovery: Home (first load, category filter), Offers tab, Search.
+- Flow 3a Card detail and apply: card detail benefits, All card benefits.
+- Flow 4 Shared result: League table, Beat my card (the wait line).
+- Flow 7 Earnings and withdraw: Earnings amounts, transactions.
+- Flow 8 Orders and missing cashback: Orders list, Order detail, Claims list.
+
+## Examples
+
+<Canvas of={S.GenericBlocks} />
+<Canvas of={S.MoneyAmounts} />
+<Canvas of={S.CardListShimmer} />
+<Canvas of={S.WaitLine} />
+
+The whole-screen `HomeSkeleton` is a 390 by 844 frame. Open it from the sidebar: Patterns / Loading / Whole Screen.
+
+<DoDont
+  dos={['Match the skeleton to the page shape.', 'Use `AmountSkeleton` for every money value.', 'Add a wait line when a call can take more than a few seconds.']}
+  donts={['Do not show ₹0 or a dash while an amount loads.', 'Do not use a bare spinner where a skeleton fits.', 'Do not animate with your own timing. Use the Skeleton atom.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Home first load', status: 'live', source: 'src/screens/HomeScreen.tsx:2871', story: 'patterns-loading--whole-screen' },
+  { state: 'Category filter loading (card list shimmer)', status: 'live', source: 'src/screens/HomeScreen.tsx:2082', story: 'patterns-loading--card-list-shimmer' },
+  { state: 'Earnings first load (AmountSkeleton)', status: 'live', source: 'src/screens/EarningsScreen.tsx:96', story: 'patterns-loading--money-amounts' },
+  { state: 'Tools: wait line and skeleton rows', status: 'live', source: 'src/screens/tools/ToolResultsScreen.tsx:522', story: 'flows-4-shared-result-league-table--loading' },
+  { state: 'Offers first load', status: 'live', source: 'src/screens/OffersScreen.tsx:522' },
+  { state: 'Store page loading', status: 'proposed', source: 'ux-states.md section 2', story: 'patterns-loading--store-header-proposed', note: 'Bare spinner today (OffersBrandAmazon.tsx:362).' },
+  { state: 'All card benefits loading', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-loading--benefits-proposed', note: 'Bare spinner today (AllCardBenefitsScreen.tsx:129).' },
+  { state: 'Orders list first load', status: 'proposed', source: 'ux-states.md section 7', note: '3 Skeleton rows, spacing[80], radius lg. Bare spinner today (OrdersList.tsx:403).' },
+  { state: 'Profile loading', status: 'proposed', source: 'ux-states.md section 8', note: 'Name and contact render blank today (Masthead.tsx:282).' },
+  { state: 'Earnings: session still restoring', status: 'proposed', source: 'ux-states.md section 6', note: 'Treat auth loading as loading so ₹0 does not flash (EarningsScreen.tsx:96).' },
+]} />

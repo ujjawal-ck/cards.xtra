@@ -1,0 +1,41 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Switches/Overview" />
+
+<PageHeader title="Switches" meta="1 component · atoms">
+An on and off toggle for a setting that applies at once. For one-or-many choices in a form use the Selections family.
+</PageHeader>
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'Track off', token: 'colors.action.secondary.default + borderWidth.thin colors.border.strong', note: 'The border makes the pale track visible on white.' },
+  { part: 'Track on', token: 'colors.action.accent.default', note: 'Cobalt.' },
+  { part: 'Track disabled', token: 'colors.action.accent.disabled', note: 'Taps ignored; no border.' },
+  { part: 'Thumb', token: 'colors.surface.default, radius.full', note: 'Slides 150 ms.' },
+  { part: 'Size md', token: 'track sizing.touchMin by iconSize[24], thumb iconSize[20]', note: '44 by 24.' },
+  { part: 'Size sm', token: 'track iconSize[24] by iconSize[16], thumb iconSize[12]', note: '24 by 16.' },
+  { part: 'Padding and hit area', token: 'spacing[2] inside, hitSlop spacing[12]', note: 'Tap area is larger than the track.' },
+]} />
+
+## Composition
+
+- The switch is controlled: pass `value` and `onValueChange`. The parent stores the value.
+- Put it at the right end of a row with a label and an optional line of help text on the left.
+- A switch with no visible label needs `accessibilityLabel`. A labelled parent row can supply it.
+- Pressed fades to 0.85 opacity. A selection haptic fires on change.
+- The setting applies when the switch flips. Do not add a Save button for it.
+
+<DoDont
+  dos={[
+    'Use for a setting that takes effect at once (alerts on or off).',
+    'Write the label as the thing that is on: "Cashback alerts".',
+    'Set accessibilityLabel when the label is not part of the row.',
+  ]}
+  donts={[
+    'Do not use a switch for a choice that needs a Submit; use Checkbox.',
+    'Do not use a switch for one of several options; use Radio or Selector.',
+    'Do not hide the off state: keep the track border.',
+  ]}
+/>

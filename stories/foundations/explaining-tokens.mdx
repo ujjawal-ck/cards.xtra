@@ -1,0 +1,60 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Tokens from './explaining-tokens.stories';
+
+<Meta of={Tokens} />
+
+<PageHeader title="Explaining tokens" meta="Foundations">
+  A token is a named design value: a colour, a size, a type style. Cards.xtra keeps every one in `src/tokens`.
+  Components use the names, never the raw values, so a change in one place reaches the whole app.
+</PageHeader>
+
+Source: `src/tokens/index.ts` (the barrel), `src/tokens/*.ts`, `src/theme/gradients.ts`.
+
+## Primitive and semantic
+
+Colour has two layers.
+
+1. **Primitives** are the raw palette: Saffron, Cobalt, Slate, Fern, Amber, Ruby, Rose, Violet, Sky and two transparent ramps. Never use them in a component.
+2. **Semantic tokens** give a primitive a role: `colors.action.primary.default`, `colors.text.secondary`, `colors.feedback.error.text`. Components use only these.
+
+Size, spacing, type, shadow and motion have one layer each: `spacing`, `radius`, `typography`, `elevation`, `motion`.
+
+<Canvas of={Tokens.Chain} />
+
+## Saffron and Cobalt (D17)
+
+Decision D17 in `docs/decision.md`: Saffron is the only solid button colour. Cobalt stays for links, outline and secondary buttons, selected chips, and the opt-in `tone="accent"` fill. Figma draws Cobalt in some places. The app follows D17.
+
+<Canvas of={Tokens.Rules} />
+
+## Type (D7)
+
+Decision D7: no `maxFontSizeMultiplier` and no `adjustsFontSizeToFit`. Text follows the OS font size and the layout grows. Details are on the Typography page.
+
+## Where each token lives
+
+<Anatomy parts={[
+  { part: 'Colour', token: 'primitives, colors', note: 'src/tokens/colors.ts. Page: Colors.' },
+  { part: 'Gradients', token: 'gradients', note: 'src/tokens/gradients.ts, plus named brand gradients in src/theme/gradients.ts.' },
+  { part: 'Type', token: 'typography, fontFamily, fontSize, letterSpacing', note: 'src/tokens/typography.ts. Page: Typography.' },
+  { part: 'Spacing, radius, stroke', token: 'spacing, radius, borderWidth', note: 'src/tokens/spacing.ts. Page: Values.' },
+  { part: 'Sizes', token: 'iconSize, avatarSize, mediaSize, sizing', note: 'src/tokens/spacing.ts. Page: Sizes.' },
+  { part: 'Shadow', token: 'elevation', note: 'src/tokens/elevation.ts. Page: Shadows.' },
+  { part: 'Transparency', token: 'opacity, alpha', note: 'src/tokens/opacity.ts. Page: Values.' },
+  { part: 'Motion', token: 'motion', note: 'src/tokens/motion.ts. Page: Animations.' },
+]} />
+
+<Canvas of={Tokens.Barrel} />
+
+## Gaps in the token layer
+
+- Some semantic colours hold a raw hex with no primitive (see Colors, "no primitive").
+- `gradients.ts` and `elevation.brand` hold raw hex values.
+- `saffron[50]` and `saffron[100]` share one hex, and `primitives.transparentBlack` repeats `alpha.black`.
+- There is no step-down rule for very long display amounts (D7 bans auto-shrink).
+
+<DoDont
+  dos={['Import from the barrel: `import { colors, spacing } from "../tokens"`.', 'Pick the semantic token that names the job.', 'Add a semantic token when a role is missing.']}
+  donts={['Do not import `primitives` in a component.', 'Do not type a hex, a px size or a font size in a screen.', 'Do not invent a token in a component. Ask for it in the token file.']}
+/>

@@ -1,0 +1,197 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/7 Earnings and withdraw/Overview" />
+
+<PageHeader title="7 Earnings and withdraw" meta="flow · 9 steps · money">See what I earned and move it to my UPI or a gift card. Every step from the gate to the success screen moves real money on production CashKaro, so each failure state is listed. Six failures are native alerts that this Storybook cannot show; they have a proposed twin.</PageHeader>
+
+## Flow
+
+```
+Entry: Earnings tab (login needed; guest sees "See every rupee you earn")
+       Profile "Withdraw Cashback" row (same gate)
+   |
+   v
+Earnings ---- tap Withdraw ---->  $ Withdraw gate (useWithdrawGate)
+                                    |-- payout settling      -> sheet, stop
+                                    |-- nothing to withdraw  -> sheet, stop
+                                    |-- below the minimum    -> sheet, stop
+                                    |-- balance did not load -> native Alert, stop
+                                    v
+                              $ Method select (WithdrawMethodSelect)
+                                  UPI | Bank Transfer (coming soon) | Gift card
+                                    |                                   |
+                                    v                                   v
+                         $ Details UPI                        $ Gift card chooser
+                         (UPI id + terms)                      |            |
+                                    |                    Details Amazon  Details Flipkart
+                                    |                    (mobile x2)     (email x2)
+                                    +------------+-----------------+--------+
+                                                 | Get Paid: send OTP (Alert on failure)
+                                                 | terms link -> Terms (one screen, 4 copies)
+                                                 v
+                                      $ Verify OTP (WithdrawVerifyOTP)
+                                         wrong | rate limited | connection problem
+                                         payment failed | unknown outcome | session expired
+                                                 v
+                                      $ Success (stack reset, no swipe back)
+Exit: Home (close or Continue Shopping)
+      Earnings, after an unknown outcome (user goes back by hand)
+Hidden: Payment history (D4), no route links to it
+```
+
+`$` marks a money step. Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
+
+Stories that type or tap run a small DOM interaction after mount (a play function). They drive the real screen: no timers are patched and no state is faked. The native `Alert.alert` calls are drawn by the preview as a plain dialog (a web shim), so the live stories show the real title, message and buttons. A `proposed` story shows the inline or full-screen design from `audit/ux-states.md` for each failure.
+
+## 1. Earnings
+
+<StateMatrix rows={[
+  { state: "Guest", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--guest', note: "Log in prompt, no figures." },
+  { state: "Loading", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--loading', note: "Skeleton amounts." },
+  { state: "Loaded", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--loaded', note: "Headline total shows 0 on web (known harness limit)." },
+  { state: "Loaded, large amounts", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--loaded-large-amounts', note: "About 14.5 lakh earned. No long-amount rule exists." },
+  { state: "Zero", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--zero', note: "New user, all ₹0." },
+  { state: "Error", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--load-error', note: "Earnings answers 500." },
+  { state: "Transactions error", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--transactions-error', note: "Only the list fails." },
+  { state: "Transactions empty", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--transactions-empty', note: "No orders." },
+  { state: "Know Why? sheet", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--pending-sheet', note: "Button tapped after mount." },
+  { state: "Offline, shows ₹0 (R6)", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--offline-shows-zero', note: "Inferred from code: Confirmed ₹0 and Pending ₹0." },
+  { state: "Offline, proposed fix (R6)", status: 'proposed', story: 'flows-7-earnings-and-withdraw-earnings--offline-proposed', note: "Never show ₹0 for unknown." },
+  { state: "Offline with cached balance", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--offline-with-cache', note: "Stale balance, no last-updated cue; transactions read empty (Q3)." },
+  { state: "Missing amount fields", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--missing-amount-fields', note: "Null fields read ₹0 (G6)." },
+  { state: "Breakup sheet", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--breakup-sheet', note: "Cashback card tapped." },
+  { state: "Breakup sheet while loading", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--breakup-sheet-while-loading', note: "Sheet shows ₹0 for unknown (G6)." },
+  { state: "Large amounts at 360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--large-amounts-360', note: "Android small viewport." },
+  { state: "Forbidden 403", status: 'live', story: 'flows-7-earnings-and-withdraw-earnings--forbidden-403', note: "Generic error; retry cannot help (Q12)." },
+]} />
+
+## 2. Withdraw gate
+
+<StateMatrix rows={[
+  { state: "Payout settling", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--settling', note: "Withdraw tapped after mount. Payment info 400 / 5002." },
+  { state: "Nothing to withdraw", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--nothing-to-withdraw', note: "Only pending earnings." },
+  { state: "Below minimum", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--below-minimum', note: "₹120 against ₹250 (400 / 5003)." },
+  { state: "Balance error", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "Balance error, proposed Toast", status: 'proposed', story: 'flows-7-earnings-and-withdraw-withdraw-gate--balance-error-proposed', note: "Error Toast with Try again." },
+  { state: "Settling, no amount", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--settling-no-amount', note: "Sheet shows ₹0 (G6)." },
+  { state: "Exactly the minimum", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--exactly-minimum', note: "₹250 passes." },
+  { state: "Payment info says below threshold", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--payment-info-says-below-threshold', note: "Gate lets the user through (G3, P1)." },
+  { state: "Slow balance", status: 'live', story: 'flows-7-earnings-and-withdraw-withdraw-gate--slow-balance', note: "8 s wait, no feedback." },
+  { state: "Slow balance, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-withdraw-gate--checking-balance-proposed', note: "Info Toast while checking." },
+]} />
+
+## 3. Method select
+
+<StateMatrix rows={[
+  { state: "Loading", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--loading', note: "Amounts read a dash." },
+  { state: "Cashback only", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--cashback-only', note: "UPI, Bank Transfer (coming soon), gift card." },
+  { state: "Rewards only", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--rewards-only', note: "Gift card only." },
+  { state: "Cashback and rewards", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--cashback-and-rewards', note: "Two sections." },
+  { state: "Bank Transfer, Coming soon (R12)", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--bank-transfer-coming-soon', note: "Row tapped, nothing happens." },
+  { state: "Tooltip open", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--tooltip-open', note: "Info circle tapped." },
+  { state: "360 dp, large amount", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--narrow-360-large-amount', note: "Confirmed ₹10,00,000." },
+  { state: "Tap while loading", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--tap-while-loading', note: "Draft amount ₹0 (G4, P2)." },
+  { state: "Earnings error", status: 'live', story: 'flows-7-earnings-and-withdraw-method-select--earnings-error', note: "₹0 amounts and live rows." },
+  { state: "Earnings error, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-method-select--earnings-error-proposed', note: "Error state, rows hidden." },
+]} />
+
+## 4. Details
+
+<StateMatrix rows={[
+  { state: "UPI, empty", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-empty', note: "Terms unticked, Get Paid off." },
+  { state: "UPI, invalid", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-invalid', note: "Types, ticks, taps Get Paid." },
+  { state: "UPI, consent given", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-consent', note: "Get Paid on." },
+  { state: "UPI, sending OTP", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-sending-otp', note: "Send call hangs." },
+  { state: "UPI, OTP send error", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-failed', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "UPI, OTP send error, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-failed-proposed', note: "Inline error above the footer." },
+  { state: "Amazon, empty", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-empty', note: "Two mobile fields." },
+  { state: "Amazon, invalid mobile", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-invalid', note: "Short number, field left." },
+  { state: "Amazon, numbers differ", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-mismatch', note: "Second field red." },
+  { state: "Amazon, consent given", status: 'live', story: 'flows-7-earnings-and-withdraw-details--amazon-consent', note: "Get Paid on." },
+  { state: "Flipkart, empty", status: 'live', story: 'flows-7-earnings-and-withdraw-details--flipkart-empty', note: "Two email fields." },
+  { state: "Flipkart, invalid email", status: 'live', story: 'flows-7-earnings-and-withdraw-details--flipkart-invalid', note: "Field left." },
+  { state: "Flipkart, emails differ", status: 'live', story: 'flows-7-earnings-and-withdraw-details--flipkart-mismatch', note: "Second field red." },
+  { state: "Flipkart, consent given", status: 'live', story: 'flows-7-earnings-and-withdraw-details--flipkart-consent', note: "Get Paid on." },
+  { state: "Gift card chooser", status: 'live', story: 'flows-7-earnings-and-withdraw-details--gift-card-chooser', note: "Amazon Pay or Flipkart." },
+  { state: "Gift card chooser, combined", status: 'live', story: 'flows-7-earnings-and-withdraw-details--gift-card-chooser-combined', note: "Cashback + rewards." },
+  { state: "UPI, OTP send offline", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-offline', note: "Native Alert, transport message." },
+  { state: "UPI, OTP send rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-rate-limited', note: "Native Alert, raw server text." },
+  { state: "UPI, OTP send rate limited, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-details--upi-send-otp-rate-limited-proposed', note: "Inline warning, Get Paid off (Q5)." },
+  { state: "UPI, session ended", status: 'live', story: 'flows-7-earnings-and-withdraw-details--upi-session-ended', note: "Get Paid does nothing, no message." },
+]} />
+
+## 4b. Terms
+
+<StateMatrix rows={[
+  { state: "UPI", status: 'live', story: 'flows-7-earnings-and-withdraw-terms--upi', note: "From the consent link." },
+  { state: "Amazon", status: 'live', story: 'flows-7-earnings-and-withdraw-terms--amazon', note: "" },
+  { state: "Flipkart", status: 'live', story: 'flows-7-earnings-and-withdraw-terms--flipkart', note: "" },
+  { state: "Bank", status: 'hidden', story: 'flows-7-earnings-and-withdraw-terms--bank', note: "Copy exists, nothing links to it (R12)." },
+]} />
+
+## 5. Verify OTP
+
+<StateMatrix rows={[
+  { state: "Entry", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--entry', note: "Six empty boxes, 30 s resend timer." },
+  { state: "Wrong OTP", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--wrong-otp', note: "Types the code. Hint Enter a valid OTP." },
+  { state: "Verifying and paying", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--verifying', note: "Types the code. Payout POST hangs." },
+  { state: "Resend ready", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-ready', note: "Wait 30 s, nothing is patched." },
+  { state: "Rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--rate-limited', note: "HTTP 429 reads as a wrong code (app bug)." },
+  { state: "Connection problem", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--connection-problem', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "Payment failed", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed', note: "Native Alert (drawn as a plain dialog)." },
+  { state: "Unknown outcome", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--unknown-outcome', note: "Native Alert (drawn as a plain dialog). Second submit blocked." },
+  { state: "Session expired (R17)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-expired', note: "Login sheet opens; Alert on submit." },
+  { state: "Connection problem, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--connection-problem-proposed', note: "Inline warning." },
+  { state: "Payment failed, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed', note: "Inline error with Try again." },
+  { state: "Unknown outcome, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--unknown-outcome-proposed', note: "Full screen state." },
+  { state: "Session expired, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--session-expired-proposed', note: "Screen's own expired state." },
+  { state: "Payout gateway 504 (G2, P0)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-gateway-504', note: "Shown as final failure; payout may have landed." },
+  { state: "Recheck found payout", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--recheck-found-payout', note: "Timeout, then 5002: goes to Success." },
+  { state: "Payout already pending", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending', note: "Pending is a state. Rare race after the gate: today shown in the generic Payment failed dialog." },
+  { state: "Payout already pending, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--payout-already-pending-proposed', note: "Own state with Go to Earnings." },
+  { state: "Verify server error (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--verify-server-error', note: "500 reads as Enter a valid OTP." },
+  { state: "Session ends on verify (B1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-ends-on-verify', note: "401 reads as Enter a valid OTP." },
+  { state: "Session ends on payout", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--session-ends-on-payout', note: "Alert Payment failed; login sheet." },
+  { state: "Resend after unknown outcome (Q1)", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-after-unknown-outcome', note: "Fresh guid lets the draft be paid again. Waits 30 s." },
+  { state: "Slow payout, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--slow-payout-proposed', note: "Info line after 5 s." },
+  { state: "Resend failed", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-failed', note: "Alert. Waits 30 s." },
+  { state: "Resend rate limited", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-rate-limited', note: "Alert, raw text. Waits 30 s." },
+  { state: "Resend failed, proposed", status: 'proposed', story: 'flows-7-earnings-and-withdraw-verify-otp--resend-failed-proposed', note: "Inline warning." },
+  { state: "360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-verify-otp--narrow-360', note: "Android small viewport." },
+]} />
+
+## 6. Success
+
+<StateMatrix rows={[
+  { state: "UPI", status: 'live', story: 'flows-7-earnings-and-withdraw-success--upi', note: "Withdrawn successfully." },
+  { state: "Amazon", status: 'live', story: 'flows-7-earnings-and-withdraw-success--amazon', note: "Payment initiated." },
+  { state: "Flipkart", status: 'live', story: 'flows-7-earnings-and-withdraw-success--flipkart', note: "Payment initiated." },
+  { state: "Payout record (R4)", status: 'proposed', story: 'flows-7-earnings-and-withdraw-success--payout-record-proposed', note: "Receipt card and View in Earnings." },
+  { state: "Large amount at 360 dp", status: 'live', story: 'flows-7-earnings-and-withdraw-success--large-amount-360', note: "₹10,00,000, Android small viewport." },
+]} />
+
+## 7. Payment history
+
+<StateMatrix rows={[
+  { state: "List", status: 'hidden', story: 'flows-7-earnings-and-withdraw-payment-history--list', note: "Hidden by D4. Figma sample values." },
+  { state: "Details", status: 'hidden', story: 'flows-7-earnings-and-withdraw-payment-history--details', note: "Hidden by D4." },
+  { state: "Empty", status: 'hidden', story: 'flows-7-earnings-and-withdraw-payment-history--empty', note: "Hidden by D4." },
+]} />
+
+## Risks
+
+- R4: after a withdrawal there is no per-payout record. Success goes to Home and Payment history is hidden. Earnings shows a Paid total and a settling sheet only.
+- R6: offline cold start shows Confirmed ₹0 and Pending ₹0 on Earnings. A user with money sees nothing to withdraw. Inferred from code, not seen on a device.
+- R12: Bank Transfer is "Coming soon", so a user with no UPI can only take a gift card.
+- R17: the session expires during Verify OTP. The login sheet opens and the cache clears, but nothing returns the user to the step. This risks a lost payout attempt.
+- Also seen in code: a 429 on the OTP check reads as "Enter a valid OTP", and the unknown-outcome message tells the user to check Earnings while no payout record exists (R4).
+
+## Open questions
+
+- Native alerts: should the six alert states become inline messages and a full screen (the proposed twins), and who owns the copy?
+- Payout record (R4): which fields, and where does it live (Success, Earnings, Payment history)? Does CashKaro return a reference at accept time?
+- Session expiry in a money step (R17): return to Verify OTP with the draft kept, or restart from the method list? Never resubmit without a fresh OTP.
+- Bank Transfer (R12): hide the row until it works, or keep "Coming soon"?
+- Payment history (D4): bring it back when a payout history API exists, or drop the screens?
+- Email for new users (D16): collect a real email before the first withdrawal, since payout mail goes to a placeholder.

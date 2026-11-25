@@ -1,0 +1,58 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Media/Overview" />
+
+<PageHeader title="Media" meta="7 components · atom, molecule, organism">
+Pictures: icons, the info glyph, a remote-safe image, the card art, and three look-alike logo frames. The three logo frames are the part people mix up, so pick by frame size and by where the logo sits.
+</PageHeader>
+
+<PickTable
+  rule="Ask: which frame size, and where does it go: a grid, an order row, or a store header?"
+  rows={[
+    { building: 'A grid or strip of partner logos (104 by 48 chip, 74 by 32 image)', use: 'BrandLogo', tier: 'molecule', story: 'components-media-brandlogo--docs' },
+    { building: 'The logo at the left of an order row or order card (80 by 48 frame)', use: 'LogoContainer', tier: 'atom', story: 'components-media-logocontainer--docs' },
+    { building: 'A retailer tile in the missing cashback flow or on a help ticket (74 wide, 32 / 40 / 44 high)', use: 'BrandLogoTile', tier: 'atom', story: 'components-media-brandlogotile--docs' },
+    { building: 'A whole collection of logos in one wrapped grid', use: 'BrandLogoGrid', tier: 'molecule', story: 'components-media-brandlogo--docs' },
+    { building: 'Any other image that may come from the CashKaro asset hosts', use: 'RemoteImage', tier: 'atom', story: 'components-media-remoteimage--docs' },
+    { building: 'A symbol next to text or on a button', use: 'Icon', tier: 'atom', story: 'components-media-icon--docs' },
+    { building: 'A tappable "more info" mark', use: 'InfoCircleGlyph', tier: 'atom', story: 'components-media-infocircleglyph--docs' },
+    { building: 'The picture of a credit card', use: 'CardArt', tier: 'organism', story: 'components-media-cardart--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The anatomy is for the three logo frames. They differ in size, in how the image sits, and in what happens when it fails.
+
+<Anatomy parts={[
+  { part: 'BrandLogo frame', token: '104 by spacing[48], radius.sm, borderWidth.thin, colors.border.default, colors.surface.default', note: 'Image 74 by mediaSize[32], contained. No error fallback.' },
+  { part: 'LogoContainer frame', token: 'spacing[80] by spacing[48], radius.xs, borderWidth.thin, colors.border.default', note: 'Image mediaSize[56] by mediaSize[24], contained. No error fallback.' },
+  { part: 'BrandLogoTile frame', token: '74 by mediaSize[32] / mediaSize[40] / 44, radius.sm, borderWidth.thin', note: 'Image contained with spacing[6] of padding. On a load error it shows images.logos.darkSmall.' },
+  { part: 'Icon', token: 'iconSize[8] to iconSize[56], default iconSize[20], default colour colors.text.primary', note: 'nav-*, desc-* and raster icons ignore the colour prop.' },
+  { part: 'InfoCircleGlyph', token: 'size from iconSize, fill from the colour prop, "i" in colors.surface.default', note: 'Drawn with react-native-svg.' },
+  { part: 'CardArt', token: 'CARD_ART_W 204 by CARD_ART_H 127.5, cardPlaceholderBgMap behind the art', note: 'Thumbnails keep the CARD_THUMB_ASPECT 132:84 ratio.' },
+]} />
+
+## Composition
+
+- All three logo frames take a `source` from the image registry (`src/assets/images`). Brand tiles are in `images.brands`, store and partner art in `images.stores`.
+- Only `BrandLogo` goes through `RemoteImage`, which retries once on the other CashKaro asset host. `LogoContainer` and `BrandLogoTile` use the plain RN `Image`.
+- The header of `BrandLogoTile` says the image fills the box. The code uses `contain` with padding, because brand logos carry transparent margins. Trust the code.
+- `CardArt` is shared by the card detail masthead and the floating rail so a crossfade between them lines up. Only the active card tilts. Neighbours pass `tilt={false}`.
+- `Icon` comes from one registry. Add a new icon in `src/assets/icons` and in the `Icon` registry, not as an inline SVG, except where the existing code already draws one (`InfoCircleGlyph`).
+
+<DoDont
+  dos={[
+    'Use the frame that matches the place: BrandLogo for strips, LogoContainer for order rows, BrandLogoTile for the missing cashback flow.',
+    'Pass local registry images or CashKaro URLs. Use RemoteImage for the CashKaro ones.',
+    'Tint outline icons with a colour token from colors.*.',
+    'Pass tilt={false} for every card that is not the active one.',
+  ]}
+  donts={[
+    'Do not mix BrandLogo and BrandLogoTile in one row. Their frames differ and the row looks uneven.',
+    'Do not pass a colour to a nav-* or desc-* icon and expect it to change.',
+    'Do not hard-code an icon size. Use iconSize.',
+    'Do not rely on a logo frame to handle a failed image, except BrandLogoTile.',
+  ]}
+/>

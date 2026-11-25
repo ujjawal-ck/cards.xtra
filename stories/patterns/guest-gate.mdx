@@ -1,0 +1,57 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './guest-gate.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Guest gate" meta="Pattern">
+  Login is optional (D12). A guest sees why logging in pays off, and is never blocked from a click-out.
+</PageHeader>
+
+## The rule
+
+- Account-only tabs (Earnings, Profile) show `GuestPrompt` to a guest: a title, a body about what they get, and "Log in".
+- A guest who taps Apply or Shop & Earn sees `EarnLoginSheet`: "Log in to earn cashback" with a second choice, "Apply without cashback" or "Shop without cashback" (D13).
+- The second choice always exists. Guests are not blocked from the revenue path, they only lose the cashback.
+- Get Help asks a guest to log in before Missing Cashback (`src/screens/GetHelpScreen.tsx:121`).
+- The login sheet itself is a flow, not a pattern part. See Flow 1.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'GuestPrompt', id: 'components-empty-and-error-guestprompt--docs', note: 'the tab-level prompt.' },
+  { name: 'EarnLoginSheet', id: 'components-sheets-earnloginsheet--docs', note: 'the click-out prompt, kind card or store.' },
+  { name: 'LoginSheet', id: 'components-sheets-loginsheet--docs', note: 'unused today: the app uses the login provider\'s own sheet.' },
+  { name: 'Button', id: 'components-buttons-button--docs', note: 'solid Saffron "Log in", D17.' },
+]} />
+
+## Where it appears
+
+- Flow 1 Launch and login: onboarding "Get started" as guest, "Already on CashKaro? Log in".
+- Flow 3a Card detail and apply: Click-out, guest earn prompt.
+- Flow 6 Offers: Store page Shop & Earn. Flow 7: Earnings guest. Flow 9: Profile guest, Get Help.
+
+## Examples
+
+<Canvas of={S.TabPrompt} />
+
+The two sheets open on mount, so each is its own story. Open them from the sidebar: Patterns / Guest gate / Click Out Card and Click Out Store.
+
+<DoDont
+  dos={['Say what the user gains: "See every rupee you earn".', 'Keep "continue without cashback" next to "Log in".', 'Use a solid Saffron button for "Log in".']}
+  donts={['Do not block a guest from Apply or Shop & Earn.', 'Do not show an empty state to a guest. Show the prompt.', 'Do not open the login sheet without a reason line (see Session expiry).']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Earnings: guest', status: 'live', source: 'src/screens/EarningsScreen.tsx:165', story: 'patterns-guest-gate--tab-prompt' },
+  { state: 'Profile: guest', status: 'live', source: 'src/screens/ProfileScreen.tsx:134', story: 'patterns-guest-gate--tab-prompt' },
+  { state: 'Click-out, card: earn prompt', status: 'live', source: 'src/organisms/EarnLoginSheet.tsx:35', story: 'patterns-guest-gate--click-out-card' },
+  { state: 'Click-out, store: earn prompt', status: 'live', source: 'src/organisms/EarnLoginSheet.tsx:84', story: 'patterns-guest-gate--click-out-store' },
+  { state: 'Continue without cashback', status: 'live', source: 'src/organisms/EarnLoginSheet.tsx:110' },
+  { state: 'Guest taps Apply or Shop & Earn (hook)', status: 'live', source: 'src/lib/useClickOut.tsx:89' },
+  { state: 'Get Help: guest taps Missing Cashback', status: 'live', source: 'src/screens/GetHelpScreen.tsx:121' },
+  { state: 'Orders list: session ended while open', status: 'proposed', source: 'ux-states.md section 7', note: 'GuestPrompt "Log in to see your orders" / "Your orders and cashback are safe. Log in again to see them."' },
+]} />

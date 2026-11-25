@@ -1,0 +1,81 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Cards/Overview" />
+
+<PageHeader title="Cards" meta="13 components · molecules and organisms">
+Two groups. Credit card displays show a card the user can get: a browse tile, a ranked row, a league row, a comparison. Content cards show one record: a help ticket, an order, a payout, a review.
+Two different parts are both called `CardTile`. The organism is the current Home tile. The molecule is the legacy one, and it is also where the `CardModel` type lives. Read the title in brackets.
+</PageHeader>
+
+## Credit card displays
+
+Deciding question: is the user browsing a list, reading a ranked result, reading a league row with a sum, or comparing against a card they left?
+
+<PickTable
+  rule="Pick by the job of the screen. All of them show real card art and rupees with Indian grouping."
+  rows={[
+    { building: 'The Home list, Cards you can get, an advisor results list (browse, one card each)', use: 'CardTile (organism, current)', tier: 'organism', story: 'components-cards-cardtile-organism-current--docs' },
+    { building: 'Nothing today: a placeholder box instead of card art. Kept for the CardModel type', use: 'CardTile (molecule, legacy)', tier: 'molecule', story: 'components-cards-cardtile-molecule-legacy--docs' },
+    { building: 'A ranked result: rank, one headline rupee value, a reason', use: 'RankedCardRow', tier: 'molecule', story: 'components-cards-rankedcardrow--docs' },
+    { building: 'A league row with a sum: Savings plus Milestones minus Annual fee equals Annual savings', use: 'LeagueCardRow', tier: 'molecule', story: 'components-cards-leaguecardrow--docs' },
+    { building: 'A comparison against a card the user left: gain, two stat deltas, View card', use: 'CompareCard', tier: 'molecule', story: 'components-cards-comparecard--docs' },
+    { building: 'The colour band on top of a CompareCard', use: 'GainBand', tier: 'molecule (part)', story: 'components-cards-gainband--docs' },
+    { building: 'The fee and Apply strip at the bottom of a tile', use: 'CardFeeStrip', tier: 'molecule (part)', story: 'components-cards-cardfeestrip--docs' },
+    { building: 'One tile in the Home list, wrapped with a tap target and category aware benefits', use: 'HomeCardTile', tier: 'screen-local, src/screens/HomeScreen.tsx' },
+    { building: 'One card in the advisor rail: label, proof tag, reason, "I have this"', use: 'AdvisorCardTile', tier: 'screen-local, src/screens/advisor/AdvisorCardTile.tsx' },
+  ]}
+/>
+
+## Content cards
+
+pm-flows 3.4 has no deciding question for this group. The rows below say what each part shows, taken from the source comments.
+
+<PickTable
+  rows={[
+    { building: 'The state of one missing cashback request (in review, need details, tracked, under review, not tracked)', use: 'HelpTicketCard', tier: 'molecule', story: 'components-cards-helpticketcard--docs' },
+    { building: 'One order in the orders list, with a status strip', use: 'OrderCard', tier: 'organism', story: 'components-cards-ordercard--docs' },
+    { building: 'One payout record as label and value rows (hidden, D4)', use: 'PaymentRecordCard', tier: 'molecule', story: 'components-cards-paymentrecordcard--docs' },
+    { building: 'One user review with stars (hidden, D14)', use: 'ReviewCard', tier: 'molecule', story: 'components-cards-reviewcard--docs' },
+    { building: 'A partner in a 2 column offers grid (unused)', use: 'PartnerCard', tier: 'molecule', story: 'components-cards-partnercard--docs' },
+    { building: 'A large rupee amount with a note and Read more (unused)', use: 'BigAmountCard', tier: 'molecule', story: 'components-cards-bigamountcard--docs' },
+  ]}
+/>
+
+## Anatomy: CardTile (organism, current)
+
+<Anatomy parts={[
+  { part: 'Container', token: 'colors.surface.default · radius.xl · borderWidth.thin · colors.border.subtle3 · elevation.light.xs', note: 'Padding and gap spacing[12].' },
+  { part: 'Card art', token: '132 by 84 · radius.md · colors.surface.sunken', note: 'Component spec size, not on the spacing scale.' },
+  { part: 'Name', token: 'body16SemiBold · colors.text.primary', note: 'Two lines at most.' },
+  { part: 'Reward badge', token: 'CashbackBadge size sm', note: 'Text is "<cashbackText> Rewards". Prefix is Flat or Upto.' },
+  { part: 'Invite only pill', token: 'primitives.amber[50], amber[400], amber[700] and a raw #edd68c', note: 'Full type only. The #edd68c stop is not a token yet.' },
+  { part: 'Tags', token: 'Tag tone sky, size sm, appearance subtle', note: 'Wrap onto more lines.' },
+  { part: 'Benefits', token: 'Icon iconSize[16] colors.text.tertiary · body12SemiBold title · body12Regular description', note: 'First 2 only. Two lines (full) or one line (scrollable).' },
+  { part: 'Fee strip', token: 'CardFeeStrip', note: 'Full type only.' },
+]} />
+
+## Composition
+
+- `CardTile (organism)` is built from `CashbackBadge`, `Tag`, `Icon` and `CardFeeStrip`. The `scrollable` type drops the invite pill and the fee strip. Carousels use it.
+- `CompareCard` is a `GainBand` on top of art, a name and two `StatDelta` rows. The caller shortens the name (without "Credit Card").
+- `RankedCardRow` and `LeagueCardRow` both start with `RankBadge`, then art at 64 wide with the same 132:84 ratio. A ranked row takes a number the screen computed. A league row computes its own sum with `rowSum`.
+- `LeagueCardRow` is memoised. Pass stable `row`, `columns`, `tops` and callbacks. A row without an app card has no Apply.
+- `CardModel` comes from `src/molecules/CardTile.tsx`. The organism does not take a `CardModel`: the screen maps its fields to props.
+- `PaymentRecordCard` is `ListRow` rows split by `Divider`. The header comment suggests a generic List part.
+- Hidden parts (`PaymentRecordCard`, `ReviewCard`) stay in the tree for reference. Do not link them from a live screen (D4, D14).
+
+<DoDont
+  dos={[
+    'Use the organism CardTile for any new browse list of cards.',
+    'Pass card art from the card data. Never draw a placeholder box in a live screen.',
+    'Write rewards as "X%" in copy you invent until the rate is verified.',
+    'Show money through the shared rupee formatter so ₹10,00,000 groups the Indian way.',
+  ]}
+  donts={[
+    'Do not import `CardTile` from the molecules barrel for a list. It is the legacy part.',
+    'Do not rebuild a ranked or league row as a custom tile. Use the part and add a prop.',
+    'Do not put the CompareCard gain in the name. The band says it.',
+    'Do not use a hidden card (payout, review) with made up data on a live screen.',
+  ]}
+/>

@@ -1,0 +1,60 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Steppers/Overview" />
+
+<PageHeader title="Steppers" meta="6 components · atoms, molecules, organisms">
+Parts that show where the user is in a sequence. Some track progress through a flow, some explain the steps of a process, and one shows the history of a status. Pick by the question the screen asks.
+</PageHeader>
+
+<PickTable
+  rule="Progress through a flow, explanation of steps, or status history?"
+  rows={[
+    { building: 'A bar that shows "2 of 6" through a flow, no step names', use: 'StepProgress', tier: 'atom', story: 'components-steppers-stepprogress--docs' },
+    { building: 'The 20 px marker at the start of one step (done, current, locked, info, footprints, cashback, image)', use: 'StepIndicator', tier: 'atom', story: 'components-steppers-stepindicator--docs' },
+    { building: 'A vertical list of named steps with done, current and locked state', use: 'Stepper', tier: 'molecule', story: 'components-steppers-stepper--docs' },
+    { building: 'A "how it works" explainer with numbered tiles and captions', use: 'ProcessSteps', tier: 'organism', story: 'components-steppers-processsteps--docs' },
+    { building: 'The status history of an order with dates (paid, cancelled, delayed)', use: 'Timeline', tier: 'organism', story: 'components-steppers-timeline--docs' },
+    { building: 'One question per screen with back, progress, skip and a sticky button', use: 'QuizStep', tier: 'organism', story: 'components-steppers-quizstep--docs' },
+    { building: 'Dots for the position in a carousel (steps variant)', use: 'Indicator', tier: 'atom', story: 'components-carousels-indicator--docs' },
+  ]}
+/>
+
+## Anatomy
+
+The main part is the vertical `Stepper`. Tokens are read from `src/molecules/Stepper.tsx` and `src/atoms/StepIndicator.tsx`.
+
+<Anatomy parts={[
+  { part: 'Marker (done, current, info)', token: 'feedback.success.default / feedback.info.default', note: '20 px round. Inner check 10 px or dot 8 px in icon.inverse' },
+  { part: 'Marker (locked)', token: 'background.lavender, border text.disabled', note: '20 px round with a 14 px lock icon' },
+  { part: 'Marker (cashback)', token: 'gradients.saffronFade, border cashback.tagBorder', note: '32 px, radius.md, 20 px clock icon' },
+  { part: 'Marker (image)', token: 'border.subtle2, iconSize[56]', note: '56 px frame, image contained' },
+  { part: 'Connector', token: 'feedback.success.hover (done), feedback.success.border (pending)', note: '4 px wide, round bottom corners' },
+  { part: 'Title', token: 'body14Medium, text.primary or feedback.success.text when done', note: 'One line per step' },
+  { part: 'Subtext', token: 'body12Medium, text.primary or feedback.success.default when done', note: 'Optional' },
+  { part: 'Layout', token: 'spacing[12] column gap, spacing[4] text gap, spacing[20] under a step', note: 'Marker column is 20 wide' },
+]} />
+
+## Composition
+
+- `StepIndicator` is built into `Stepper`. A step sets `indicator` to override the marker that its state would give.
+- `StepProgress` is built into `QuizStep` (header row), and `QuizStep` pins a `FooterButtons` (single layout) at the bottom.
+- `Timeline` and `ProcessSteps` draw their own tiles and connectors. They do not use `StepIndicator`.
+- `Timeline` is for status with dates: 44 px tone circles and a dashed connector. `ProcessSteps` is an explainer: 44 px numbered saffron squares and a dotted connector. `Stepper` is progress: 20 px markers and a solid connector.
+- `Stepper`, `ProcessSteps` and `Timeline` are vertical. The horizontal "How it works" scroller is the `HowItWorks` export of Carousels.
+- `QuizStep` has no screen using it today. It lives in the gallery only.
+
+<DoDont
+  dos={[
+    'Use Stepper when the user moves through steps and you know which one is current.',
+    'Use Timeline only for real order status, with a date on every step.',
+    'Use StepProgress for a flow where the step names do not matter.',
+    'Keep titles short. Put detail in the subtext or caption.',
+  ]}
+  donts={[
+    'Do not use Timeline as a how-to. It has dates and tones for status.',
+    'Do not use ProcessSteps to show live progress. It has no done or current state.',
+    'Do not use colour alone to show state. The Stepper marker shape changes too.',
+    'Do not nest two steppers in one screen section.',
+  ]}
+/>

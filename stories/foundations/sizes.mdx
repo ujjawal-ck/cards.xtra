@@ -1,0 +1,42 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Sizes from './sizes.stories';
+
+<Meta of={Sizes} />
+
+<PageHeader title="Sizes" meta="Foundations · tokens">
+  Edge lengths for icons, avatars and media, and the touch and layout sizes. From the Figma "sizes" collection.
+</PageHeader>
+
+Source: `src/tokens/spacing.ts` (`iconSize`, `avatarSize`, `mediaSize`, `sizing`).
+
+<Anatomy parts={[
+  { part: 'Icon edge', token: 'iconSize[n]', note: '8 to 56. The Icon atom default is iconSize[20].' },
+  { part: 'Avatar diameter', token: 'avatarSize[n]', note: '24 to 80.' },
+  { part: 'Logo or illustration height', token: 'mediaSize[n]', note: '16 to 64. Not the icon scale.' },
+  { part: 'Minimum touch target', token: 'sizing.touchMin', note: '44. Comfortable: sizing.touchComfortable, 48.' },
+  { part: 'Fixed heights', token: 'sizing.inputHeight, headerHeight, bottomNavHeight', note: '44, 56, 64.' },
+]} />
+
+## Icons
+
+<Canvas of={Sizes.Icons} />
+
+## Avatars
+
+<Canvas of={Sizes.Avatars} />
+
+## Media
+
+<Canvas of={Sizes.Media} />
+
+## Touch and layout
+
+<Canvas of={Sizes.TouchAndLayout} />
+
+`sizing.ticketLogoW` (74) has no slot on the spacing or media scale. It is a named one-off for the help ticket card logo box.
+
+<DoDont
+  dos={['Keep every tap target at least `sizing.touchMin` (44) tall.', 'Pick a logo height from `mediaSize`.', 'Let containers grow with the font scale (D7).']}
+  donts={['Do not size an icon with a raw number.', 'Do not reuse `iconSize` for a logo.', 'Do not set a fixed height on a text container.']}
+/>

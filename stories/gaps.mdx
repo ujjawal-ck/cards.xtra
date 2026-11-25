@@ -1,0 +1,268 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader } from '../storybook/blocks';
+
+<Meta title="Introduction/Gaps and unsupported" />
+
+<PageHeader title="Gaps and unsupported" meta="Audit 2026-11-19">
+  What the app cannot do or does wrong, what the design system lacks, which screens have no story, and what this Storybook cannot show on web. One de-duplicated list built from the six audits in storybook/audit. Each kept claim was checked against the cited src line. Nothing was run on a device. Source file: storybook/audit/gaps.md.
+</PageHeader>
+
+## How to read this file
+
+- Severity (one rule for all audits; where the audits disagreed, this rule wins):
+  - P0: the gap can lose, duplicate or misroute money (payout, withdraw), click-out attribution or cashback tracking.
+  - P1: trust. A wrong number, a false empty, misleading copy or a dead end.
+  - P2: polish.
+- Frequency: H, M or L. It is an estimate. No usage data exists (`pm-flows.md`, "How to read this file").
+- Evidence labels: no label = the cited line shows it. "Inferred" = the branch is in code, but the runtime result was not seen. "Doc only" = no `src/` evidence; listed at the end of part 1.
+- IDs (N1, A2 and so on) are labels, not ranks. Rows in each group sort P0 first, then by frequency H, M, L.
+- Story ids are full Storybook ids from current source. "live" in the story column = a story that shows today's wrong render.
+- Paths are under `src/` unless they start with `storybook/` or `stories/`.
+
+## 1. App gaps
+
+### Network and offline
+
+Root cause for N1 to N9 (inferred, not reproduced on a device): queries pause when the device is offline before the first fetch. A paused query with no data is neither `isLoading` nor `isError`, so screens fall to their empty or ₹0 branch. Only the tools handle it (`query/useCardSavings.ts:124`). There is no persisted cache (no persister in `src/` or `App.js`; `query/queryClient.ts:13`), so every offline cold start hits it. Engineering prerequisite: one shared "paused with no data = offline" helper. Pattern story: `patterns-offline--standard-offline-proposed`.
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| N1 | FIXED on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Missing Cashback "Yes" offline counts a paused lookup as "no visits" and routes to Oops. A real shopper is told they have no claim. Inferred. | `screens/MissingCashbackHelp.tsx:56`, `:66`, `:72` | Claimants on a weak network. M | P0 | `flows-8-orders-and-missing-cashback-did-you-shop--yes-offline` |
+| N2 | FIXED on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Choose date offline reads "We couldn't find any recent visits", CTA disabled. Inferred. | `screens/MissingCashbackChooseDate.tsx:92` | Claimants on a weak network. L | P0 | `flows-8-orders-and-missing-cashback-date-order-id-amount--choose-date-offline` |
+| N3 | Earnings offline cold start shows Confirmed ₹0 and Pending ₹0. A user with money sees nothing to withdraw. | `screens/EarningsScreen.tsx:95`, `:96`, `:288`, `:300` | Signed-in users who open Earnings on a weak network. M | P1 | `flows-7-earnings-and-withdraw-earnings--offline-proposed`, `flows-10-offline-and-session-paused-screens--earnings-offline-fix`, `patterns-offline--earnings-offline-proposed` |
+| N4 | Home offline cold start: the timed skeleton (about 750 ms) ends, then the masthead shows with no cards and no message. The no-results block needs an active filter. | `screens/HomeScreen.tsx:354`, `:387`, `:1605` | Every cold start with no network. M | P1 | `flows-2-home-and-discovery-home--offline-proposed` |
+| N5 | Orders list "No orders yet", Order detail body with empty values, Claims list per-tab empty, all offline. | `screens/OrdersList.tsx:425`; `screens/OrdersDetail.tsx:198`, `:199`; `screens/MissingCashbackDidYouShop.tsx:168` | Signed-in users on a weak network. M | P1 | `flows-10-offline-and-session-paused-screens--orders-list-offline-fix`, `--order-detail-offline-fix`, `--claims-list-offline-fix` |
+| N6 | Offers offline reads "No offers here yet". | `screens/OffersScreen.tsx:552` | Offers visitors on a weak network. M | P1 | `flows-6-offers-offers-tab--offline-proposed` |
+| N7 | Search says "No results" for every query when the catalogue is not loaded (offline, error or still loading). Only loaded sections count. | `organisms/SearchTopSheet.tsx:211` | Search users on a weak network. M | P1 | `flows-2-home-and-discovery-search--catalogue-not-loaded-proposed`, `--catalogue-loading-proposed` |
+| N8 | Cards you can get, Advisor, Advisor results and All card benefits offline show "no cards" or "benefits not available" copy. Advisor eligibility offline shows no status and no verdict. | `screens/CardsYouCanGetScreen.tsx:291`; `screens/advisor/AdvisorScreen.tsx:445`; `screens/advisor/AdvisorResultsScreen.tsx:162`; `screens/AllCardBenefitsScreen.tsx:133`; `screens/advisor/useAdvisor.ts:130`, `:131` | Lower-traffic surfaces. L | P1 | `flows-3b-rejection-cards-you-can-get-rejection--offline-proposed`, `flows-3a-card-detail-and-apply-all-card-benefits--offline-proposed`, `flows-5-card-advisor-chat--offline-proposed`, `flows-5-card-advisor-chat--eligibility-offline-proposed`, `flows-5-card-advisor-results--offline-proposed` |
+| N9 | Profile offline or failed: blank name and contact. `isError` is never read. | `screens/ProfileScreen.tsx:64` | Signed-in users. M | P2 | `flows-10-offline-and-session-paused-screens--profile-offline-fix`, `flows-9-profile-and-account-profile--profile-failed-proposed` |
+| N10 | Tools: an edit of spends while offline replaces a good list with "You're offline" (no previous data kept). | `screens/tools/ToolResultsScreen.tsx:332`, `:533` | Tool users who edit offline. L | P2 | `flows-4-shared-result-league-table--edit-offline-proposed` |
+
+### Loaders and slow network
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| L1 | FIXED on branch `claude/mc-p0-fixes` (4d40166), not yet in `Anmol--changes`. Invoice upload: one POST for all images with the default 15 s deadline, no retry (not idempotent) and no progress. On a slow network it can fail every time, so the ticket cannot be raised. Inferred. | `api/missingCashback.ts:268`; `api/http/client.ts:50`, `:196`; `screens/MissingCashbackInvoiceUpload.tsx:64` | C1-Other and C2 claimants. L | P0 | `flows-8-orders-and-missing-cashback-outcomes--upload-unconfirmed`, `flows-8-orders-and-missing-cashback-outcomes--uploading-slow`; per-file progress still proposed: `flows-8-orders-and-missing-cashback-outcomes--uploading-proposed` |
+| L2 | No "taking longer" line on any loader outside the tools. Worst case on a GET is about 46 s (15 s per try, 2 retries, backoff) before the error shows. | `api/http/client.ts:50`, `:51`, `:196` | Anyone on a slow network. M | P1 | `flows-2-home-and-discovery-home--slow-catalogue-proposed`, `flows-1-launch-and-login-login-sheet--requesting-otp-slow-proposed`, `flows-2-home-and-discovery-eligibility-checker--checking-slow-proposed`, `flows-5-card-advisor-chat--checking-long-proposed` |
+| L3 | Calculate can take about 90 s (45 s timeout, 1 retry), but the wait line says "up to a minute". | `api/bankkaro.ts:68`, `:69`; `screens/tools/ToolResultsScreen.tsx:526` | Tool users on a slow network. M | P1 | `flows-4-shared-result-league-table--still-checking-proposed` |
+| L4 | Withdraw tap gives no feedback while the balance loads (awaits a refetch, up to 3 tries of 15 s). `AmountActionRow` has loading for the amount only, not for its action. | `screens/withdraw/useWithdrawGate.tsx:59` to `:63`; `molecules/AmountActionRow.tsx:76` | Users who tap Withdraw right after opening. M | P1 | `flows-7-earnings-and-withdraw-withdraw-gate--checking-balance-proposed` |
+| L5 | The payout call can run up to 30 s with only a busy footer. Nothing says "don't close the app". | `api/payments.ts:210` | Withdrawers on a slow network. M | P1 | `flows-7-earnings-and-withdraw-verify-otp--slow-payout-proposed` |
+| L6 | Earnings can flash ₹0 while the session restores: the query is disabled until a token exists, so `loading` is false. Inferred. | `query/useEarnings.ts:17`; `screens/EarningsScreen.tsx:96` | Signed-in cold starts, short window. M | P1 | None (the harness cannot hold the restore window) |
+| L7 | Beat my card pick list waits for the full calculate call only to list cards, and has no "my card is not here" exit. | `screens/tools/BeatMyCardPickScreen.tsx:163`, `:269` | Beat my card users. M | P1 | `flows-4b-beat-my-card-pick-list--my-card-missing-proposed` |
+| L8 | Bare spinners where a `Skeleton` exists: Orders list, Order detail, All card benefits, Store page, Claims list, Where did you shop, Choose date. | `screens/OrdersList.tsx:403`; `screens/OrdersDetail.tsx:211`; `screens/AllCardBenefitsScreen.tsx:129`; `screens/OffersBrandAmazon.tsx:362`; `screens/MissingCashbackDidYouShop.tsx:200`; `screens/MissingCashbackWhereDidYouShop.tsx:99`; `screens/MissingCashbackChooseDate.tsx:77` | Everyone, on every first load. H | P2 | `flows-8-orders-and-missing-cashback-orders-list--loading-proposed`, `flows-8-orders-and-missing-cashback-order-detail--loading-proposed`, `flows-8-orders-and-missing-cashback-claims-list--loading-proposed`, `flows-6-offers-store-page--loading-proposed`, `patterns-loading--store-header-proposed`, `patterns-loading--benefits-proposed` |
+| L9 | Offers search shows the no-results hint while the store index still loads (`isLoading` is not read). | `screens/OffersScreen.tsx:235` | Offers searchers. L | P2 | `flows-6-offers-offers-tab--search-index-loading-proposed` |
+
+### Errors and server codes
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| E1 | Login sheet shows raw API or transport text when send OTP, resend or verify fails (5xx, offline, timeout, 429 rate limit). | `auth/LoginSheetProvider.tsx:231`, `:263`, `:319` | Users on bad networks or shared IPs. M | P1 | `flows-1-launch-and-login-login-sheet--server-error-proposed`, `--offline-proposed`, `--rate-limit-proposed`, `patterns-offline--login-offline-proposed` |
+| E2 | Eligibility errors are not mapped by status. Every failure, including a 422 for a bad PIN, reads "Check your connection". The client check accepts any 6 digits. | `organisms/EligibilityCheckerSheet.tsx:293` to `:297`, `:328` to `:332`; `api/eligibility.ts:93`; `organisms/CardDetailSheet.tsx:673` | Users who mistype a PIN. M | P1 | `flows-2-home-and-discovery-eligibility-checker--invalid-pincode-proposed` |
+| E3 | Card detail: only `isPending` is read, so a failed detail fetch falls back to the list tiles or hides the benefits block, with no message. | `organisms/CardDetailSheet.tsx:1111`, `:1137`; `organisms/CardDetailScreenAndroid.tsx:288` | Card detail viewers on a weak network. M | P1 | `patterns-error-and-retry--benefits-error-proposed`; live: `flows-3a-card-detail-and-apply-card-detail-ios-sheet--detail-fetch-failed` |
+| E4 | Orders list checks `isError` before the rows, so a failed next page likely replaces the whole list with the error block. Inferred. | `screens/OrdersList.tsx:407` | Users with many orders. L | P1 | `flows-8-orders-and-missing-cashback-orders-list--next-page-failed` |
+| E13 | Claim submit and invoice upload have no unknown-outcome handling. Both are single POSTs with no retry; a timeout shows the raw error, and a retry can send the claim or the ticket again while the first one landed. Inferred. | `screens/MissingCashbackEnterAmount.tsx:76`; `screens/MissingCashbackInvoiceUpload.tsx:130`; `api/missingCashback.ts:203`, `:268`; `api/http/client.ts:196` | Claimants on a slow network. L | P1 | `flows-8-orders-and-missing-cashback-date-order-id-amount--submit-unknown-outcome-proposed`, live, upload half fixed with L1: `flows-8-orders-and-missing-cashback-outcomes--upload-unconfirmed` |
+| E5 | Off-pattern error blocks with ad-hoc text and a hand-built retry, or no retry (All card benefits): Home catalogue, All card benefits, Order detail, Where did you shop, Choose date. Order detail shows the same text for a 404 as for a 500. | `screens/HomeScreen.tsx:2244`; `screens/AllCardBenefitsScreen.tsx:133`; `screens/OrdersDetail.tsx:215`; `screens/MissingCashbackWhereDidYouShop.tsx:103`; `screens/MissingCashbackChooseDate.tsx:81` | Users who hit an error. M | P2 | `patterns-error-and-retry--home-catalogue-proposed`, `flows-3a-card-detail-and-apply-all-card-benefits--load-error-proposed`, `flows-8-orders-and-missing-cashback-order-detail--load-error-proposed`, `flows-8-orders-and-missing-cashback-order-detail--not-found-proposed` |
+| E6 | Missing Cashback store-visit lookup failure is a native `Alert` (it has "Try again"). | `screens/MissingCashbackHelp.tsx:59` to `:63` | Claimants on a weak network. L | P2 | `flows-8-orders-and-missing-cashback-did-you-shop--lookup-failed` |
+| E7 | A failed refocus refetch stacks the Home error block over a good list, and replaces a good list on Cards you can get. Inferred. | `screens/HomeScreen.tsx:2244`; `screens/CardsYouCanGetScreen.tsx:280` | Users who return to the app on a weak network. L | P2 | `flows-2-home-and-discovery-home--refetch-failed-proposed` |
+| E14 | Advisor "Start over?" confirmation is a native `Alert`. | `screens/advisor/AdvisorScreen.tsx:269` | Advisor users who restart. L | P2 | `flows-5-card-advisor-chat--start-over-confirm` |
+| E8 | Claim steps show raw transport or server text (`e.message`). | `screens/MissingCashbackEnterOrderId.tsx:107`; `screens/MissingCashbackEnterAmount.tsx:76`; `screens/MissingCashbackNewUserCheck.tsx:96`; `screens/MissingCashbackCategorySelect.tsx:66` | Claimants who hit an error. L | P2 | None |
+| E9 | Offers error always says "Something went wrong on our side", also for a dropped network. | `screens/OffersScreen.tsx:539`, `:540` | Offers visitors offline mid-load. L | P2 | Live: `flows-6-offers-offers-tab--network-drop` |
+| E10 | A malformed calculate body shows "No cards came back", the same as a real empty. Only a contract log records it. | `lib/cardTools.ts:627` | Tool users during a backend bug. L | P2 | None |
+| E11 | A 403 on a user call is not a session end, so the screen shows the generic error with a retry that cannot help. | `api/http/tokenManager.ts:166` to `:170`, `:200` | Users during a gateway or key fault. L | P2 | None |
+| E12 | "Call Us" failure: Get Help swallows it, Profile has no catch. No message. | `screens/GetHelpScreen.tsx:99`; `screens/ProfileScreen.tsx:240` | Devices with no dialler (tablets). L | P2 | None (needs the toast host, DS-2) |
+
+### Empty and data volume
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| D6 | League table can rank cards the app cannot sell at the top. Rows have no Apply, and there is no "why can't I apply" state (decision D27, directional). | `lib/cardTools.ts:712`; `screens/tools/ToolResultsScreen.tsx:72`, `:375`; `organisms/SavingsBreakdownSheet.tsx:382` | Most tool users. H | P1 | Live: `flows-4-shared-result-league-table--row-not-in-app`; no proposal yet |
+| D1 | A null fee from calculate reads as ₹0, so the card gets "Lifetime free" and passes the "Lifetime free" filter. | `lib/cardTools.ts:372` to `:375`, `:580`, `:593`, `:606` | Tool users, when the data has null fees. M | P1 | `flows-4-shared-result-league-table--null-fee-proposed` |
+| D4 | Zero eligible cards on the Home eligibility toggle: no sheet and no message (only `eligibleCount > 0` has a branch). | `screens/HomeScreen.tsx:2730` | Low-income users who use the toggle. M | P1 | `flows-2-home-and-discovery-home--none-eligible-proposed` |
+| D5 | Rejection sheet with zero alternatives: blocks 2 and 3 are left out, so only Edit and Continue to Apply remain. | `organisms/IneligibleSheet.tsx:130` | Low-income users who get a "no". M | P1 | `flows-3b-rejection-rejection-sheet--zero-picks-proposed`, `patterns-eligibility-verdict--ineligible-zero-alternatives-proposed` |
+| D10 | Monthly income has no upper bound and no `maxLength` (only the PIN has one). A yearly figure typed as monthly inflates eligibility. | `organisms/EligibilityCheckerSheet.tsx:499`, `:509` to `:515` | Users who type a yearly income. M | P1 | `flows-2-home-and-discovery-eligibility-checker--very-high-income-proposed` |
+| D2 | Mappers and sheets turn a null or unparsable amount into ₹0: earnings, orders, breakup sheet, payout-settling sheet. A partial response reads as "no money". | `api/earningsMapper.ts:93` to `:96`; `api/ordersMapper.ts:103`; `organisms/EarningsBreakupSheet.tsx:174`; `api/payments.ts:74`; `screens/withdraw/useWithdrawGate.tsx:128` | Any user during a partial API response. L | P1 | Live: `flows-8-orders-and-missing-cashback-orders-list--null-amount` |
+| D3 | The Orders store filter works on loaded pages only, so long histories get a false "No matching results". | `screens/OrdersList.tsx:276` to `:279` | Users with long histories. L | P1 | Live: `flows-8-orders-and-missing-cashback-orders-list--no-matching-results` |
+| D9 | Notifications always says "You're all caught up". No feed API exists. | `screens/NotificationsScreen.tsx:172` | Every bell tap. H | P2 | None |
+| D7 | Home has no empty state when the catalogue returns 0 cards with no filter. | `screens/HomeScreen.tsx:1605` to `:1607` | Rare backend fault. L | P2 | `flows-2-home-and-discovery-home--empty-catalogue-proposed` |
+| D8 | Orders list renders every loaded row in a `ScrollView` (no virtualisation) and has no end-of-list cue. | `screens/OrdersList.tsx:435` to `:437` | Heavy shoppers. L | P2 | `flows-8-orders-and-missing-cashback-orders-list--end-of-list-proposed` |
+
+### Money (withdraw, payout)
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| M1 | Only timeout and network count as "unknown outcome". A gateway 5xx on submit shows "Payment failed" and invites a retry while a payout may have landed. Note: pending (5002) is a payout state, not an error (user, 2026-11-19). The withdraw gate already shows it as a state with the "Payment Is Processing" sheet (`screens/withdraw/useWithdrawGate.tsx:9`). | `query/mutations/withdraw.ts:86`; `screens/withdraw/WithdrawVerifyOTP.tsx:177` | Withdrawers during a backend incident. L | P0 | `flows-7-earnings-and-withdraw-verify-otp--payment-failed-proposed`, `--payout-already-pending-proposed`, `patterns-money-confirmation--payout-failed-proposed` |
+| M2 | Missing payment method ids fall back to built-in ids and are only reported. On a backend with other ids, a payout can go to the wrong method. | `api/payments.ts:130` to `:132` | Every withdrawer, if the field is missing. L | P0 | None (no visible state) |
+| M3 | Unknown payout outcome (timeout, re-check failed) is a native `Alert`, not a screen. The money is in limbo. | `screens/withdraw/WithdrawVerifyOTP.tsx:88`, `:89` | Withdrawers on a slow network. L | P0 | `flows-7-earnings-and-withdraw-verify-otp--unknown-outcome-proposed`, `patterns-money-confirmation--unknown-outcome-proposed` |
+| M4 | Verify OTP maps every error that is not status 0 (5xx, 401 session end) to "Enter a valid OTP". | `screens/withdraw/WithdrawVerifyOTP.tsx:133` to `:137` | Withdrawers during a fault. M | P1 | None; related `flows-7-earnings-and-withdraw-verify-otp--connection-problem-proposed` |
+| M5 | Other withdraw failures are native `Alert`s with server text: payout failed, OTP session expired, connection problem, resend failed, send OTP failed (UPI, Amazon, Flipkart), balance could not load. | `screens/withdraw/WithdrawVerifyOTP.tsx:111`, `:134`, `:177`, `:204`; `screens/withdraw/WithdrawEnterUPI.tsx:75`; `screens/withdraw/WithdrawAmazon.tsx:99`; `screens/withdraw/WithdrawFlipkart.tsx:92`; `screens/withdraw/useWithdrawGate.tsx:72` | Withdrawers who hit any error. M | P1 | `flows-7-earnings-and-withdraw-details--upi-send-otp-failed-proposed`, `--upi-send-otp-rate-limited-proposed`; `flows-7-earnings-and-withdraw-verify-otp--resend-failed-proposed`, `--session-expired-proposed`; `flows-7-earnings-and-withdraw-withdraw-gate--balance-error-proposed`, `patterns-toast-and-feedback--balance-error-proposed`, `patterns-error-and-retry--network-problem-proposed` |
+| M7 | No per-payout record after a withdrawal. Success goes to Home. Payment History is hidden and shows sample data (D4). | `screens/withdraw/WithdrawSuccess.tsx:131`; `screens/ProfileScreen.tsx:185` to `:189`; `screens/ProfilePaymentHistory.tsx:79` | Every withdrawer. M | P1 | `flows-7-earnings-and-withdraw-success--payout-record-proposed` |
+| M6 | `belowThreshold` from payment info is set but never read. The gate uses its own minimum, so a user the server refuses goes through UPI and OTP to a late "Payment failed". | `query/usePaymentInfo.ts:86`; `screens/withdraw/useWithdrawGate.tsx:91`, `:106` | Users near the minimum. L | P1 | None |
+| M8 | Get Paid does nothing when the token is gone (session ended on the form). | `screens/withdraw/WithdrawEnterUPI.tsx:59`; `screens/withdraw/WithdrawAmazon.tsx:83`; `screens/withdraw/WithdrawFlipkart.tsx:76` | Long-idle withdrawers. L | P1 | `flows-10-offline-and-session-mid-flow-return--withdraw-otp-session-ended`; live: `flows-7-earnings-and-withdraw-details--upi-session-ended` |
+| M9 | Session expiry during a money step (withdraw OTP, claim submit, invoice upload): the login sheet opens with no return to the step. | `auth/LoginSheetProvider.tsx:123` to `:127`; `auth/AuthContext.tsx:195` to `:202` | Long-idle users. L | P1 | `flows-10-offline-and-session-mid-flow-return--withdraw-otp-session-ended`, `--claim-submit-session-ended`, `--invoice-upload-session-ended` |
+| M11 | Bank Transfer is "Coming soon". Users without UPI can only take a gift card. | `screens/WithdrawScreen.tsx:242`, `:243` | Users without UPI. M | P2 | None |
+| M10 | Method rows stay tappable while earnings load or fail, and the next screen gets amount 0 (display and analytics only; the payout POST sends no amount). | `screens/WithdrawScreen.tsx:184`, `:185`, `:188` to `:191` | Rare (the gate loads earnings first). L | P2 | `flows-7-earnings-and-withdraw-method-select--earnings-error-proposed` |
+
+### Attribution (click-out)
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| A2 | Closing the eligibility checker that Apply opened drops the Apply: no bank page, no message. The gate default is `mandatory`. | `screens/HomeScreen.tsx:2694` to `:2701`; `experiments/index.ts:31` | Every first Apply without saved details. H | P0 | None (product question Q4) |
+| A1 | Apply and Shop & Earn have no in-flight guard and no loading state while the user id resolves (a profile refetch, up to about 46 s). The tap looks dead. A second tap later sends a second click-out with a new click id. | `lib/useClickOut.tsx:85` to `:115` (refetch `:99`); `organisms/CardDetailSheet.tsx:2066` to `:2072` | Signed-in users whose profile is not cached. M | P0 | `flows-3a-card-detail-and-apply-click-out--resolving-user-id-proposed`, `patterns-click-out--resolving-proposed`; live: `flows-3a-card-detail-and-apply-click-out--double-tap-today`, `flows-3a-card-detail-and-apply-click-out--resolving-slow-today` |
+| A4 | Empty URL: Apply and Shop & Earn do nothing, with no message and no `clickout_blocked` event. The store page still logs `offer_shop`. `useTrackedClickout` (which logs `clickout_blocked`) has no caller. | `lib/useClickOut.tsx:69`, `:87`; `screens/OffersBrandAmazon.tsx:553` to `:557`; grep: no caller of `useTrackedClickout` in `src/` or `App.js` | Cards or stores with no link. M | P0 | `flows-3a-card-detail-and-apply-click-out--empty-url-proposed`, `patterns-click-out--no-link-proposed`, `flows-6-offers-store-page--no-shop-link-proposed` |
+| A3 | `CLICK_OUT` is logged and the card is saved as applied before `openUrl`, and `openUrl` swallows a failure. Analytics counts a click-out that never opened. | `lib/useClickOut.tsx:72`, `:81`, `:82`; `lib/openUrl.ts:11` | Rare open failures, but it skews every click-out count. L | P0 | None (Storybook stubs `Linking`) |
+| A5 | League table when the catalogue never loaded or is still loading: every row loses Apply, and the sheet says "You cannot apply for this card in this app." for cards the app sells. | `query/useCardSavings.ts:70`; `organisms/SavingsBreakdownSheet.tsx:382` | Tool users whose Home load also failed. L | P0 | `flows-4-shared-result-league-table--catalogue-failed-proposed` |
+| A6 | User id not resolved: a native `Alert`, no retry, no analytics event. | `lib/useClickOut.tsx:106`, `:132` | Users right after login on a slow network. L | P0 | `flows-3a-card-detail-and-apply-click-out--user-id-missing-proposed`, `patterns-toast-and-feedback--click-out-error-proposed` |
+| A7 | No return state after a click-out: the same screen shows, with no "what happens next" and no pending Rewards record. The applied card is read only by the cross-sell rail. | `lib/useClickOut.tsx:67` to `:83`; `screens/useCrossSellRail.ts:100` | Every click-out. H | P1 | `flows-3a-card-detail-and-apply-click-out--return-proposed` |
+| A8 | No redirect step at the hand-off. Nothing says "your cashback is tracked, finish there". | `lib/useClickOut.tsx:82` | Every click-out. H | P1 | `flows-3a-card-detail-and-apply-click-out--redirect-proposed`, `patterns-click-out--redirect-proposed` |
+| A9 | Apply from tools, advisor, Cards you can get and store best cards skips the eligibility gate that Home runs (`eligibility_known` is always false). | `lib/useCardDetailSheet.tsx:14`, `:60` | Users on those surfaces. M | P2 | None (product question Q4) |
+
+### Session and auth
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| S5 | New users get a generated placeholder email (D16). Profile shows it masked. Payout, claim and reset emails never reach them. | `auth/LoginSheetProvider.tsx:282`; `screens/ProfileScreen.tsx:91` | Every new signup. H | P1 | None |
+| S1 | Session expired: the login sheet opens by itself with the fixed title "Log in or sign up". The user is not told why. | `auth/LoginSheetProvider.tsx:123` to `:127`, `:427` | Every user whose refresh token dies. M | P1 | `flows-1-launch-and-login-login-sheet--session-expired-proposed`, `patterns-session-expiry--per-reason-title-proposed` |
+| S2 | A refresh rejected at launch logs the user out silently: no `sessionExpiredAt`, no sheet, no message. | `auth/AuthContext.tsx:136` to `:140`, `:149` | Users back after a long gap. M | P1 | None |
+| S4 | Edit Profile and contact change are demo: Save only goes back, any OTP passes, then the app says "updated". | `screens/AccountSettingsScreen.tsx:205`; `screens/EditContactVerifyIdentityScreen.tsx:103` to `:106`; `screens/EditContactVerifyNewScreen.tsx:121` to `:126` | Users who fix a name, email or number. M | P1 | `flows-9-profile-and-account-edit-contact--enter-new-already-registered` |
+| S3 | Orders list left open when the session ends shows "No orders yet" behind the login sheet (cache cleared, query disabled). | `auth/AuthContext.tsx:195`, `:202`; `query/useOrders.ts:25`; `screens/OrdersList.tsx:425` | Long-idle users. L | P1 | `flows-10-offline-and-session-session-expired--orders-list-login-prompt` |
+| S6 | No way to delete the account: the entry is hidden (D23), and the delete OTP accepts any code. | `screens/AccountSettingsScreen.tsx:183`; `screens/DeleteAccountOtpScreen.tsx:127` to `:132` | Users who leave. L, with store-policy risk | P1 | None (hidden stories only) |
+| S8 | Logout waits for the server logout call (one POST, up to 15 s) before it clears the session, and the confirm sheet has no loading state. | `auth/AuthContext.tsx:274` to `:281`; `screens/ProfileScreen.tsx:105`; `organisms/LogoutConfirmSheet.tsx:44` | Users who log out on a slow network. L | P2 | `flows-9-profile-and-account-logout--logging-out-proposed` |
+| S7 | The 7 s splash safety exit can fire while the session still loads. The route then depends on the onboarded flag. Inferred. | `screens/SplashScreen.tsx:35`, `:64` to `:66` | Slow refresh at launch. L | P2 | None |
+
+### Content and copy
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| C1 | Withdraw success promises "We'll notify you once it's processed". The app has no push package and Notifications is always empty, so the app itself cannot notify. Whether the server sends an SMS or email is not known (inferred). New in this report, not in the audits. | `screens/withdraw/WithdrawSuccess.tsx:55`, `:62`, `:69`; `screens/NotificationsScreen.tsx:172`; `package.json` | Every withdrawer. M | P1 | None |
+| C2 | Store with no cashback amount: the headline falls back to the word "Cashback" in place of a rate. | `api/offersMapper.ts:59`; `organisms/StoreCashbackDetails.tsx:220` | Stores with no rate in the data. L | P1 | `flows-6-offers-store-page--no-cashback-rate-proposed` |
+| C3 | `EligibleSheet` has a fixed rupee rewards figure as its default headline. Home passes `undefined` when the hero card has no reward value. | `organisms/EligibleSheet.tsx:135`; `screens/HomeScreen.tsx:2782` to `:2785` | Rare today. L | P1 | Live: `flows-3a-card-detail-and-apply-result-sheets--eligible-no-reward-today` |
+| C4 | Invoice copy promises ".jpg, .png, .jpeg, .pdf, .bmp, Max 2MB". The picker allows images only, and nothing checks size or type. | `screens/MissingCashbackInvoiceUpload.tsx:63`, `:174` | C1-Other and C2 claimants. L | P1 | `flows-8-orders-and-missing-cashback-outcomes--invoice-file-too-large` |
+| C5 | A rejected claim tells the user to raise a ticket from Get Help, whose missing-cashback topic restarts the same intake. | `api/missingCashbackMapper.ts:335`; `screens/GetHelpScreen.tsx:125`, `:127` | Users whose claim fails. M | P2 | Live: `flows-8-orders-and-missing-cashback-claims-list--not-tracked-with-reason` |
+| C6 | Order detail "Need Help" restarts the claim at store choice. Store, date and order ID are not carried. | `screens/OrdersDetail.tsx:278` | Users who start from an order. M | P2 | None |
+| C7 | Ticket success never shows the ticket number. The upload passes `ticketId`; the success screen reads no params. | `screens/MissingCashbackInvoiceUpload.tsx:128`; `screens/MissingCashbackTicketSuccess.tsx` | Ticket raisers. L | P2 | None |
+| C8 | Copy bug: "1 cards". | `screens/tools/ToolResultsScreen.tsx:578` | Tool users with one match. L | P2 | None |
+| C9 | `LogoContainer` has no image error fallback, so a dead logo URL is a blank tile. `BrandLogoTile` has one. | `atoms/LogoContainer.tsx:52`; `atoms/BrandLogoTile.tsx:86` | Stores with a dead logo URL. L | P2 | Live: `flows-8-orders-and-missing-cashback-orders-list--logo-failed` |
+| C10 | Write Review shows "submitted" but discards the text (hidden, D14). | `screens/ReviewUsScreen.tsx:306` | Nobody today (hidden). L | P2 | Hidden stories only |
+
+### Device (small screens, font, keyboard, back)
+
+| ID | Gap | Where (file:line) | Who is hit, how often | Severity | Proposed state story |
+|---|---|---|---|---|---|
+| V1 | No Android hardware-back guard while a payout, claim submit or invoice upload is in flight. `BackHandler` is used only on claim result screens and the three tool input screens. `gestureEnabled: false` turns off iOS swipe-back on result screens only, and does not cover Android back. `beforeRemove` is used only on NameInput. | grep `BackHandler`, `beforeRemove`, `usePreventRemove`, `gestureEnabled` in `src/`: `screens/useExitToClaims.ts`, `screens/tools/*`, `navigation/RootNavigator.tsx:201`, `:208`, `navigation/WithdrawStack.tsx:54`, `screens/NameInputScreen.tsx:220` | Android users who press back mid-request. L | P1 | None; device QA |
+| V2 | Invoice photo permission denied: a native `Alert` with no link to Settings. The user is stuck. | `screens/MissingCashbackInvoiceUpload.tsx:59` to `:61` | Users who tapped "Don't allow". L | P1 | `flows-8-orders-and-missing-cashback-outcomes--invoice-photo-permission-denied` |
+| V3 | App text follows the OS font size with no cap (a cap was tried and reverted). | `atoms/Text.tsx:31` | Users with large system font. M | P2 | None; device QA |
+| V4 | Claim amount and order ID forms use `KeyboardAvoidingView` with no Android behaviour. The withdraw forms fixed this. | `screens/MissingCashbackEnterAmount.tsx:87`; `screens/MissingCashbackEnterOrderId.tsx:118` | Android claimants. M | P2 | None; device QA |
+| V5 | No pull to refresh on Home, Earnings, Orders, Claims, Profile or All card benefits. Only Offers has `RefreshControl`. | grep `RefreshControl` and `onRefresh` in `src/screens` and `src/organisms`: `screens/OffersScreen.tsx` only | Users who pull to refresh. M | P2 | None (`RefreshControl` does not render on web) |
+| V6 | Long names have no line limit: the Greeting name (`display40ExtraBold`) and the Profile masthead name. | `screens/GreetingScreen.tsx:184`; `organisms/Masthead.tsx:341` | Users with long names. L | P2 | None |
+| V7 | The all-time earnings figure uses `display36ExtraBold` with no step-down for long amounts (D7 bans auto-shrink). | `organisms/Masthead.tsx:629` to `:631` | High earners. L | P2 | None |
+
+### Dropped or doc only (not in the table)
+
+- Offers tab empty on production (stores not mapped): doc only (D11, `docs/UI_UX_AUDIT_2026-11-09.md`). No `src/` evidence. Live story `flows-6-offers-offers-tab--empty-no-offers-yet` shows the empty state.
+- Invoice limits "app allows 6 MB" and "BFF limit about 4.4 MB": no limit exists in `src/` (C4). The numbers are doc only.
+- OTP rate limits "5 per number, 10 per IP in 10 minutes": doc only. E1 keeps the raw-text gap.
+- Calculate response "about 3.7 MB": not in code. L7 keeps the wait gap.
+- "500+ orders = 25 pages": page size not checked. D8 keeps the no-virtualisation gap.
+- Old doc claims that `pm-flows.md` found fixed in code are not carried (dropped click after "Log in to earn", Earnings ₹0 on a load error, silent income fallback, store placeholder coupons, "Learn More" no-ops, combined balance forced to gift card).
+
+## 2. Design-system gaps
+
+| ID | Missing part or token | Where it is needed |
+|---|---|---|
+| DS-1 | "Connection lost" and generic error illustrations for `ScreenState`. Only `appOrders`, `tracking` and `confirmation` exist (`assets/images/index.ts:141` to `:145`). | Every offline state (N1 to N9), error states (E5) |
+| DS-2 | App-level toast host with `show({ tone, message, actionLabel, onActionPress })`. `Toast` is mounted per screen (`screens/ReviewUsScreen.tsx:306`, `screens/ProfilePaymentHistoryDetails.tsx:171`). | Replacing native `Alert` in click-out (A6), withdraw (M5), gate (L4), Call Us (E12) |
+| DS-3 | Redirect interstitial organism with title and body slots. The cat animation lives only inside `organisms/FilterTransitionOverlay.tsx:136`. | Click-out hand-off (A8) |
+| DS-4 | Login sheet title and body per `source`. Today the title is fixed (`auth/LoginSheetProvider.tsx:427`). | Session expired (S1); later other sources |
+| DS-5 | `ScreenState` with a second action and a variant. Today it takes one action and no variant (`organisms/ScreenState.tsx:23` to `:30`). | "Try again" plus "Go to Earnings" or "Contact us" (M3, N3) |
+| DS-6 | Action loading on `AmountActionRow` (loading covers the amount only, `molecules/AmountActionRow.tsx:76`). | Withdraw tap while the balance loads (L4) |
+| DS-7 | "Amount unknown" display rule, so null never renders as ₹0. | D2, N3 |
+| DS-8 | Long-amount rule for display numbers (step-down above a set length, since D7 bans auto-shrink). | V7 |
+| DS-9 | Loading slot in `SearchTopSheet` (no loading state today). | N7, L9 |
+| DS-10 | Reusable "wait line" with a time step ("still working" after N s). It exists only in the tools (`screens/tools/ToolResultsScreen.tsx:526`). | L2, L3, L5 |
+| DS-11 | Image error fallback on `LogoContainer` (`atoms/LogoContainer.tsx:52`). | C9 |
+| DS-12 | Click-out return state (a "did you apply" or pending-Rewards card). No part exists. | A7 |
+| DS-13 | Engineering, not visual: one shared offline-aware query state ("paused with no data" = offline), as in `query/useCardSavings.ts:124`. | Every N row |
+
+## 3. Pages and screens with no story
+
+| Screen | Status | Why |
+|---|---|---|
+| `screens/NameInputScreen.tsx` | No story | Being added now (new-number name step of the login flow). |
+| `screens/ReviewUsScreen.tsx` | Placeholder story only (`stories/flows/09-profile-and-account/HiddenScreens.stories.tsx:12`) | Withheld: the sample reviews hold a real-looking person name at `screens/ReviewUsScreen.tsx:50`, `:56`, `:62`. Replace it with a placeholder in `src/` first. Screen is hidden (D14). |
+| `screens/FoundationCheck.tsx` | No story, by design | Dev-only token check screen (`navigation/RootNavigator.tsx:128`, `__DEV__`). |
+| `screens/advisor/AdvisorAvatarDemo.tsx` | No story, by design | Dev-only (`navigation/RootNavigator.tsx:234`, `__DEV__`). |
+| `screens/DsAdditionsGallery.tsx` | No story, by design | Rendered only inside FoundationCheck (`screens/FoundationCheck.tsx:4022`). |
+| Advisor parts: `AdvisorChatBubble`, `AdvisorChatHeader`, `AdvisorMessageEntrance`, `AdvisorOptionRow`, `AdvisorReplyTray`, `AdvisorRevealBlock`, `AdvisorTypingDots` (`screens/advisor/`) | No component story | Shown only inside `Flows/5 Card advisor/Chat`. |
+
+## 4. What the Storybook cannot show on web (unsupported)
+
+| Item | What is lost | How to test it instead |
+|---|---|---|
+| Large font scaling | No font-scale control; app text is uncapped (`atoms/Text.tsx:31`), so 130% and larger layouts are not visible. | Device QA at 130% and largest font on Android and iOS: Verify OTP, Earnings cards, Order card, Method select. |
+| On-screen keyboard | No virtual keyboard, so keyboard-over-input layouts (login, checker, withdraw forms, claim forms) do not shift. | Simulator with the software keyboard on (iOS: Toggle Software Keyboard); Android emulator for V4. |
+| Android hardware back | `BackHandler` is a no-op (`storybook/.storybook/preview.tsx:6`). | Android emulator: press back during payout, claim submit, upload (V1) and in tool input screens. |
+| Native file picker and camera | `expo-image-picker` is the real web module (`storybook/.storybook/main.ts:75`); permission denial, many files and large files cannot be seeded. | Device: deny photo access, pick several large images, upload on a throttled network (L1, C4, V2). |
+| Rive and Lottie animations | Mocked to empty boxes (`storybook/.storybook/main.ts:97` to `:99`): splash, onboarding, withdraw success, filter transition cat. Animation-end callbacks never fire. | Simulator run of splash, onboarding, filter change and withdraw success. |
+| Masked-view gradients (`GradientText`, `RollingAmount`) | Render wrong or blank; `RollingAmount` shows "0" (`storybook/harness/README.md:135`). Greeting name and the Earnings headline cannot be trusted. | Simulator screenshots of Greeting and Earnings, including a long name and a large amount. |
+| RN `Modal` sizing | `Modal` sheets (ShareSheet, HowItWorksSheet) portal to `document.body` and size to the browser window, not the phone frame (`storybook/harness/README.md:134`). | Simulator at 390 and 360 widths. |
+| Saved-spends seeding | `savedSpends` is memory only on web (`lib/savedSpends.ts:18`, `canPersist` false), so "entered before" states in the tools have no story. | Simulator: run a tool once, reopen it. |
+| Haptics | `expo-haptics` is a no-op on web (unverified; from `fe-inventory.md` part 5). | Device (haptics do not work in a simulator). |
+| Push and SMS autofill | No push package in the app; OTP autofill uses `textContentType="oneTimeCode"` and `autoComplete` (`atoms/OtpInput.tsx:250` to `:253`), which web cannot trigger. | Device with a real SIM for OTP autofill. |
+| Android-only and iOS-only branches | `Platform.OS` is `web`, so `CardDetailScreenAndroid`, `CashbackPip`, Cashback guard and iOS sheet paths do not render as on device. | Android emulator and iOS simulator. |
+| Pull to refresh | `RefreshControl` does not render on web (V5; from `edge-flows-7-10.md` G13, not checked here). | Device. |
+| Link open failure | `Linking.openURL` is stubbed (`storybook/harness/storyState.ts:93`), so a failed open (A3) cannot be shown. | Device with an unsupported link scheme. |
+| Real timeouts | A GET timeout needs about 46 s and calculate about 90 s; stories do not wait for them. | Device or simulator on a throttled network (Network Link Conditioner). |
+| Supported, for the record | 360 dp works with the `android360` viewport global (`storybook/.storybook/preview.tsx:71`), not with the `width` prop alone. Native `Alert` is drawn by a DOM shim (`storybook/.storybook/preview.tsx:9` to `:11`). | Use the viewport toolbar. |
+
+## 5. Open product questions
+
+Merged from `pm-flows.md` section 4 and the three edge audits. None is decided here.
+
+| # | Question | Owner |
+|---|---|---|
+| Q1 | Apply while the user id resolves: block the button with a spinner, or open the link unattributed after N seconds? (A1) | PM, with eng (CashKaro tracking) |
+| Q2 | What does the user see before and after a click-out: redirect step, terms to accept, a "did you apply" return state? (A7, A8) | PM, with design |
+| Q3 | Log `CLICK_OUT` only after `Linking.openURL` resolves? It changes how click-outs are counted. (A3) | Eng (analytics) |
+| Q4 | Eligibility gate: keep `mandatory` or ship `skippable`; drop the Apply when the checker is closed, or continue to the bank; run the same gate on tools, advisor, Cards you can get and store best cards? (A2, A9) | PM |
+| Q5 | League table (D27): keep unsellable cards at the top with Apply only in the sheet? When the catalogue fails: hide Apply, show a retry, or block the league? (D6, A5) | PM |
+| Q6 | A store with no cashback rate or no `cashback_url`: list it, show it without Shop, or hide it? (A4, C2) | CashKaro FOP, with PM |
+| Q7 | Treat a payout 5xx as "unknown" (re-check first)? After an unknown outcome, block Resend and "Edit details" until a re-check clears? (M1, M3) | Eng (CashKaro payments) |
+| Q8 | Offline with a cached balance: show the last known balance with a "last updated" line, or hide amounts? (N3) | PM, with design |
+| Q9 | After a failed background refresh or an offline edit of spends: keep the old data with a warning, or show the error alone? (E7, N10) | PM, with design |
+| Q10 | Refresh rejected at launch: tell the user "You were logged out", or stay silent as a guest? A different user logs in over a withdraw screen: restart the stack or keep the draft? (S2, M9) | PM |
+| Q11 | Demo account flows (Edit Profile, contact change, delete): hide until the CashKaro profile APIs exist? What does a user deleted server-side see on next launch? (S4, S6) | PM, with eng (CashKaro backend) |
+| Q12 | Generated email (D16): collect a real email, and at which step (signup, first withdrawal, first claim)? (S5) | PM |
+| Q13 | Invoice limits: one number for size, file types (PDF or not) and file count, matched to the BFF. (C4, L1) | Eng (BFF), with CashKaro FOP |
+| Q14 | OTP rate limits (login and withdraw): what wait time does the API give, and should the app count wrong OTPs before the server 429? (E1, M5) | Eng (CashKaro auth) |
+| Q15 | Eligibility: is a 422 for a pincode "not serviceable" or a bad input? At what monthly income does the app ask "monthly, not yearly?" (E2) | BankKaro |
+| Q16 | Zero eligible cards on the Home toggle, and zero alternatives on the rejection sheet: which path forward (edit details, Cards you can get, all cards)? (D4, D5) | PM, with design |
+| Q17 | Wait times: is about 46 s on Home acceptable, or should the catalogue call use a shorter timeout? When does calculate show "still checking" (20 s proposed), and should it offer cancel? Keep the timed Home skeletons? (L2, L3) | Eng, with design |
+| Q18 | Beat my card: what does "I can't find my card" do, and should the pick list come from the catalogue instead of calculate? (L7) | PM |
+| Q19 | `crosssell_rail` default: `rail` (today) or `holdout` before release? (`experiments/index.ts:32` has a TODO) | PM |
+| Q20 | Claims: show unknown order status strings as "Pending" or a neutral "Processing"; add an upper bound or confirm step for very large claim amounts? | CashKaro FOP, with PM |
+
+Not carried (low stakes or merged): league ties, spend quiz close confirm, 403 copy (E11), logout local-first, prefill last UPI id.
+
+## 6. Top 10 to fix first
+
+Ranked by expected damage (frequency x severity, money and attribution first). A P1 can rank above a P0 when it hits far more users.
+
+1. A2: closing the checker drops the Apply on every first Apply without saved details.
+2. A1: dead Apply tap while the user id resolves, and double click-outs.
+3. N3: Earnings shows ₹0 offline; users think their cashback is gone.
+4. M1: a payout 5xx reads "Payment failed" and invites a duplicate request. (Pending is a state, not part of this gap.)
+5. A4: empty URL makes Apply and Shop & Earn a silent dead CTA, invisible in analytics.
+6. A3: click-out logged before the link opens, and failures swallowed.
+7. N1: Missing Cashback offline tells real shoppers they have no claim.
+8. A7: no return state after every click-out ("where is my Rewards" tickets).
+9. M2: missing payment method ids fall back silently; a payout can go to the wrong method.
+10. A5: catalogue not loaded strips Apply from every league row and says "You cannot apply".
+
+## Counts
+
+| Severity | Rows |
+|---|---|
+| P0 | 12 (3 fixed on a branch: N1, N2, L1) |
+| P1 | 44 |
+| P2 | 32 |
+| Total | 88 |

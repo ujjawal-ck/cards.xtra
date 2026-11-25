@@ -1,0 +1,45 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Empty and error/Overview" />
+
+<PageHeader title="Empty and error" meta="2 components · organisms">
+What a screen shows when there is nothing to show, something failed, or the user is signed out. `ScreenState` covers empty, no results and error. `GuestPrompt` covers a guest on an account screen.
+</PageHeader>
+
+## Anatomy
+
+The anatomy is for `ScreenState`.
+
+<Anatomy parts={[
+  { part: 'Container', token: 'paddingHorizontal spacing[24], paddingVertical spacing[32], gap spacing[16]', note: 'Centred. Pass style to place it.' },
+  { part: 'Illustration', token: '156 by 156, resizeMode contain', note: 'Optional. Images are in images.screenstate (appOrders, tracking, confirmation).' },
+  { part: 'Title', token: 'heading18SemiBold, colors.text.primary, centred', note: 'Always shown.' },
+  { part: 'Body', token: 'body14Regular, colors.text.secondary, gap spacing[4] under the title', note: 'Optional.' },
+  { part: 'Action', token: 'Button solid, tone second, size 44', note: 'Shows only with both actionLabel and onAction.' },
+  { part: 'GuestPrompt card', token: 'colors.surface.default, radius.xl, padding spacing[20], elevation.light.xs', note: 'Icon badge 48 round in colors.background.emphasis, icon in colors.action.primary.default.' },
+  { part: 'GuestPrompt action', token: 'Button solid, tone main, size 44, full width', note: 'Reassurance line is caption-style body12Regular in colors.text.tertiary.' },
+]} />
+
+## Composition
+
+- `ScreenState` replaces the old one-line texts ("No orders yet.", "Couldn't load offers. Pull to retry.") that each screen styled differently and that gave no way forward.
+- Error copy pairs one short title with a body and a Try again action. Empty copy states the reason and, where one exists, points to the next step (for example Explore cards).
+- Screens that need account data show `GuestPrompt` for guests instead of empty figures (Earnings, Profile). Login is optional elsewhere: Home, cards and Offers work as a guest.
+- Patterns: Empty, Error and retry, and Guest gate pages link here. This page does not repeat their rules.
+- Known gap (risk R6): a paused query is neither loading nor error, so Home, Earnings, Offers and Orders fall through to their empty layout while the phone is offline. No offline `ScreenState` exists yet.
+
+<DoDont
+  dos={[
+    'Say what happened in the title and what to do in the body.',
+    'Give an action when there is a way forward: Try again, Clear filters, Explore cards.',
+    'Use GuestPrompt, not zeros, for account data a guest cannot have.',
+    'Write ₹ amounts with Indian grouping in the copy.',
+  ]}
+  donts={[
+    'Do not show "No orders yet" for a failed load. Use the error copy.',
+    'Do not show ₹0 to a guest or while offline.',
+    'Do not write a rate in the copy. Write "X%" until it is verified.',
+    'Do not add a second button. ScreenState has one action.',
+  ]}
+/>

@@ -1,0 +1,55 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Footers/Overview" />
+
+<PageHeader title="Footers" meta="2 components · organisms">
+Two blocks that close a screen. `FooterButtons` is the sticky action bar. `Footer` is the large promotional block at the end of a page.
+</PageHeader>
+
+## Which one
+
+| You are building | Use |
+|---|---|
+| The sticky bar with the main action of a screen (Continue, Withdraw, Apply) | `FooterButtons` |
+| A strip with a note or a terms checkbox above the actions | `FooterButtons` with `strip` |
+| The closing headline, supporting text and card art at the end of a long page | `Footer` |
+
+## Anatomy
+
+The main part is `FooterButtons`, from `src/organisms/FooterButtons.tsx`.
+
+<Anatomy parts={[
+  { part: 'Container', token: 'surface.default, elevation.light.up when shadow is on', note: 'Full width. The shadow rises above the bar' },
+  { part: 'Strip (caption)', token: 'StripAlert layout center, tone from stripTone', note: 'Default tone info' },
+  { part: 'Strip (tnc)', token: 'TermsAndConditions default placement, body multi-line', note: 'Link labels default Terms and Privacy Policy' },
+  { part: 'Action row', token: 'spacing[16] horizontal, spacing[14] vertical, gap spacing[12]', note: 'Height 72 (size 44) or 80 (size 52)' },
+  { part: 'Primary button', token: 'Button solid, tone main (saffron)', note: 'second and mixed colours change the secondary only' },
+  { part: 'Secondary button', token: 'Button outline, tone main or second', note: 'dual: hugs its label. dual-outline: both outline' },
+  { part: 'Shine', token: 'LinearGradient band, 110 wide', note: 'Single layout only. Reanimated loop' },
+]} />
+
+`Footer` uses `display40ExtraBold` for the headline and `heading20SemiBold` for the subtext, both at `opacity[32]`. The padding is `spacing[24]` on top and `spacing[16]` on the sides. The theme sets the text colour: `dark` gives `surface.dark`, `light` gives `text.inverse`.
+
+## Composition
+
+- `FooterButtons` is pure composition: every button is the `Button` atom, the strips are `StripAlert` and `TermsAndConditions`.
+- `QuizStep` pins a `FooterButtons` (single) at the bottom of its screen.
+- The solid button is saffron only. Use `outline` for the secondary action.
+- `Footer` is theme-only, not tone-themed. Its text colour flips with the surface it sits on, so place `light` over a dark surface or an image.
+- `Footer` takes children, usually card art, which render below the CTA.
+
+<DoDont
+  dos={[
+    'Use one primary action per screen. Put it in FooterButtons.',
+    'Disable the primary button until the terms checkbox is ticked (strip tnc).',
+    'Use the caption strip for one short note about what happens next.',
+    'Use Footer light theme only over a dark surface or an image.',
+  ]}
+  donts={[
+    'Do not use two solid buttons. Use dual with an outline secondary.',
+    'Do not use shine on dual layouts. It only works on single.',
+    'Do not place FooterButtons inside a scroll view. It is sticky.',
+    'Do not put a cashback rate in the strip text. Write X% until it is verified.',
+  ]}
+/>

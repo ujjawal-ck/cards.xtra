@@ -1,0 +1,45 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../storybook/blocks';
+import * as Type from './typography.stories';
+
+<Meta of={Type} />
+
+<PageHeader title="Typography" meta="Foundations · tokens">
+  One family, Outfit, in five weights. 53 named text styles in four groups: display, heading, body, caption.
+  Render text with the `Text` atom and a `variant`. Never set size, weight or line height by hand.
+</PageHeader>
+
+Source: `src/tokens/typography.ts`, `src/atoms/Text.tsx`.
+
+## The naming rule
+
+`<group><size><Weight>`: `heading20SemiBold` is the Figma style Heading / 20 / Semi Bold. Each token is a full style: family, size, line height, letter spacing.
+
+<Anatomy parts={[
+  { part: 'Family', token: 'fontFamily.regular … extraBold', note: 'Outfit_400Regular to Outfit_800ExtraBold. One font file for each weight.' },
+  { part: 'Size and line height', token: 'typography.<variant>', note: 'Set together. Do not override.' },
+  { part: 'Colour', token: 'Text color prop, default colors.text.primary', note: 'Pass a semantic colour, such as colors.text.secondary.' },
+]} />
+
+## Scale
+
+<Canvas of={Type.Scale} />
+
+## Weights
+
+<Canvas of={Type.Weights} />
+
+## Raw scales
+
+<Canvas of={Type.RawScales} />
+
+## D7: no font-size caps
+
+Decision D7 in `docs/decision.md`: `maxFontSizeMultiplier` and `adjustsFontSizeToFit` misbehave on React Native's new architecture on Android. Text follows the OS setting and the layout grows with it. Known gap: no step-down rule for very long display amounts (for example 8 digits in the Earnings masthead).
+
+<Canvas of={Type.LongText} />
+
+<DoDont
+  dos={['Use `<Text variant="body14Regular">`.', 'Let containers grow: `minHeight`, wrapping labels.', 'Pass `color={colors.text.secondary}` for secondary copy.']}
+  donts={['Do not set `fontWeight`. Weights are separate fonts.', 'Do not add `maxFontSizeMultiplier` or `adjustsFontSizeToFit` (D7).', 'Do not type a font size in a screen. Extend the token file instead.']}
+/>

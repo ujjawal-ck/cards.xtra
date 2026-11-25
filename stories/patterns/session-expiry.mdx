@@ -1,0 +1,56 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './session-expiry.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Session expiry" meta="Pattern">
+  When the refresh token is rejected, the login sheet opens over the current screen. It does not say why, and the way back to a money step is not defined.
+</PageHeader>
+
+## The rule
+
+- The sheet opens by itself with `source: session_expired` (`src/auth/LoginSheetProvider.tsx:125`). A manual logout never sets it.
+- Today the title is always "Log in or sign up" (`:427`). A user whose session ended sees the same words as a new user.
+- Proposal: a title and body for this source: "Please log in again", "You were logged out to keep your account safe. Your cashback is safe." This needs a title and body slot per source (DS gap).
+- On expiry the cache is cleared, so an account-only screen left open shows its empty state behind the sheet (audit).
+- Not designed: return to the money step (withdraw OTP, claim submit, invoice upload) after login (R17). The audit gives no copy, so this page shows none.
+- A network failure keeps the session (`src/auth/AuthContext.tsx:127`). Only a rejected token expires it.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'LoginSheet', id: 'components-sheets-loginsheet--docs', note: 'unused today; the login provider has its own sheet.' },
+  { name: 'BottomSheetHeader', id: 'components-sheets-bottomsheetheader--docs', note: 'the handle and header of the sheet.' },
+  { name: 'GuestPrompt', id: 'components-empty-and-error-guestprompt--docs', note: 'for the screen behind the sheet.' },
+  { name: 'Button', id: 'components-buttons-button--docs', note: 'the CTA is unchanged.' },
+]} />
+
+## Where it appears
+
+- Flow 1 Launch and login: Login sheet, session expired state.
+- Flow 7 Earnings and withdraw: Verify OTP, "session expired" (R17).
+- Flow 8 Orders and missing cashback: claim submit, invoice upload.
+- Flow 10 Offline and session: session-expired sheet, mid-flow return (not built).
+
+## Examples
+
+<Canvas of={S.TodaySheet} />
+<Canvas of={S.PerReasonTitleProposed} />
+
+<DoDont
+  dos={['Tell the user why the sheet opened.', 'Say that their cashback is safe.', 'Keep the CTA the same.']}
+  donts={['Do not reuse the new-user title for an expired session.', 'Do not clear a money step silently. Decide the return first (open question).', 'Do not invent copy for the return state before the product owner decides.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Sheet opens by itself on expiry', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:125', story: 'flows-10-offline-and-session-session-expired--orders-list-session-expired' },
+  { state: 'Fixed title "Log in or sign up"', status: 'live', source: 'src/auth/LoginSheetProvider.tsx:427', note: 'PARTIAL in the audit: the user does not know why.' },
+  { state: 'Per-reason title and body', status: 'proposed', source: 'ux-states.md section 1', story: 'patterns-session-expiry--per-reason-title-proposed', note: 'Open question: DS gap, a title and body slot per source.' },
+  { state: 'Withdraw verify: OTP session expired', status: 'proposed', source: 'ux-states.md section 6', note: 'Reuse the screen\'s existing expired state (WithdrawVerifyOTP.tsx:214) in place of the Alert (:111). No new copy.' },
+  { state: 'Return to the money step after login (R17)', status: 'proposed', source: 'pm-flows.md R17', note: 'Open question for the product owner. No copy until decided.' },
+  { state: 'Screen behind the sheet shows an empty state', status: 'proposed', source: 'ux-states.md section 7', note: 'See the Guest gate pattern: GuestPrompt "Log in to see your orders".' },
+]} />

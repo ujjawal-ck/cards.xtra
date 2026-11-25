@@ -1,0 +1,340 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/2 Home and discovery/Overview" />
+
+<PageHeader title="2 Home and discovery" meta="Flow 2 · 5 steps · 39 states">
+Find cards that fit me without knowing card names. The Home tab holds the masthead with search, the tools row, the filter row (Category, Filters, Eligibility toggle) and the card tiles. Auth: guest. No money step on this flow; the tile "Apply Now" starts flow 3a.
+</PageHeader>
+
+## Flow
+
+```
+ENTRY: Home tab
+  v
+Home  ---- search bar --------> Search sheet --- result ----> Card detail (3a)
+  |                                  |-- "help me pick" ---> Advisor (flow 5)
+  |-- Filters chip --> Filters sheet --> Apply Filter --> white transition --> filtered list
+  |-- Eligibility toggle --> Eligibility checker --> result sheet --> Home regrouped
+  |                                       (Eligible / Maybe / Ineligible)
+  |-- tools row ------------> Tools (flow 4)
+  |-- tile tap / "Apply Now" -> Card detail (3a)        [Apply gate and click-out: 3a, MONEY]
+  |-- bell -----------------> Notifications (always empty)
+  |-- help icon ------------> Get Help (flow 9)
+```
+
+States: 29 live, 10 proposed, 0 hidden, 0 demo. Each state is a story; a row links to it. Screen stories use the real app screen with no network (fixtures answer every call); a proposed state is composed from design-system parts and is not in the app.
+
+## Steps and states
+
+### Home
+
+<StateMatrix rows={[
+  {
+    "state": "Loading",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2871",
+    "story": "flows-2-home-and-discovery-home--loading",
+    "note": "First load: the Home skeleton"
+  },
+  {
+    "state": "Loaded Guest",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2884",
+    "story": "flows-2-home-and-discovery-home--loaded-guest",
+    "note": "Loaded, guest: cards from the harness catalogue"
+  },
+  {
+    "state": "Loaded Eligibility Groups",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:1543",
+    "story": "flows-2-home-and-discovery-home--loaded-eligibility-groups",
+    "note": "Eligibility on: Home regroups into Eligible, Maybe and Ineligible cards"
+  },
+  {
+    "state": "No Match With Closest",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--no-match-with-closest",
+    "note": "Filters match nothing: the \"closest cards\" fallback with a Clear button"
+  },
+  {
+    "state": "Load Error",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2244",
+    "story": "flows-2-home-and-discovery-home--load-error",
+    "note": "Catalogue request fails: ad-hoc text and a retry link"
+  },
+  {
+    "state": "Offline (today)",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:354",
+    "story": "flows-2-home-and-discovery-home--offline-today",
+    "note": "Offline with no cache, today: masthead and filters, but no cards and no message (R6)"
+  },
+  {
+    "state": "Empty Catalogue (today)",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--empty-catalogue-today",
+    "note": "Empty catalogue, no filters, today: an empty list with no message"
+  },
+  {
+    "state": "Offline (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:354",
+    "story": "flows-2-home-and-discovery-home--offline-proposed",
+    "note": "Proposed: offline with no cache"
+  },
+  {
+    "state": "Empty Catalogue (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--empty-catalogue-proposed",
+    "note": "Proposed: empty catalogue"
+  },
+  {
+    "state": "Slow Catalogue",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2871",
+    "story": "flows-2-home-and-discovery-home--slow-catalogue",
+    "note": "Cold start on a slow network: the catalogue answers after 8 seconds"
+  },
+  {
+    "state": "Slow Catalogue (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:2871",
+    "story": "flows-2-home-and-discovery-home--slow-catalogue-proposed",
+    "note": "Proposed: the skeleton with a \"still loading\" line"
+  },
+  {
+    "state": "None Eligible Groups",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2730",
+    "story": "flows-2-home-and-discovery-home--none-eligible-groups",
+    "note": "Eligibility check finds no eligible card: today the app shows nothing new (A9)"
+  },
+  {
+    "state": "None Eligible (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:1570",
+    "story": "flows-2-home-and-discovery-home--none-eligible-proposed",
+    "note": "Proposed: no eligible card, with a way forward"
+  },
+  {
+    "state": "Refetch Failed With Cache",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2244",
+    "story": "flows-2-home-and-discovery-home--refetch-failed-with-cache",
+    "note": "A background refresh fails while cards are on screen: the error block stacks over the list (A14). Not seen in a browser"
+  },
+  {
+    "state": "Refetch Failed (proposed)",
+    "status": "proposed",
+    "source": "src/screens/HomeScreen.tsx:2244",
+    "story": "flows-2-home-and-discovery-home--refetch-failed-proposed",
+    "note": "Proposed: a failed refresh keeps the list and warns"
+  },
+  {
+    "state": "Session Expired On Home",
+    "status": "live",
+    "source": "src/auth/LoginSheetProvider.tsx:427",
+    "story": "flows-2-home-and-discovery-home--session-expired-on-home",
+    "note": "The session expires while Home is open: the login sheet opens by itself"
+  },
+  {
+    "state": "Broken Card Art",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:327",
+    "story": "flows-2-home-and-discovery-home--broken-card-art",
+    "note": "Cards whose art is missing or does not load"
+  },
+  {
+    "state": "One Card",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--one-card",
+    "note": "One card in the catalogue"
+  },
+  {
+    "state": "Many Cards",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:2320",
+    "story": "flows-2-home-and-discovery-home--many-cards",
+    "note": "200 cards: a long list"
+  },
+  {
+    "state": "Long Names 360",
+    "status": "live",
+    "source": "src/screens/HomeScreen.tsx:327",
+    "story": "flows-2-home-and-discovery-home--long-names-360",
+    "note": "Long card and bank names on the small Android viewport (360 dp)"
+  }
+]} />
+
+### Search
+
+<StateMatrix rows={[
+  {
+    "state": "Popular",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:127",
+    "story": "flows-2-home-and-discovery-search--popular",
+    "note": "Empty query: popular chips and the advisor row"
+  },
+  {
+    "state": "Results",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:417",
+    "story": "flows-2-home-and-discovery-search--results",
+    "note": "A query with matches: bank and card sections"
+  },
+  {
+    "state": "No Results Advisor Row",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:417",
+    "story": "flows-2-home-and-discovery-search--no-results-advisor-row",
+    "note": "No results: the block plus the \"help me pick\" row that opens the advisor (F5)"
+  },
+  {
+    "state": "Catalogue Not Loaded (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/SearchTopSheet.tsx:211",
+    "story": "flows-2-home-and-discovery-search--catalogue-not-loaded-proposed",
+    "note": "Proposed: the catalogue did not load (error or offline)"
+  },
+  {
+    "state": "Long Query",
+    "status": "live",
+    "source": "src/organisms/SearchTopSheet.tsx:417",
+    "story": "flows-2-home-and-discovery-search--long-query",
+    "note": "A long query that matches nothing"
+  },
+  {
+    "state": "Catalogue Loading (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/SearchTopSheet.tsx:211",
+    "story": "flows-2-home-and-discovery-search--catalogue-loading-proposed",
+    "note": "Proposed: the catalogue is still loading when the user types"
+  }
+]} />
+
+### Filters
+
+<StateMatrix rows={[
+  {
+    "state": "Menu Open",
+    "status": "live",
+    "source": "src/organisms/FilterMenu.tsx:267",
+    "story": "flows-2-home-and-discovery-filters--menu-open",
+    "note": "Menu: Category tab, nothing selected"
+  },
+  {
+    "state": "Applied",
+    "status": "live",
+    "source": "src/organisms/FilterMenu.tsx:267",
+    "story": "flows-2-home-and-discovery-filters--applied",
+    "note": "Applied: selections on three rails (dots on the rail labels, count in the footer)"
+  },
+  {
+    "state": "Transition",
+    "status": "live",
+    "source": "src/organisms/FilterTransitionOverlay.tsx:74",
+    "story": "flows-2-home-and-discovery-filters--transition",
+    "note": "Transition: the white screen with the redirect animation after \"Apply Filter\""
+  }
+]} />
+
+### Eligibility checker
+
+<StateMatrix rows={[
+  {
+    "state": "Empty",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:168",
+    "story": "flows-2-home-and-discovery-eligibility-checker--empty",
+    "note": "Empty form"
+  },
+  {
+    "state": "Validation Errors",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:292",
+    "story": "flows-2-home-and-discovery-eligibility-checker--validation-errors",
+    "note": "Check tapped with an empty form: PIN and income errors show"
+  },
+  {
+    "state": "Checking",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:383",
+    "story": "flows-2-home-and-discovery-eligibility-checker--checking",
+    "note": "Checking: the API never answers, the button shows its spinner"
+  },
+  {
+    "state": "Api Error",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:448",
+    "story": "flows-2-home-and-discovery-eligibility-checker--api-error",
+    "note": "API failed: an error banner, no verdict"
+  },
+  {
+    "state": "Invalid Pincode Today",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:328",
+    "story": "flows-2-home-and-discovery-eligibility-checker--invalid-pincode-today",
+    "note": "Invalid PIN, as it is today: the API answers 422 and the sheet blames the connection (A7)"
+  },
+  {
+    "state": "Invalid Pincode (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:328",
+    "story": "flows-2-home-and-discovery-eligibility-checker--invalid-pincode-proposed",
+    "note": "Proposed: a PIN error that says the PIN is the problem"
+  },
+  {
+    "state": "Very High Income",
+    "status": "live",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:509",
+    "story": "flows-2-home-and-discovery-eligibility-checker--very-high-income",
+    "note": "Very high monthly income: the app accepts it (A8)"
+  },
+  {
+    "state": "Very High Income (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:509",
+    "story": "flows-2-home-and-discovery-eligibility-checker--very-high-income-proposed",
+    "note": "Proposed: a hint when the income looks yearly"
+  },
+  {
+    "state": "Checking Slow (proposed)",
+    "status": "proposed",
+    "source": "src/organisms/EligibilityCheckerSheet.tsx:383",
+    "story": "flows-2-home-and-discovery-eligibility-checker--checking-slow-proposed",
+    "note": "Proposed: checking takes a while"
+  }
+]} />
+
+### Notifications
+
+<StateMatrix rows={[
+  {
+    "state": "Always Empty",
+    "status": "live",
+    "source": "src/screens/NotificationsScreen.tsx:110",
+    "story": "flows-2-home-and-discovery-notifications--always-empty",
+    "note": "Always empty: there is no notifications API (R19)"
+  }
+]} />
+
+## Risks
+
+- **R6**: Offline cold start: Home shows the timed skeleton, then no cards and no message. Seen in: Home, offline today.
+- **R19**: Notifications always says "You're all caught up"; the bell suggests a feature that does not exist. Seen in: Notifications.
+
+## Open questions
+
+- Home offline with a cached list: keep showing the stale cards or show the offline state? Owner: product owner.
+- Empty catalogue (200 with 0 cards): a real case, or always a backend fault that should read as an error? Owner: product owner with the BankKaro team.
+- Search with the catalogue not loaded: block the search bar offline, or show a message in the result area? Owner: product owner.
+- Hide the Notifications bell until an API exists? Owner: product owner.
+
+Not storied: Home states that need a long tap path beyond the stories (inline filter questions, NeverMissCashbackNudge on Android). Search stories render the real sheet with props; they do not tap the search bar.

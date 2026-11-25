@@ -1,0 +1,152 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, StateMatrix } from '../../../storybook/blocks';
+
+<Meta title="Flows/9 Profile and account/Overview" />
+
+<PageHeader title="Profile and account" meta="flow 9 · screens and states">Manage my account and get help. Profile is the hub; account edits are demo (R5), account deletion is hidden (R16), and Get Help, Privacy policy and Never miss cashback work signed out.</PageHeader>
+
+Open a state from the matrix. Every flow story renders in its own frame, so a state opens as a page and not inline.
+
+## Flow
+
+```
+ENTRY: Profile tab | Home help icon | Earnings "Get Help" | Home bell (Notifications)
+
+Profile ──┬─ Edit Profile ──> Account settings [demo, R5]
+          │                      ├─ Email / Mobile ──> Verify identity ──> Enter new ──> Verify new ──┐
+          │                      │                       (any 6 digits pass)                          │
+          │                      └─ <────────── success message, nothing saved ───────────────────────┘
+          │                      └─ Delete account [hidden, R16] ──> Delete OTP ──> Account deleted
+          ├─ My Earnings / Withdraw / Missing Cashback ──> Flows 7 and 8 (signed in; guest sees a login prompt)
+          ├─ Never miss cashback ──> Android setup steps | iOS notice
+          ├─ Get Help ──> topics | guest gate on Missing Cashback ──> login sheet
+          ├─ Call Us ──> phone app
+          ├─ Privacy policy
+          └─ Logout ──> confirm sheet ──> Home as guest
+
+Hidden (nothing links here): Payment history x3 (D4), Review Us, Write Review (D14)
+```
+
+## Profile
+
+Guest, signed in, and the load problems.
+
+<StateMatrix rows={[
+  { state: "Guest", status: "live", story: "flows-9-profile-and-account-profile--guest", note: "Signed out: a 'Your CashKaro account' prompt. No earnings, withdraw, missing cashback or logout rows. Help, call and privacy still work." },
+  { state: "Signed In", status: "live", story: "flows-9-profile-and-account-profile--signed-in", note: "Signed in: name and masked contact in the account card, account rows and Logout." },
+  { state: "Placeholder Email", status: "live", story: "flows-9-profile-and-account-profile--placeholder-email", note: "R9: a new user's email is the generated placeholder, shown masked in the account card." },
+  { state: "Profile Loading", status: "live", story: "flows-9-profile-and-account-profile--profile-loading", note: "Profile still loading: name and contact are empty (no skeleton)." },
+  { state: "Profile Failed", status: "live", story: "flows-9-profile-and-account-profile--profile-failed", note: "Profile call failed: nothing tells the user. The screen never reads isError." },
+  { state: "Long Name", status: "live", story: "flows-9-profile-and-account-profile--long-name", note: "A very long display name: the name has no line limit." },
+  { state: "Signed In 360", status: "live", story: "flows-9-profile-and-account-profile--signed-in-360", note: "A long display name at 360 dp, signed in." },
+  { state: "Profile Failed Proposed", status: "proposed", story: "flows-9-profile-and-account-profile--profile-failed-proposed", note: "PROPOSED: the profile call failed; say so and keep the menu usable." },
+]} />
+
+## Account settings
+
+DEMO (R5): Save Changes saves nothing.
+
+<StateMatrix rows={[
+  { state: "Loaded", status: "demo", story: "flows-9-profile-and-account-account-settings--loaded", note: "Profile fields filled from the fixture; 'Save Changes' is disabled until the name changes." },
+  { state: "Email Changed", status: "demo", story: "flows-9-profile-and-account-account-settings--email-changed", note: "Back from the contact-change flow with a new email: the success message and the new value show." },
+  { state: "Mobile Changed", status: "demo", story: "flows-9-profile-and-account-account-settings--mobile-changed", note: "Back from the contact-change flow with a new mobile number." },
+  { state: "Profile Loading", status: "demo", story: "flows-9-profile-and-account-account-settings--profile-loading", note: "Profile still loading: the email and mobile fields read empty (no skeleton)." },
+]} />
+
+## Edit contact
+
+DEMO (R5): three steps, any 6-digit code passes.
+
+<StateMatrix rows={[
+  { state: "Verify Identity Email", status: "demo", story: "flows-9-profile-and-account-edit-contact--verify-identity-email", note: "Step 1, email: an OTP is 'sent' to the current email and mobile. Resend timer runs." },
+  { state: "Verify Identity Mobile", status: "demo", story: "flows-9-profile-and-account-edit-contact--verify-identity-mobile", note: "Step 1, mobile." },
+  { state: "Enter New Email", status: "demo", story: "flows-9-profile-and-account-edit-contact--enter-new-email", note: "Step 2, email: enter the new email. 'Send OTP' is disabled until the value is valid." },
+  { state: "Enter New Mobile", status: "demo", story: "flows-9-profile-and-account-edit-contact--enter-new-mobile", note: "Step 2, mobile." },
+  { state: "Enter New Invalid", status: "demo", story: "flows-9-profile-and-account-edit-contact--enter-new-invalid", note: "Step 2, an invalid email typed: the CTA stays disabled and no message explains why. A play function types 'not-an-email'." },
+  { state: "Verify New Email", status: "demo", story: "flows-9-profile-and-account-edit-contact--verify-new-email", note: "Step 3, email: an OTP is 'sent' to the new email, with an 'Edit email' link." },
+  { state: "Verify New Mobile", status: "demo", story: "flows-9-profile-and-account-edit-contact--verify-new-mobile", note: "Step 3, mobile." },
+  { state: "Enter New Already Registered", status: "proposed", story: "flows-9-profile-and-account-edit-contact--enter-new-already-registered", note: "PROPOSED: the new email is already linked to another account. No server check exists today." },
+]} />
+
+## Delete account
+
+HIDDEN (D23, R16): the screens only simulate deletion.
+
+<StateMatrix rows={[
+  { state: "Landing", status: "hidden", story: "flows-9-profile-and-account-delete-account--landing", note: "Landing: what is lost, a terms checkbox, and the destructive 'Delete Account' (disabled until the box is ticked)." },
+  { state: "Terms Ticked", status: "hidden", story: "flows-9-profile-and-account-delete-account--terms-ticked", note: "Terms ticked: 'Delete Account' is enabled. A play function ticks the box." },
+  { state: "Otp", status: "hidden", story: "flows-9-profile-and-account-delete-account--otp", note: "OTP step: a code is 'sent' to the masked mobile number." },
+  { state: "Deleted", status: "hidden", story: "flows-9-profile-and-account-delete-account--deleted", note: "The 'Account deleted' confirmation. Nothing was deleted." },
+]} />
+
+## Logout
+
+<StateMatrix rows={[
+  { state: "Confirm Sheet", status: "live", story: "flows-9-profile-and-account-logout--confirm-sheet", note: "The confirm sheet on its own: 'Yes' signs out, 'No' closes." },
+  { state: "From Profile", status: "live", story: "flows-9-profile-and-account-logout--from-profile", note: "From the Profile tab: a play function taps 'Logout' and the sheet rises over the screen." },
+  { state: "Slow Logout", status: "live", story: "flows-9-profile-and-account-logout--slow-logout", note: "The server logout takes 8 s: the sheet is gone and the screen stays signed in." },
+  { state: "Logging Out Proposed", status: "proposed", story: "flows-9-profile-and-account-logout--logging-out-proposed", note: "PROPOSED: the sheet stays open while the server call runs." },
+]} />
+
+## Get help
+
+<StateMatrix rows={[
+  { state: "Topics Signed In", status: "live", story: "flows-9-profile-and-account-get-help--topics-signed-in", note: "Five topics (How Cards.xtra works, Your Cashback, Missing Cashback or Rewards, Payment related, Unable to Login). Signed in." },
+  { state: "Topics Guest", status: "live", story: "flows-9-profile-and-account-get-help--topics-guest", note: "Signed out: same topics. Get Help works without an account." },
+  { state: "Guest Gate", status: "live", story: "flows-9-profile-and-account-get-help--guest-gate", note: "Guest taps 'Missing Cashback or Rewards': the login sheet opens (source get_help)." },
+  { state: "Missing Cashback Topic", status: "live", story: "flows-9-profile-and-account-get-help--missing-cashback-topic", note: "Signed in taps 'Missing Cashback or Rewards': goes straight to the claim intake (stub page here)." },
+  { state: "How It Works Sheet", status: "live", story: "flows-9-profile-and-account-get-help--how-it-works-sheet", note: "'How Cards.xtra Works?' opens the tracking steps sheet." },
+]} />
+
+## Never miss cashback
+
+The Android setup steps cannot render on web.
+
+<StateMatrix rows={[
+  { state: "Not Available", status: "live", story: "flows-9-profile-and-account-never-miss-cashback--not-available", note: "Not available: 'This feature is available on the Android app build only.' This is what iOS shows, and what web renders." },
+]} />
+
+## Privacy policy
+
+<StateMatrix rows={[
+  { state: "Policy", status: "live", story: "flows-9-profile-and-account-privacy-policy--policy", note: "Static policy sections and a last-updated line. Works signed out." },
+]} />
+
+## Notifications
+
+Always empty (R19).
+
+<StateMatrix rows={[
+  { state: "All Caught Up", status: "live", story: "flows-9-profile-and-account-notifications--all-caught-up", note: "All tab: always 'You're all caught up'." },
+  { state: "Offers Tab", status: "live", story: "flows-9-profile-and-account-notifications--offers-tab", note: "Offers tab: the same empty state. A play function taps the Offers pill." },
+]} />
+
+## Hidden screens
+
+For reference only. Review Us source holds a real-looking reviewer name that must be removed before release.
+
+<StateMatrix rows={[
+  { state: "Payment History", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--payment-history", note: "HIDDEN: payment history list (sample payouts)." },
+  { state: "Payment History Details", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--payment-history-details", note: "HIDDEN: payment history, one payout's details." },
+  { state: "Payment History Empty", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--payment-history-empty", note: "HIDDEN: payment history, no payouts yet." },
+  { state: "Review Us", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--review-us", note: "HIDDEN: Review Us with sample reviews." },
+  { state: "Review Us Submitted Toast", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--review-us-submitted-toast", note: "HIDDEN: Review Us after a submit: the 'submitted successfully' toast (shows 3 s)." },
+  { state: "Write Review", status: "hidden", story: "flows-9-profile-and-account-hidden-screens--write-review", note: "HIDDEN: Write Review form (rating required, comment)." },
+]} />
+
+## Risks
+
+- R5: Edit Profile and contact change say "saved" but save nothing; any OTP passes. See Account settings and Edit contact.
+- R9: new users carry a generated placeholder email, shown masked on Profile. See Profile, "Placeholder email".
+- R16: a user who wants to delete the account has no path (entry hidden). See Delete account.
+- R19: Notifications always says "You are all caught up". See Notifications.
+- R13: Get Help's Missing Cashback topic restarts the intake that a not-tracked claim points to. See Get help.
+- R6 and R17: profile offline and session expiry on this tab are in Flow 10.
+
+## Open questions
+
+1. Hide the Edit Profile and contact-change flows until the CashKaro profile APIs exist, or keep them? (pm-flows question 7)
+2. New users get a generated email (D16): collect a real email, and at which step? (pm-flows question 8, R9)
+3. Build account deletion and show the link, or give a support route? (R16, D23)
+4. Hide the Home bell until a notification feed exists? (R19)
+5. Map the payment-history API and un-hide it, or drop the screens? (D4, R4)

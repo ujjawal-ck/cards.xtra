@@ -1,0 +1,57 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './money-confirmation.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Money confirmation" meta="Pattern">
+  A money step never leaves the user guessing. If the outcome is unknown, do not let them submit again.
+</PageHeader>
+
+## The rule
+
+- A payout already in process blocks a second request: Withdraw opens `PaymentProcessingSheet` instead (`src/screens/withdraw/useWithdrawGate.tsx:126`).
+- An unknown outcome (a timeout after the send) must tell the user not to request again until it shows in Earnings. Today it is a native Alert (`WithdrawVerifyOTP.tsx:89`).
+- A failed payout needs an error that stays on screen, not an Alert that vanishes (`WithdrawVerifyOTP.tsx:177`).
+- Success goes to Home with no swipe back and no per-payout record yet (R4). Payment History is hidden (D4).
+- Never show ₹0 for an amount that is unknown (see Offline).
+- The OTP step has its own states: see OTP entry.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'PaymentProcessingSheet', id: 'components-sheets-paymentprocessingsheet--docs', note: 'a payout is already settling.' },
+  { name: 'ScreenState', id: 'components-empty-and-error-screenstate--docs', note: 'the proposed unknown-outcome state.' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'the proposed payout-failed message.' },
+  { name: 'FooterButtons', id: 'components-footers-footerbuttons--docs', note: 'the confirm CTA, with primaryLoading.' },
+  { name: 'OtpInput', id: 'components-input-fields-otpinput--docs', note: 'the verify step.' },
+]} />
+
+## Where it appears
+
+- Flow 7 Earnings and withdraw: Withdraw gate (settling, below minimum, balance error), Verify OTP, Success.
+- Flow 8 Orders and missing cashback: claim submit (money recovery, same rule for unknown outcome).
+
+## Examples
+
+<Canvas of={S.UnknownOutcomeProposed} />
+<Canvas of={S.PayoutFailedProposed} />
+
+The payout-in-process sheet opens on mount. Open it from the sidebar: Patterns / Money confirmation / Payout In Process.
+
+<DoDont
+  dos={['Say what is happening and what not to do.', 'Send the user to Earnings to check.', 'Keep an error on screen until the user acts.']}
+  donts={['Do not let the user resubmit while the outcome is unknown.', 'Do not use a native Alert for a money state.', 'Do not show success before the payout is confirmed.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Payout already in process', status: 'live', source: 'src/screens/withdraw/useWithdrawGate.tsx:126', story: 'patterns-money-confirmation--payout-in-process' },
+  { state: 'Verifying and paying (input blocked)', status: 'live', source: 'src/screens/withdraw/WithdrawVerifyOTP.tsx:297' },
+  { state: 'Withdraw success', status: 'live', source: 'src/screens/withdraw/WithdrawSuccess.tsx:68', note: 'Not rendered here: it needs the screen harness. See the flow page.' },
+  { state: 'Outcome unknown', status: 'proposed', source: 'ux-states.md section 6', story: 'patterns-money-confirmation--unknown-outcome-proposed', note: 'Native Alert today (WithdrawVerifyOTP.tsx:89). DS gap: second action on ScreenState.' },
+  { state: 'Payout failed', status: 'proposed', source: 'ux-states.md section 6', story: 'patterns-money-confirmation--payout-failed-proposed', note: 'Native Alert today (WithdrawVerifyOTP.tsx:177).' },
+  { state: 'Per-payout record after success (R4)', status: 'proposed', source: 'pm-flows.md R4', note: 'Open question for the product owner. Payment History is hidden (D4). No copy.' },
+]} />

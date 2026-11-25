@@ -1,0 +1,117 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, PickTable, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Sheets/Overview" />
+
+<PageHeader title="Sheets" meta="28 components · organisms">
+A sheet is a panel that slides over the screen for one short job: a verdict, an explanation, a confirm, a filter, a form. The shell is `BottomSheet` (handle, title, body, footer). Most specific sheets build their own modal with the same look. Each story below opens the sheet on mount.
+</PageHeader>
+
+## Which sheet for the job
+
+<PickTable
+  rule="Find the job, then open the sheet. Sub-group names follow the Storybook tree."
+  rows={[
+    { building: 'A new simple sheet (text, list, picker)', use: 'BottomSheet', tier: 'Shell', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Only the body of a sheet, no modal', use: 'BottomSheetBody', tier: 'Shell', story: 'components-sheets-bottomsheetbody--docs' },
+    { building: 'Only the handle, title and stroke', use: 'BottomSheetHeader', tier: 'Shell', story: 'components-sheets-bottomsheetheader--docs' },
+    { building: 'Confirm a log out', use: 'LogoutConfirmSheet', tier: 'Auth', story: 'components-sheets-logoutconfirmsheet--docs' },
+    { building: 'Explain why a withdraw is blocked', use: 'CashbackNotConfirmedSheet or PaymentProcessingSheet', tier: 'Money', story: 'components-sheets-cashbacknotconfirmedsheet--docs' },
+    { building: 'Explain one earning status or the three amounts', use: 'EarningStatusSheet or EarningsBreakupSheet', tier: 'Money', story: 'components-sheets-earningstatussheet--docs' },
+    { building: 'A claim summary, or the reasons for a missing cashback', use: 'MissingCashbackSummarySheet, WhatWentWrongInfoSheet, WhatWentWrongFeedbackSheet, FeedbackAppreciatedSheet', tier: 'Claims', story: 'components-sheets-missingcashbacksummarysheet--docs' },
+    { building: 'Filter a list with a rail and a panel', use: 'FilterMenu (cards) or OrdersFilterMenu (orders)', tier: 'Filters and pickers', story: 'components-sheets-filtermenu--docs' },
+    { building: 'Pick one month', use: 'SelectMonthSheet', tier: 'Filters and pickers', story: 'components-sheets-selectmonthsheet--docs' },
+    { building: 'Explain how tracking works, or share a card', use: 'HowItWorksSheet or ShareSheet', tier: 'Card and share', story: 'components-sheets-howitworkssheet--docs' },
+    { building: 'The sum behind a league row, or edit the spends', use: 'SavingsBreakdownSheet or EditSpendsSheet', tier: 'Tools', story: 'components-sheets-savingsbreakdownsheet--docs' },
+    { building: 'Search from the top, or a promo banner', use: 'SearchTopSheet or PromoTopSheet', tier: 'Search and promo', story: 'components-sheets-searchtopsheet--docs' },
+    { building: 'A card, in full', use: 'CardDetailSheet', tier: 'Page section', story: 'components-sheets-carddetailsheet--docs' },
+  ]}
+/>
+
+## Sheets: Eligibility
+
+<PickTable
+  rule="Deciding question: is it a verdict after Apply, or a result inside the detail?"
+  rows={[
+    { building: 'Ask for PIN, income and job type', use: 'EligibilityCheckerSheet', tier: 'form', story: 'components-sheets-eligibilitycheckersheet--docs' },
+    { building: 'Verdict: the user qualifies (green)', use: 'EligibleSheet', tier: 'verdict', story: 'components-sheets-eligiblesheet--docs' },
+    { building: 'Verdict: not sure, may still qualify (amber)', use: 'MaybeSheet', tier: 'verdict', story: 'components-sheets-maybesheet--docs' },
+    { building: 'Verdict: no, with other cards to try (red)', use: 'IneligibleSheet', tier: 'verdict', story: 'components-sheets-ineligiblesheet--docs' },
+    { building: 'Result when details were already entered on Home', use: 'EligibilityResultBanner, inline in CardDetailSheet', tier: 'inline', story: 'components-sheets-carddetailsheet--docs' },
+  ]}
+/>
+
+The three verdict sheets are plain views. HomeScreen hosts each in a 90% (red: 95%) modal with no handle and a scroll view. The stories do the same.
+
+## Sheets: Auth
+
+<PickTable
+  rule="Deciding question: an earn prompt before a click-out, or the real login?"
+  rows={[
+    { building: 'Guest taps Apply or Shop: "Log in to earn cashback", or go on without it', use: 'EarnLoginSheet', tier: 'prompt', story: 'components-sheets-earnloginsheet--docs' },
+    { building: 'Phone, OTP and name step (the real login)', use: 'LoginSheetProvider UI (see Flows, Login)', tier: 'provider' },
+    { building: 'Standalone phone step. The app does not use it.', use: 'LoginSheet', tier: 'hidden', story: 'components-sheets-loginsheet--docs' },
+    { building: 'Confirm "Log out?"', use: 'LogoutConfirmSheet', tier: 'confirm', story: 'components-sheets-logoutconfirmsheet--docs' },
+  ]}
+/>
+
+## Which BottomSheet template
+
+<PickTable
+  rule="Set `template` on BottomSheet or BottomSheetBody. Body data goes in `bodyProps`."
+  rows={[
+    { building: 'One image, nothing else', use: 'image-only', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'A short paragraph', use: 'text-only', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Illustration, heading, body and a note', use: 'image-heading-body', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'A 156 px illustration with a heading and body (store info sheets)', use: 'icon-heading-body', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'A big amount and a status badge', use: 'money-status', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Amounts grouped by section, each with a status', use: 'cashback-status', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Pick one month', use: 'month-picker', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Pick one of a short list', use: 'selector', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'Reward rates, with dashed rows', use: 'rate-list (or reward-rates)', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'An intro line and bullets (terms)', use: 'terms-list', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'An intro line and numbered steps', use: 'numbered-list', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'A small form: income, city, job type', use: 'eligibility-checker (static; the real form is EligibilityCheckerSheet)', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+    { building: 'A filter menu', use: 'filters (placeholder in code; use FilterMenu or OrdersFilterMenu)', tier: 'template', story: 'components-sheets-bottomsheet--docs' },
+  ]}
+/>
+
+## Anatomy of BottomSheet
+
+<Anatomy parts={[
+  { part: 'Surface', token: 'colors.surface.default, radius["2xl"] (top corners)', note: 'White. The sheet draws it as the modal background.' },
+  { part: 'Handle', token: 'sizing.touchMin × 4, radius.full, colors.border.default', note: '44 by 4 pill, centred. Drawn by BottomSheetHeader. The library handle is hidden.' },
+  { part: 'Title', token: 'heading18SemiBold, colors.text.primary', note: 'Optional, centred. Without a title and without a stroke, the header is left out.' },
+  { part: 'Stroke', token: 'borderWidth.thin, colors.border.default', note: 'Optional 1 px line under the header.' },
+  { part: 'Body', token: 'BottomSheetBody template, spacing[16] side padding', note: 'Scrolls in a BottomSheetScrollView. Minimum height 360.' },
+  { part: 'Footer', token: 'FooterButtons, spacing[14] and spacing[16] padding', note: 'Sticky. Flush to the bottom edge. The safe-area inset is padding inside the footer.' },
+  { part: 'Backdrop', token: 'black scrim, opacity 0.5 (BottomSheet) or 0.72 (info sheets)', note: 'Tap closes. Appears at the first snap point.' },
+  { part: 'Snap points', token: '58% and 96%', note: 'Drag up to expand, drag down at the top to collapse, pan down at 58% to close. Light haptics on each change.' },
+]} />
+
+## Composition
+
+- **Snap points.** The shell uses 58% and 96%. Info sheets (earnings, claims, logout, feedback) use dynamic sizing: they hug their content and do not expand. Other sheets fix their height: filters 70%, verdicts 90% (red 95%), eligibility checker 94%, edit spends 90%, savings breakdown 75% and 96%, card detail 75% and 100%.
+- **Sticky footer.** Put the main action in `footer` with `footerProps`. The body gets bottom room (`spacing[96]`) so the last row is not hidden. Solid buttons are Saffron (decision D17).
+- **Header first.** Use `BottomSheetHeader` for the handle. Do not draw a second handle.
+- **Back handler.** No sheet in `src/organisms` registers its own `BackHandler`. Closing by back, backdrop or pan down is the library's. The RN Modal sheets (`HowItWorksSheet`, `ShareSheet`, `SearchTopSheet`, `PromoTopSheet`) close through their own Modal and their own `onClose` or `onDismiss`.
+- **One sheet at a time.** Hosts close one sheet before they open another. Example: Share dismisses the card detail, then brings it back when Share closes (`HomeScreen.tsx`, near line 2570).
+- **Modal provider.** Every gorhom sheet needs `BottomSheetModalProvider` above it. The Storybook preview adds it. Sheets that call `useNavigation`, `useQuery` or `useAuth` need the harness (`ComponentHarness`).
+- **Present on a ref.** Modal sheets show nothing until `ref.present()`. Each story calls it after mount. `SavingsBreakdownSheet` and `EditSpendsSheet` take their data in `present(...)`.
+
+<DoDont
+  dos={[
+    'Open one sheet at a time and say in one line what the sheet decides.',
+    'Use BottomSheet with a template for plain info, lists and pickers.',
+    'Keep the primary action in the sticky footer.',
+    'Use Saffron for the solid button.',
+    'Write rates as X% until a rate is verified.',
+  ]}
+  donts={[
+    'Do not stack a second sheet on top of a sheet. Close the first, then open the next.',
+    'Do not put a long form in a content-hugging info sheet. It does not expand.',
+    'Do not use the `filters` template. It is a placeholder. Use FilterMenu or OrdersFilterMenu.',
+    'Do not use LoginSheet for login. The app uses the LoginSheetProvider UI.',
+    'Do not draw a custom handle. BottomSheetHeader owns it.',
+  ]}
+/>

@@ -1,0 +1,69 @@
+import { Meta, Canvas } from '@storybook/addon-docs/blocks';
+import { PageHeader, DoDont, StateMatrix } from '../../storybook/blocks';
+import { Parts } from './_links';
+import * as S from './error-and-retry.stories';
+
+<Meta of={S} />
+
+<PageHeader title="Error and retry" meta="Pattern">
+  Say what failed, say what to do next, and give a way to try again. Keep the error next to the thing that failed.
+</PageHeader>
+
+## The rule
+
+- A screen that fails to load uses `ScreenState`: title "Couldn't load …", a cause line, and "Try again".
+- While the retry runs, the action label reads "Retrying…" (Orders, Claims, Transactions).
+- Name the cause when the user can fix it ("Check your connection") and own it when we caused it ("Something went wrong on our side").
+- A field error is inline: `Input` with `state="error"` and a `hint`. Do not use a dialog.
+- Native `Alert` for an error is the old way (click-out, withdraw, gate, Help). The audit proposes `InlineMessage` or `Toast` instead.
+- A money error never leaves the outcome unclear. See Money confirmation.
+- Gap: the Figma "Connection lost" and "Something didn't go as planned" illustrations are not exported, so these states have no picture.
+
+## Use these parts
+
+<Parts rows={[
+  { name: 'ScreenState', id: 'components-empty-and-error-screenstate--docs', note: 'a whole screen failed.' },
+  { name: 'InlineMessage', id: 'components-messages-and-tooltips-inlinemessage--docs', note: 'a failed block inside a page, with one action.' },
+  { name: 'Toast', id: 'components-messages-and-tooltips-toast--docs', note: 'a transient error.' },
+  { name: 'Input', id: 'components-input-fields-input--docs', note: 'a field error with a hint.' },
+  { name: 'OtpInput', id: 'components-input-fields-otpinput--docs', note: 'a wrong code. See OTP entry.' },
+]} />
+
+## Where it appears
+
+- Flow 1 Launch and login: send OTP failed, wrong OTP.
+- Flow 2 Home and discovery: catalogue error, Offers error, Search.
+- Flow 3a Card detail and apply: detail fetch failed, checker API failed, click-out blocked.
+- Flow 7 Earnings and withdraw: Earnings error, balance, send OTP failed, payout failed.
+- Flow 8 Orders and missing cashback: Orders, Claims, store visit lookup, invoice upload.
+
+## Examples
+
+<Canvas of={S.LoadFailed} />
+<Canvas of={S.Retrying} />
+<Canvas of={S.ServerSide} />
+<Canvas of={S.FieldError} />
+<Canvas of={S.NetworkProblemProposed} />
+<Canvas of={S.BenefitsErrorProposed} />
+<Canvas of={S.HomeCatalogueProposed} />
+
+<DoDont
+  dos={['Say what failed and give "Try again".', 'Keep field errors on the field.', 'Keep the rows the user already has when only the next page fails.']}
+  donts={['Do not use a native Alert for an error.', 'Do not replace the whole list when page 2 fails (OrdersList.tsx:407, audit PARTIAL).', 'Do not show the raw API message.']}
+/>
+
+## State matrix
+
+<StateMatrix rows={[
+  { state: 'Earnings failed', status: 'live', source: 'src/screens/EarningsScreen.tsx:217', story: 'patterns-error-and-retry--load-failed' },
+  { state: 'Orders failed, retrying label', status: 'live', source: 'src/screens/OrdersList.tsx:407', story: 'patterns-error-and-retry--retrying' },
+  { state: 'Offers failed', status: 'live', source: 'src/screens/OffersScreen.tsx:537', story: 'patterns-error-and-retry--server-side' },
+  { state: 'Field error (Input)', status: 'live', source: 'src/atoms/Input.tsx:71', story: 'patterns-error-and-retry--field-error' },
+  { state: 'Cards you can get, Advisor, tools: load failed', status: 'live', source: 'src/screens/CardsYouCanGetScreen.tsx:280' },
+  { state: 'Eligibility checker: API failed', status: 'live', source: 'src/organisms/EligibilityCheckerSheet.tsx:328' },
+  { state: 'Card detail fetch failed', status: 'proposed', source: 'ux-states.md section 3', story: 'patterns-error-and-retry--benefits-error-proposed', note: 'Silent fallback today (CardDetailSheet.tsx:1111).' },
+  { state: 'Home catalogue error', status: 'proposed', source: 'ux-states.md section 2', story: 'patterns-error-and-retry--home-catalogue-proposed', note: 'Ad-hoc text today (HomeScreen.tsx:2244).' },
+  { state: 'Withdraw verify: network or resend failure', status: 'proposed', source: 'ux-states.md section 6', story: 'patterns-error-and-retry--network-problem-proposed', note: 'Native Alert today (WithdrawVerifyOTP.tsx:134).' },
+  { state: 'Orders list: next page failed', status: 'proposed', source: 'ux-states.md section 7', note: 'List footer InlineMessage "Couldn\'t load more orders." with "Try again". Today the error block replaces the list.' },
+  { state: 'Profile failed', status: 'proposed', source: 'ux-states.md section 8', note: 'InlineMessage "Couldn\'t load your details." isError is never read (ProfileScreen.tsx:64).' },
+]} />

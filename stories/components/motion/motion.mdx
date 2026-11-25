@@ -1,0 +1,41 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import { PageHeader, Anatomy, DoDont } from '../../../storybook/blocks';
+
+<Meta title="Components/Motion/Overview" />
+
+<PageHeader title="Motion" meta="2 components · organisms">
+Two pieces that add motion at the screen level: an entrance cascade for page sections, and an interstitial that plays when a Home filter is applied. Small motion inside a component (pulse, indicator fill) lives with that component.
+</PageHeader>
+
+## Anatomy
+
+<Anatomy parts={[
+  { part: 'StaggeredEntrance step', token: 'STEP_MS 65, DURATION_MS 380, RISE 16, MAX_STEPS 8', note: 'File constants. Each direct child is one step; the delay stops growing after the eighth.' },
+  { part: 'Entrance easing', token: 'Easing.out(Easing.cubic), scale 0.985 to 1', note: 'fade={false} keeps opacity at 1 for stack screens.' },
+  { part: 'Overlay fade', token: 'FADE_MS 220, HOLD_MS 2000, Easing.out then in (cubic)', note: 'Fade in, hold, fade out. Total about 2.4 seconds.' },
+  { part: 'Overlay layers', token: 'colors.surface.default, zIndex 100, HomeSkeleton behind, 160 by 160 animation box centred', note: 'Blocks taps while mounted.' },
+  { part: 'Overlay placeholder', token: 'ActivityIndicator in colors.action.primary.default, body14Medium colors.text.secondary', note: 'Only in Expo Go, where the Rive view cannot load.' },
+]} />
+
+## Composition
+
+- `StaggeredEntrance` uses `useIsFocused`, so any story or screen using it needs a navigator. `RootNavigator` wraps every pushed screen in it (rise 14, 340 ms, replays on focus). Earnings, Offers and Profile use it for their sections.
+- It animates on iOS only. On Android and on web it renders the children plain, keeping `fill` and `style`. This repo keeps Reanimated entrances to iOS because of recurring Android edge-to-edge jank.
+- `FilterTransitionOverlay` is mounted by `HomeScreen`. It fires `onCovered` when fully opaque (commit the filters behind it) and `onHidden` after the fade out (set `visible` back to false).
+- The cat animation needs the `rive-react-native` native module. Storybook replaces it with an empty view, so the animation itself is not shown here.
+- Neither piece checks the OS reduce motion setting. `ToolsRow` does. Open question for product and engineering: should these two follow it?
+
+<DoDont
+  dos={[
+    'Wrap section blocks as direct children so each becomes one step.',
+    'Use fade={false} and fill for a whole stack screen.',
+    'Commit filter changes in onCovered, behind the white screen.',
+    'Set visible back to false in onHidden.',
+  ]}
+  donts={[
+    'Do not wrap a long list item by item. Wrap the sections.',
+    'Do not expect the cascade on web or Android.',
+    'Do not leave visible true after onHidden. The next flip will not replay.',
+    'Do not start a second filter transition while one plays.',
+  ]}
+/>
