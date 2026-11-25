@@ -61,6 +61,7 @@ export function AmountInput({
         onBlur={handleBlur}
         state={error ? 'error' : undefined}
         hint={error ?? hint}
+        hintIcon={error ? 'desc-exclamation' : undefined}
         useBottomSheetInput={useBottomSheetInput}
         accessibilityLabel={label}
       />

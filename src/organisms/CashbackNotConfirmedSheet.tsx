@@ -29,7 +29,7 @@ import React, {
   useImperativeHandle,
   useRef,
 } from 'react';
-import { View, Text as RNText } from 'react-native';
+import { View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -41,7 +41,7 @@ import type {
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '../atoms';
+import { Text, Icon } from '../atoms';
 import { BottomSheetHeader } from './BottomSheetHeader';
 import { FooterButtons } from './FooterButtons';
 import { colors, spacing, radius } from '../tokens';
@@ -57,11 +57,9 @@ export interface CashbackNotConfirmedSheetProps {
 }
 
 // Illustration placeholder — the Figma uses a 156-px 3D stopwatch+cash
-// render; no asset ships, so a stopwatch emoji stands in. Sizes are
-// component-spec values (image dimensions, not type), same pattern as
-// the other emoji placeholders in this codebase.
+// render; no asset ships, so the desc-pending icon stands in (interim).
+// IMAGE_BOX is a component-spec value (image dimension).
 const IMAGE_BOX = 156;
-const EMOJI_SIZE = 96;
 
 export const CashbackNotConfirmedSheet = forwardRef<
   BottomSheetModalRef,
@@ -118,6 +116,7 @@ export const CashbackNotConfirmedSheet = forwardRef<
         >
           {/* Illustration placeholder */}
           <View
+            accessibilityLabel="Pending cashback"
             style={{
               width: IMAGE_BOX,
               height: IMAGE_BOX,
@@ -125,12 +124,7 @@ export const CashbackNotConfirmedSheet = forwardRef<
               justifyContent: 'center',
             }}
           >
-            <RNText
-              accessibilityLabel="Pending cashback"
-              style={{ fontSize: EMOJI_SIZE, lineHeight: EMOJI_SIZE * 1.1 }}
-            >
-              ⏱️
-            </RNText>
+            <Icon name="desc-pending" size={IMAGE_BOX} />
           </View>
 
           {/* Text block */}

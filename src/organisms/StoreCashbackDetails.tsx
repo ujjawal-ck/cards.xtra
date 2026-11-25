@@ -58,7 +58,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Text } from '../atoms';
+import { Text, Icon } from '../atoms';
 import { Timer } from '../atoms';
 import { colors, spacing, radius, borderWidth, iconSize, sizing } from '../tokens';
 
@@ -131,16 +131,7 @@ function ForwardArrowGlyph({ size, color }: { size: number; color: string }) {
 
 // The "+" is the close (×) glyph rotated 45° (see header note).
 function CloseGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 12 12" fill="none">
-      <Path
-        d="M3 3 L9 9 M9 3 L3 9"
-        stroke={color}
-        strokeWidth={borderWidth.iconDefault}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Icon name="close" size={size} color={color} />;
 }
 
 /** Parse "dd:hh:mm" / "hh:mm" into Timer atom props. */

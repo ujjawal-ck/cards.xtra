@@ -17,13 +17,9 @@
  * Trailing slot (optional):
  *   32×32 Pressable with padding 4 wrapping a 24-px outline Icon.
  *
- * No `backarrow` / `close` SVG ships in src/assets/icons (only
- * `desc-cross` which is baked semantic-red and wouldn't tint to
- * text.primary). We draw the arrow + × inline via react-native-svg
- * with strokeWidth = borderWidth.thick (1.5) so the line weight
- * matches the rest of the outline icon family. When a real
- * backarrow / close SVG ships, replace BackArrowGlyph / CloseGlyph
- * with `<Icon name="…" size={…} color={fg} />`.
+ * No `backarrow` SVG ships in src/assets/icons, so the arrow is drawn
+ * inline via react-native-svg with strokeWidth = borderWidth.thick (1.5).
+ * The close (×) is the `close` icon, tinted to the host colour.
  *
  * Optional `tabs` prop renders the existing TabPrimary molecule
  * directly below the header row. When omitted, only the header row
@@ -116,8 +112,7 @@ function BackArrowGlyph({
 }
 
 /**
- * Thin close (×) glyph. Drawn in a 24-unit viewBox so the 1.5px stroke
- * renders true at the spec's 24-px display size.
+ * Close (×) glyph — the close icon at the spec's 24-px display size.
  */
 function CloseGlyph({
   size,
@@ -126,22 +121,7 @@ function CloseGlyph({
   size: number;
   color: string;
 }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M6 6 L18 18"
-        stroke={color}
-        strokeWidth={GLYPH_STROKE}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M18 6 L6 18"
-        stroke={color}
-        strokeWidth={GLYPH_STROKE}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
+  return <Icon name="close" size={size} color={color} />;
 }
 
 type LeadingSpec = {

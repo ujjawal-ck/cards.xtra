@@ -166,3 +166,17 @@ describe('missing cashback visit dates (QA-03, QA-04)', () => {
     expect(mapExitClicks(clicks(['', 'not a date', '2026-13-40']))).toEqual([]);
   });
 });
+
+describe('order detail timeline icons', () => {
+  const steps = (status: string) =>
+    mapOrderDetail({ data: { id: '1', attributes: { cashback_status: status } } }).steps;
+
+  it('uses the outline cart for the placed step', () => {
+    expect(steps('Pending')[0].iconName).toBe('cart-outline');
+  });
+
+  it('uses the tintable close icon for the cancelled step', () => {
+    const list = steps('Cancelled');
+    expect(list[list.length - 1].iconName).toBe('close');
+  });
+});

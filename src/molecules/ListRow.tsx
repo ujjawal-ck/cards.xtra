@@ -32,16 +32,13 @@
  *                                              to this primitive)
  *   #fff    → colors.surface.default
  *
- * Chevrons: there's no chevron-right SVG in src/assets/icons, so the
- * chevron glyph is rendered as Unicode '›' via raw RN Text sized with
- * the iconSize token. Swap when a real chevron icon ships.
+ * Chevrons: rendered with the chevron-right icon sized with the iconSize token.
  */
 import React from 'react';
 import {
   View,
   Pressable,
   Image,
-  Text as RNText,
   ImageSourcePropType,
   StyleProp,
   ViewStyle,
@@ -102,7 +99,7 @@ const RATE_BLOCK_W = 95;
 // 10; nearest spacing token is 8.
 const AMOUNT_STATUS_GAP = spacing[8];
 
-// Chevron renderer — Unicode '›' sized with iconSize; tinted to
+// Chevron renderer — chevron-right icon sized with iconSize; tinted to
 // text.secondary by default.
 function Chevron({
   size = iconSize[24],
@@ -112,7 +109,7 @@ function Chevron({
   color?: string;
 }) {
   return (
-    <RNText style={{ fontSize: size, lineHeight: size, color }}>›</RNText>
+    <Icon name="chevron-right" size={size} color={color} />
   );
 }
 

@@ -55,7 +55,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text, Tag, Button, Divider } from '../atoms';
+import { Text, Tag, Button, Divider, Icon } from '../atoms';
 import { images } from '../assets/images';
 import {
   colors,
@@ -911,22 +911,9 @@ function RadialBackground({
   );
 }
 
-// Reusable inline chevron-right glyph — no SVG ships in
-// src/assets/icons; same approach as Tag's x-close and Masthead's
-// earnings chevron.
+// Reusable chevron-right glyph — chevron-right icon, 16-px.
 function ChevronRightGlyph({ color }: { color: string }) {
-  const s = iconSize[16];
-  return (
-    <Svg width={s} height={s} viewBox="0 0 16 16" fill="none">
-      <Path
-        d="M6 4l4 4-4 4"
-        stroke={color}
-        strokeWidth={borderWidth.heavy}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={iconSize[16]} color={color} />;
 }
 
 // Small util used twice (banner + maybe variant) — same shape as

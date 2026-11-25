@@ -429,21 +429,9 @@ function InfoCircleGlyph({
   );
 }
 
-// Chevron-right glyph — 16-px caret. There's no chevron-right SVG in
-// src/assets/icons, so it's drawn inline.
+// Chevron-right glyph — 16-px caret (chevron-right icon).
 function ChevronRightGlyph({ color }: { color: string }) {
-  const s = iconSize[16];
-  return (
-    <Svg width={s} height={s} viewBox="0 0 16 16" fill="none">
-      <Path
-        d="M6 4l4 4-4 4"
-        stroke={color}
-        strokeWidth={borderWidth.heavy}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="chevron-right" size={iconSize[16]} color={color} />;
 }
 
 function EarningsStatCard({

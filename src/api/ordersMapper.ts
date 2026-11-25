@@ -260,7 +260,7 @@ export function mapOrders(res: any): OrderListRow[] {
 
 // ── detail ─────────────────────────────────────────────────────────────────
 
-const STEP_PLACED_ICON = 'cart-filled' as const;
+const STEP_PLACED_ICON = 'cart-outline' as const;
 const STEP_TRACKED_ICON = 'check-circle-outline' as const;
 
 /** Footer "expected/confirmed/paid on …" line per status. */
@@ -326,7 +326,7 @@ function buildSteps(statusKey: OrderStatusKey, a: Record<string, unknown>): Time
       return [
         placed,
         tracked,
-        { iconName: 'desc-cross', title: 'Cashback cancelled', date: longDate(a.cancelled_date) || expDate, fill: 'solid', tone: 'error' },
+        { iconName: 'close', title: 'Cashback cancelled', date: longDate(a.cancelled_date) || expDate, fill: 'solid', tone: 'error' },
       ];
     case 'delayed':
       // Timeline has no orange tone; warning (amber) is the closest available.

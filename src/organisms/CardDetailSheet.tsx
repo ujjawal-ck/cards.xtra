@@ -2072,6 +2072,8 @@ export function ApplyBar({
               tone="main"
               size={44}
               fullWidth
+              icon="trailing"
+              iconName="chevron-right"
               onPress={onApply}
             />
           </View>
