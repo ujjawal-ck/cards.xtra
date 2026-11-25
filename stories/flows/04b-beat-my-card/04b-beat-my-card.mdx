@@ -3,45 +3,53 @@ import { PageHeader, StateMatrix } from '../../../storybook/blocks';
 
 <Meta title="Flows/4b Beat my card/Overview" />
 
-<PageHeader title="4b Beat my card" meta="flow · 4 steps">Is there a better card than the one I have? The user gives spends (saved or from the quiz), picks the card they hold, and sees the best other card against it.</PageHeader>
+<PageHeader title="4b Beat my card" meta="flow · 3 steps">Is there a better card than the one I have? The user picks the card they hold, enters spends for the categories they use, and sees the best other card against it.</PageHeader>
 
 ## Flow
 
 ```
 Home tools row
    |
-   +-- saved spends on device -----------------+
-   |                                           v
-   +-- no saved spends -> SpendQuiz {next:'beat'} -> Pick list (BeatMyCardPick)
-                                                          |
-                                                          v
-                                                 Result (BeatMyCardResult)
-                                                  verdicts: best_wins, mine_wins, equal, not_found
-                                                          |
-                                           Full ranking (ToolResults, highlightAlias)
-                                                          |
-                                           Breakdown sheet -> click-out (not for the user's own card)
+   v
+Pick list (BeatMyCardPick)         "Can't find your card? Tell us" -> request sheet
+   |  Use this card  { cardAlias }
+   v
+Spends (BeatMyCardSpends)          category chips, one spend card per question; "Change" goes back
+   |  See result  { cardAlias, spends, answers, categories }
+   v
+Result (BeatMyCardResult)          "Based on <categories>" opens the edit sheet
+   verdicts: best_wins, mine_wins, equal, not_found
+   |
+   +-- Full ranking (ToolResults, highlightAlias)
+   |      Breakdown sheet -> click-out (not for the user's own card)
+   +-- Try another card -> back to Pick list
 ```
 
-Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below.
-
-## Spends
-
-<StateMatrix rows={[
-  { state: "Quiz, first question", status: 'live', story: 'flows-4b-beat-my-card-spends--quiz-first-question', note: "No saved spends." },
-  { state: "From saved spends", status: 'live', story: 'flows-4b-beat-my-card-spends--from-saved-spends', note: "Route params stand in for the saved spends (web cannot persist them)." },
-]} />
+Stories reset the shared store, cache and fetch mock when they mount, so each step is its own page. Open them from the tables below. The old spend quiz is no longer part of this flow.
 
 ## Pick list
 
 <StateMatrix rows={[
   { state: "Loaded", status: 'live', story: 'flows-4b-beat-my-card-pick-list--loaded', note: "A to Z, with search and bank chips." },
+  { state: "Card picked", status: 'live', story: 'flows-4b-beat-my-card-pick-list--picked-card', note: "Radio selected, \"Use this card\" shows." },
   { state: "Loading", status: 'live', story: 'flows-4b-beat-my-card-pick-list--loading', note: "Waits for the whole calculate call (G7)." },
   { state: "Error", status: 'live', story: 'flows-4b-beat-my-card-pick-list--error', note: "Calculate answers 500." },
   { state: "Offline", status: 'live', story: 'flows-4b-beat-my-card-pick-list--offline', note: "Paused query." },
   { state: "Empty", status: 'live', story: 'flows-4b-beat-my-card-pick-list--empty', note: "No cards to compare yet." },
-  { state: "Search, no match", status: 'live', story: 'flows-4b-beat-my-card-pick-list--search-no-match', note: "Clear search is the only way out." },
-  { state: "My card missing, proposed", status: 'proposed', story: 'flows-4b-beat-my-card-pick-list--my-card-missing-proposed', note: "Open question Q2." },
+  { state: "Search, no match", status: 'live', story: 'flows-4b-beat-my-card-pick-list--search-no-match', note: "Clear search, and Tell us stays under the list." },
+  { state: "Tell us your card sheet", status: 'live', story: 'flows-4b-beat-my-card-pick-list--card-request-sheet', note: "Replaces the old proposed exit (Q2)." },
+]} />
+
+## Spends
+
+<StateMatrix rows={[
+  { state: "Default, nothing selected", status: 'live', story: 'flows-4b-beat-my-card-spends--default', note: "Chips, \"Pick where you spend\", See result disabled." },
+  { state: "Category selected", status: 'live', story: 'flows-4b-beat-my-card-spends--category-selected', note: "Group opens, all values 0." },
+  { state: "Typed value", status: 'live', story: 'flows-4b-beat-my-card-spends--typed-value', note: "Footer \"Based on 1 category\", See result enabled." },
+  { state: "Folded group", status: 'live', story: 'flows-4b-beat-my-card-spends--folded-group', note: "A finished group folds to one line while another is edited." },
+  { state: "See result", status: 'live', story: 'flows-4b-beat-my-card-spends--see-result', note: "Next route params include categories." },
+  { state: "Card list loading", status: 'live', story: 'flows-4b-beat-my-card-spends--card-list-loading', note: "No card name in the strip; the screen has no loading state." },
+  { state: "Card list error", status: 'live', story: 'flows-4b-beat-my-card-spends--card-list-error', note: "Calculate answers 500." },
 ]} />
 
 ## Result
@@ -51,8 +59,9 @@ Stories reset the shared store, cache and fetch mock when they mount, so each st
   { state: "mine_wins", status: 'live', story: 'flows-4b-beat-my-card-result--mine-wins', note: "Rank 1 card is not in the app list; check the hero." },
   { state: "equal", status: 'live', story: 'flows-4b-beat-my-card-result--equal', note: "Built tie: the story edits the calculate answer." },
   { state: "not_found", status: 'live', story: 'flows-4b-beat-my-card-result--not-found', note: "Card missing from the calculate list." },
-  { state: "best_wins, Apply now", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins-applyable', note: "Main revenue branch; HSBC Live Plus already ranks 1, so it matches best_wins." },
+  { state: "best_wins, Apply now", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins-applyable', note: "Main revenue branch; the card rule (leagueForDisplay) may hide Apply for a card with no CashKaro rate." },
   { state: "best_wins, no Apply", status: 'live', story: 'flows-4b-beat-my-card-result--best-wins-no-apply', note: "Best other card also loses money." },
+  { state: "Based on, edit sheet", status: 'live', story: 'flows-4b-beat-my-card-result--based-on-edit', note: "Sheet holds only the picked categories." },
   { state: "Loading", status: 'live', story: 'flows-4b-beat-my-card-result--loading', note: "Calculate never answers." },
   { state: "Error", status: 'live', story: 'flows-4b-beat-my-card-result--error', note: "Calculate answers 500." },
   { state: "Offline", status: 'live', story: 'flows-4b-beat-my-card-result--offline', note: "Paused query." },

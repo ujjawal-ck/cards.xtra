@@ -31,7 +31,7 @@ const ROOT = {
   MissingCashbackInvoiceUpload: true, MissingCashbackTicketSuccess: true, MissingCashbackResult: true,
   MissingCashbackTicketStatusReview: true, MissingCashbackTicketListClosed: true, MissingCashbackTicketListTracked: true,
   OrdersList: true, OrdersDetail: true, AllCardBenefits: true, CardsYouCanGet: true, SpendQuiz: true, ToolResults: true,
-  BeatMyCardPick: true, BeatMyCardResult: true, BestForBrands: true, BestForCategory: true, Advisor: true,
+  BeatMyCardPick: true, BeatMyCardSpends: true, BeatMyCardResult: true, BestForBrands: true, BestForCategory: true, Advisor: true,
   AdvisorResults: true, AdvisorAvatarDemo: true, ProfilePaymentHistory: true, ProfilePaymentHistoryDetails: true,
   ProfilePaymentHistoryEmpty: true, ReviewUs: true, WriteReview: true, PrivacyPolicy: true, AccountSettings: true,
   EditContactVerifyIdentity: true, EditContactEnterNew: true, EditContactVerifyNew: true, DeleteAccount: true,

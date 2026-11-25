@@ -13,7 +13,9 @@ export default meta;
 type Story = StoryObj;
 
 const SRC = 'src/screens/tools/BeatMyCardResultScreen.tsx';
-const result = (cardAlias: string) => routeParams('BeatMyCardResult', { cardAlias, spends: SPENDS, answers: ANSWERS });
+const CATEGORIES = ['shopping', 'groceries', 'bills', 'fuel', 'food'] as const;
+const result = (cardAlias: string) =>
+  routeParams('BeatMyCardResult', { cardAlias, spends: SPENDS, answers: ANSWERS, categories: [...CATEGORIES] });
 const screen = (cardAlias: string, a: ReturnType<typeof api.ok>) => (
   <ScreenHarness name="BeatMyCardResult" component={BeatMyCardResultScreen} params={result(cardAlias)} api={a} />
 );
@@ -22,7 +24,7 @@ const screen = (cardAlias: string, a: ReturnType<typeof api.ok>) => (
 export const BestWins: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:150`,
+    source: `${SRC}:344`,
     docs: { description: { story: 'Verdict `best_wins`. The user holds HDFC Regalia Gold, which ranks 8th in the fixture league: another card wins, shown on the podium with the line table below.' } },
   },
   render: () => <ScreenHarness name="BeatMyCardResult" component={BeatMyCardResultScreen} params={result('hdfc-regalia-gold')} api={api.ok()} />,
@@ -32,7 +34,7 @@ export const BestWins: Story = {
 export const MineWins: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:150`,
+    source: `${SRC}:344`,
     docs: { description: { story: 'Verdict `mine_wins`. The user holds the rank 1 card of the fixture league (CRED IndusInd). That card is not in the app list, so the hero has no app card art and no card page: check this on a device.' } },
   },
   render: () => <ScreenHarness name="BeatMyCardResult" component={BeatMyCardResultScreen} params={result('cred-indusind-bank-credit-card')} api={api.ok()} />,
@@ -42,7 +44,7 @@ export const MineWins: Story = {
 export const Equal: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:150`,
+    source: `${SRC}:344`,
     docs: { description: { story: 'Verdict `equal`. The calculate answer is edited in the story so the second row copies the first: the two top cards tie, and the user holds one of them (HSBC Live Plus). The tie is a built case; no real card pair does this.' } },
   },
   render: () => (
@@ -59,7 +61,7 @@ export const Equal: Story = {
 export const NotFound: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:299`,
+    source: `${SRC}:319`,
     docs: { description: { story: 'The user\'s card is not in the list the calculate call returned: "We can\'t compare this card yet", the best cards for the spends, and "Try another card".' } },
   },
   render: () => <ScreenHarness name="BeatMyCardResult" component={BeatMyCardResultScreen} params={result('card-not-in-the-list')} api={api.ok()} />,
@@ -69,7 +71,7 @@ export const NotFound: Story = {
 export const BestWinsApplyable: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:443`,
+    source: `${SRC}:477`,
     docs: { description: { story: 'Verdict `best_wins` with a card the app sells: the user holds HDFC Regalia Gold, the best other card is HSBC Live Plus (in the app), and the result shows "Apply now". The story drops the CRED row (not in the app) from the calculate answer, but HSBC already ranks 1 with the full fixture (net ₹11,160 a year, fee waived, against CRED at ₹11,111), so this renders the same branch as `BestWins`.' } },
   },
   render: () => screen('hdfc-regalia-gold', api.ok({ calculate: calcWithout('cred-indusind-bank-credit-card') })),
@@ -77,26 +79,26 @@ export const BestWinsApplyable: Story = {
 
 export const Loading: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:257`, docs: { description: { story: 'The calculate call never answers: the loading state with the wait line and skeletons. The real call can take up to about 90 s.' } } },
+  parameters: { source: `${SRC}:277`, docs: { description: { story: 'The calculate call never answers: the loading state with the wait line and skeletons. The real call can take up to about 90 s.' } } },
   render: () => screen('hdfc-regalia-gold', api.loading()),
 };
 
 export const Error: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:277`, docs: { description: { story: '"Couldn\'t compare cards" with "Try again". The calculate call answers 500; the state shows after the call\'s one retry.' } } },
+  parameters: { source: `${SRC}:297`, docs: { description: { story: '"Couldn\'t compare cards" with "Try again". The calculate call answers 500; the state shows after the call\'s one retry.' } } },
   render: () => screen('hdfc-regalia-gold', api.ok({ calculate: e500 })),
 };
 
 export const Offline: Story = {
   tags: ['live'],
-  parameters: { source: `${SRC}:268`, docs: { description: { story: 'Offline at cold start with no cache: "You\'re offline" with "Try again". The query is paused, not failed.' } } },
+  parameters: { source: `${SRC}:288`, docs: { description: { story: 'Offline at cold start with no cache: "You\'re offline" with "Try again". The query is paused, not failed.' } } },
   render: () => screen('hdfc-regalia-gold', api.offline()),
 };
 
 export const BestWinsNoApply: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:443`,
+    source: `${SRC}:477`,
     docs: { description: { story: 'Verdict `best_wins`, but the best other card also loses money (`otherSaves` is false), so "Apply now" is hidden. The calculate answer is edited in the story: the CRED row is dropped, every row saves 0 a year, the other cards carry a ₹100 fee and the user\'s card its own larger fee, so the best other card (HSBC Live Plus, in the app) nets -₹100.' } },
   },
   render: () => screen('hdfc-regalia-gold', api.ok({ calculate: calcOthersLose('hdfc-regalia-gold') })),
@@ -105,13 +107,27 @@ export const BestWinsNoApply: Story = {
 export const FilterNoMatch: Story = {
   tags: ['live'],
   parameters: {
-    source: `${SRC}:311`,
+    source: `${SRC}:336`,
     docs: { description: { story: 'Every card in the answer has a joining fee. "Lifetime free" is tapped after mount, so the filter matches nothing: "No card matches these filters" with "Clear filters".' } },
   },
   render: () => (
     <>
       {screen('hdfc-regalia-gold', api.ok({ calculate: calcAllPaid() }))}
       <TapScript steps={[{ click: 'Lifetime free' }]} startMs={1800} />
+    </>
+  ),
+};
+
+export const BasedOnEdit: Story = {
+  tags: ['live'],
+  parameters: {
+    source: `${SRC}:401`,
+    docs: { description: { story: 'Under the hero, "Based on Shopping, Groceries, Paying Bills, Fuel and Ordering Food" lists the categories picked on the spends step. Tapped after mount, it opens the edit sheet with only those categories\' questions; "+ Add a category" in the sheet goes back to the spends step. An edit keeps the categories as they were.' } },
+  },
+  render: () => (
+    <>
+      {screen('hdfc-regalia-gold', api.ok())}
+      <TapScript steps={[{ click: 'Based on', prefix: true }]} startMs={2500} />
     </>
   ),
 };
