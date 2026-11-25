@@ -120,3 +120,19 @@ describe('unusable category response', () => {
     expect(() => mapCategoryOffers({ meta: { total_records: 0 }, data: 'oops' })).toThrow();
   });
 });
+
+describe('storeId on the grid summary (C5)', () => {
+  it('is the row id as a string, not the slug, when unique_identifier differs', () => {
+    const [s] = mapCategoryOffers({
+      data: [{ type: 'offers', id: 12345, attributes: { name: 'Some Store', unique_identifier: 'some-store-coupons' } }],
+    });
+    expect(s.slug).toBe('some-store-coupons');
+    expect(s.storeId).toBe('12345');
+  });
+
+  it('is undefined when the row has no id (the slug comes from unique_identifier)', () => {
+    const [s] = mapCategoryOffers({ data: [{ type: 'offers', attributes: { name: 'No Id', unique_identifier: 'no-id' } }] });
+    expect(s.slug).toBe('no-id');
+    expect(s.storeId).toBeUndefined();
+  });
+});

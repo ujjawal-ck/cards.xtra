@@ -19,6 +19,7 @@ import { httpRequest } from './http/client';
 import { otpValue } from './client';
 import { ApiError } from './http/errors';
 import { withUserToken } from './http/tokenManager';
+import { reportHandled } from './http/report';
 import type { ZodTypeAny } from 'zod';
 import { checkContract } from './schemas/validate';
 import * as Schemas from './schemas';
@@ -384,19 +385,125 @@ export async function getOfferCategories(): Promise<any> {
   return ck('/offers/categories', { auth: 'aws', query: { device: CK.device } });
 }
 
+/** Rows per category page. The API default is 10; production honours at least 2000 (2026-11-24). */
+export const CATEGORY_PAGE_SIZE = 500;
+/** Most pages one category call reads: 10000 rows at 500 a page, 2000 if the server caps a page at 100. */
+export const CATEGORY_MAX_PAGES = 20;
+
+/**
+ * A card-rate list (`partialOk: false`) that ends below the server's
+ * `meta.total_records`. Carries the rows that did load (deduped by id) and the
+ * total, so the caller can choose: last good rows, else these short rows (a
+ * short list hides some cards, a throw hides all). Never saved as last good.
+ */
+export class CardRateShortListError extends Error {
+  readonly rows: any[];
+  readonly total: number;
+  constructor(rows: any[], rawCount: number, total: number) {
+    super(`Offers category ended at ${rawCount} of ${total} rows`);
+    this.name = 'CardRateShortListError';
+    this.rows = rows;
+    this.total = total;
+  }
+}
+
+/**
+ * Read every page of `/offers/category/<path>` (contract C8). Pages are read
+ * one after another with page size 500. The loop stops:
+ *   - when `meta.total_records` is known: at the total, counted in RAW rows
+ *     (before the dedupe), so a duplicate store id never makes the list look
+ *     short. A short page does NOT stop it: the server may cap the page size
+ *     below 500, and it caps every page the same, so the page numbers stay
+ *     consistent;
+ *   - when the total is unknown: at a short page;
+ *   - always: at an empty page, a page that adds no new row (a server that
+ *     ignores `page[number]`), or 20 pages.
+ * `links.next` is not used to stop: production sets it on the last page too.
+ * Rows are deduped by row `id`. The same `query` goes on every page.
+ * Page 1 failure throws. A later page failure (or a later page with no `data`
+ * list) throws too, unless `partialOk`: then the rows of the pages read so far
+ * are returned (and the error is reported). Without `partialOk`, a list whose
+ * raw rows end below a known total throws CardRateShortListError. A page that
+ * adds no new row does not count toward the raw rows (a server that ignores
+ * `page[number]` repeats page 1).
+ * Returns page 1's envelope with `data` replaced by all the rows. A page 1 body
+ * with no `data` list is returned as is, so the mapper can tell an empty
+ * category from a broken body.
+ */
+async function getCategoryPages(
+  encodedPath: string,
+  opts: { query: Record<string, string | number>; contract: [string, ZodTypeAny]; partialOk: boolean },
+): Promise<any> {
+  let first: any;
+  let total = NaN; // meta.total_records of page 1; NaN when unknown
+  const rows: any[] = [];
+  let rawCount = 0; // rows of the pages that added a new row, before the dedupe
+  const seen = new Set<string>();
+  for (let page = 1; page <= CATEGORY_MAX_PAGES; page++) {
+    let res: any;
+    try {
+      res = await ck<any>(`/offers/category/${encodedPath}`, {
+        contract: opts.contract,
+        auth: 'aws',
+        query: { ...opts.query, 'page[size]': CATEGORY_PAGE_SIZE, 'page[number]': page },
+      });
+      if (page > 1 && !Array.isArray(res?.data)) {
+        throw new ApiError('Offers category page had no data list', 0, res);
+      }
+    } catch (e) {
+      if (page === 1 || !opts.partialOk) throw e;
+      reportHandled(e, `ck category page ${page} (${encodedPath}): showing the pages read`);
+      break;
+    }
+    if (page === 1) {
+      first = res;
+      if (!Array.isArray(res?.data)) return res;
+      const raw = res?.meta?.total_records;
+      if (raw !== null && raw !== undefined && raw !== '') total = Number(raw);
+    }
+    const pageRows: any[] = res.data;
+    const before = rows.length;
+    for (const row of pageRows) {
+      const id = row?.id == null ? '' : String(row.id);
+      if (id) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      rows.push(row);
+    }
+    if (pageRows.length === 0 || rows.length === before) break; // empty, or nothing new
+    rawCount += pageRows.length;
+    if (Number.isFinite(total)) {
+      if (rawCount >= total) break;
+    } else if (pageRows.length < CATEGORY_PAGE_SIZE) {
+      break;
+    }
+  }
+  // The loop can end below a known total (an empty page, a page with no new
+  // row, the cap). Without `partialOk` that short list is no good list: a
+  // short card-rate list would hide cards. The caller decides (useCards).
+  if (!opts.partialOk && Number.isFinite(total) && rawCount < total) {
+    throw new CardRateShortListError(rows, rawCount, total);
+  }
+  return { ...first, data: rows };
+}
+
 /**
  * Stores within a category. Accepts a category PATH — usually nested
  * "parent/sub" (e.g. "home-categories-exclusive/home-kitchen-offers"), the
  * same shape the website uses; a single segment also works. Slashes are
  * preserved (only the segments are encoded).
+ * Reads every page (getCategoryPages; "More" has 1573 stores, 4 pages). A
+ * later page failure keeps the pages read (Q6). Returns one
+ * `{ data, meta, links }` envelope, as one page did.
  */
 export async function getCategoryOffers(categoryPath: string): Promise<any> {
   const path = categoryPath.split('/').map(encodeURIComponent).join('/');
-  return ck(`/offers/category/${path}`, { contract: ['offers/category', Schemas.OffersByCategoryResponse],
-    auth: 'aws',
-    // Default page size is 10 — request a large page so the grid shows the
-    // full category (e.g. fashion has 39 stores, not 10).
-    query: { device: CK.device, 'page[size]': 100, ...segmentQuery() },
+  return getCategoryPages(path, {
+    contract: ['offers/category', Schemas.OffersByCategoryResponse],
+    // The segment is read once, so every page of one call sends the same value.
+    query: { device: CK.device, ...segmentQuery() },
+    partialOk: true,
   });
 }
 
@@ -432,25 +539,23 @@ export async function getOfferStore(storeSlug: string): Promise<any> {
 const CARD_RATE_CATEGORY = 'home-categories-exclusive';
 
 /**
- * All stores in the card-rate category. Pages through (page size 100) until a
- * short page, so the full set is returned (≈288 stores / 3 pages on staging).
- * Returns the flat `data[]` of offer rows; cardRates.ts builds the index.
+ * All stores in the card-rate category. Reads every page with the shared
+ * paging helper (page size 500; 289 rows = 1 page in production, 2026-11-24).
+ * Any page failure throws: a partial list would hide cards, so the caller
+ * keeps its last good rows instead (contract C8). A list that ends below the
+ * total throws CardRateShortListError, which carries the rows that loaded.
+ * Returns the flat `data[]` of offer rows, deduped by id; cardRates.ts builds the index.
  */
 export async function getCardRateStores(): Promise<any[]> {
-  const all: any[] = [];
   // No `filter[segmentid]` here: it is not known whether the filter restricts
   // the card stores returned (user decision 2026-11-23). Offers category and
   // store calls keep it.
-  for (let page = 1; page <= 20; page++) {
-    const res = await ck<any>(`/offers/category/${CARD_RATE_CATEGORY}`, { contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
-      auth: 'aws',
-      query: { device: CK.device, 'page[size]': 100, 'page[number]': page },
-    });
-    const rows: any[] = Array.isArray(res?.data) ? res.data : [];
-    all.push(...rows);
-    if (rows.length < 100) break; // last page
-  }
-  return all;
+  const res = await getCategoryPages(CARD_RATE_CATEGORY, {
+    contract: ['offers/category (card rates)', Schemas.OffersByCategoryResponse],
+    query: { device: CK.device },
+    partialOk: false,
+  });
+  return Array.isArray(res?.data) ? res.data : [];
 }
 
 /**

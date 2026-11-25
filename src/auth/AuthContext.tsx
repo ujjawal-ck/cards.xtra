@@ -49,7 +49,7 @@ import {
 import { qk } from '../query/keys';
 import { fetchProfile } from '../query/useProfile';
 import { fetchEarnings } from '../query/useEarnings';
-import { queryClient } from '../query/queryClient';
+import { clearQueryCache, queryClient } from '../query/queryClient';
 import { analytics, Events } from '../analytics';
 
 type Status = 'loading' | 'authenticated' | 'unauthenticated';
@@ -192,8 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The new user id (click-out attribution reads it right after) and
     // segment, before the cache clear so refetched offers carry the segment.
     await keepIdentity(next).catch(() => undefined);
-    // A new login never inherits the previous user's cache.
-    queryClient.clear();
+    // A new login never inherits the previous user's cache. The public
+    // card-rate rows stay (clearQueryCache).
+    clearQueryCache();
     sessionRef.current = tokens;
     setSession(tokens);
     setStatus('authenticated');

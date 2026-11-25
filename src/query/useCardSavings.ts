@@ -12,9 +12,13 @@
  * row (`joinAppCards` in src/lib/cardTools.ts).
  *
  * `league`: every calculate row in rank order (SHOW_CARDS_NOT_IN_APP), with
- * `card` set only when the join finds one. It needs only the calculate call:
- * while the cards list loads, or when it fails, rows come without `card`.
- * `isLoading`, `isOffline` and `isError` follow the calculate call only.
+ * `card` set only when the join finds one. While the cards list loads, or when
+ * it fails, rows come without `card`.
+ * `isLoading` and `isOffline` wait for BOTH calls: the card rule (mapped only)
+ * cannot run before the cards list is known, so the screens never show a
+ * league row while it loads. `isError` follows the calculate call only.
+ * `cardsError` is the cards list failing with nothing cached: screens show an
+ * error for it, because the league cannot apply the card rule without it.
  *
  * The join uses EVERY active app card, not only the shown ones: the Beat my
  * card picker lists the league, and the user's own card is an input, not a
@@ -39,7 +43,7 @@ import {
   type CardSavings,
   type LeagueRowOf,
 } from '../lib/cardTools';
-import { useCardCatalog } from './useCards';
+import { isNoMappedCardsError, useCardCatalog } from './useCards';
 import type { ShownCards } from '../api/cardRates';
 
 /** What the calculate query caches: the ranked list and how long the call took. */
@@ -63,31 +67,75 @@ export interface UseCardSavingsResult {
   /** Every calculate row in rank order. `card` is set only when the join finds one. Empty until loaded. */
   league: LeagueRow[];
   /**
-   * The app cards the card rule shows (isCardShown) and whether the CashKaro
-   * filter is on, for display only (leagueForDisplay). null while the cards
-   * list is not known (loading or failed).
+   * The app cards the card rule shows (isCardShown), for display only
+   * (leagueForDisplay). null while the cards list is not known (loading or
+   * failed).
    */
   shown: ShownCards | null;
   /**
-   * true while the calculate call has no data and is fetching.
+   * true while the calculate call or the cards list has no data and is
+   * fetching (the cards list until it resolves or fails).
    * false while paused offline (see `isOffline`).
    */
   isLoading: boolean;
   /**
-   * true when the hook is enabled, has no result yet, and the calculate call is
-   * paused because the phone is offline. React Query resumes the call by itself
-   * when the phone is back online. `league` is empty here, and that does NOT
-   * mean "no card saves you money".
+   * true when the hook is enabled, and the calculate call or the cards list has
+   * no result yet and is paused because the phone is offline. React Query
+   * resumes the call by itself when the phone is back online. `league` is
+   * empty here, and that does NOT mean "no card saves you money".
    */
   isOffline: boolean;
   /** true when the calculate call failed for good. A failed cards list only leaves `card` unset. */
   isError: boolean;
+  /**
+   * true when the cards list failed AND no cards are cached (cardsQueryFailed).
+   * A failed background refetch keeps the cached list, so this stays false.
+   */
+  cardsError: boolean;
+  /**
+   * true when `cardsError` is because no card matched a CashKaro store row
+   * (NoMappedCardsError), not a network or server failure. Screens pick the copy.
+   */
+  cardsNoMatch: boolean;
   refetch: () => void;
   /**
    * How long the calculate call took, for analytics. Set only when this hook
    * instance saw the call finish; undefined for a cached result.
    */
   loadMs?: number;
+}
+
+/**
+ * The cards query failed and has no data. Never bare `isError`: a failed
+ * background refetch keeps the last list, and must not replace a working league.
+ */
+export function cardsQueryFailed(q: { isError: boolean; data?: unknown }): boolean {
+  return q.isError && !q.data;
+}
+
+/** The query fields the loading flags read (a v5 query result fits). */
+interface QueryStatusInput {
+  data?: unknown;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
+}
+
+/**
+ * The loading and offline flags of useCardSavings. Both calls gate them: the
+ * calculate call and the cards list (the card rule needs the shown set).
+ * Offline: App.js wires NetInfo into onlineManager and the network mode is
+ * 'online', so a query with no data is PAUSED (isPending, fetchStatus
+ * 'paused'). v5 `isLoading` is false then, so it cannot be used here.
+ */
+export function savingsFlags(
+  enabled: boolean,
+  calc: QueryStatusInput,
+  cards: QueryStatusInput,
+): { isLoading: boolean; isOffline: boolean } {
+  const paused = (q: QueryStatusInput) => q.data === undefined && q.fetchStatus === 'paused';
+  const loading = (q: QueryStatusInput) => q.isPending && q.fetchStatus !== 'paused';
+  const isOffline = enabled && (paused(calc) || paused(cards));
+  return { isOffline, isLoading: enabled && !isOffline && (loading(calc) || loading(cards)) };
 }
 
 /**
@@ -126,7 +174,7 @@ export function useCardSavings(
 
   const catalog = cards.data;
   const shown = useMemo<ShownCards | null>(
-    () => (catalog ? { ids: new Set(catalog.shown.map((c) => c.id)), filterOn: catalog.filterOn } : null),
+    () => (catalog ? { ids: new Set(catalog.shown.map((c) => c.id)) } : null),
     [catalog],
   );
 
@@ -144,12 +192,8 @@ export function useCardSavings(
     [calcFailed, cardsFailed, calcRefetch, cardsRefetch],
   );
 
-  // Offline: App.js wires NetInfo into onlineManager and the network mode is
-  // 'online', so a query with no data is PAUSED (isPending, fetchStatus
-  // 'paused'). v5 `isLoading` is false then, so it cannot be used here.
-  // The cards list does not gate these flags: the league shows without it.
-  const isOffline = enabled && calc.data === undefined && calc.fetchStatus === 'paused';
-  const isLoading = enabled && !isOffline && calc.isPending && calc.fetchStatus !== 'paused';
+  const { isLoading, isOffline } = savingsFlags(enabled, calc, cards);
+  const cardsError = cardsQueryFailed(cards);
 
   return {
     league,
@@ -157,6 +201,8 @@ export function useCardSavings(
     isLoading,
     isOffline,
     isError: enabled && calc.isError,
+    cardsError,
+    cardsNoMatch: cardsError && isNoMappedCardsError(cards.error),
     refetch,
     // A cached result keeps the first call's duration; report it only for a
     // call this instance saw finish.

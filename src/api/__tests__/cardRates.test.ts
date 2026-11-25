@@ -1,5 +1,5 @@
 /**
- * CashKaro card rewards and the "filter once mapped" rule (decision 2026-11-23).
+ * CashKaro card rewards and the mapped-only card rule (owner rule D-A, 2026-11-24).
  *
  * Flat vs Upto on the card reward badge. Rule (same as cashkaro.com, checked on
  * all 20 listed cards on 2026-11-17): "Upto" when the CashKaro offer row has
@@ -9,7 +9,6 @@
 import {
   buildCardRateIndex,
   isCardShown,
-  isCkFilterOn,
   leagueForDisplay,
   resolveCkRate,
 } from '../cardRates';
@@ -126,8 +125,7 @@ describe('store row with amount 0 (parity J)', () => {
 
   it('a card on an amount-0 row is still a matched card, so it is shown', () => {
     const card = { ck_store_id: '50', name: 'Zero 50' };
-    expect(isCkFilterOn(idx, [card])).toBe(true);
-    expect(isCardShown(card, idx, true)).toBe(true);
+    expect(isCardShown(card, idx)).toBe(true);
   });
 
   it('a row with amount 0 never makes a rated card\'s name ambiguous', () => {
@@ -161,48 +159,50 @@ describe('store row with amount 0 (parity J)', () => {
   });
 });
 
-describe('filter once mapped (isCkFilterOn + isCardShown)', () => {
-  const sbi = { ck_store_id: '24756', name: 'SBI Cashback Credit Card', commission: '1400' };
-  const axisPaid = { ck_store_id: '11111', name: 'Axis Unmapped Credit Card', commission: '900' };
-  const axisFree = { ck_store_id: '11112', name: 'Axis Miles Credit Card', commission: '0', bk_commission: '700' };
-  const noComm = { ck_store_id: '11113', name: 'No Comm Credit Card', commission: 'N/A' };
+describe('mapped only (isCardShown, owner rule D-A)', () => {
+  // Dummy amounts. Commission fields stay on the inputs to prove the rule never reads them.
+  const sbi = { ck_store_id: '24756', name: 'SBI Cashback Credit Card', commission: '100' };
+  const axisPaid = { ck_store_id: '11111', name: 'Axis Unmapped Credit Card', commission: '200' };
+  const bkOnly = { ck_store_id: '11112', name: 'Axis Miles Credit Card', commission: '0', bk_commission: '200' };
   const twin = { ck_store_id: '99999', name: 'Kotak League Platinum Credit Card CG May' };
 
-  it('index empty or failed: the filter is off', () => {
+  it('an empty index shows no card, also one with a BankKaro commission', () => {
     for (const empty of [buildCardRateIndex([]), buildCardRateIndex(undefined as any)]) {
-      expect(isCkFilterOn(empty, [sbi, axisPaid])).toBe(false);
+      expect(isCardShown(sbi, empty)).toBe(false);
+      expect(isCardShown(axisPaid, empty)).toBe(false);
+      expect(isCardShown({ name: 'x', bk_commission: '100' } as any, empty)).toBe(false);
     }
   });
 
-  it('filter off: commissionable only, as before (CashKaro amount or BankKaro commission above 0)', () => {
-    const empty = buildCardRateIndex([]);
-    expect(isCardShown(axisPaid, empty, false)).toBe(true);
-    expect(isCardShown(noComm, empty, false)).toBe(false);
-    // Same parse as before: `commission` "0" is truthy, so `bk_commission` is not read.
-    expect(isCardShown(axisFree, empty, false)).toBe(false);
-    expect(isCardShown({ name: 'x', bk_commission: '500' }, empty, false)).toBe(true);
-  });
-
-  it('an index with only non-card stores leaves the filter off', () => {
+  it('an index with only non-card stores shows no card', () => {
     const nonCard = buildCardRateIndex([
       { id: '16919', attributes: { name: 'Nykaa Fashion', cashback: { payment_type: 'percent', amount: '5' } } },
-      { id: '100000015', attributes: { name: 'Dot & Key IDFC', cashback: { payment_type: 'percent', amount: '12' } } },
+      { id: '100000015', attributes: { name: 'Dot & Key IDFC', cashback: { payment_type: 'percent', amount: '10' } } },
     ]);
-    expect(isCkFilterOn(nonCard, [sbi, axisPaid, noComm])).toBe(false);
-    expect(isCardShown(sbi, nonCard, false)).toBe(true); // commission keeps it, as before
-    expect(isCardShown(noComm, nonCard, false)).toBe(false);
+    expect(isCardShown(sbi, nonCard)).toBe(false);
+    expect(isCardShown(axisPaid, nonCard)).toBe(false);
   });
 
-  it('filter on once one card matches: only matched cards show, commission does not count', () => {
-    expect(isCkFilterOn(index, [axisPaid, sbi])).toBe(true);
-    expect(isCardShown(sbi, index, true)).toBe(true); // by id
-    expect(isCardShown(axisPaid, index, true)).toBe(false); // unmatched: hidden despite a commission
-    expect(isCardShown({ name: 'No Name Match' }, index, true)).toBe(false);
+  it('an unmatched card with a BankKaro commission is hidden', () => {
+    expect(isCardShown(axisPaid, index)).toBe(false);
+    expect(isCardShown(bkOnly, index)).toBe(false);
+    expect(isCardShown({ name: 'No Name Match' }, index)).toBe(false);
   });
 
-  it('a name-fallback match turns the filter on and is shown', () => {
-    expect(isCkFilterOn(index, [twin, noComm])).toBe(true);
-    expect(isCardShown(twin, index, true)).toBe(true);
+  it('a card matched by id is shown', () => {
+    expect(isCardShown(sbi, index)).toBe(true);
+  });
+
+  it('a matched card with amount 0 is shown', () => {
+    const zeroIdx = buildCardRateIndex([
+      { id: '40', attributes: { name: 'Zero Forty Credit Card', cashback: { payment_type: 'currency', amount: '0' } } },
+    ]);
+    expect(resolveCkRate('40', undefined, zeroIdx)?.amount).toBe(0);
+    expect(isCardShown({ ck_store_id: '40', name: 'Other Name' }, zeroIdx)).toBe(true);
+  });
+
+  it('a name-fallback match is shown (contract Q2)', () => {
+    expect(isCardShown(twin, index)).toBe(true);
   });
 });
 
@@ -214,24 +214,25 @@ describe('league for display (leagueForDisplay)', () => {
   const rows = [lr('a', '1'), lr('b', '2'), lr('not-in-app'), lr('mine', '9')];
   const aliases = (xs: Array<{ savings: { alias: string } }>) => xs.map((r) => r.savings.alias);
 
-  it('keeps every row as it is while the card list is not known', () => {
-    expect(leagueForDisplay(rows, null)).toBe(rows);
+  it('a null shown set (cards loading or failed) returns no unmapped row; only the own card stays', () => {
+    expect(leagueForDisplay(rows, null)).toEqual([]);
+    const out = leagueForDisplay(rows, null, 'mine');
+    expect(aliases(out)).toEqual(['mine']);
+    expect((out[0] as { card?: { id: string } }).card?.id).toBe('9');
   });
 
-  it('filter on: only rows whose app card is shown; rows with no app card drop out', () => {
-    expect(aliases(leagueForDisplay(rows, { ids: new Set(['1']), filterOn: true }))).toEqual(['a']);
+  it('only rows whose app card is shown; rows with no app card drop out', () => {
+    expect(aliases(leagueForDisplay(rows, { ids: new Set(['1']) }))).toEqual(['a']);
   });
 
-  it('filter off: every row stays, a card the app does not sell loses its `card` (no Apply)', () => {
-    const out = leagueForDisplay(rows, { ids: new Set(['1']), filterOn: false });
-    expect(aliases(out)).toEqual(['a', 'b', 'not-in-app', 'mine']);
-    expect(out.map((r) => !!(r as { card?: unknown }).card)).toEqual([true, false, false, false]);
+  it('an empty shown set drops every row', () => {
+    expect(leagueForDisplay(rows, { ids: new Set<string>() })).toEqual([]);
   });
 
   it("always keeps the user's own card with its card, matched or not", () => {
-    const on = leagueForDisplay(rows, { ids: new Set(['1']), filterOn: true }, 'mine');
-    expect(aliases(on)).toEqual(['a', 'mine']);
-    const off = leagueForDisplay(rows, { ids: new Set(['1']), filterOn: false }, 'mine');
-    expect((off[3] as { card?: { id: string } }).card?.id).toBe('9');
+    const out = leagueForDisplay(rows, { ids: new Set(['1']) }, 'mine');
+    expect(aliases(out)).toEqual(['a', 'mine']);
+    expect((out[1] as { card?: { id: string } }).card?.id).toBe('9');
+    expect(aliases(leagueForDisplay(rows, { ids: new Set<string>() }, 'mine'))).toEqual(['mine']);
   });
 });

@@ -90,6 +90,7 @@ jest.mock('../../query/queryClient', () => ({
       Promise.resolve(queryFn({})),
     ),
   },
+  clearQueryCache: jest.fn(),
 }));
 jest.mock('../../../modules/cashback-guard', () => ({
   isSupported: true,
@@ -106,7 +107,10 @@ const cashkaro = require('../../api/cashkaro') as {
 };
 const CashbackGuard = require('../../../modules/cashback-guard') as { stopGuard: jest.Mock };
 const { fetchEarnings } = require('../../query/useEarnings') as { fetchEarnings: jest.Mock };
-const { queryClient } = require('../../query/queryClient') as { queryClient: { prefetchQuery: jest.Mock } };
+const { queryClient, clearQueryCache } = require('../../query/queryClient') as {
+  queryClient: { prefetchQuery: jest.Mock };
+  clearQueryCache: jest.Mock;
+};
 const { qk } = require('../../query/keys') as typeof import('../../query/keys');
 const { AuthProvider } = require('../AuthContext') as typeof import('../AuthContext');
 const { currentSegment } = require('../tokenStore') as typeof import('../tokenStore');
@@ -296,6 +300,14 @@ describe('AUTH-02: signIn', () => {
 
     await b.setDisplayName('Ravi');
     expect((await settle()).displayName).toBe('Ravi');
+  });
+
+  it('a successful sign-in clears the query cache once (clearQueryCache)', async () => {
+    const v = await launch(VALID);
+    clearQueryCache.mockClear();
+    await v.signIn({ accessToken: VALID, refreshToken: 'b-refresh' });
+    expect((await settle()).status).toBe('authenticated');
+    expect(clearQueryCache).toHaveBeenCalledTimes(1);
   });
 
   it('R-08: the earnings prefetch uses the same query function as useEarnings', async () => {
