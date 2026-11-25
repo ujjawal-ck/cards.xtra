@@ -6,6 +6,8 @@ What has to be configured on the CashKaro mini-app side (and with BankKaro) so t
 
 ## 1. Offers: stores and categories
 
+> Update 2026-11-24: the mini-app key now has stores (1573 in "More") and 289 card-rate rows. Offers hide card stores (D34). The text below is from 2026-11-09.
+
 **Today on production** (`https://ckminapps.com/v1`, mini-app key):
 - `/offers/categories` returns 15 top-level CashKaro categories.
 - Every valid category path returns `total_records: 0`. No stores are mapped to the mini-app key.
@@ -25,6 +27,8 @@ What has to be configured on the CashKaro mini-app side (and with BankKaro) so t
 5. Agree what "All" means: the parent category's own store list (the app requests the parent path for the "All" tab).
 
 ## 2. Cards: click-outs and cashback rates
+
+> Update 2026-11-24: card amounts come only from CashKaro (D32), and only cards mapped to a CashKaro store show (D34). The click-out part below is still open. The rest is from 2026-11-09.
 
 **Today:** all 281 BankKaro cards carry a `ck_store_id`. The app opens BankKaro's `network_url` (`track.techtrack.in/click?…&p1={user_id}&p2={click_id}`) with `p1` = CashKaro user id and `p2` = a per-click id, because no CashKaro tracking host is configured (`CK.trackingHost` in `src/config/env.ts` is empty for prod). Card cashback amounts come from BankKaro's commission because CashKaro's card-rate category (`home-categories-exclusive`) is empty on production.
 

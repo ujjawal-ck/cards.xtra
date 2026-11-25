@@ -6,6 +6,15 @@ Format: **Decision** · date · commit(s) where it landed.
 
 ---
 
+## D34. Show only cards mapped to a CashKaro store; Offers show every store except card stores
+2026-11-24 [claude] · user decisions D-A and D-B · merge `515d2c5` (branch `claude/ck-store-filters`). Replaces the filter part of D32.
+
+- Cards (D-A). A card shows only when its BankKaro `ck_store_id`, or an exact name match (3 cards), is in the CashKaro card-rate rows (`home-categories-exclusive`). There is no fallback to unmapped cards, also while the list loads. `isCkFilterOn` and `hasBkCommission` are deleted. `isCardShown` = `resolveCkRate(...) !== null`. The own card and the rejected anchor card stay exempt.
+- Failure states. A first failure of the card-rate call shows "Couldn't load cards" with Retry. No matching card shows "Cards aren't available right now. Please try again." Later failures keep the last good rows (query key `['ck','card-rate-stores']`, kept across cache clears for the app session). A list shorter than `meta.total_records` keeps the last good rows; with none, it is used and reported once.
+- Offers (D-B). A store is hidden when its id is a BankKaro `ck_store_id` or its name matches "credit card". Category calls use pages of 500 up to `meta.total_records` (at most 20 pages). The grid shows 100 tiles and adds 100 near the end of the scroll. A refetch on focus happens only after 10 minutes.
+- Cost. Cards that lose their CashKaro store disappear without a message (5 on 2026-11-24). 29 cards show another card's store reward and 16 show a bank-level store reward (list: `mini appas/discovery/ck-store-filters-2026-11-24/card-store-mapping-2026-11-24.csv` in the owner's workspace, also in the handoff repo). "More" takes 4 calls, about 125 KB gzip.
+- Source: `mini appas/discovery/ck-store-filters-2026-11-24/alignment.md`.
+
 ## D33. Copy the CashKaro app for profile edit, reminder, login consent, splash and payout OTP
 2026-11-23 [claude] · user decision ("look at the CashKaro app for these decisions, we copy that") · branch `claude/audit-fixes`
 
@@ -22,7 +31,7 @@ Source: static teardown of the CashKaro app 4.6 and 4.7 beta, `mini appas/discov
 2026-11-23 [claude] · user decision · branch `claude/audit-fixes`. Replaces part of D27.
 
 - Displayed reward: only the CashKaro card-store rate (`home-categories-exclusive`, matched by `ck_store_id`). Never a BankKaro `commission` or `bk_commission` field. A card with no rate shows "Rewards" with no amount, or the server `cashback_button_text`.
-- Filter (`isCkFilterOn`, `isCardShown` in `src/api/cardRates.ts`). The filter is on only when at least one catalogue card matches a CashKaro store row. Then only matched cards show. While it is off (production today: 0 card stores for the app key, fact M10), the old set shows: cards with a CashKaro rate or a BankKaro commission above 0, with no amount.
+- Replaced by D34 (2026-11-24). Filter (`isCkFilterOn`, `isCardShown` in `src/api/cardRates.ts`). The filter is on only when at least one catalogue card matches a CashKaro store row. Then only matched cards show. While it is off (production today: 0 card stores for the app key, fact M10), the old set shows: cards with a CashKaro rate or a BankKaro commission above 0, with no amount.
 - Tools: the league table and the beat result use the same filter (`leagueForDisplay`). D27 "lists every card" no longer holds once the filter is on. The beat picker and the user's own card are never filtered.
 - Internal maths: `internalReward` (CashKaro rate, else commission) keeps the cross-sell gates, rejection picks and the "Highest Rewards" sort as before. It is never displayed.
 - Payout safety (audit W1). Only a 4xx is a rejection. Any other failure re-checks `payment/payment` and reports "Couldn't confirm". New payouts are then blocked app-wide for 10 minutes.
