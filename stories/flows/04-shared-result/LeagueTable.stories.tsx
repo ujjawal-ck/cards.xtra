@@ -237,7 +237,7 @@ export const OfflineWithCache: Story = {
           list: rankByNetValue(mapCalculateResponse(calculateFixture.league)),
           loadMs: 0,
         });
-        queryClient.setQueryData(cardsQueryKey, APP_CARDS);
+        queryClient.setQueryData(cardsQueryKey, { all: APP_CARDS, shown: APP_CARDS, filterOn: false });
       }}
     />
   ),

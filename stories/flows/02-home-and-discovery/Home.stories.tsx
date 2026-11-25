@@ -228,7 +228,7 @@ export const RefetchFailedWithCache: Story = {
   render: () => (
     <Home
       a={api.ok({ cards: reply.error(500) })}
-      beforeMount={() => { queryClient.setQueryData(cardsQueryKey, MODELS); }}
+      beforeMount={() => { queryClient.setQueryData(cardsQueryKey, { all: MODELS, shown: MODELS, filterOn: false }); }}
       steps={[[2000, () => { void queryClient.refetchQueries({ queryKey: cardsQueryKey }); }]]}
     />
   ),
