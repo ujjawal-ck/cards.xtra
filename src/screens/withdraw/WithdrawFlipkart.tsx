@@ -155,6 +155,7 @@ export function WithdrawFlipkart() {
                 keyboardType="email-address"
                 returnKeyType="next"
                 state={emailInvalid ? 'error' : undefined}
+                hintIcon={emailInvalid ? 'desc-exclamation' : undefined}
                 hint={emailInvalid ? 'Invalid Email ID' : undefined}
               />
               <Input
@@ -167,6 +168,7 @@ export function WithdrawFlipkart() {
                 keyboardType="email-address"
                 returnKeyType="done"
                 state={confirmMismatch ? 'error' : undefined}
+                hintIcon={confirmMismatch ? 'desc-exclamation' : undefined}
                 hint={confirmMismatch ? "Emails don't match. Please re-enter email" : undefined}
               />
               <NoteBox>

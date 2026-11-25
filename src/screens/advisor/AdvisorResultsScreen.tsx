@@ -64,7 +64,7 @@ const ResultsTile = React.memo(function ResultsTile({ card, proof, onPress }: Re
   return (
     <View style={{ gap: spacing[6] }}>
       {proof === 'likely' ? (
-        <Tag label="Likely to qualify" tone="success" size="xs" style={{ alignSelf: 'flex-start' }} />
+        <Tag label="Likely to qualify" tone="success" size="xs" icon="icon-left" iconName="check-circle-outline" style={{ alignSelf: 'flex-start' }} />
       ) : null}
       <Pressable
         onPress={() => onPress(card)}

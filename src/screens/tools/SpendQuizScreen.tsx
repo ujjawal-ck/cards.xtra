@@ -206,7 +206,7 @@ export function SpendQuizScreen() {
           />
 
           {showEmpty ? (
-            <InlineMessage tone="warning" message="Add at least one spend above 0 to see your cards." />
+            <InlineMessage tone="warning" icon="desc-exclamation" message="Add at least one spend above 0 to see your cards." />
           ) : null}
 
           <Button

@@ -74,7 +74,6 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FocusAwareStatusBar as StatusBar } from '../navigation/FocusAwareStatusBar';
-import Svg, { Path } from 'react-native-svg';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
@@ -85,7 +84,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Chip } from '../atoms';
+import { Text, Chip, Icon } from '../atoms';
 import {
   Header,
   OrderCard,
@@ -104,7 +103,7 @@ import { useOrders, useOrderDates } from '../query/useOrders';
 import { groupOrdersByMonth } from '../api/ordersMapper';
 import { isPausedWithoutData } from '../query/paused';
 import type { OrdersApiFilters } from '../api/cashkaro';
-import { colors, spacing, radius, iconSize, borderWidth, sizing, elevation } from '../tokens';
+import { colors, spacing, radius, iconSize, sizing, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -116,22 +115,6 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'OrdersList'>;
  * that are not tracked to the user. The code stays; flip to bring it back.
  */
 const SHOW_CASHBACK_GUARD = false;
-
-/** 24px chevron — no `chevron-right` in the Icon registry (inline glyph). */
-function ChevronRightGlyph({ size, color }: { size: number; color: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6 L15 12 L9 18"
-        stroke={color}
-        strokeWidth={borderWidth.thick}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
-}
-
 
 interface OrdersFilter {
   statusIndices: number[];
@@ -406,7 +389,7 @@ export function OrdersList() {
                 <Text variant="body14SemiBold" color={colors.text.inverse}>
                   Don’t see your order here?
                 </Text>
-                <ChevronRightGlyph size={iconSize[24]} color={colors.text.inverse} />
+                <Icon name="chevron-right" size={iconSize[24]} color={colors.text.inverse} />
               </ImageBackground>
             </Pressable>
           </View>

@@ -43,67 +43,9 @@ export function InfoCircleGlyph({ color }: { color: string }) {
   );
 }
 
-// Brand logos extracted from the pay-* SVGs (their embedded-PNG <pattern>
-// fills don't render in react-native-svg). Composed below as two circles.
-const LOGO_AMAZON = require('../../assets/icons/logo-amazon.png');
-const LOGO_FLIPKART = require('../../assets/icons/logo-flipkart.png');
-
-/**
- * Amazon / Flipkart gift-card glyph — two white bordered circles, each with a
- * brand logo, slightly overlapping (matches the Figma combined mark). Built
- * from raster logos because the equivalent SVGs use embedded-PNG patterns
- * that react-native-svg renders incorrectly.
- */
+/** Amazon / Flipkart gift-card glyph — the combined raster mark. */
 export function GiftCardGlyph() {
-  const CIRCLE = 20; // diameter of each brand circle
-  const LOGO = 12; // logo edge inside the circle
-  const OVERLAP = 4; // how much the circles overlap
-
-  const circle = {
-    width: CIRCLE,
-    height: CIRCLE,
-    borderRadius: CIRCLE / 2,
-    borderWidth: borderWidth.thin,
-    borderColor: colors.border.subtle3,
-    backgroundColor: colors.surface.default,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  };
-
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={circle}>
-        <Image
-          source={LOGO_AMAZON}
-          style={{ width: LOGO, height: LOGO }}
-          resizeMode="contain"
-        />
-      </View>
-      <View style={[circle, { marginLeft: -OVERLAP }]}>
-        <Image
-          source={LOGO_FLIPKART}
-          style={{ width: LOGO, height: LOGO }}
-          resizeMode="contain"
-        />
-      </View>
-    </View>
-  );
-}
-
-/** Chevron-right caret, tinted via `color`. */
-export function ChevronRightGlyph({ color }: { color: string }) {
-  const s = iconSize[24];
-  return (
-    <Svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M9 6l6 6-6 6"
-        stroke={color}
-        strokeWidth={borderWidth.heavy}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Svg>
-  );
+  return <Icon name="pay-combined" size={mediaSize[32]} />;
 }
 
 export interface MethodRowItem {
@@ -200,7 +142,7 @@ export function MethodRow({ item }: { item: MethodRowItem }) {
           ) : null}
         </View>
       </View>
-      {unavailable ? null : <ChevronRightGlyph color={colors.text.secondary} />}
+      {unavailable ? null : <Icon name="chevron-right" size={iconSize[24]} color={colors.text.secondary} />}
     </Pressable>
   );
 }

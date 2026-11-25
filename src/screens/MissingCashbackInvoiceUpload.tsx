@@ -24,9 +24,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Button } from '../atoms';
+import { Text, Button, Icon } from '../atoms';
 import { Header } from '../organisms';
-import { colors, spacing, radius, borderWidth, elevation } from '../tokens';
+import { colors, spacing, radius, borderWidth, iconSize, elevation } from '../tokens';
 import { analytics, Events } from '../analytics';
 import { useMissingCashbackActions } from '../query/useMissingCashback';
 import type { McTicketFile } from '../api/missingCashback';
@@ -271,9 +271,7 @@ export function MissingCashbackInvoiceUpload() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Text variant="body12SemiBold" color={colors.text.inverse}>
-                        ✕
-                      </Text>
+                      <Icon name="close" size={iconSize[12]} color={colors.text.inverse} />
                     </Pressable>
                   </View>
                 ))}

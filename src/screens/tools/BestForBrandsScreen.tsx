@@ -269,7 +269,7 @@ export function BestForBrandsScreen() {
                 );
               })}
               {showEmpty ? (
-                <InlineMessage tone="warning" message="Add a spend above 0 for at least one brand." />
+                <InlineMessage tone="warning" icon="desc-exclamation" message="Add a spend above 0 for at least one brand." />
               ) : null}
             </ScrollView>
             {footer('See my cards', onSeeCards)}

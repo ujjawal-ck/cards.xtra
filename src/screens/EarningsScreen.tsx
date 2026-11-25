@@ -436,6 +436,8 @@ export function EarningsScreen() {
                     label="View all orders"
                     variant="link"
                     size={36}
+                    icon="trailing"
+                    iconName="chevron-right"
                     onPress={() => navigation.navigate('OrdersList')}
                   />
                 </View>

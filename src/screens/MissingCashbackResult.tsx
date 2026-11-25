@@ -20,7 +20,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { Text, Button } from '../atoms';
+import { Text, Button, Icon } from '../atoms';
 import { Header } from '../organisms';
 import { colors, spacing, elevation } from '../tokens';
 import type { RootStackParamList } from '../navigation/types';
@@ -56,21 +56,16 @@ function ResultGlyph({ variant }: { variant: 'tracked' | 'tracking' | 'queued' }
         justifyContent: 'center',
       }}
     >
-      <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-        {variant === 'tracked' ? (
-          <Path d="M5 13l4 4L19 7" stroke={tone} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-        ) : variant === 'tracking' ? (
-          <>
-            <Circle cx={12} cy={12} r={9} stroke={tone} strokeWidth={2} />
-            <Path d="M12 7v5l3 2" stroke={tone} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </>
-        ) : (
-          <>
-            <Circle cx={12} cy={12} r={9} stroke={tone} strokeWidth={2} />
-            <Path d="M12 8h.01M11 12h1v4h1" stroke={tone} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </>
-        )}
-      </Svg>
+      {variant === 'tracked' ? (
+        <Icon name="check-outline" size={36} color={tone} />
+      ) : variant === 'tracking' ? (
+        <Icon name="clock-outline" size={36} color={tone} />
+      ) : (
+        <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
+          <Circle cx={12} cy={12} r={9} stroke={tone} strokeWidth={2} />
+          <Path d="M12 8h.01M11 12h1v4h1" stroke={tone} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
     </View>
   );
 }

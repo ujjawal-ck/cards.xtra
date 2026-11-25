@@ -480,6 +480,8 @@ export function BeatMyCardResultScreen() {
                     variant="solid"
                     tone="main"
                     size={52}
+                    icon="trailing"
+                    iconName="chevron-right"
                     fullWidth
                     onPress={() => otherRow.card && applyCard(otherRow.card)}
                   />
@@ -510,6 +512,8 @@ export function BeatMyCardResultScreen() {
                       variant="solid"
                       tone="main"
                       size={52}
+                      icon="trailing"
+                      iconName="chevron-right"
                       fullWidth
                       onPress={() => applyRow.card && applyCard(applyRow.card)}
                     />

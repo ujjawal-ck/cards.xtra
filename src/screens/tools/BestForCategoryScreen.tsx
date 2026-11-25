@@ -18,10 +18,11 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { FocusAwareStatusBar as StatusBar } from '../../navigation/FocusAwareStatusBar';
 import type { RootStackParamList } from '../../navigation/types';
-import { Text, StepProgress } from '../../atoms';
+import { Text, StepProgress, Icon } from '../../atoms';
+import type { IconName } from '../../atoms';
 import { SpendCard, InlineMessage, Choice } from '../../molecules';
 import { Header, FooterButtons } from '../../organisms';
-import { colors, spacing, radius, borderWidth } from '../../tokens';
+import { colors, spacing, radius, borderWidth, iconSize } from '../../tokens';
 import { analytics, Events } from '../../analytics';
 import { TOOL_CATEGORIES, buildSpends, questionsForCategory } from '../../lib/cardTools';
 import type { SpendKey } from '../../lib/cardTools';
@@ -38,6 +39,16 @@ import {
 type Nav = NativeStackNavigationProp<RootStackParamList, 'BestForCategory'>;
 type Rt = RouteProp<RootStackParamList, 'BestForCategory'>;
 type Answers = Partial<Record<SpendKey, number>>;
+
+// Leading glyphs per category. Groceries, insurance, rent and education have no icon in the set yet.
+const CATEGORY_ICONS: Partial<Record<string, IconName>> = {
+  shopping: 'cart-outline',
+  fuel: 'feat-fuel-outline',
+  dining: 'feat-dining-outline',
+  food: 'feat-dining-outline',
+  travel: 'feat-travel-outline',
+  bills: 'feat-mobile-recharge-outline',
+};
 
 const ZERO_COPY = 'Leave it at 0 if you do not spend here.';
 
@@ -162,7 +173,7 @@ export function BestForCategoryScreen() {
                 </View>
               ))}
               {showEmpty ? (
-                <InlineMessage tone="warning" message="Add at least one spend above 0 to see your cards." />
+                <InlineMessage tone="warning" icon="desc-exclamation" message="Add at least one spend above 0 to see your cards." />
               ) : null}
             </ScrollView>
             {footer(isLast ? 'Find my best card' : 'Next category', onNextCategory)}
@@ -186,6 +197,11 @@ export function BestForCategoryScreen() {
                       type="checkbox"
                       checked={on}
                       label={c.label}
+                      leading={
+                        CATEGORY_ICONS[c.id] ? (
+                          <Icon name={CATEGORY_ICONS[c.id]!} size={iconSize[24]} color={colors.icon.features} />
+                        ) : undefined
+                      }
                       onChange={() => setSelected((cur) => toggleId(cur, c.id))}
                       style={{
                         flexGrow: 1,

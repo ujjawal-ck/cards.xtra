@@ -130,6 +130,7 @@ export function WithdrawEnterUPI() {
                   if (showError) setShowError(false);
                 }}
                 state={showError ? 'error' : undefined}
+                hintIcon={showError ? 'desc-exclamation' : undefined}
                 hint={
                   showError
                     ? 'Invalid UPI ID. Please enter correct UPI ID'

@@ -161,6 +161,7 @@ export function WithdrawAmazon() {
                 maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="next"
                 state={mobileInvalid ? 'error' : undefined}
+                hintIcon={mobileInvalid ? 'desc-exclamation' : undefined}
                 hint={mobileInvalid ? 'Invalid mobile number' : undefined}
               />
               <Input
@@ -172,6 +173,7 @@ export function WithdrawAmazon() {
                 maxLength={PHONE_INPUT_MAX_LENGTH}
                 returnKeyType="done"
                 state={confirmMismatch ? 'error' : undefined}
+                hintIcon={confirmMismatch ? 'desc-exclamation' : undefined}
                 hint={confirmMismatch ? 'Mobile numbers do not match' : undefined}
               />
               <NoteBox>

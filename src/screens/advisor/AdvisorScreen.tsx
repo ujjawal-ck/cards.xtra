@@ -379,6 +379,7 @@ export function AdvisorScreen() {
         ) : (
           <InlineMessage
             tone="warning"
+            icon="desc-exclamation"
             message="Couldn't check right now."
             action="single"
             primaryActionLabel="Try again"

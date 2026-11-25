@@ -58,7 +58,7 @@ export function useOfflineSubmitGuard() {
       accessibilityLiveRegion="polite"
       style={{ paddingHorizontal: spacing[16], paddingBottom: spacing[8] }}
     >
-      <Toast tone="warning" message={OFFLINE_SUBMIT_MESSAGE} onDismiss={hide} />
+      <Toast tone="warning" icon="desc-exclamation" message={OFFLINE_SUBMIT_MESSAGE} onDismiss={hide} />
     </View>
   ) : null;
 
